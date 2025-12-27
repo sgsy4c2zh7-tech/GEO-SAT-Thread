@@ -1,19 +1,15 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>GEO Space Weather Dashboard（NOAA API: v,n / Kp 取得）</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GEO Space Weather Dashboard（NOAA APIフルスペックKp推定：Newell結合関数）</title>
   <style>
     body{
-      margin:0;
-      padding:16px;
+      margin:0; padding:16px;
       font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      background:#111820;
-      color:#f5f5f5;
-      display:flex;
-      flex-direction:column;
-      gap:16px;
+      background:#111820; color:#f5f5f5;
+      display:flex; flex-direction:column; gap:16px;
     }
     h1{font-size:20px;margin:0 0 8px}
     h2{font-size:16px;margin:8px 0}
@@ -25,7 +21,7 @@
     }
     .card{
       background:#1a2330;
-      border-radius:8px;
+      border-radius:10px;
       padding:12px 14px;
       box-shadow:0 0 0 1px #222c3a;
     }
@@ -33,80 +29,65 @@
       width:100%;
       height:auto;
       background:#141b24;
-      border-radius:8px;
+      border-radius:10px;
       display:block;
     }
     .param-row{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      margin-bottom:6px;
-      font-size:13px;
-      flex-wrap:wrap;
+      display:flex; align-items:center; gap:10px;
+      margin-bottom:8px; font-size:13px; flex-wrap:wrap;
     }
-    .param-row label{flex:0 0 160px}
+    .param-row label{flex:0 0 190px}
     .param-row input[type="number"],
     .param-row input[type="range"],
     .param-row input[type="date"]{flex:1}
     .param-row input[type="number"],
     .param-row input[type="date"]{
-      max-width:180px;
-      padding:2px 4px;
+      max-width:220px;
+      padding:4px 6px;
       background:#101621;
-      border-radius:4px;
+      border-radius:6px;
       border:1px solid #303b4c;
       color:#f5f5f5;
     }
-    .time-display{margin-bottom:4px;font-size:14px}
+    .param-row input[type="range"]{width:100%}
+    .time-display{margin-bottom:6px;font-size:14px}
     .badge{
-      display:inline-block;
-      padding:3px 8px;
-      border-radius:999px;
-      font-size:11px;
-      margin-right:6px;
-      line-height:1.2;
+      display:inline-block; padding:3px 10px;
+      border-radius:999px; font-size:11px;
+      margin-right:8px; line-height:1.4;
+      border:1px solid transparent;
     }
-    .badge.cme{background:#ff914d22;color:#ffb37a;border:1px solid #ff914d55}
-    .badge.kp{background:#4caf5022;color:#a5d6a7;border:1px solid #4caf5055}
-    .badge.status{background:#2196f322;color:#90caf9;border:1px solid #2196f355}
+    .badge.kp{background:#4caf5022;color:#a5d6a7;border-color:#4caf5055}
+    .badge.status{background:#2196f322;color:#90caf9;border-color:#2196f355}
+    .badge.noaa{background:#ffffff14;color:#e5e7eb;border-color:#ffffff22}
     .risk-legend,.sector-legend{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      font-size:12px;
-      margin-top:8px;
-      align-items:center;
+      display:flex; gap:10px; flex-wrap:wrap;
+      font-size:12px; margin-top:10px; align-items:center;
     }
     .color-box{
-      width:14px;
-      height:8px;
-      border-radius:999px;
-      border:1px solid #0004;
-      display:inline-block;
-      vertical-align:middle;
-      margin-right:6px;
+      width:14px;height:9px;border-radius:999px;
+      border:1px solid #0006; display:inline-block;
+      vertical-align:middle; margin-right:6px;
     }
-    .night-indicator{font-size:12px;opacity:.85;margin-top:8px}
-    .small{font-size:11px;opacity:.75}
+    .small{font-size:11px;opacity:.76}
     .block-title{
-      margin-top:10px;
-      font-weight:600;
+      margin-top:12px;
+      font-weight:700;
       font-size:13px;
       border-top:1px solid #2a3445;
-      padding-top:6px;
+      padding-top:8px;
     }
-    #logicSummary{margin-top:6px;white-space:pre-line}
-    .tz-group{display:flex;gap:10px;align-items:center;font-size:12px;flex-wrap:wrap}
-    .note{font-size:10px;opacity:.65;margin-top:4px}
+    #logicSummary{margin-top:8px;white-space:pre-line}
+    .tz-group{display:flex;gap:12px;align-items:center;font-size:12px;flex-wrap:wrap}
     .ok{color:#a5d6a7}
     .ng{color:#ffb3b3}
-    @media (max-width: 1100px){
-      .layout{grid-template-columns:1fr}
-    }
+    .note{font-size:10px;opacity:.65;margin-top:6px}
+    @media (max-width:1100px){ .layout{grid-template-columns:1fr} }
   </style>
 </head>
+
 <body>
-  <h1>GEO Space Weather Dashboard（NOAA API: 太陽風 v,n / Kp 取得）</h1>
+  <h1>GEO Space Weather Dashboard（NOAA API + Newell結合関数でKp推定・フルスペック）</h1>
 
   <div class="layout">
     <!-- LEFT -->
@@ -115,7 +96,7 @@
       <canvas id="geoCanvas" width="520" height="520"></canvas>
 
       <div class="risk-legend">
-        <span><b>Color scale:</b></span>
+        <span><b>Color:</b></span>
         <span><span class="color-box" id="lowColorBox"></span>Low</span>
         <span><span class="color-box" id="medColorBox"></span>Moderate</span>
         <span><span class="color-box" id="highColorBox"></span>High</span>
@@ -128,9 +109,10 @@
         <span>Inner = Deep charging</span>
       </div>
 
-      <div class="night-indicator">
-        青帯は nightside（±90° around midnight）を示す表示補助。<br>
-        ※内部帯電（deep）は放射線帯擾乱を「全球一様」で評価（昼側も含めて評価）。
+      <div class="small" style="margin-top:10px;">
+        ・青帯は nightside の表示補助（±90° around midnight）。<br>
+        ・内部帯電（deep）の放射線帯擾乱は <b>全球一様</b>に評価（昼側も同じ評価に含める）。<br>
+        ・表面帯電（surface）は局所時依存を残すが、<b>夜側の過剰ブーストは抑制</b>。
       </div>
     </div>
 
@@ -140,116 +122,143 @@
 
       <div class="time-display">
         <div id="baseTimeLabel"></div>
-        <div style="margin-top:4px;">
-          Time (UTC): <span id="timeAheadLabel"></span><br>
-          <span class="badge cme" id="cmeCountdownBadge"></span>
-          <span class="badge kp">Kp(t): <span id="kpNowLabel"></span></span>
+        <div style="margin-top:6px;">
+          Time (UTC): <span id="timeUtcLabel"></span><br>
+          <span class="badge kp">Kp̂(t): <span id="kpNowLabel"></span></span>
           <span class="badge status" id="statusLabel"></span>
+          <span class="badge noaa" id="noaaBadge"></span>
         </div>
-
-        <div style="margin-top:6px;font-size:12px;">
-          NOAA API:
-          <b id="noaaState" class="ng">OFF</b> /
-          Plasma更新: <span id="plasmaStamp">--</span> /
-          Kp更新: <span id="kpStamp">--</span>
-        </div>
-
         <div id="logicSummary" class="small"></div>
       </div>
 
-      <input type="range" id="timeSlider" min="0" max="120" step="1" value="0" style="width:100%;">
-
-      <p class="small">
-        NOAAから v(t), n(t), Kp(t) を取得して反映。<br>
-        未来側でNOAA実測が無い場合は、CME/HSSモデルで補完（ハイブリッド運用）。
-      </p>
+      <input type="range" id="timeSlider" min="0" max="120" step="1" value="0" />
 
       <div class="block-title">Forecast start time</div>
       <div class="param-row">
         <label for="startDateInput">Start date</label>
-        <input type="date" id="startDateInput">
+        <input type="date" id="startDateInput" />
       </div>
       <div class="param-row">
         <label for="startHourInput">Start hour</label>
-        <input type="number" id="startHourInput" min="0" max="23" step="1" value="9">
+        <input type="number" id="startHourInput" min="0" max="23" step="1" value="9" />
       </div>
       <div class="param-row">
-        <label>Time zone</label>
+        <label>Time zone（入力）</label>
         <div class="tz-group">
-          <label><input type="radio" name="tzMode" id="tzJST" value="JST" checked> JST</label>
-          <label><input type="radio" name="tzMode" id="tzUTC" value="UTC"> UTC</label>
+          <label><input type="radio" name="tzMode" id="tzJST" value="JST" checked /> JST</label>
+          <label><input type="radio" name="tzMode" id="tzUTC" value="UTC" /> UTC</label>
         </div>
+        <span class="small">表示は常にUTC。開始時刻をJST/UTCで入力。</span>
       </div>
 
-      <div class="block-title">NOAA API（ON/OFF）</div>
+      <div class="block-title">NOAA API（フルスペック）</div>
       <div class="param-row">
         <label for="useNoaaCheckbox">Use NOAA API</label>
-        <input type="checkbox" id="useNoaaCheckbox" checked>
-        <span class="small">v,n,Kp をNOAAから取得</span>
-      </div>
-
-      <div class="block-title">Solar wind inputs（fallback用 / 未来補完）</div>
-      <div class="param-row">
-        <label for="bzInput">Bz (nT, sign)</label>
-        <input type="number" id="bzInput" value="0" step="1">
+        <input type="checkbox" id="useNoaaCheckbox" checked />
+        <span class="small">v,n,By,Bz を取得して Kp̂ を計算（Newell）</span>
       </div>
       <div class="param-row">
-        <label for="vswInput">Ambient Vsw (km/s)</label>
-        <input type="number" id="vswInput" value="400" step="10">
+        <label for="noaaRefreshMin">API更新間隔（分）</label>
+        <input type="number" id="noaaRefreshMin" value="5" min="1" max="60" step="1" />
+        <span class="small">GitHub PagesでもOK</span>
+      </div>
+
+      <div class="block-title">Kp̂（Newell結合関数）設定</div>
+      <div class="param-row">
+        <label for="lagMinInput">応答遅れ（分）</label>
+        <input type="number" id="lagMinInput" value="45" min="0" max="180" step="5" />
+        <span class="small">太陽風→地磁気の遅れ（簡易）</span>
       </div>
       <div class="param-row">
-        <label for="nAmbInput">Ambient density (cm⁻³)</label>
-        <input type="number" id="nAmbInput" value="5" step="0.5">
+        <label for="smoothHInput">平滑化（時間窓h）</label>
+        <input type="number" id="smoothHInput" value="3" min="0" max="12" step="1" />
+        <span class="small">移動平均（重くてもOK仕様）</span>
+      </div>
+      <div class="param-row">
+        <label for="alphaInput">動圧補正指数 α</label>
+        <input type="number" id="alphaInput" value="0.15" min="0" max="0.6" step="0.05" />
+        <span class="small">Pdyn^(α) を掛ける</span>
+      </div>
+      <div class="param-row">
+        <label for="aInput">写像係数 a</label>
+        <input type="number" id="aInput" value="2.5" min="0.5" max="6" step="0.1" />
+        <span class="small">Kp̂ = a ln(1+Cp)+b</span>
+      </div>
+      <div class="param-row">
+        <label for="bInput">写像係数 b</label>
+        <input type="number" id="bInput" value="1.0" min="-2" max="4" step="0.1" />
+      </div>
+      <div class="param-row">
+        <label for="kpStormThresh">storm閾値（Kp̂）</label>
+        <input type="number" id="kpStormThresh" value="4.0" min="2" max="7" step="0.1" />
+        <span class="small">stormActive 判定</span>
       </div>
 
-      <div class="block-title">CME parameters</div>
-      <div class="param-row"><label for="cmeEtaInput">CME ETA (h)</label><input type="number" id="cmeEtaInput" value="-1" step="1" min="-1" max="120"></div>
-      <div class="param-row"><label for="cmeSpeedInput">CME speed (km/s)</label><input type="number" id="cmeSpeedInput" value="800" step="20"></div>
-      <div class="param-row"><label for="cmeDensityInput">CME density (cm⁻³)</label><input type="number" id="cmeDensityInput" value="15" step="1"></div>
-      <div class="param-row"><label for="cmeDurInput">CME duration (h)</label><input type="number" id="cmeDurInput" value="6" step="1" min="1" max="24"></div>
+      <div class="block-title">Fallback（NOAA欠損/未来補完）</div>
+      <div class="param-row">
+        <label for="bzInput">Fallback Bz (nT)</label>
+        <input type="number" id="bzInput" value="0" step="1" />
+        <span class="small">NOAAが無い時だけ使用</span>
+      </div>
+      <div class="param-row">
+        <label for="vswInput">Fallback Vsw (km/s)</label>
+        <input type="number" id="vswInput" value="400" step="10" />
+      </div>
+      <div class="param-row">
+        <label for="nAmbInput">Fallback density (cm⁻³)</label>
+        <input type="number" id="nAmbInput" value="5" step="0.5" />
+      </div>
 
-      <div class="block-title">HSS parameters</div>
-      <div class="param-row"><label for="hssEtaInput">HSS ETA (h)</label><input type="number" id="hssEtaInput" value="-1" step="1" min="-1" max="120"></div>
-      <div class="param-row"><label for="hssSpeedInput">HSS speed (km/s)</label><input type="number" id="hssSpeedInput" value="700" step="20"></div>
-      <div class="param-row"><label for="hssDensityInput">HSS density (cm⁻³)</label><input type="number" id="hssDensityInput" value="5" step="0.5"></div>
-      <div class="param-row"><label for="hssDurInput">HSS duration (h)</label><input type="number" id="hssDurInput" value="72" step="6" min="12" max="120"></div>
+      <div class="block-title">CME/HSS（未来補完・任意）</div>
+      <div class="param-row"><label for="cmeEtaInput">CME ETA (h)</label><input type="number" id="cmeEtaInput" value="-1" step="1" min="-1" max="120" /></div>
+      <div class="param-row"><label for="cmeSpeedInput">CME speed</label><input type="number" id="cmeSpeedInput" value="800" step="20" /></div>
+      <div class="param-row"><label for="cmeDensityInput">CME density</label><input type="number" id="cmeDensityInput" value="15" step="1" /></div>
+      <div class="param-row"><label for="cmeDurInput">CME duration (h)</label><input type="number" id="cmeDurInput" value="6" step="1" min="1" max="24" /></div>
 
-      <div class="block-title">Storm & radiation model parameters</div>
-      <div class="param-row"><label for="quietKpInput">Quiet Kp (fallback)</label><input type="number" id="quietKpInput" value="2" step="0.5" min="0" max="5"></div>
-      <div class="param-row"><label for="stormDurInput">Storm duration (h)</label><input type="number" id="stormDurInput" value="48" step="6" min="24" max="72"></div>
-      <div class="param-row"><label for="stormDelayInput">Storm delay (h)</label><input type="number" id="stormDelayInput" value="0" step="1" min="0" max="24"></div>
-      <div class="param-row"><label for="dstInput">Dst (nT)</label><input type="number" id="dstInput" value="0" step="10"></div>
-      <div class="param-row"><label for="vswThresh">Vsw threshold (km/s)</label><input type="number" id="vswThresh" value="500" step="10"></div>
-      <div class="param-row"><label for="stormDriverThreshInput">Driver threshold</label><input type="number" id="stormDriverThreshInput" value="1.3" step="0.1"></div>
+      <div class="param-row"><label for="hssEtaInput">HSS ETA (h)</label><input type="number" id="hssEtaInput" value="-1" step="1" min="-1" max="120" /></div>
+      <div class="param-row"><label for="hssSpeedInput">HSS speed</label><input type="number" id="hssSpeedInput" value="700" step="20" /></div>
+      <div class="param-row"><label for="hssDensityInput">HSS density</label><input type="number" id="hssDensityInput" value="5" step="0.5" /></div>
+      <div class="param-row"><label for="hssDurInput">HSS duration (h)</label><input type="number" id="hssDurInput" value="72" step="6" min="12" max="120" /></div>
+
+      <div class="block-title">Storm/Radiation（リスク側）</div>
+      <div class="param-row">
+        <label for="quietKpInput">Quiet Kp（基準）</label>
+        <input type="number" id="quietKpInput" value="2" step="0.5" min="0" max="5" />
+      </div>
+      <div class="param-row">
+        <label for="dstInput">Dst (nT,参考)</label>
+        <input type="number" id="dstInput" value="0" step="10" />
+      </div>
 
       <div class="block-title">Color</div>
-      <div class="param-row"><label for="lowColor">Low</label><input type="color" id="lowColor" value="#2ecc71"></div>
-      <div class="param-row"><label for="medColor">Moderate</label><input type="color" id="medColor" value="#f1c40f"></div>
-      <div class="param-row"><label for="highColor">High</label><input type="color" id="highColor" value="#e67e22"></div>
-      <div class="param-row"><label for="extColor">Extreme</label><input type="color" id="extColor" value="#e74c3c"></div>
+      <div class="param-row"><label for="lowColor">Low</label><input type="color" id="lowColor" value="#2ecc71" /></div>
+      <div class="param-row"><label for="medColor">Moderate</label><input type="color" id="medColor" value="#f1c40f" /></div>
+      <div class="param-row"><label for="highColor">High</label><input type="color" id="highColor" value="#e67e22" /></div>
+      <div class="param-row"><label for="extColor">Extreme</label><input type="color" id="extColor" value="#e74c3c" /></div>
 
-      <div class="block-title">Direct impact toggle</div>
+      <div class="block-title">Direct impact（任意）</div>
       <div class="param-row">
         <label for="directImpactCheckbox">Direct CME/HSS impact</label>
-        <input type="checkbox" id="directImpactCheckbox">
+        <input type="checkbox" id="directImpactCheckbox" />
+        <span class="small">短時間の圧縮効果をリスクに直接加算</span>
       </div>
 
-      <p class="note">
-        NOAAのplasmaは基本「実測」なので未来側は欠損しやすく、その場合は入力したCME/HSSモデルで補完します。<br>
-        Kpは予報JSONがあるので未来も入ります。
-      </p>
+      <div class="note">
+        ※Kp̂は「太陽風 v,n,By,Bz → Newell結合関数 → 動圧補正 → 非線形写像」で毎時0–120hを計算。<br>
+        ※NOAA欠損・未来はCME/HSS+fallbackで補完（フルスペックでも動く設計）。
+      </div>
     </div>
   </div>
 
 <script>
   // ===== DOM =====
   const baseTimeLabel = document.getElementById("baseTimeLabel");
+  const timeUtcLabel = document.getElementById("timeUtcLabel");
   const timeSlider = document.getElementById("timeSlider");
-  const timeAheadLabel = document.getElementById("timeAheadLabel");
-  const cmeCountdownBadge = document.getElementById("cmeCountdownBadge");
   const kpNowLabel = document.getElementById("kpNowLabel");
   const statusLabel = document.getElementById("statusLabel");
   const logicSummary = document.getElementById("logicSummary");
+  const noaaBadge = document.getElementById("noaaBadge");
 
   const startDateInput = document.getElementById("startDateInput");
   const startHourInput = document.getElementById("startHourInput");
@@ -257,9 +266,14 @@
   const tzUTC = document.getElementById("tzUTC");
 
   const useNoaaCheckbox = document.getElementById("useNoaaCheckbox");
-  const noaaState = document.getElementById("noaaState");
-  const plasmaStamp = document.getElementById("plasmaStamp");
-  const kpStamp = document.getElementById("kpStamp");
+  const noaaRefreshMin = document.getElementById("noaaRefreshMin");
+
+  const lagMinInput = document.getElementById("lagMinInput");
+  const smoothHInput = document.getElementById("smoothHInput");
+  const alphaInput = document.getElementById("alphaInput");
+  const aInput = document.getElementById("aInput");
+  const bInput = document.getElementById("bInput");
+  const kpStormThresh = document.getElementById("kpStormThresh");
 
   const bzInput = document.getElementById("bzInput");
   const vswInput = document.getElementById("vswInput");
@@ -276,31 +290,25 @@
   const hssDurInput = document.getElementById("hssDurInput");
 
   const quietKpInput = document.getElementById("quietKpInput");
-  const stormDurInput = document.getElementById("stormDurInput");
-  const stormDelayInput = document.getElementById("stormDelayInput");
   const dstInput = document.getElementById("dstInput");
-  const vswThreshInput = document.getElementById("vswThresh");
-  const stormDriverThreshInput = document.getElementById("stormDriverThreshInput");
+  const directImpactCheckbox = document.getElementById("directImpactCheckbox");
 
   const lowColorInput = document.getElementById("lowColor");
   const medColorInput = document.getElementById("medColor");
   const highColorInput = document.getElementById("highColor");
   const extColorInput = document.getElementById("extColor");
-
   const lowColorBox = document.getElementById("lowColorBox");
   const medColorBox = document.getElementById("medColorBox");
   const highColorBox = document.getElementById("highColorBox");
   const extColorBox = document.getElementById("extColorBox");
 
-  const directImpactCheckbox = document.getElementById("directImpactCheckbox");
-
-  // Canvas
+  // ===== Canvas =====
   const canvas = document.getElementById("geoCanvas");
   const ctx = canvas.getContext("2d");
   const cx = canvas.width / 2;
   const cy = canvas.height / 2;
 
-  // Enlarged radii (for 520x520)
+  // Enlarged radii for 520x520
   const surfaceOuterR = 220;
   const surfaceInnerR = 185;
   const deepOuterR = 175;
@@ -309,7 +317,7 @@
   const nightRadiusInner = 135;
   const earthRadius = 70;
 
-  // ===== Start date init =====
+  // ===== Init start date =====
   (function initStartDate(){
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -333,33 +341,21 @@
   }
 
   function pad2(n){ return String(n).padStart(2,"0"); }
-
-  function formatUtcYYYYMMDDHHMM(ms){
+  function formatUtc(ms){
     const d = new Date(ms);
-    const y = d.getUTCFullYear();
-    const m = pad2(d.getUTCMonth()+1);
-    const dd = pad2(d.getUTCDate());
-    const hh = pad2(d.getUTCHours());
-    const mm = pad2(d.getUTCMinutes());
-    return `${y}-${m}-${dd} ${hh}:${mm} UTC`;
+    return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())} ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())} UTC`;
+  }
+  function getUtcMsAtHoursAhead(h){
+    return computeBaseTimeUtc().getTime() + h*3600*1000;
   }
 
-  function formatBaseTimeForLabel(baseUtc){
-    // baseUtc is already UTC
-    return `Forecast start: ${formatUtcYYYYMMDDHHMM(baseUtc.getTime())}`;
-  }
-
-  function getUtcMsAtHoursAhead(hoursAhead){
-    return computeBaseTimeUtc().getTime() + hoursAhead * 3600 * 1000;
-  }
-
+  // ===== Geometry helpers =====
   function degToRad(deg){ return (deg - 90) * Math.PI / 180; }
   function angleDiff(a,b){ return (a - b + 540) % 360 - 180; }
 
-  // subsolar longitude (simple)
+  // Subsolar longitude (simple)
   function getSubsolarLongitude(hoursAhead){
-    const tMs = getUtcMsAtHoursAhead(hoursAhead);
-    const t = new Date(tMs);
+    const t = new Date(getUtcMsAtHoursAhead(hoursAhead));
     const ut = t.getUTCHours() + t.getUTCMinutes()/60 + t.getUTCSeconds()/3600;
     let lon = (ut - 12) * 15; // 12UT ~ 0°
     lon = ((lon % 360) + 360) % 360;
@@ -382,120 +378,117 @@
     return { name:"Night-Morning", code:"N_MORN", isNight:true };
   }
 
-  function getBzCouplingFactor(){
-    const bz = Number(bzInput.value);
-    if (bz < 0) return 1.0;
-    if (bz > 0) return 0.3;
-    return 0.6;
-  }
-
-  // ===== NOAA ingest =====
+  // ===== NOAA store =====
   const noaa = {
     enabled: true,
     plasma: [], // {tMs, density, speed}
-    kp: [],     // {tMs, kp, kind}
-    lastPlasmaUpdate: null,
-    lastKpUpdate: null,
+    mag: [],    // {tMs, by, bz, bt}
+    lastOkMs: null,
+    lastErr: null
   };
 
-  function setStamp(el, ms){
-    if(!ms){ el.textContent="--"; return; }
-    const d = new Date(ms);
-    const s = d.toISOString().slice(0,16).replace("T"," ") + "Z";
-    el.textContent = s;
+  function setNoaaBadge(){
+    const on = noaa.enabled && useNoaaCheckbox.checked;
+    const ok = (noaa.lastOkMs != null);
+    if(!on){
+      noaaBadge.textContent = "NOAA: OFF";
+      noaaBadge.className = "badge noaa ng";
+      return;
+    }
+    if(ok){
+      noaaBadge.textContent = `NOAA: ON / last ${new Date(noaa.lastOkMs).toISOString().slice(11,16)}Z`;
+      noaaBadge.className = "badge noaa ok";
+    }else{
+      noaaBadge.textContent = `NOAA: ON / (no data)`;
+      noaaBadge.className = "badge noaa ng";
+    }
+  }
+
+  async function fetchJsonNoStore(url){
+    const res = await fetch(url + (url.includes("?") ? "&" : "?") + "_=" + Date.now(), { cache:"no-store" });
+    if(!res.ok) throw new Error(`fetch failed ${res.status}`);
+    return res.json();
   }
 
   async function fetchNoaaPlasma(){
-    const url = "https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json?_=" + Date.now();
-    const res = await fetch(url, { cache:"no-store" });
-    if(!res.ok) throw new Error("NOAA plasma fetch failed: " + res.status);
-
-    const data = await res.json();
-    if(!Array.isArray(data) || data.length < 2) return;
-
+    // 2-hour product, includes density & speed
+    const url = "https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json";
+    const data = await fetchJsonNoStore(url);
+    if(!Array.isArray(data) || data.length < 2) return [];
     const rows = data.slice(1);
     const out = [];
     for(const r of rows){
-      // r: ["YYYY-MM-DD HH:MM:SS.000", density, speed, temp]
-      const tMs = Date.parse(r[0].replace(" ","T") + "Z");
+      const tMs = Date.parse(String(r[0]).replace(" ","T")+"Z");
       const density = (r[1]==null) ? null : Number(r[1]);
       const speed   = (r[2]==null) ? null : Number(r[2]);
       if(isFinite(tMs)) out.push({ tMs, density, speed });
     }
     out.sort((a,b)=>a.tMs-b.tMs);
-    noaa.plasma = out;
-    noaa.lastPlasmaUpdate = Date.now();
-    setStamp(plasmaStamp, noaa.lastPlasmaUpdate);
+    return out;
   }
 
-  async function fetchNoaaKp(){
-    const url = "https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json?_=" + Date.now();
-    const res = await fetch(url, { cache:"no-store" });
-    if(!res.ok) throw new Error("NOAA Kp fetch failed: " + res.status);
-
-    const data = await res.json();
-    if(!Array.isArray(data) || data.length < 2) return;
-
+  async function fetchNoaaMag(){
+    // 2-hour mag: By,Bz,Bt
+    const url = "https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json";
+    const data = await fetchJsonNoStore(url);
+    if(!Array.isArray(data) || data.length < 2) return [];
     const rows = data.slice(1);
     const out = [];
     for(const r of rows){
-      // format: ["YYYY-MM-DD HH:MM:SS.000", kp, observed/estimated/predicted, ...]
-      const tMs = Date.parse(r[0].replace(" ","T") + "Z");
-      const kp = (r[1]==null) ? null : Number(r[1]);
-      const kind = r[2];
-      if(isFinite(tMs) && isFinite(kp)) out.push({ tMs, kp, kind });
+      const tMs = Date.parse(String(r[0]).replace(" ","T")+"Z");
+      // Typical columns: time_tag, bx_gsm, by_gsm, bz_gsm, bt
+      // We'll be defensive: try indices [2]=By, [3]=Bz, [4]=Bt as common in SWPC JSON.
+      const by = (r[2]==null) ? null : Number(r[2]);
+      const bz = (r[3]==null) ? null : Number(r[3]);
+      const bt = (r[4]==null) ? null : Number(r[4]);
+      if(isFinite(tMs)) out.push({ tMs, by, bz, bt });
     }
     out.sort((a,b)=>a.tMs-b.tMs);
-    noaa.kp = out;
-    noaa.lastKpUpdate = Date.now();
-    setStamp(kpStamp, noaa.lastKpUpdate);
+    return out;
   }
 
   async function refreshNoaa(){
-    if(!noaa.enabled) return;
-    try{ await fetchNoaaPlasma(); }catch(e){ console.warn(e); }
-    try{ await fetchNoaaKp(); }catch(e){ console.warn(e); }
-  }
-
-  function updateNoaaState(){
-    noaa.enabled = !!useNoaaCheckbox.checked;
-    noaaState.textContent = noaa.enabled ? "ON" : "OFF";
-    noaaState.className = noaa.enabled ? "ok" : "ng";
-    refreshNoaa().then(updateAll).catch(()=>updateAll());
-  }
-
-  // ===== Lookup helpers =====
-  function lookupNearest(arr, tMs, field){
-    if(!arr || arr.length===0) return null;
-    let lo=0, hi=arr.length-1;
-    while(lo<hi){
-      const mid=(lo+hi)>>1;
-      if(arr[mid].tMs < tMs) lo=mid+1;
-      else hi=mid;
+    if(!(useNoaaCheckbox.checked)) return;
+    noaa.enabled = true;
+    try{
+      const [plasma, mag] = await Promise.all([fetchNoaaPlasma(), fetchNoaaMag()]);
+      noaa.plasma = plasma;
+      noaa.mag = mag;
+      noaa.lastOkMs = Date.now();
+      noaa.lastErr = null;
+    }catch(e){
+      noaa.lastErr = String(e?.message || e);
+      // keep old data (best effort)
+    }finally{
+      setNoaaBadge();
     }
-    const a=arr[lo];
-    const b=arr[Math.max(0,lo-1)];
-    const pick = (a && b)
-      ? (Math.abs(a.tMs - tMs) < Math.abs(b.tMs - tMs) ? a : b)
-      : (a || b);
-    const v = pick ? pick[field] : null;
-    return isFinite(v) ? v : null;
   }
 
-  function lookupKpHold(tMs){
-    const arr = noaa.kp;
-    if(!arr || arr.length===0) return null;
-    let lo=0, hi=arr.length-1;
+  // ===== Interpolation helpers =====
+  function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
+
+  function lerp(a,b,t){ return a + (b-a)*t; }
+
+  function interpLinear(series, tMs, key){
+    if(!series || series.length === 0) return null;
+    // binary search rightmost <= tMs
+    let lo=0, hi=series.length-1;
     while(lo<hi){
-      const mid=((lo+hi+1)>>1);
-      if(arr[mid].tMs <= tMs) lo=mid;
+      const mid = (lo+hi+1)>>1;
+      if(series[mid].tMs <= tMs) lo=mid;
       else hi=mid-1;
     }
-    const kp = arr[lo]?.kp;
-    return isFinite(kp) ? kp : null;
+    const p0 = series[lo];
+    const p1 = series[Math.min(series.length-1, lo+1)];
+    const v0 = p0 ? p0[key] : null;
+    const v1 = p1 ? p1[key] : null;
+    if(!isFinite(v0)) return (isFinite(v1) ? v1 : null);
+    if(p0.tMs === p1.tMs || !isFinite(v1)) return v0;
+    const t = (tMs - p0.tMs) / (p1.tMs - p0.tMs);
+    return lerp(v0, v1, clamp(t,0,1));
   }
 
-  // ===== CME/HSS windows =====
+  // ===== CME/HSS windows (fallback future) =====
   function isHssActive(t){
     const eta = Number(hssEtaInput.value);
     const dur = Number(hssDurInput.value);
@@ -510,12 +503,7 @@
     return t >= (eta - half) && t <= (eta + half);
   }
 
-  // ===== Solar wind: NOAA first, then model =====
-  function solarWindSpeedAt(t){
-    if(noaa.enabled){
-      const v = lookupNearest(noaa.plasma, getUtcMsAtHoursAhead(t), "speed");
-      if(v != null) return v;
-    }
+  function fallbackSolarWindSpeedAt(t){
     const vswAmb = Number(vswInput.value);
     const cmeSpeed = Number(cmeSpeedInput.value);
     const hssSpeed = Number(hssSpeedInput.value);
@@ -523,156 +511,240 @@
     if(isHssActive(t)) return hssSpeed;
     return vswAmb;
   }
-
-  function solarWindDensityAt(t){
-    if(noaa.enabled){
-      const n = lookupNearest(noaa.plasma, getUtcMsAtHoursAhead(t), "density");
-      if(n != null) return n;
-    }
+  function fallbackSolarWindDensityAt(t){
     const nAmb = Number(nAmbInput.value);
-    const cmeDensity = Number(cmeDensityInput.value);
-    const hssDensity = Number(hssDensityInput.value);
-    if(isCmeImpact(t)) return cmeDensity;
-    if(isHssActive(t)) return hssDensity;
+    const cmeD = Number(cmeDensityInput.value);
+    const hssD = Number(hssDensityInput.value);
+    if(isCmeImpact(t)) return cmeD;
+    if(isHssActive(t)) return hssD;
     return nAmb;
   }
 
-  // ===== dynIndex =====
-  function getDynamicPressureIndex(t){
-    const n = solarWindDensityAt(t);
-    const v = solarWindSpeedAt(t);
+  // ===== Full-spec solar wind getters (NOAA + fallback) =====
+  function getVAtHours(h){
+    const tMs = getUtcMsAtHoursAhead(h);
+    if(useNoaaCheckbox.checked){
+      const v = interpLinear(noaa.plasma, tMs, "speed");
+      if(isFinite(v)) return v;
+    }
+    return fallbackSolarWindSpeedAt(h);
+  }
+  function getNAtHours(h){
+    const tMs = getUtcMsAtHoursAhead(h);
+    if(useNoaaCheckbox.checked){
+      const n = interpLinear(noaa.plasma, tMs, "density");
+      if(isFinite(n)) return n;
+    }
+    return fallbackSolarWindDensityAt(h);
+  }
+  function getByAtHours(h){
+    const tMs = getUtcMsAtHoursAhead(h);
+    if(useNoaaCheckbox.checked){
+      const by = interpLinear(noaa.mag, tMs, "by");
+      if(isFinite(by)) return by;
+    }
+    return 0; // fallback: unknown
+  }
+  function getBzAtHours(h){
+    const tMs = getUtcMsAtHoursAhead(h);
+    if(useNoaaCheckbox.checked){
+      const bz = interpLinear(noaa.mag, tMs, "bz");
+      if(isFinite(bz)) return bz;
+    }
+    return Number(bzInput.value); // fallback
+  }
+  function getBtAtHours(h){
+    const tMs = getUtcMsAtHoursAhead(h);
+    if(useNoaaCheckbox.checked){
+      // Some feeds include bt; if missing, compute from By,Bz
+      const bt = interpLinear(noaa.mag, tMs, "bt");
+      if(isFinite(bt)) return bt;
+    }
+    const by = getByAtHours(h);
+    const bz = getBzAtHours(h);
+    const bt = Math.sqrt((by||0)*(by||0) + (bz||0)*(bz||0));
+    return bt;
+  }
+
+  // ===== Newell coupling (full spec) =====
+  function newellCoupling(v, by, bz, bt){
+    // C = v^(4/3) * Bt^(2/3) * sin^(8/3)(theta/2)
+    // theta = atan2(By, Bz) in GSM
+    if(!isFinite(v) || !isFinite(bt)) return 0;
+
+    const By = (isFinite(by) ? by : 0);
+    const Bz = (isFinite(bz) ? bz : 0);
+
+    const theta = Math.atan2(By, Bz); // [-pi, pi]
+    const sinTerm = Math.sin(theta/2);
+    const sinPow = Math.pow(Math.abs(sinTerm), 8/3);
+
+    const vPow = Math.pow(Math.max(0, v), 4/3);
+    const btPow = Math.pow(Math.max(0, bt), 2/3);
+
+    const C = vPow * btPow * sinPow;
+    return isFinite(C) ? C : 0;
+  }
+
+  function pdynIndex(n, v){
+    // relative dynamic pressure index (dimensionless)
+    // ~ (n/5)*(v/400)^2
     const nRef = 5.0;
     const vRef = 400.0;
-    let idx = (n / nRef) * Math.pow(v / vRef, 2);
+    let idx = (n/nRef) * Math.pow(v/vRef, 2);
     if(!isFinite(idx) || idx <= 0) idx = 1.0;
-    return Math.max(0.5, Math.min(3.0, idx));
+    return clamp(idx, 0.3, 6.0);
   }
 
-  // ===== Driver storm window =====
-  function getDriverStormWindow(){
-    const bzFactor = getBzCouplingFactor();
-    const stormDur = Number(stormDurInput.value);
-    const delay = Number(stormDelayInput.value);
-    const driverThresh = Number(stormDriverThreshInput.value);
+  // Normalize coupling so quiet-ish baseline is around 1
+  function couplingNorm(C){
+    // Reference: v0=400, Bt0=5, theta=pi -> sin(theta/2)=1
+    const v0 = 400;
+    const bt0 = 5;
+    const C0 = Math.pow(v0,4/3) * Math.pow(bt0,2/3) * 1.0;
+    if(!isFinite(C0) || C0<=0) return C;
+    return C / C0;
+  }
 
-    const starts = [];
+  // ===== Kp-hat series (heavy ok) =====
+  let kpSeries = new Array(121).fill(2.0);  // kp at each hour 0..120
+  let bzSeries = new Array(121).fill(0.0);  // for logic/status
+  let vSeries  = new Array(121).fill(400);
+  let nSeries  = new Array(121).fill(5);
+  let stormActiveSeries = new Array(121).fill(false);
 
-    const cmeEta = Number(cmeEtaInput.value);
-    if(cmeEta >= 0){
-      const dynAtCme = getDynamicPressureIndex(cmeEta);
-      if(dynAtCme * bzFactor >= driverThresh) starts.push(cmeEta + delay);
+  function movingAverage(arr, win){
+    if(win <= 1) return arr.slice();
+    const out = new Array(arr.length).fill(0);
+    const half = Math.floor(win/2);
+    for(let i=0;i<arr.length;i++){
+      let sum=0, cnt=0;
+      for(let k=-half;k<=half;k++){
+        const j=i+k;
+        if(j>=0 && j<arr.length){
+          sum += arr[j];
+          cnt++;
+        }
+      }
+      out[i] = (cnt>0) ? (sum/cnt) : arr[i];
+    }
+    return out;
+  }
+
+  function recomputeKpSeries(){
+    const lagMin = Number(lagMinInput.value);
+    const alpha = Number(alphaInput.value);
+    const a = Number(aInput.value);
+    const b = Number(bInput.value);
+    const smoothH = Number(smoothHInput.value);
+
+    // Build Cp at each hour (0..120)
+    const cp = new Array(121).fill(0);
+
+    for(let h=0; h<=120; h++){
+      // Apply lag: use solar wind at (h - lag)
+      const lagH = lagMin/60;
+      const hs = h - lagH;
+
+      // sample solar wind at fractional hour hs (linear between floor/ceil)
+      function sampleAtFrac(getter){
+        const h0 = Math.floor(hs);
+        const h1 = Math.ceil(hs);
+        if(h0 < 0) return getter(0);
+        if(h1 > 120) return getter(120);
+        if(h0 === h1) return getter(h0);
+        const t = hs - h0;
+        return lerp(getter(h0), getter(h1), clamp(t,0,1));
+      }
+
+      const v = sampleAtFrac(getVAtHours);
+      const n = sampleAtFrac(getNAtHours);
+      const by = sampleAtFrac(getByAtHours);
+      const bz = sampleAtFrac(getBzAtHours);
+      const bt = sampleAtFrac(getBtAtHours);
+
+      vSeries[h] = v;
+      nSeries[h] = n;
+      bzSeries[h] = bz;
+
+      const C = newellCoupling(v, by, bz, bt);
+      const Cn = couplingNorm(C);
+      const P = pdynIndex(n, v);
+      const Cp = Cn * Math.pow(P, clamp(alpha, 0, 1));
+      cp[h] = isFinite(Cp) ? Math.max(0, Cp) : 0;
     }
 
-    const hssEta = Number(hssEtaInput.value);
-    const hssDur = Number(hssDurInput.value);
-    if(hssEta >= 0){
-      const dynAtHss = getDynamicPressureIndex(hssEta + hssDur/2);
-      if(dynAtHss * bzFactor >= driverThresh) starts.push(hssEta + delay);
+    // Heavy smoothing on Cp (optional)
+    const cpSm = (smoothH && smoothH>0) ? movingAverage(cp, Math.max(1, Math.round(smoothH))) : cp;
+
+    // Map to Kp-hat (saturating)
+    const kp = new Array(121).fill(0);
+    for(let h=0; h<=120; h++){
+      const val = a * Math.log(1 + cpSm[h]) + b;
+      kp[h] = clamp(val, 0, 9);
     }
 
-    if(starts.length === 0) return { exists:false, start:0, end:0 };
-    const start = Math.min(...starts);
-    return { exists:true, start, end: start + stormDur };
+    // Optional smoothing on Kp itself (if you want it even heavier)
+    const kpSm = (smoothH && smoothH>0) ? movingAverage(kp, Math.max(1, Math.round(smoothH))) : kp;
+
+    kpSeries = kpSm;
+    const thr = Number(kpStormThresh.value);
+    stormActiveSeries = kpSeries.map(x => x >= thr);
   }
 
-  function isStormActive(t){
-    const driver = getDriverStormWindow();
-    return driver.exists && t >= driver.start && t <= driver.end;
+  function kpAtHour(h){
+    const i = clamp(Math.round(h), 0, 120);
+    return kpSeries[i] ?? 2.0;
+  }
+  function bzAtHour(h){
+    const i = clamp(Math.round(h), 0, 120);
+    return bzSeries[i] ?? 0;
   }
 
-  // ===== Radiation window (deep charging) =====
-  function getRadiationWindow(){
-    const driver = getDriverStormWindow();
-    const cmeEta = Number(cmeEtaInput.value);
-    const hssEta = Number(hssEtaInput.value);
-
-    if(driver.exists){
-      const radStart = driver.end + 24;
-      return { exists:true, start:radStart, end: radStart + 48 };
+  // ===== Radiation belt term (global) =====
+  // Define radiation window after storm ends:
+  //  - Detect contiguous storm segments (kp>=thr). Use the first segment as main storm.
+  //  - radStart = stormEnd + 24h, radEnd = radStart + 48h
+  let radWindow = { exists:false, start:0, end:0 };
+  function recomputeRadiationWindow(){
+    const thr = Number(kpStormThresh.value);
+    let inSeg=false, segStart=0, segEnd=0;
+    for(let h=0; h<=120; h++){
+      const on = (kpSeries[h] >= thr);
+      if(on && !inSeg){ inSeg=true; segStart=h; segEnd=h; }
+      if(on && inSeg){ segEnd=h; }
+      if(!on && inSeg){ break; } // take first segment
     }
-
-    let baseEta = Infinity;
-    if(cmeEta >= 0) baseEta = Math.min(baseEta, cmeEta);
-    if(hssEta >= 0) baseEta = Math.min(baseEta, hssEta);
-    if(baseEta === Infinity) return { exists:false, start:0, end:0 };
-
-    const radStart = baseEta + 24;
-    return { exists:true, start:radStart, end: radStart + 48 };
+    if(inSeg){
+      const start = segEnd + 24;
+      const end = start + 48;
+      if(start <= 120){
+        radWindow = { exists:true, start, end: Math.min(120, end) };
+        return;
+      }
+    }
+    radWindow = { exists:false, start:0, end:0 };
   }
-
-  function isRadActive(t){
-    const rw = getRadiationWindow();
-    return rw.exists && t >= rw.start && t <= rw.end;
+  function isRadActive(h){
+    return radWindow.exists && h >= radWindow.start && h <= radWindow.end;
   }
-
-  function getRadiationTerm(t){
-    if(!isRadActive(t)) return 0;
-    const rw = getRadiationWindow();
-    const mid = (rw.start + rw.end) / 2;
-    const span = (rw.end - rw.start) / 2;
-    const dist = Math.abs(t - mid) / span;
-    return 3.5 * Math.max(0, 1 - dist);
+  function radiationTerm(h){
+    if(!isRadActive(h)) return 0;
+    const mid = (radWindow.start + radWindow.end)/2;
+    const span = Math.max(1e-6, (radWindow.end - radWindow.start)/2);
+    const dist = Math.abs(h - mid)/span;
+    const shape = Math.max(0, 1 - dist);
+    return 3.5 * shape; // amp
   }
 
   // ===== Global quiet =====
-  function isGloballyQuiet(t){
-    const dyn = getDynamicPressureIndex(t);
-    const bz = Number(bzInput.value);
+  function isGloballyQuiet(h){
+    // Use Kp̂ itself as primary "quiet" gate, plus optional dst
+    const kp = kpAtHour(h);
     const dst = Number(dstInput.value);
-
-    const noStorm = !isStormActive(t);
-    const noRad = !isRadActive(t);
-    const noCme = !isCmeImpact(t);
-    const noHss = !isHssActive(t);
-
-    const dynQuiet = Math.abs(dyn - 1.0) <= 0.2;
-    const bzQuiet = Math.abs(bz) <= 1.0;
-    const dstQuiet = Math.abs(dst) <= 20;
-
-    return (noStorm && noRad && noCme && noHss && dynQuiet && bzQuiet && dstQuiet);
-  }
-
-  // ===== Kp: NOAA first, then fallback estimate =====
-  function getKpAtTime(t){
-    if(noaa.enabled){
-      const kp = lookupKpHold(getUtcMsAtHoursAhead(t));
-      if(kp != null) return Math.max(0, Math.min(9, kp));
-    }
-    const quietKp = Number(quietKpInput.value);
-    if(!isStormActive(t)) return quietKp;
-    const dyn = getDynamicPressureIndex(t);
-    const driverIndex = dyn * getBzCouplingFactor();
-    const delta = Math.max(0, (driverIndex - 1.0) * 4.0);
-    return Math.max(quietKp, Math.min(9, quietKp + delta));
-  }
-
-  // ===== Risk terms =====
-  function computeBaseTerms(t){
-    const dynIndex = getDynamicPressureIndex(t);
-    const bzFactor = getBzCouplingFactor();
-
-    let stormBase = 0;
-    if(isStormActive(t)){
-      stormBase = Math.max(0, (dynIndex * bzFactor - 1.0) * 4.0);
-    }
-
-    let cmeBase = 0;
-    if(isCmeImpact(t)){
-      cmeBase = Math.max(0, (dynIndex - 1.0) * 3.0);
-    }
-
-    let bzTerm = 0;
-    if(Number(bzInput.value) < 0) bzTerm = 1.0;
-
-    let vTerm = 0;
-    const vEff = solarWindSpeedAt(t);
-    const vThresh = Number(vswThreshInput.value);
-    if(isStormActive(t) && vEff > vThresh){
-      vTerm = (vEff - vThresh) / 120.0;
-      vTerm = Math.max(0, Math.min(2.5, vTerm));
-    }
-
-    return { stormBase, cmeBase, bzTerm, vTerm };
+    const quietByKp = (kp <= 2.0);
+    const dstQuiet = (Math.abs(dst) <= 20);
+    return quietByKp && dstQuiet;
   }
 
   // ===== Colors =====
@@ -687,7 +759,6 @@
     extColorBox.style.background = ext;
     return { low, med, high, ext };
   }
-
   function riskToColor(r){
     const c = getColors();
     if(r < 3) return c.low;
@@ -696,117 +767,90 @@
     return c.ext;
   }
 
-  // ===== Surface risk (LT dependent) =====
-  function computeSurfaceRisk(t, lon){
-    if(isGloballyQuiet(t)) return { value:0.5, sector:getSector(lon,t) };
+  // ===== Risk model =====
+  function computeSurfaceRisk(h, lon){
+    if(isGloballyQuiet(h)) return { value:0.5, sector:getSector(lon,h) };
 
-    const sector = getSector(lon,t);
-    const { stormBase, cmeBase, bzTerm, vTerm } = computeBaseTerms(t);
+    const sector = getSector(lon,h);
+    const quietKp = Number(quietKpInput.value);
+    const kp = kpAtHour(h);
+
+    // stormBase: Kp above quiet
+    const stormBase = Math.max(0, kp - quietKp);
+
+    // Southward IMF indicator (time-varying if NOAA)
+    const bz = bzAtHour(h);
+    const bzTerm = (bz < 0) ? 1.0 : 0.0;
+
+    // Direct impact (optional): compressions from CME/HSS (fallback windows)
     const directOn = directImpactCheckbox.checked;
+    let direct = 0;
+    if(directOn){
+      if(isCmeImpact(h)) direct += 0.9;
+      if(isHssActive(h)) direct += 0.4;
+    }
 
-    let stormMult=0.9, cmeMult=0.8, bzMult=1.1, vMult=0.9, offset=0.2;
+    // LT weights (night boost moderated)
+    let stormMult=1.0, bzMult=1.0, offset=0.4;
     switch(sector.code){
-      case "D_MORN": stormMult=0.3; cmeMult=0.6; bzMult=0.6; vMult=0.7; offset=0.1; break;
-      case "D_NOON": stormMult=0.2; cmeMult=0.7; bzMult=0.5; vMult=0.8; offset=0.1; break;
-      case "D_AFTER":stormMult=0.4; cmeMult=0.7; bzMult=0.8; vMult=0.9; offset=0.2; break;
-      case "N_EVE":  stormMult=1.4; cmeMult=0.9; bzMult=1.3; vMult=1.0; offset=0.9; break;
-      case "N_MID":  stormMult=1.8; cmeMult=0.9; bzMult=1.4; vMult=1.0; offset=1.1; break;
-      case "N_MORN": stormMult=1.2; cmeMult=0.8; bzMult=1.1; vMult=0.9; offset=0.7; break;
+      case "D_MORN": stormMult=0.55; bzMult=0.65; offset=0.25; break;
+      case "D_NOON": stormMult=0.45; bzMult=0.60; offset=0.22; break;
+      case "D_AFTER":stormMult=0.60; bzMult=0.75; offset=0.30; break;
+      case "N_EVE":  stormMult=1.10; bzMult=1.15; offset=0.60; break;
+      case "N_MID":  stormMult=1.25; bzMult=1.25; offset=0.70; break;
+      case "N_MORN": stormMult=1.05; bzMult=1.10; offset=0.58; break;
     }
 
-    let risk = stormBase * stormMult + bzTerm * bzMult + offset;
-    if(directOn) risk += cmeBase * cmeMult + vTerm * vMult;
-
-    const driverCore = stormBase + bzTerm;
-    if(driverCore < 0.2 && !directOn) risk = 0.5;
-
-    return { value:Math.max(0,Math.min(10,risk)), sector };
+    let risk = stormBase*stormMult + bzTerm*bzMult + offset + direct;
+    // clamp
+    risk = clamp(risk, 0, 10);
+    return { value:risk, sector };
   }
 
-  // ===== Deep risk (radiation is global) =====
-  function computeDeepRisk(t, lon){
-    if(isGloballyQuiet(t)) return { value:0.5, sector:getSector(lon,t) };
+  function computeDeepRisk(h, lon){
+    if(isGloballyQuiet(h)) return { value:0.5, sector:getSector(lon,h) };
 
-    const sector = getSector(lon,t);
-    const { stormBase, cmeBase, bzTerm, vTerm } = computeBaseTerms(t);
-    const radTerm = getRadiationTerm(t);
+    const sector = getSector(lon,h);
+    const quietKp = Number(quietKpInput.value);
+    const kp = kpAtHour(h);
+
+    const stormBase = Math.max(0, kp - quietKp);
+    const rad = radiationTerm(h); // global
+
+    // Bz term is weaker for deep (it's mainly radiation belts + prolonged activity)
+    const bz = bzAtHour(h);
+    const bzTerm = (bz < 0) ? 0.6 : 0.0;
+
     const directOn = directImpactCheckbox.checked;
-
-    // LT dependence minimized (no strong nightside boost)
-    const stormMult = 1.0;
-    const bzMult = 0.7;
-    const vMult = 0.8;
-    const offset = 0.35;
-
-    let risk = stormBase * stormMult + radTerm + bzTerm * bzMult + offset;
-    if(directOn) risk += cmeBase * 0.6 + vTerm * vMult;
-
-    const driverCore = stormBase + radTerm + bzTerm;
-    if(driverCore < 0.2 && !isRadActive(t)) risk = 0.5;
-
-    return { value:Math.max(0,Math.min(10,risk)), sector };
-  }
-
-  // ===== Labels =====
-  function updateLabels(){
-    const t = Number(timeSlider.value);
-    const baseUtc = computeBaseTimeUtc();
-
-    baseTimeLabel.textContent = formatBaseTimeForLabel(baseUtc);
-
-    // UTC absolute time instead of "D+"
-    const utcMs = getUtcMsAtHoursAhead(t);
-    timeAheadLabel.textContent = formatUtcYYYYMMDDHHMM(utcMs);
-
-    // CME countdown badge stays relative to slider (useful)
-    const cmeEta = Number(cmeEtaInput.value);
-    let cmeText = "No CME (ETA < 0)";
-    if(cmeEta >= 0){
-      const diff = cmeEta - t;
-      const ad = Math.abs(diff);
-      const d = Math.floor(ad/24);
-      const h = Math.round(ad%24);
-      cmeText = diff > 0 ? `CME arrival in: ${d} d ${h} h` : `Since CME arrival: ${d} d ${h} h`;
+    let direct = 0;
+    if(directOn){
+      if(isCmeImpact(h)) direct += 0.35;
+      if(isHssActive(h)) direct += 0.20;
     }
-    cmeCountdownBadge.textContent = cmeText;
 
-    const kp = getKpAtTime(t);
-    kpNowLabel.textContent = kp.toFixed(1);
+    // LT dependence minimized (no nightside boost)
+    const offset = 0.45;
+    let risk = stormBase*0.95 + rad*1.0 + bzTerm + offset + direct;
 
-    const parts = [];
-    if(isCmeImpact(t)) parts.push("CME impact");
-    if(isStormActive(t)) parts.push("Geomagnetic storm");
-    if(isRadActive(t)) parts.push("Radiation belt disturbance");
-    if(isHssActive(t)) parts.push("HSS");
-    statusLabel.textContent = parts.length ? parts.join(" + ") : "Quiet";
-
-    const dyn = getDynamicPressureIndex(t);
-    const bzFactor = getBzCouplingFactor();
-    const driverIndex = dyn * bzFactor;
-
-    logicSummary.textContent =
-`現在の判定根拠（UTC = ${formatUtcYYYYMMDDHHMM(utcMs)}）
- - NOAA API: ${noaa.enabled ? "ON" : "OFF"}
- - dynIndex=${dyn.toFixed(2)} / bzFactor=${bzFactor.toFixed(2)} / driverIndex=${driverIndex.toFixed(2)}
- - stormActive=${isStormActive(t) ? "YES" : "NO"}（閾値=${Number(stormDriverThreshInput.value).toFixed(2)}）
- - radActive=${isRadActive(t) ? "YES" : "NO"}（内部帯電=全球一様で評価）
- - directImpact=${directImpactCheckbox.checked ? "ON" : "OFF"}
- - globalQuiet=${isGloballyQuiet(t) ? "YES" : "NO"}`;
+    // If radiation active, deep risk should not depend on night/day (already global)
+    risk = clamp(risk, 0, 10);
+    return { value:risk, sector };
   }
 
-  // ===== Draw GEO =====
+  // ===== Drawing =====
   function drawGeoRings(){
-    const t = Number(timeSlider.value);
-
+    const h = Number(timeSlider.value);
     ctx.clearRect(0,0,canvas.width,canvas.height);
+
     ctx.fillStyle = "#141b24";
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
     const step = 10;
     for(let lon=0; lon<360; lon+=step){
       const mid = lon + step/2;
-      const s = computeSurfaceRisk(t, mid).value;
-      const d = computeDeepRisk(t, mid).value;
+
+      const s = computeSurfaceRisk(h, mid).value;
+      const d = computeDeepRisk(h, mid).value;
 
       const sCol = riskToColor(s);
       const dCol = riskToColor(d);
@@ -831,8 +875,8 @@
       ctx.fill();
     }
 
-    // Nightside band (visual aid)
-    const sub = getSubsolarLongitude(t);
+    // Nightside band (visual aid only)
+    const sub = getSubsolarLongitude(h);
     const nightCenter = (sub + 180) % 360;
     const ns = nightCenter - 90;
     const ne = nightCenter + 90;
@@ -844,7 +888,7 @@
     ctx.fillStyle = "rgba(52,93,255,0.35)";
     ctx.fill();
 
-    // Earth disk
+    // Earth
     ctx.beginPath();
     ctx.arc(cx, cy, earthRadius, 0, Math.PI*2);
     ctx.fillStyle = "#0f1724";
@@ -871,36 +915,97 @@
     ctx.font = "bold 14px system-ui";
     ctx.fillText("Surface / Deep Charging Risk", cx, cy - 14);
     ctx.font = "11px system-ui";
-    const utcStr = new Date(getUtcMsAtHoursAhead(t)).toISOString().slice(0,16).replace("T"," ") + "Z";
-    ctx.fillText(utcStr, cx, cy + 10);
+    const utcZ = new Date(getUtcMsAtHoursAhead(h)).toISOString().slice(0,16).replace("T"," ") + "Z";
+    ctx.fillText(utcZ, cx, cy + 10);
   }
 
-  // ===== Update =====
+  // ===== Labels =====
+  function updateLabels(){
+    const h = Number(timeSlider.value);
+    const baseUtc = computeBaseTimeUtc();
+
+    baseTimeLabel.textContent = `Forecast start: ${formatUtc(baseUtc.getTime())}`;
+    const tMs = getUtcMsAtHoursAhead(h);
+    timeUtcLabel.textContent = formatUtc(tMs);
+
+    const kp = kpAtHour(h);
+    kpNowLabel.textContent = kp.toFixed(2);
+
+    const parts = [];
+    const thr = Number(kpStormThresh.value);
+    if(kp >= thr) parts.push("Geomagnetic storm (by Kp̂)");
+    if(isRadActive(h)) parts.push("Radiation belt disturbance (global)");
+    if(isCmeImpact(h)) parts.push("CME (fallback window)");
+    if(isHssActive(h)) parts.push("HSS (fallback window)");
+    statusLabel.textContent = parts.length ? parts.join(" + ") : "Quiet";
+
+    const v = vSeries[Math.round(h)] ?? getVAtHours(h);
+    const n = nSeries[Math.round(h)] ?? getNAtHours(h);
+    const bz = bzAtHour(h);
+    const alpha = Number(alphaInput.value);
+    const lagMin = Number(lagMinInput.value);
+    const smoothH = Number(smoothHInput.value);
+
+    const globalQuiet = isGloballyQuiet(h);
+
+    logicSummary.textContent =
+`現在（UTC=${formatUtc(tMs)}）
+ - NOAA API: ${useNoaaCheckbox.checked ? "ON" : "OFF"} / lastOK=${noaa.lastOkMs ? new Date(noaa.lastOkMs).toISOString().slice(11,16)+"Z" : "--"}${noaa.lastErr ? " / err="+noaa.lastErr : ""}
+ - v=${v.toFixed(0)} km/s, n=${n.toFixed(1)} cm⁻³, Bz=${isFinite(bz)?bz.toFixed(2):"--"} nT
+ - Kp̂=${kp.toFixed(2)}（Newell + Pdyn^α, lag=${lagMin}min, smooth=${smoothH}h, α=${alpha.toFixed(2)}）
+ - stormThreshold=${thr.toFixed(1)} / radWindow=${radWindow.exists ? (radWindow.start.toFixed(0)+"–"+radWindow.end.toFixed(0)+"h") : "none"}
+ - globalQuiet=${globalQuiet ? "YES (low forced)" : "NO"}`;
+  }
+
+  // ===== Update pipeline =====
   function updateAll(){
+    // heavy part first
+    recomputeKpSeries();
+    recomputeRadiationWindow();
+
+    setNoaaBadge();
     updateLabels();
     getColors();
     drawGeoRings();
   }
 
   // ===== Events =====
-  timeSlider.addEventListener("input", updateAll);
-  useNoaaCheckbox.addEventListener("change", updateNoaaState);
+  function hookInputs(){
+    const els = [
+      startDateInput, startHourInput, tzJST, tzUTC,
+      useNoaaCheckbox, noaaRefreshMin,
+      lagMinInput, smoothHInput, alphaInput, aInput, bInput, kpStormThresh,
+      bzInput, vswInput, nAmbInput,
+      cmeEtaInput, cmeSpeedInput, cmeDensityInput, cmeDurInput,
+      hssEtaInput, hssSpeedInput, hssDensityInput, hssDurInput,
+      quietKpInput, dstInput,
+      lowColorInput, medColorInput, highColorInput, extColorInput,
+      directImpactCheckbox
+    ];
+    els.forEach(el => el.addEventListener("input", () => updateAll()));
+    useNoaaCheckbox.addEventListener("change", async () => { await refreshNoaa(); updateAll(); });
+    timeSlider.addEventListener("input", () => updateAll());
+  }
+  hookInputs();
 
-  [
-    startDateInput, startHourInput, tzJST, tzUTC,
-    bzInput, vswInput, nAmbInput,
-    cmeEtaInput, cmeSpeedInput, cmeDensityInput, cmeDurInput,
-    hssEtaInput, hssSpeedInput, hssDensityInput, hssDurInput,
-    quietKpInput, stormDurInput, stormDelayInput,
-    dstInput, vswThreshInput, stormDriverThreshInput,
-    lowColorInput, medColorInput, highColorInput, extColorInput,
-    directImpactCheckbox
-  ].forEach(el => el.addEventListener("input", updateAll));
+  // ===== Scheduler =====
+  let refreshTimer = null;
+  function startRefreshLoop(){
+    if(refreshTimer) clearInterval(refreshTimer);
+    const min = clamp(Number(noaaRefreshMin.value)||5, 1, 60);
+    refreshTimer = setInterval(async ()=>{
+      await refreshNoaa();
+      updateAll();
+    }, min*60*1000);
+  }
+  noaaRefreshMin.addEventListener("input", startRefreshLoop);
 
   // ===== Boot =====
-  updateNoaaState();
-  refreshNoaa().then(updateAll).catch(()=>updateAll());
-  setInterval(refreshNoaa, 5*60*1000);
+  (async function boot(){
+    await refreshNoaa();
+    startRefreshLoop();
+    updateAll();
+  })();
 </script>
 </body>
 </html>
