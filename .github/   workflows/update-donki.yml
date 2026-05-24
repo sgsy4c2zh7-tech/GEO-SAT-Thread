@@ -1,1 +1,129 @@
+name: Update DONKI Daily
 
+on:
+  schedule:
+    # 毎日 01:00 UTC = 日本時間 10:00
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-donki:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch DONKI and keep 7 days
+        env:
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+        run: |
+          python3 <<'PY'
+          import os
+          import json
+          import urllib.request
+          from datetime import datetime, timedelta, timezone
+          from pathlib import Path
+
+          api_key = os.environ.get("NASA_API_KEY", "")
+          if not api_key:
+              raise SystemExit("NASA_API_KEY is not set")
+
+          base_dir = Path("docs/data/donki")
+          base_dir.mkdir(parents=True, exist_ok=True)
+
+          now = datetime.now(timezone.utc)
+          today = now.strftime("%Y-%m-%d")
+
+          start = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+          end = now.strftime("%Y-%m-%d")
+
+          urls = {
+              "cmeAnalysis": f"https://api.nasa.gov/DONKI/CMEAnalysis?startDate={start}&endDate={end}&mostAccurateOnly=true&speed=300&api_key={api_key}",
+              "cme": f"https://api.nasa.gov/DONKI/CME?startDate={start}&endDate={end}&api_key={api_key}",
+              "sep": f"https://api.nasa.gov/DONKI/SEP?startDate={start}&endDate={end}&api_key={api_key}",
+              "flr": f"https://api.nasa.gov/DONKI/FLR?startDate={start}&endDate={end}&api_key={api_key}"
+          }
+
+          def fetch_json(url):
+              req = urllib.request.Request(
+                  url,
+                  headers={"User-Agent": "donki-github-actions-cache"}
+              )
+              with urllib.request.urlopen(req, timeout=60) as r:
+                  return json.loads(r.read().decode("utf-8"))
+
+          payload = {
+              "generated_at": now.isoformat(),
+              "startDate": start,
+              "endDate": end,
+              "sources": {}
+          }
+
+          for name, url in urls.items():
+              try:
+                  data = fetch_json(url)
+                  payload["sources"][name] = {
+                      "ok": True,
+                      "count": len(data) if isinstance(data, list) else 1,
+                      "data": data
+                  }
+              except Exception as e:
+                  payload["sources"][name] = {
+                      "ok": False,
+                      "error": str(e),
+                      "data": []
+                  }
+
+          out_file = base_dir / f"{today}.json"
+          out_file.write_text(
+              json.dumps(payload, ensure_ascii=False, indent=2),
+              encoding="utf-8"
+          )
+
+          # 7日より古いJSONを削除
+          keep_dates = {
+              (now - timedelta(days=i)).strftime("%Y-%m-%d")
+              for i in range(7)
+          }
+
+          for f in base_dir.glob("*.json"):
+              if f.name == "index.json":
+                  continue
+              if f.stem not in keep_dates:
+                  f.unlink()
+
+          files = sorted(
+              [f for f in base_dir.glob("*.json") if f.name != "index.json"],
+              reverse=True
+          )
+
+          index = {
+              "updated_at": now.isoformat(),
+              "retention_days": 7,
+              "latest": files[0].name if files else None,
+              "files": [
+                  {
+                      "date": f.stem,
+                      "path": f"./data/donki/{f.name}"
+                  }
+                  for f in files
+              ]
+          }
+
+          (base_dir / "index.json").write_text(
+              json.dumps(index, ensure_ascii=False, indent=2),
+              encoding="utf-8"
+          )
+          PY
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add docs/data/donki
+          git commit -m "Update DONKI daily cache" || echo "No changes"
+          git push
