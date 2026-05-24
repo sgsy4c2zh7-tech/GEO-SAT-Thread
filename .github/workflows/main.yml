@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch DONKI and keep 7 days
+      - name: Fetch DONKI CMEAnalysis only
         env:
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
         run: |
@@ -25,7 +25,6 @@ jobs:
           import json
           import time
           import urllib.request
-          import urllib.error
           from datetime import datetime, timedelta, timezone
           from pathlib import Path
 
@@ -42,14 +41,15 @@ jobs:
           start = (now - timedelta(days=7)).strftime("%Y-%m-%d")
           end = now.strftime("%Y-%m-%d")
 
-          urls = {
-              "cmeAnalysis": f"https://api.nasa.gov/DONKI/CMEAnalysis?startDate={start}&endDate={end}&mostAccurateOnly=true&speed=300&api_key={api_key}",
-              "cme": f"https://api.nasa.gov/DONKI/CME?startDate={start}&endDate={end}&api_key={api_key}",
-              "sep": f"https://api.nasa.gov/DONKI/SEP?startDate={start}&endDate={end}&api_key={api_key}",
-              "flr": f"https://api.nasa.gov/DONKI/FLR?startDate={start}&endDate={end}&api_key={api_key}"
-          }
+          url = (
+              "https://api.nasa.gov/DONKI/CMEAnalysis"
+              f"?startDate={start}&endDate={end}"
+              f"&mostAccurateOnly=true"
+              f"&speed=300"
+              f"&api_key={api_key}"
+          )
 
-          def fetch_json_with_retry(url, tries=5):
+          def fetch_json(url, tries=8):
               last_error = None
 
               for i in range(tries):
@@ -63,12 +63,11 @@ jobs:
                       )
 
                       with urllib.request.urlopen(req, timeout=90) as r:
-                          text = r.read().decode("utf-8")
-                          return json.loads(text)
+                          return json.loads(r.read().decode("utf-8"))
 
                   except Exception as e:
                       last_error = e
-                      wait = 10 * (i + 1)
+                      wait = 20 * (i + 1)
                       print(f"Retry {i+1}/{tries} failed: {e}")
                       time.sleep(wait)
 
@@ -79,25 +78,45 @@ jobs:
               "startDate": start,
               "endDate": end,
               "any_ok": False,
-              "sources": {}
-          }
-
-          for name, url in urls.items():
-              try:
-                  data = fetch_json_with_retry(url)
-                  payload["sources"][name] = {
-                      "ok": True,
-                      "count": len(data) if isinstance(data, list) else 1,
-                      "data": data
-                  }
-                  payload["any_ok"] = True
-
-              except Exception as e:
-                  payload["sources"][name] = {
+              "sources": {
+                  "cmeAnalysis": {
                       "ok": False,
-                      "error": str(e),
+                      "error": None,
+                      "data": []
+                  },
+                  "cme": {
+                      "ok": False,
+                      "skipped": True,
+                      "data": []
+                  },
+                  "sep": {
+                      "ok": False,
+                      "skipped": True,
+                      "data": []
+                  },
+                  "flr": {
+                      "ok": False,
+                      "skipped": True,
                       "data": []
                   }
+              }
+          }
+
+          try:
+              data = fetch_json(url)
+              payload["sources"]["cmeAnalysis"] = {
+                  "ok": True,
+                  "count": len(data) if isinstance(data, list) else 1,
+                  "data": data
+              }
+              payload["any_ok"] = True
+
+          except Exception as e:
+              payload["sources"]["cmeAnalysis"] = {
+                  "ok": False,
+                  "error": str(e),
+                  "data": []
+              }
 
           out_file = base_dir / f"{today}.json"
           out_file.write_text(
@@ -137,8 +156,8 @@ jobs:
               "updated_at": now.isoformat(),
               "retention_days": 7,
               "latest": latest_file,
-              "latest_policy": "latest file with any successful DONKI source",
               "last_attempt": f"{today}.json",
+              "latest_policy": "Use latest successful DONKI cache only",
               "files": [
                   {
                       "date": f.stem,
