@@ -2,7 +2,6 @@ name: Update DONKI Daily
 
 on:
   schedule:
-    # 毎日 01:00 UTC = 日本時間 10:00
     - cron: "0 1 * * *"
   workflow_dispatch:
 
@@ -84,7 +83,6 @@ jobs:
               encoding="utf-8"
           )
 
-          # 7日より古いJSONを削除
           keep_dates = {
               (now - timedelta(days=i)).strftime("%Y-%m-%d")
               for i in range(7)
