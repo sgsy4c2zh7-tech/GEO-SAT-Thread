@@ -3,6 +3,7 @@ name: Update DONKI Cache
 on:
   workflow_dispatch:
   schedule:
+    # 毎日 01:00 UTC = 日本時間 10:00
     - cron: "0 1 * * *"
 
 permissions:
@@ -16,7 +17,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch DONKI CMEAnalysis only
+      - name: Test NASA API Key and Fetch DONKI
         env:
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
         run: |
@@ -25,12 +26,17 @@ jobs:
           import json
           import time
           import urllib.request
+          import urllib.error
           from datetime import datetime, timedelta, timezone
           from pathlib import Path
 
-          api_key = os.environ.get("NASA_API_KEY", "")
+          api_key = os.environ.get("NASA_API_KEY", "").strip()
+
           if not api_key:
               raise SystemExit("NASA_API_KEY is not set")
+
+          print("NASA_API_KEY exists: true")
+          print("NASA_API_KEY length:", len(api_key))
 
           base_dir = Path("docs/data/donki")
           base_dir.mkdir(parents=True, exist_ok=True)
@@ -38,18 +44,18 @@ jobs:
           now = datetime.now(timezone.utc)
           today = now.strftime("%Y-%m-%d")
 
-          start = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+          # 取得期間：過去3日
+          # 保存期間：7日
+          fetch_days = 3
+          retention_days = 7
+
+          start = (now - timedelta(days=fetch_days)).strftime("%Y-%m-%d")
           end = now.strftime("%Y-%m-%d")
 
-          url = (
-              "https://api.nasa.gov/DONKI/CMEAnalysis"
-              f"?startDate={start}&endDate={end}"
-              f"&mostAccurateOnly=true"
-              f"&speed=300"
-              f"&api_key={api_key}"
-          )
+          print("DONKI startDate:", start)
+          print("DONKI endDate:", end)
 
-          def fetch_json(url, tries=8):
+          def fetch_text(url, tries=5, timeout=90):
               last_error = None
 
               for i in range(tries):
@@ -62,124 +68,223 @@ jobs:
                           }
                       )
 
-                      with urllib.request.urlopen(req, timeout=90) as r:
-                          return json.loads(r.read().decode("utf-8"))
+                      with urllib.request.urlopen(req, timeout=timeout) as r:
+                          text = r.read().decode("utf-8")
+                          print("HTTP status:", r.status)
+                          return text
 
                   except Exception as e:
                       last_error = e
-                      wait = 20 * (i + 1)
+                      wait = 15 * (i + 1)
                       print(f"Retry {i+1}/{tries} failed: {e}")
+                      print(f"Waiting {wait} sec...")
                       time.sleep(wait)
 
               raise last_error
+
+          def fetch_json(url, tries=5):
+              text = fetch_text(url, tries=tries)
+
+              try:
+                  return json.loads(text)
+              except Exception:
+                  print("Response text head:")
+                  print(text[:500])
+                  raise
+
+          # 1. NASA APIキー自体の検証：APOD
+          apod_ok = False
+          apod_error = None
+
+          try:
+              apod_url = f"https://api.nasa.gov/planetary/apod?api_key={api_key}"
+              apod = fetch_json(apod_url, tries=2)
+              apod_ok = True
+              print("APOD API key test: OK")
+              print("APOD title:", apod.get("title", "no title") if isinstance(apod, dict) else "not dict")
+          except Exception as e:
+              apod_error = str(e)
+              print("APOD API key test: FAILED")
+              print("APOD error:", apod_error)
+
+          # 2. DONKI取得URL
+          urls = {
+              "cmeAnalysis": (
+                  "https://api.nasa.gov/DONKI/CMEAnalysis"
+                  f"?startDate={start}&endDate={end}"
+                  f"&mostAccurateOnly=true"
+                  f"&speed=300"
+                  f"&api_key={api_key}"
+              ),
+              "cme": (
+                  "https://api.nasa.gov/DONKI/CME"
+                  f"?startDate={start}&endDate={end}"
+                  f"&api_key={api_key}"
+              ),
+              "sep": (
+                  "https://api.nasa.gov/DONKI/SEP"
+                  f"?startDate={start}&endDate={end}"
+                  f"&api_key={api_key}"
+              ),
+              "flr": (
+                  "https://api.nasa.gov/DONKI/FLR"
+                  f"?startDate={start}&endDate={end}"
+                  f"&api_key={api_key}"
+              )
+          }
 
           payload = {
               "generated_at": now.isoformat(),
               "startDate": start,
               "endDate": end,
+              "fetch_days": fetch_days,
+              "retention_days": retention_days,
+              "api_key_test": {
+                  "apod_ok": apod_ok,
+                  "apod_error": apod_error
+              },
               "any_ok": False,
-              "sources": {
-                  "cmeAnalysis": {
-                      "ok": False,
-                      "error": None,
-                      "data": []
-                  },
-                  "cme": {
-                      "ok": False,
-                      "skipped": True,
-                      "data": []
-                  },
-                  "sep": {
-                      "ok": False,
-                      "skipped": True,
-                      "data": []
-                  },
-                  "flr": {
-                      "ok": False,
-                      "skipped": True,
-                      "data": []
-                  }
-              }
+              "sources": {}
           }
 
-          try:
-              data = fetch_json(url)
-              payload["sources"]["cmeAnalysis"] = {
-                  "ok": True,
-                  "count": len(data) if isinstance(data, list) else 1,
-                  "data": data
-              }
-              payload["any_ok"] = True
+          # 3. DONKI取得
+          for name, url in urls.items():
+              print("")
+              print("Fetching:", name)
+              print("URL:", url.replace(api_key, "***"))
 
-          except Exception as e:
-              payload["sources"]["cmeAnalysis"] = {
-                  "ok": False,
-                  "error": str(e),
-                  "data": []
-              }
+              try:
+                  data = fetch_json(url, tries=5)
 
+                  count = len(data) if isinstance(data, list) else 1
+
+                  payload["sources"][name] = {
+                      "ok": True,
+                      "count": count,
+                      "data": data
+                  }
+
+                  payload["any_ok"] = True
+
+                  print(f"{name}: OK, count={count}")
+
+              except Exception as e:
+                  payload["sources"][name] = {
+                      "ok": False,
+                      "error": str(e),
+                      "data": []
+                  }
+
+                  print(f"{name}: FAILED")
+                  print(str(e))
+
+          # 4. 今日の取得結果を保存
           out_file = base_dir / f"{today}.json"
           out_file.write_text(
               json.dumps(payload, ensure_ascii=False, indent=2),
               encoding="utf-8"
           )
 
+          print("")
+          print("Saved:", out_file)
+
+          # 5. 古いファイル削除
           keep_dates = {
               (now - timedelta(days=i)).strftime("%Y-%m-%d")
-              for i in range(7)
+              for i in range(retention_days)
           }
 
           for f in base_dir.glob("*.json"):
               if f.name == "index.json":
                   continue
+
               if f.stem not in keep_dates:
+                  print("Delete old file:", f)
                   f.unlink()
 
+          # 6. index.json生成
           all_files = sorted(
               [f for f in base_dir.glob("*.json") if f.name != "index.json"],
               reverse=True
           )
 
           valid_files = []
+          file_entries = []
 
           for f in all_files:
+              valid = False
+              any_ok = False
+              counts = {}
+              generated_at = None
+              start_date = None
+              end_date = None
+
               try:
                   obj = json.loads(f.read_text(encoding="utf-8"))
-                  if obj.get("any_ok"):
+
+                  generated_at = obj.get("generated_at")
+                  start_date = obj.get("startDate")
+                  end_date = obj.get("endDate")
+                  any_ok = bool(obj.get("any_ok"))
+
+                  for source_name, source_obj in obj.get("sources", {}).items():
+                      counts[source_name] = source_obj.get("count", 0) if source_obj.get("ok") else 0
+
+                  if any_ok:
+                      valid = True
                       valid_files.append(f)
-              except Exception:
-                  pass
+
+              except Exception as e:
+                  print("Failed to inspect:", f, e)
+
+              file_entries.append({
+                  "date": f.stem,
+                  "path": f"./data/donki/{f.name}",
+                  "valid": valid,
+                  "any_ok": any_ok,
+                  "generated_at": generated_at,
+                  "startDate": start_date,
+                  "endDate": end_date,
+                  "counts": counts
+              })
 
           latest_file = valid_files[0].name if valid_files else None
 
           index = {
               "updated_at": now.isoformat(),
-              "retention_days": 7,
+              "retention_days": retention_days,
+              "fetch_days": fetch_days,
               "latest": latest_file,
               "last_attempt": f"{today}.json",
-              "latest_policy": "Use latest successful DONKI cache only",
-              "files": [
-                  {
-                      "date": f.stem,
-                      "path": f"./data/donki/{f.name}",
-                      "valid": f in valid_files
-                  }
-                  for f in all_files
-              ]
+              "latest_policy": "Use latest cache file with any successful DONKI source",
+              "files": file_entries
           }
 
-          (base_dir / "index.json").write_text(
+          index_file = base_dir / "index.json"
+          index_file.write_text(
               json.dumps(index, ensure_ascii=False, indent=2),
               encoding="utf-8"
           )
 
-          print(json.dumps(index, indent=2))
+          print("")
+          print("Saved:", index_file)
+          print(json.dumps(index, ensure_ascii=False, indent=2))
+
+          # 7. DONKIが全部失敗してもworkflow自体は成功扱いにする
+          # 理由：503時に過去成功キャッシュをlatestとして残すため。
+          if not payload["any_ok"]:
+              print("")
+              print("WARNING: All DONKI sources failed in this attempt.")
+              print("This workflow still succeeds so previous valid cache can remain latest.")
+
           PY
 
       - name: Commit and push
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+
           git add docs/data/donki
+
           git commit -m "Update DONKI cache" || echo "No changes"
           git push
