@@ -1,9 +1,9 @@
-name: Update DONKI Daily
+name: Update DONKI Cache
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 1 * * *"
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -18,7 +18,7 @@ jobs:
 
       - name: Fetch DONKI and keep 7 days
         env:
-          NASA_API_KEY: ${{ qleq01LhnxbMVrUCMMwnG6lbKu4luKmS8yxYhNfv }}
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
         run: |
           python3 <<'PY'
           import os
@@ -27,7 +27,7 @@ jobs:
           from datetime import datetime, timedelta, timezone
           from pathlib import Path
 
-          api_key = os.environ.get("qleq01LhnxbMVrUCMMwnG6lbKu4luKmS8yxYhNfv", "")
+          api_key = os.environ.get("NASA_API_KEY", "")
           if not api_key:
               raise SystemExit("NASA_API_KEY is not set")
 
@@ -50,7 +50,7 @@ jobs:
           def fetch_json(url):
               req = urllib.request.Request(
                   url,
-                  headers={"User-Agent": "donki-github-actions-cache"}
+                  headers={"User-Agent": "donki-cache-github-actions"}
               )
               with urllib.request.urlopen(req, timeout=60) as r:
                   return json.loads(r.read().decode("utf-8"))
@@ -123,5 +123,5 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add docs/data/donki
-          git commit -m "Update DONKI daily cache" || echo "No changes"
+          git commit -m "Update DONKI cache" || echo "No changes"
           git push
