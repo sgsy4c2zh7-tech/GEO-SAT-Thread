@@ -1,1011 +1,987 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GEO Space Weather Dashboard（NOAA APIフルスペックKp推定：Newell結合関数）</title>
-  <style>
-    body{
-      margin:0; padding:16px;
-      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      background:#111820; color:#f5f5f5;
-      display:flex; flex-direction:column; gap:16px;
-    }
-    h1{font-size:20px;margin:0 0 8px}
-    h2{font-size:16px;margin:8px 0}
-    .layout{
-      display:grid;
-      grid-template-columns: 520px minmax(420px,1fr);
-      gap:16px;
-      align-items:start;
-    }
-    .card{
-      background:#1a2330;
-      border-radius:10px;
-      padding:12px 14px;
-      box-shadow:0 0 0 1px #222c3a;
-    }
-    #geoCanvas{
-      width:100%;
-      height:auto;
-      background:#141b24;
-      border-radius:10px;
-      display:block;
-    }
-    .param-row{
-      display:flex; align-items:center; gap:10px;
-      margin-bottom:8px; font-size:13px; flex-wrap:wrap;
-    }
-    .param-row label{flex:0 0 190px}
-    .param-row input[type="number"],
-    .param-row input[type="range"],
-    .param-row input[type="date"]{flex:1}
-    .param-row input[type="number"],
-    .param-row input[type="date"]{
-      max-width:220px;
-      padding:4px 6px;
-      background:#101621;
-      border-radius:6px;
-      border:1px solid #303b4c;
-      color:#f5f5f5;
-    }
-    .param-row input[type="range"]{width:100%}
-    .time-display{margin-bottom:6px;font-size:14px}
-    .badge{
-      display:inline-block; padding:3px 10px;
-      border-radius:999px; font-size:11px;
-      margin-right:8px; line-height:1.4;
-      border:1px solid transparent;
-    }
-    .badge.kp{background:#4caf5022;color:#a5d6a7;border-color:#4caf5055}
-    .badge.status{background:#2196f322;color:#90caf9;border-color:#2196f355}
-    .badge.noaa{background:#ffffff14;color:#e5e7eb;border-color:#ffffff22}
-    .risk-legend,.sector-legend{
-      display:flex; gap:10px; flex-wrap:wrap;
-      font-size:12px; margin-top:10px; align-items:center;
-    }
-    .color-box{
-      width:14px;height:9px;border-radius:999px;
-      border:1px solid #0006; display:inline-block;
-      vertical-align:middle; margin-right:6px;
-    }
-    .small{font-size:11px;opacity:.76}
-    .block-title{
-      margin-top:12px;
-      font-weight:700;
-      font-size:13px;
-      border-top:1px solid #2a3445;
-      padding-top:8px;
-    }
-    #logicSummary{margin-top:8px;white-space:pre-line}
-    .tz-group{display:flex;gap:12px;align-items:center;font-size:12px;flex-wrap:wrap}
-    .ok{color:#a5d6a7}
-    .ng{color:#ffb3b3}
-    .note{font-size:10px;opacity:.65;margin-top:6px}
-    @media (max-width:1100px){ .layout{grid-template-columns:1fr} }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modular CME Satellite Hazard Console</title>
+<style>
+body{margin:0;background:#070b12;color:#eee;font-family:system-ui,sans-serif}
+header{background:#101826;border-bottom:1px solid #333;padding:16px}
+button{padding:9px 12px;margin:3px;border:0;border-radius:8px;font-weight:700;cursor:pointer}
+input{padding:8px;border-radius:8px;border:1px solid #333;background:#0b1220;color:#eee}
+main{padding:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px}
+.card{background:#141b27;border:1px solid #333;border-radius:14px;padding:14px}
+.box{position:relative;width:100%;aspect-ratio:1/1;background:#000;border-radius:12px;overflow:hidden}
+.widebox{position:relative;width:100%;height:330px;background:#000;border-radius:12px;overflow:hidden}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+input[type=range]{width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{border-bottom:1px solid #333;padding:6px;text-align:left}
+pre{background:#050608;border-radius:10px;padding:10px;white-space:pre-wrap;max-height:320px;overflow:auto}
+.small{font-size:13px;color:#bbb;line-height:1.5}
+.sourceGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.sourceCard{background:#0d1320;border:1px solid #2b3342;border-radius:12px;padding:10px}
+.sourceTitle{font-weight:800}
+.phase{margin-top:8px;padding:10px;border-radius:10px;background:#0d1320}
+.bar{height:16px;border-radius:999px;background:#222;overflow:hidden;margin-top:6px}
+.fill{height:100%}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:800;font-size:12px}
+.ok{color:#8bc34a}.warn{color:#ffee58}.mid{color:#ff9800}.bad{color:#ff5252}.extreme{color:#d500f9}
+</style>
 </head>
 
 <body>
-  <h1>GEO Space Weather Dashboard（NOAA API + Newell結合関数でKp推定・フルスペック）</h1>
+<header>
+<h2>Modular CME → Satellite Hazard Console</h2>
+<div class="small">
+NASA API Key:
+<input id="apiKey" value="PASTE_YOUR_NASA_API_KEY_HERE" style="width:300px">
+<button onclick="loadAllSources()">全ソース取得</button>
+<button onclick="rebuildAll()">再計算</button>
+<button onclick="playTimeline()">▶ 再生</button>
+<button onclick="stopTimeline()">停止</button>
+</div>
+</header>
 
-  <div class="layout">
-    <!-- LEFT -->
-    <div class="card">
-      <h2>Longitude Risk Map</h2>
-      <canvas id="geoCanvas" width="520" height="520"></canvas>
+<main>
 
-      <div class="risk-legend">
-        <span><b>Color:</b></span>
-        <span><span class="color-box" id="lowColorBox"></span>Low</span>
-        <span><span class="color-box" id="medColorBox"></span>Moderate</span>
-        <span><span class="color-box" id="highColorBox"></span>High</span>
-        <span><span class="color-box" id="extColorBox"></span>Extreme</span>
-      </div>
+<section class="card">
+<h3>0. Data Sources / 個別取得</h3>
+<div class="sourceGrid" id="sourcePanel"></div>
+</section>
 
-      <div class="sector-legend">
-        <span><b>Rings:</b></span>
-        <span>Outer = Surface charging</span>
-        <span>Inner = Deep charging</span>
-      </div>
+<div class="grid" style="margin-top:16px">
+<section class="card">
+<h3>① CME Source / Solar Disk</h3>
+<div class="box"><canvas id="sunCanvas"></canvas></div>
+<div id="sunSummary" class="small">未取得</div>
+</section>
 
-      <div class="small" style="margin-top:10px;">
-        ・青帯は nightside の表示補助（±90° around midnight）。<br>
-        ・内部帯電（deep）の放射線帯擾乱は <b>全球一様</b>に評価（昼側も同じ評価に含める）。<br>
-        ・表面帯電（surface）は局所時依存を残すが、<b>夜側の過剰ブーストは抑制</b>。
-      </div>
-    </div>
+<section class="card">
+<h3>② Satellite Hazard Assessment</h3>
+<div id="hazardPanel" class="small">未取得</div>
+</section>
+</div>
 
-    <!-- RIGHT -->
-    <div class="card">
-      <h2>Time & Status</h2>
+<section class="card" style="margin-top:16px">
+<h3>③ CME Propagation / Earth Arrival</h3>
+<input id="timeSlider" type="range" min="0" max="168" value="0" step="1" oninput="updateTimeline()">
+<div id="timeLabel" class="small"></div>
+<div class="widebox"><canvas id="flowCanvas"></canvas></div>
+</section>
 
-      <div class="time-display">
-        <div id="baseTimeLabel"></div>
-        <div style="margin-top:6px;">
-          Time (UTC): <span id="timeUtcLabel"></span><br>
-          <span class="badge kp">Kp̂(t): <span id="kpNowLabel"></span></span>
-          <span class="badge status" id="statusLabel"></span>
-          <span class="badge noaa" id="noaaBadge"></span>
-        </div>
-        <div id="logicSummary" class="small"></div>
-      </div>
+<section class="card" style="margin-top:16px">
+<h3>Environment / Status</h3>
+<div id="statusBox" class="small"></div>
+</section>
 
-      <input type="range" id="timeSlider" min="0" max="120" step="1" value="0" />
+<section class="card" style="margin-top:16px">
+<h3>Merged CME Event Table</h3>
+<div id="table"></div>
+</section>
 
-      <div class="block-title">Forecast start time</div>
-      <div class="param-row">
-        <label for="startDateInput">Start date</label>
-        <input type="date" id="startDateInput" />
-      </div>
-      <div class="param-row">
-        <label for="startHourInput">Start hour</label>
-        <input type="number" id="startHourInput" min="0" max="23" step="1" value="9" />
-      </div>
-      <div class="param-row">
-        <label>Time zone（入力）</label>
-        <div class="tz-group">
-          <label><input type="radio" name="tzMode" id="tzJST" value="JST" checked /> JST</label>
-          <label><input type="radio" name="tzMode" id="tzUTC" value="UTC" /> UTC</label>
-        </div>
-        <span class="small">表示は常にUTC。開始時刻をJST/UTCで入力。</span>
-      </div>
+<section class="card" style="margin-top:16px">
+<h3>Raw / Debug</h3>
+<pre id="raw"></pre>
+</section>
 
-      <div class="block-title">NOAA API（フルスペック）</div>
-      <div class="param-row">
-        <label for="useNoaaCheckbox">Use NOAA API</label>
-        <input type="checkbox" id="useNoaaCheckbox" checked />
-        <span class="small">v,n,By,Bz を取得して Kp̂ を計算（Newell）</span>
-      </div>
-      <div class="param-row">
-        <label for="noaaRefreshMin">API更新間隔（分）</label>
-        <input type="number" id="noaaRefreshMin" value="5" min="1" max="60" step="1" />
-        <span class="small">GitHub PagesでもOK</span>
-      </div>
-
-      <div class="block-title">Kp̂（Newell結合関数）設定</div>
-      <div class="param-row">
-        <label for="lagMinInput">応答遅れ（分）</label>
-        <input type="number" id="lagMinInput" value="45" min="0" max="180" step="5" />
-        <span class="small">太陽風→地磁気の遅れ（簡易）</span>
-      </div>
-      <div class="param-row">
-        <label for="smoothHInput">平滑化（時間窓h）</label>
-        <input type="number" id="smoothHInput" value="3" min="0" max="12" step="1" />
-        <span class="small">移動平均（重くてもOK仕様）</span>
-      </div>
-      <div class="param-row">
-        <label for="alphaInput">動圧補正指数 α</label>
-        <input type="number" id="alphaInput" value="0.15" min="0" max="0.6" step="0.05" />
-        <span class="small">Pdyn^(α) を掛ける</span>
-      </div>
-      <div class="param-row">
-        <label for="aInput">写像係数 a</label>
-        <input type="number" id="aInput" value="2.5" min="0.5" max="6" step="0.1" />
-        <span class="small">Kp̂ = a ln(1+Cp)+b</span>
-      </div>
-      <div class="param-row">
-        <label for="bInput">写像係数 b</label>
-        <input type="number" id="bInput" value="1.0" min="-2" max="4" step="0.1" />
-      </div>
-      <div class="param-row">
-        <label for="kpStormThresh">storm閾値（Kp̂）</label>
-        <input type="number" id="kpStormThresh" value="4.0" min="2" max="7" step="0.1" />
-        <span class="small">stormActive 判定</span>
-      </div>
-
-      <div class="block-title">Fallback（NOAA欠損/未来補完）</div>
-      <div class="param-row">
-        <label for="bzInput">Fallback Bz (nT)</label>
-        <input type="number" id="bzInput" value="0" step="1" />
-        <span class="small">NOAAが無い時だけ使用</span>
-      </div>
-      <div class="param-row">
-        <label for="vswInput">Fallback Vsw (km/s)</label>
-        <input type="number" id="vswInput" value="400" step="10" />
-      </div>
-      <div class="param-row">
-        <label for="nAmbInput">Fallback density (cm⁻³)</label>
-        <input type="number" id="nAmbInput" value="5" step="0.5" />
-      </div>
-
-      <div class="block-title">CME/HSS（未来補完・任意）</div>
-      <div class="param-row"><label for="cmeEtaInput">CME ETA (h)</label><input type="number" id="cmeEtaInput" value="-1" step="1" min="-1" max="120" /></div>
-      <div class="param-row"><label for="cmeSpeedInput">CME speed</label><input type="number" id="cmeSpeedInput" value="800" step="20" /></div>
-      <div class="param-row"><label for="cmeDensityInput">CME density</label><input type="number" id="cmeDensityInput" value="15" step="1" /></div>
-      <div class="param-row"><label for="cmeDurInput">CME duration (h)</label><input type="number" id="cmeDurInput" value="6" step="1" min="1" max="24" /></div>
-
-      <div class="param-row"><label for="hssEtaInput">HSS ETA (h)</label><input type="number" id="hssEtaInput" value="-1" step="1" min="-1" max="120" /></div>
-      <div class="param-row"><label for="hssSpeedInput">HSS speed</label><input type="number" id="hssSpeedInput" value="700" step="20" /></div>
-      <div class="param-row"><label for="hssDensityInput">HSS density</label><input type="number" id="hssDensityInput" value="5" step="0.5" /></div>
-      <div class="param-row"><label for="hssDurInput">HSS duration (h)</label><input type="number" id="hssDurInput" value="72" step="6" min="12" max="120" /></div>
-
-      <div class="block-title">Storm/Radiation（リスク側）</div>
-      <div class="param-row">
-        <label for="quietKpInput">Quiet Kp（基準）</label>
-        <input type="number" id="quietKpInput" value="2" step="0.5" min="0" max="5" />
-      </div>
-      <div class="param-row">
-        <label for="dstInput">Dst (nT,参考)</label>
-        <input type="number" id="dstInput" value="0" step="10" />
-      </div>
-
-      <div class="block-title">Color</div>
-      <div class="param-row"><label for="lowColor">Low</label><input type="color" id="lowColor" value="#2ecc71" /></div>
-      <div class="param-row"><label for="medColor">Moderate</label><input type="color" id="medColor" value="#f1c40f" /></div>
-      <div class="param-row"><label for="highColor">High</label><input type="color" id="highColor" value="#e67e22" /></div>
-      <div class="param-row"><label for="extColor">Extreme</label><input type="color" id="extColor" value="#e74c3c" /></div>
-
-      <div class="block-title">Direct impact（任意）</div>
-      <div class="param-row">
-        <label for="directImpactCheckbox">Direct CME/HSS impact</label>
-        <input type="checkbox" id="directImpactCheckbox" />
-        <span class="small">短時間の圧縮効果をリスクに直接加算</span>
-      </div>
-
-      <div class="note">
-        ※Kp̂は「太陽風 v,n,By,Bz → Newell結合関数 → 動圧補正 → 非線形写像」で毎時0–120hを計算。<br>
-        ※NOAA欠損・未来はCME/HSS+fallbackで補完（フルスペックでも動く設計）。
-      </div>
-    </div>
-  </div>
+</main>
 
 <script>
-  // ===== DOM =====
-  const baseTimeLabel = document.getElementById("baseTimeLabel");
-  const timeUtcLabel = document.getElementById("timeUtcLabel");
-  const timeSlider = document.getElementById("timeSlider");
-  const kpNowLabel = document.getElementById("kpNowLabel");
-  const statusLabel = document.getElementById("statusLabel");
-  const logicSummary = document.getElementById("logicSummary");
-  const noaaBadge = document.getElementById("noaaBadge");
+const DONKI_LON_POSITIVE_WEST = true;
+const AU_KM = 149597870;
+const SOLAR_ROTATION = 13.2 / 24;
 
-  const startDateInput = document.getElementById("startDateInput");
-  const startHourInput = document.getElementById("startHourInput");
-  const tzJST = document.getElementById("tzJST");
-  const tzUTC = document.getElementById("tzUTC");
+const DONKI = {
+  cmeAnalysis:"https://api.nasa.gov/DONKI/CMEAnalysis",
+  cme:"https://api.nasa.gov/DONKI/CME",
+  sep:"https://api.nasa.gov/DONKI/SEP",
+  flr:"https://api.nasa.gov/DONKI/FLR"
+};
 
-  const useNoaaCheckbox = document.getElementById("useNoaaCheckbox");
-  const noaaRefreshMin = document.getElementById("noaaRefreshMin");
+const CACTUS_URL = "https://www.sidc.be/cactus/out/latestCMEs.html";
 
-  const lagMinInput = document.getElementById("lagMinInput");
-  const smoothHInput = document.getElementById("smoothHInput");
-  const alphaInput = document.getElementById("alphaInput");
-  const aInput = document.getElementById("aInput");
-  const bInput = document.getElementById("bInput");
-  const kpStormThresh = document.getElementById("kpStormThresh");
+const NOAA = {
+  wind:"https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json",
+  mag:"https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json",
+  windOld:"https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json",
+  magOld:"https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json",
+  kp:"https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json",
+  kpAlt:"https://services.swpc.noaa.gov/products/noaa-estimated-planetary-k-index-1-minute.json",
+  proton:"https://services.swpc.noaa.gov/json/goes/primary/integral-protons-6-hour.json"
+};
 
-  const bzInput = document.getElementById("bzInput");
-  const vswInput = document.getElementById("vswInput");
-  const nAmbInput = document.getElementById("nAmbInput");
+const STATE = {
+  sources:{
+    donkiAnalysis:src("DONKI CMEAnalysis","未取得"),
+    donkiCME:src("DONKI CME","未取得"),
+    donkiSEP:src("DONKI SEP","未取得"),
+    donkiFLR:src("DONKI FLR","未取得"),
+    cactus:src("CACTus CME","未取得"),
+    noaaWind:src("NOAA Wind","未取得"),
+    noaaMag:src("NOAA IMF","未取得"),
+    noaaKp:src("NOAA Kp","未取得"),
+    goesProton:src("GOES Proton","未取得")
+  },
+  env:defaultEnv(),
+  cmes:[],
+  startTime:new Date(),
+  timer:null
+};
 
-  const cmeEtaInput = document.getElementById("cmeEtaInput");
-  const cmeSpeedInput = document.getElementById("cmeSpeedInput");
-  const cmeDensityInput = document.getElementById("cmeDensityInput");
-  const cmeDurInput = document.getElementById("cmeDurInput");
+function src(label,status){
+  return {label,status,data:null,time:null,error:null};
+}
 
-  const hssEtaInput = document.getElementById("hssEtaInput");
-  const hssSpeedInput = document.getElementById("hssSpeedInput");
-  const hssDensityInput = document.getElementById("hssDensityInput");
-  const hssDurInput = document.getElementById("hssDurInput");
+function raw(x){document.getElementById("raw").textContent=x;}
 
-  const quietKpInput = document.getElementById("quietKpInput");
-  const dstInput = document.getElementById("dstInput");
-  const directImpactCheckbox = document.getElementById("directImpactCheckbox");
+function apiKey(){
+  return document.getElementById("apiKey").value.trim() || "DEMO_KEY";
+}
 
-  const lowColorInput = document.getElementById("lowColor");
-  const medColorInput = document.getElementById("medColor");
-  const highColorInput = document.getElementById("highColor");
-  const extColorInput = document.getElementById("extColor");
-  const lowColorBox = document.getElementById("lowColorBox");
-  const medColorBox = document.getElementById("medColorBox");
-  const highColorBox = document.getElementById("highColorBox");
-  const extColorBox = document.getElementById("extColorBox");
-
-  // ===== Canvas =====
-  const canvas = document.getElementById("geoCanvas");
-  const ctx = canvas.getContext("2d");
-  const cx = canvas.width / 2;
-  const cy = canvas.height / 2;
-
-  // Enlarged radii for 520x520
-  const surfaceOuterR = 220;
-  const surfaceInnerR = 185;
-  const deepOuterR = 175;
-  const deepInnerR = 140;
-  const nightRadiusOuter = 160;
-  const nightRadiusInner = 135;
-  const earthRadius = 70;
-
-  // ===== Init start date =====
-  (function initStartDate(){
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth()+1).padStart(2,"0");
-    const dd = String(now.getDate()).padStart(2,"0");
-    startDateInput.value = `${yyyy}-${mm}-${dd}`;
-    startHourInput.value = now.getHours();
-  })();
-
-  function getTzMode(){ return tzUTC.checked ? "UTC" : "JST"; }
-
-  function computeBaseTimeUtc(){
-    const dateStr = startDateInput.value;
-    const base = new Date(dateStr + "T00:00:00Z");
-    let hour = Number(startHourInput.value);
-    if(!isFinite(hour)) hour = 0;
-    hour = Math.max(0, Math.min(23, hour));
-    if(getTzMode()==="JST") base.setUTCHours(hour - 9);
-    else base.setUTCHours(hour);
-    return base;
-  }
-
-  function pad2(n){ return String(n).padStart(2,"0"); }
-  function formatUtc(ms){
-    const d = new Date(ms);
-    return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())} ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())} UTC`;
-  }
-  function getUtcMsAtHoursAhead(h){
-    return computeBaseTimeUtc().getTime() + h*3600*1000;
-  }
-
-  // ===== Geometry helpers =====
-  function degToRad(deg){ return (deg - 90) * Math.PI / 180; }
-  function angleDiff(a,b){ return (a - b + 540) % 360 - 180; }
-
-  // Subsolar longitude (simple)
-  function getSubsolarLongitude(hoursAhead){
-    const t = new Date(getUtcMsAtHoursAhead(hoursAhead));
-    const ut = t.getUTCHours() + t.getUTCMinutes()/60 + t.getUTCSeconds()/3600;
-    let lon = (ut - 12) * 15; // 12UT ~ 0°
-    lon = ((lon % 360) + 360) % 360;
-    return lon;
-  }
-
-  function getSector(longitudeDeg, hoursAhead){
-    const subsolar = getSubsolarLongitude(hoursAhead);
-    const diff = angleDiff(longitudeDeg, subsolar);
-
-    if (Math.abs(diff) <= 90) {
-      if (Math.abs(diff) <= 30) return { name:"Day-Noon", code:"D_NOON", isNight:false };
-      if (diff < -30) return { name:"Day-Morning", code:"D_MORN", isNight:false };
-      return { name:"Day-Afternoon", code:"D_AFTER", isNight:false };
-    }
-    const nightCenter = (subsolar + 180) % 360;
-    const diffN = angleDiff(longitudeDeg, nightCenter);
-    if (Math.abs(diffN) <= 30) return { name:"Night-Midnight", code:"N_MID", isNight:true };
-    if (diffN < -30) return { name:"Night-Evening", code:"N_EVE", isNight:true };
-    return { name:"Night-Morning", code:"N_MORN", isNight:true };
-  }
-
-  // ===== NOAA store =====
-  const noaa = {
-    enabled: true,
-    plasma: [], // {tMs, density, speed}
-    mag: [],    // {tMs, by, bz, bt}
-    lastOkMs: null,
-    lastErr: null
+function dateRange(){
+  const now = new Date();
+  return {
+    start:new Date(now.getTime()-7*86400000).toISOString().slice(0,10),
+    end:now.toISOString().slice(0,10)
   };
+}
 
-  function setNoaaBadge(){
-    const on = noaa.enabled && useNoaaCheckbox.checked;
-    const ok = (noaa.lastOkMs != null);
-    if(!on){
-      noaaBadge.textContent = "NOAA: OFF";
-      noaaBadge.className = "badge noaa ng";
-      return;
+function setSource(key,status,data=null,error=null){
+  STATE.sources[key].status=status;
+  STATE.sources[key].data=data;
+  STATE.sources[key].error=error;
+  STATE.sources[key].time=new Date();
+  renderSourcePanel();
+}
+
+function renderSourcePanel(){
+  const s=STATE.sources;
+  const rows=[
+    ["donkiAnalysis","DONKI CMEAnalysis",loadDONKIAnalysis],
+    ["donkiCME","DONKI CME",loadDONKICME],
+    ["donkiSEP","DONKI SEP",loadDONKISEP],
+    ["donkiFLR","DONKI FLR",loadDONKIFLR],
+    ["cactus","CACTus CME",loadCACTus],
+    ["noaaWind","NOAA Wind",loadNOAAWind],
+    ["noaaMag","NOAA IMF",loadNOAAMag],
+    ["noaaKp","NOAA Kp",loadNOAAKp],
+    ["goesProton","GOES Proton",loadGOESProton]
+  ];
+
+  document.getElementById("sourcePanel").innerHTML = rows.map(([key,title,fn])=>{
+    const x=s[key];
+    const col = x.status.startsWith("OK") ? "#8bc34a" :
+                x.status.startsWith("FAILED") ? "#ff5252" :
+                x.status.startsWith("LOADING") ? "#ffee58" : "#aaa";
+    const when = x.time ? x.time.toISOString().slice(11,19)+" UTC" : "-";
+    return `
+      <div class="sourceCard">
+        <div class="sourceTitle">${title}</div>
+        <div style="color:${col};font-weight:800">${x.status}</div>
+        <div class="small">Last: ${when}</div>
+        ${x.error ? `<div class="small" style="color:#ff8a80">${escapeHtml(x.error).slice(0,140)}</div>` : ""}
+        <button onclick="${fn.name}()">LOAD</button>
+      </div>
+    `;
+  }).join("");
+}
+
+async function loadAllSources(){
+  await Promise.allSettled([
+    loadDONKIAnalysis(),
+    loadDONKICME(),
+    loadDONKISEP(),
+    loadDONKIFLR(),
+    loadCACTus(),
+    loadNOAAWind(),
+    loadNOAAMag(),
+    loadNOAAKp(),
+    loadGOESProton()
+  ]);
+  rebuildAll();
+}
+
+async function loadDONKIAnalysis(){
+  const {start,end}=dateRange();
+  const url=`${DONKI.cmeAnalysis}?startDate=${start}&endDate=${end}&mostAccurateOnly=true&speed=300&api_key=${apiKey()}`;
+  return loadJsonSource("donkiAnalysis",url);
+}
+
+async function loadDONKICME(){
+  const {start,end}=dateRange();
+  const url=`${DONKI.cme}?startDate=${start}&endDate=${end}&api_key=${apiKey()}`;
+  return loadJsonSource("donkiCME",url);
+}
+
+async function loadDONKISEP(){
+  const {start,end}=dateRange();
+  const url=`${DONKI.sep}?startDate=${start}&endDate=${end}&api_key=${apiKey()}`;
+  return loadJsonSource("donkiSEP",url,false);
+}
+
+async function loadDONKIFLR(){
+  const {start,end}=dateRange();
+  const url=`${DONKI.flr}?startDate=${start}&endDate=${end}&api_key=${apiKey()}`;
+  return loadJsonSource("donkiFLR",url,false);
+}
+
+async function loadNOAAWind(){
+  setSource("noaaWind","LOADING...");
+  try{
+    const data = await fetchJsonAny([NOAA.wind,NOAA.windOld]);
+    setSource("noaaWind",`OK: ${Array.isArray(data)?data.length:1} records`,data);
+    rebuildAll();
+  }catch(e){setSource("noaaWind","FAILED",null,e.message);}
+}
+
+async function loadNOAAMag(){
+  setSource("noaaMag","LOADING...");
+  try{
+    const data = await fetchJsonAny([NOAA.mag,NOAA.magOld]);
+    setSource("noaaMag",`OK: ${Array.isArray(data)?data.length:1} records`,data);
+    rebuildAll();
+  }catch(e){setSource("noaaMag","FAILED",null,e.message);}
+}
+
+async function loadNOAAKp(){
+  setSource("noaaKp","LOADING...");
+  try{
+    const data = await fetchJsonAny([NOAA.kp,NOAA.kpAlt]);
+    setSource("noaaKp",`OK: ${Array.isArray(data)?data.length:1} records`,data);
+    rebuildAll();
+  }catch(e){setSource("noaaKp","FAILED",null,e.message);}
+}
+
+async function loadGOESProton(){
+  return loadJsonSource("goesProton",NOAA.proton);
+}
+
+async function loadCACTus(){
+  setSource("cactus","LOADING...");
+  try{
+    const text=await fetchCactus(CACTUS_URL);
+    setSource("cactus","OK",text);
+    rebuildAll();
+  }catch(e){
+    setSource("cactus","FAILED",null,e.message);
+  }
+}
+
+async function loadJsonSource(key,url,rebuild=true){
+  setSource(key,"LOADING...");
+  try{
+    const data=await fetchJson(url);
+    setSource(key,`OK: ${Array.isArray(data)?data.length:1} records`,data);
+    if(rebuild) rebuildAll();
+  }catch(e){
+    setSource(key,"FAILED",null,e.message);
+  }
+}
+
+async function fetchJson(url){
+  const sep=url.includes("?")?"&":"?";
+  const r=await fetch(url+sep+"t="+Date.now());
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  const text=await r.text();
+  try{return JSON.parse(text);}
+  catch(e){throw new Error("JSON parse failed: "+text.slice(0,120));}
+}
+
+async function fetchJsonAny(urls){
+  let err="";
+  for(const u of urls){
+    try{return await fetchJson(u);}
+    catch(e){err=e.message;}
+  }
+  throw new Error(err);
+}
+
+async function fetchCactus(url){
+  try{
+    const r=await fetch(url+"?t="+Date.now());
+    if(!r.ok) throw new Error("direct "+r.status);
+    return await r.text();
+  }catch(e){
+    const proxy="https://api.allorigins.win/raw?url="+encodeURIComponent(url);
+    const r=await fetch(proxy+"&t="+Date.now());
+    if(!r.ok) throw new Error("proxy "+r.status);
+    return await r.text();
+  }
+}
+
+function rebuildAll(){
+  STATE.env=parseEnvironment(
+    STATE.sources.noaaWind.data,
+    STATE.sources.noaaMag.data,
+    STATE.sources.noaaKp.data,
+    STATE.sources.goesProton.data
+  );
+
+  let events=[];
+
+  const analysis=STATE.sources.donkiAnalysis.data;
+  if(Array.isArray(analysis)){
+    events.push(...analysis.map(x=>parseDONKIAnalysis(x,STATE.env)).filter(Boolean));
+  }
+
+  const cme=STATE.sources.donkiCME.data;
+  if(Array.isArray(cme)){
+    events.push(...parseDONKICME(cme,STATE.env));
+  }
+
+  const cactus=STATE.sources.cactus.data;
+  if(typeof cactus==="string" && cactus.length){
+    events.push(...parseCACTus(cactus,STATE.env));
+  }
+
+  STATE.cmes=dedupeCMEs(events).sort((a,b)=>b.confidence-b.confidence || b.arrivalScore-a.arrivalScore);
+  STATE.startTime = STATE.startTime || new Date();
+
+  renderStatus();
+  renderTable(STATE.cmes);
+  updateTimeline();
+
+  raw(JSON.stringify({
+    dataHealth:Object.fromEntries(Object.entries(STATE.sources).map(([k,v])=>[k,{status:v.status,time:v.time,error:v.error}])),
+    env:STATE.env,
+    mergedCount:STATE.cmes.length,
+    cmes:STATE.cmes.slice(0,25)
+  },null,2));
+}
+
+function defaultEnv(){
+  return {speed:400,density:0,bt:0,by:0,bz:0,kp:0,dynamicPressure:0,clockAngle:0,p10:0,p50:0,p100:0,radiationScale:"S0"};
+}
+
+function parseEnvironment(wind,mag,kp,protons){
+  const w=latest(wind);
+  const b=latest(mag);
+  const k=latest(kp);
+
+  const speed=pick(w,["speed","proton_speed","bulk_speed",2])||400;
+  const density=pick(w,["density","proton_density",1]);
+  const by=pick(b,["by_gsm","by",2]);
+  const bz=pick(b,["bz_gsm","bz",3]);
+  const bt=pick(b,["bt","total_field",6]);
+  const kpVal=pick(k,["kp_index","kp","estimated_kp","Kp",1]);
+
+  const p10=latestEnergy(protons,">=10 MeV")?.flux||0;
+  const p50=latestEnergy(protons,">=50 MeV")?.flux||0;
+  const p100=latestEnergy(protons,">=100 MeV")?.flux||0;
+
+  const pdyn=density&&speed?1.6726e-6*density*speed*speed:0;
+  const clock=Math.max(0,Math.min(180,Math.atan2(Math.abs(by),bz)*180/Math.PI));
+
+  return {
+    time:getTime(w)||getTime(b)||getTime(k)||"",
+    speed,density,bt,by,bz,kp:kpVal,
+    dynamicPressure:pdyn,
+    clockAngle:clock,
+    p10,p50,p100,
+    radiationScale:radiationScale(p10)
+  };
+}
+
+function latest(arr){
+  if(!Array.isArray(arr)) return {};
+  for(let i=arr.length-1;i>=0;i--){
+    const r=arr[i];
+    if(Array.isArray(r)){
+      if(String(r[0]).toLowerCase().includes("time")) continue;
+      return r;
     }
-    if(ok){
-      noaaBadge.textContent = `NOAA: ON / last ${new Date(noaa.lastOkMs).toISOString().slice(11,16)}Z`;
-      noaaBadge.className = "badge noaa ok";
+    if(r&&typeof r==="object") return r;
+  }
+  return {};
+}
+
+function pick(obj,names){
+  for(const n of names){
+    if(typeof n==="number"&&Array.isArray(obj)){
+      const v=Number(obj[n]); if(Number.isFinite(v)) return v;
+    }
+    if(typeof n==="string"&&obj&&obj[n]!==undefined){
+      const v=Number(obj[n]); if(Number.isFinite(v)) return v;
+    }
+  }
+  return 0;
+}
+
+function getTime(obj){
+  if(Array.isArray(obj)) return obj[0]||"";
+  if(!obj) return "";
+  return obj.time_tag||obj.time||obj.observation_time||"";
+}
+
+function latestEnergy(arr,energy){
+  if(!Array.isArray(arr)) return null;
+  for(let i=arr.length-1;i>=0;i--){
+    const x=arr[i];
+    if(String(x?.energy||"").includes(energy)) return x;
+  }
+  return null;
+}
+
+function radiationScale(p10){
+  if(p10>=100000) return "S5";
+  if(p10>=10000) return "S4";
+  if(p10>=1000) return "S3";
+  if(p10>=100) return "S2";
+  if(p10>=10) return "S1";
+  return "S0";
+}
+
+function parseDONKIAnalysis(c,env){
+  const rawLon=finiteOr(c.longitude,0);
+  const lon=DONKI_LON_POSITIVE_WEST ? rawLon : -rawLon;
+  const lat=finiteOr(c.latitude,0);
+  const speed=finiteOr(c.speed,500);
+  const half=finiteOr(c.halfAngle,30);
+  const t0=c.time21_5?new Date(c.time21_5):new Date(c.activityStartTime||Date.now());
+  const arrival=computeArrivalDONKI(c,env);
+  const score=scoreArrival(lon,lat,speed,half);
+  const hasEnlil=arrival.source==="ENLIL";
+
+  return buildCME({
+    id:c.activityID||"DONKI",
+    type:"DONKI",
+    rawLon,lon,lat,speed,halfAngle:half,t0,arrival,
+    arrivalScore:score,
+    sources:["DONKI"],
+    confidence:hasEnlil?1.0:0.82
+  });
+}
+
+function parseDONKICME(list,env){
+  const out=[];
+  for(const c of list){
+    const analyses=Array.isArray(c.cmeAnalyses)?c.cmeAnalyses:[];
+    if(analyses.length){
+      for(const a of analyses){
+        const item=parseDONKIAnalysis({...a,activityID:c.activityID,activityStartTime:c.startTime},env);
+        if(item){item.sources.push("DONKI-CME"); item.confidence=Math.max(item.confidence,0.88); out.push(item);}
+      }
     }else{
-      noaaBadge.textContent = `NOAA: ON / (no data)`;
-      noaaBadge.className = "badge noaa ng";
+      out.push(buildCME({
+        id:c.activityID||"DONKI-CME",
+        type:"DONKI-basic",
+        rawLon:0,lon:0,lat:0,speed:500,halfAngle:30,
+        t0:new Date(c.startTime||Date.now()),
+        arrival:computeArrivalBasic(new Date(c.startTime||Date.now()),500,env),
+        arrivalScore:35,
+        sources:["DONKI-basic"],
+        confidence:0.45
+      }));
     }
   }
+  return out.filter(Boolean);
+}
 
-  async function fetchJsonNoStore(url){
-    const res = await fetch(url + (url.includes("?") ? "&" : "?") + "_=" + Date.now(), { cache:"no-store" });
-    if(!res.ok) throw new Error(`fetch failed ${res.status}`);
-    return res.json();
+function parseCACTus(html,env){
+  const text=html.replace(/<br\s*\/?>/gi,"\n").replace(/<\/p>/gi,"\n").replace(/<[^>]+>/g," ");
+  const lines=text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const out=[];
+  for(const line of lines){
+    const m=line.match(/^(\d{4})\s*\|\s*(\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2})\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*([IVX]*)/);
+    if(!m) continue;
+
+    const id="CACTus-"+m[1];
+    const t0=parseCactusTime(m[2]);
+    const pa=Number(m[4]);
+    const da=Number(m[5]);
+    const speed=Number(m[6]);
+    const half=Math.max(15,Math.min(90,da/2));
+    const lon=paToApproxLon(pa);
+    const lat=0;
+    const arrival=computeArrivalBasic(t0,speed,env);
+    const score=scoreArrival(lon,lat,speed,half);
+
+    out.push(buildCME({
+      id,type:"CACTus",rawLon:lon,lon,lat,speed,halfAngle:half,t0,arrival,
+      arrivalScore:score,pa,da,
+      sources:["CACTus"],
+      confidence:0.55
+    }));
   }
+  return out;
+}
 
-  async function fetchNoaaPlasma(){
-    // 2-hour product, includes density & speed
-    const url = "https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json";
-    const data = await fetchJsonNoStore(url);
-    if(!Array.isArray(data) || data.length < 2) return [];
-    const rows = data.slice(1);
-    const out = [];
-    for(const r of rows){
-      const tMs = Date.parse(String(r[0]).replace(" ","T")+"Z");
-      const density = (r[1]==null) ? null : Number(r[1]);
-      const speed   = (r[2]==null) ? null : Number(r[2]);
-      if(isFinite(tMs)) out.push({ tMs, density, speed });
-    }
-    out.sort((a,b)=>a.tMs-b.tMs);
-    return out;
+function buildCME(c){
+  const dur=durationBy(c.halfAngle,c.speed);
+  return {
+    ...c,
+    activeStart:new Date(c.arrival.date.getTime()-6*3600*1000),
+    activeEnd:new Date(c.arrival.date.getTime()+dur*3600*1000),
+    shockStart:new Date(c.arrival.date.getTime()-2*3600*1000),
+    shockEnd:new Date(c.arrival.date.getTime()+3*3600*1000),
+    surfaceStart:new Date(c.arrival.date.getTime()+3*3600*1000),
+    surfaceEnd:new Date(c.arrival.date.getTime()+12*3600*1000),
+    deepStart:new Date(c.arrival.date.getTime()+12*3600*1000),
+    deepEnd:new Date(c.arrival.date.getTime()+48*3600*1000)
+  };
+}
+
+function finiteOr(v,def){
+  const n=Number(v);
+  return Number.isFinite(n)?n:def;
+}
+
+function scoreArrival(lon,lat,speed,half){
+  const d=Math.sqrt(lon*lon+lat*lat);
+  const earth=d<=half?45:d<=half+20?30:d<=half+40?18:5;
+  const sp=speed>=2000?30:speed>=1500?24:speed>=1000?16:speed>=700?10:4;
+  const wd=Math.min(25,half*0.45);
+  return Math.min(100,Math.round(earth+sp+wd));
+}
+
+function computeArrivalDONKI(c,env){
+  const enlil=Array.isArray(c.enlilList)?c.enlilList.find(x=>x?.estimatedShockArrivalTime):null;
+  if(enlil){
+    const d=new Date(enlil.estimatedShockArrivalTime);
+    return {source:"ENLIL",date:d,utc:d.toISOString()};
   }
+  const t0=c.time21_5?new Date(c.time21_5):new Date(c.activityStartTime||Date.now());
+  return computeArrivalBasic(t0,finiteOr(c.speed,500),env);
+}
 
-  async function fetchNoaaMag(){
-    // 2-hour mag: By,Bz,Bt
-    const url = "https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json";
-    const data = await fetchJsonNoStore(url);
-    if(!Array.isArray(data) || data.length < 2) return [];
-    const rows = data.slice(1);
-    const out = [];
-    for(const r of rows){
-      const tMs = Date.parse(String(r[0]).replace(" ","T")+"Z");
-      // Typical columns: time_tag, bx_gsm, by_gsm, bz_gsm, bt
-      // We'll be defensive: try indices [2]=By, [3]=Bz, [4]=Bt as common in SWPC JSON.
-      const by = (r[2]==null) ? null : Number(r[2]);
-      const bz = (r[3]==null) ? null : Number(r[3]);
-      const bt = (r[4]==null) ? null : Number(r[4]);
-      if(isFinite(tMs)) out.push({ tMs, by, bz, bt });
-    }
-    out.sort((a,b)=>a.tMs-b.tMs);
-    return out;
-  }
+function computeArrivalBasic(t0,speed,env){
+  const bg=env.speed||400;
+  let v=speed;
+  if(v>bg) v=bg+(v-bg)*0.62;
+  if(v<bg) v=v+(bg-v)*0.25;
+  if(v<320) v=320;
+  const hours=AU_KM/v/3600;
+  const d=new Date(t0.getTime()+hours*3600*1000);
+  return {source:"DBM-lite",date:d,utc:d.toISOString(),speed:Math.round(v)};
+}
 
-  async function refreshNoaa(){
-    if(!(useNoaaCheckbox.checked)) return;
-    noaa.enabled = true;
-    try{
-      const [plasma, mag] = await Promise.all([fetchNoaaPlasma(), fetchNoaaMag()]);
-      noaa.plasma = plasma;
-      noaa.mag = mag;
-      noaa.lastOkMs = Date.now();
-      noaa.lastErr = null;
-    }catch(e){
-      noaa.lastErr = String(e?.message || e);
-      // keep old data (best effort)
-    }finally{
-      setNoaaBadge();
-    }
-  }
+function parseCactusTime(s){
+  const m=s.match(/(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/);
+  if(!m) return new Date();
+  return new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]));
+}
 
-  // ===== Interpolation helpers =====
-  function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
+function paToApproxLon(pa){
+  if(pa>=45&&pa<=135) return -70;
+  if(pa>=225&&pa<=315) return 70;
+  return 0;
+}
 
-  function lerp(a,b,t){ return a + (b-a)*t; }
+function durationBy(half,speed){
+  let h=12;
+  if(half>=35) h=24;
+  if(half>=60) h=36;
+  if(half>=90) h=48;
+  if(speed>=1200) h+=6;
+  return h;
+}
 
-  function interpLinear(series, tMs, key){
-    if(!series || series.length === 0) return null;
-    // binary search rightmost <= tMs
-    let lo=0, hi=series.length-1;
-    while(lo<hi){
-      const mid = (lo+hi+1)>>1;
-      if(series[mid].tMs <= tMs) lo=mid;
-      else hi=mid-1;
-    }
-    const p0 = series[lo];
-    const p1 = series[Math.min(series.length-1, lo+1)];
-    const v0 = p0 ? p0[key] : null;
-    const v1 = p1 ? p1[key] : null;
-    if(!isFinite(v0)) return (isFinite(v1) ? v1 : null);
-    if(p0.tMs === p1.tMs || !isFinite(v1)) return v0;
-    const t = (tMs - p0.tMs) / (p1.tMs - p0.tMs);
-    return lerp(v0, v1, clamp(t,0,1));
-  }
+function dedupeCMEs(items){
+  const sorted=[...items].sort((a,b)=>b.confidence-a.confidence);
+  const merged=[];
 
-  // ===== CME/HSS windows (fallback future) =====
-  function isHssActive(t){
-    const eta = Number(hssEtaInput.value);
-    const dur = Number(hssDurInput.value);
-    if(eta < 0) return false;
-    return t >= eta && t <= (eta + dur);
-  }
-  function isCmeImpact(t){
-    const eta = Number(cmeEtaInput.value);
-    const dur = Number(cmeDurInput.value);
-    if(eta < 0) return false;
-    const half = dur/2;
-    return t >= (eta - half) && t <= (eta + half);
-  }
+  for(const c of sorted){
+    const near=merged.find(m=>{
+      const dt=Math.abs(m.t0-c.t0)/3600000;
+      const dl=Math.abs((m.lon||0)-(c.lon||0));
+      return dt<=3 && dl<=35;
+    });
 
-  function fallbackSolarWindSpeedAt(t){
-    const vswAmb = Number(vswInput.value);
-    const cmeSpeed = Number(cmeSpeedInput.value);
-    const hssSpeed = Number(hssSpeedInput.value);
-    if(isCmeImpact(t)) return cmeSpeed;
-    if(isHssActive(t)) return hssSpeed;
-    return vswAmb;
-  }
-  function fallbackSolarWindDensityAt(t){
-    const nAmb = Number(nAmbInput.value);
-    const cmeD = Number(cmeDensityInput.value);
-    const hssD = Number(hssDensityInput.value);
-    if(isCmeImpact(t)) return cmeD;
-    if(isHssActive(t)) return hssD;
-    return nAmb;
-  }
-
-  // ===== Full-spec solar wind getters (NOAA + fallback) =====
-  function getVAtHours(h){
-    const tMs = getUtcMsAtHoursAhead(h);
-    if(useNoaaCheckbox.checked){
-      const v = interpLinear(noaa.plasma, tMs, "speed");
-      if(isFinite(v)) return v;
-    }
-    return fallbackSolarWindSpeedAt(h);
-  }
-  function getNAtHours(h){
-    const tMs = getUtcMsAtHoursAhead(h);
-    if(useNoaaCheckbox.checked){
-      const n = interpLinear(noaa.plasma, tMs, "density");
-      if(isFinite(n)) return n;
-    }
-    return fallbackSolarWindDensityAt(h);
-  }
-  function getByAtHours(h){
-    const tMs = getUtcMsAtHoursAhead(h);
-    if(useNoaaCheckbox.checked){
-      const by = interpLinear(noaa.mag, tMs, "by");
-      if(isFinite(by)) return by;
-    }
-    return 0; // fallback: unknown
-  }
-  function getBzAtHours(h){
-    const tMs = getUtcMsAtHoursAhead(h);
-    if(useNoaaCheckbox.checked){
-      const bz = interpLinear(noaa.mag, tMs, "bz");
-      if(isFinite(bz)) return bz;
-    }
-    return Number(bzInput.value); // fallback
-  }
-  function getBtAtHours(h){
-    const tMs = getUtcMsAtHoursAhead(h);
-    if(useNoaaCheckbox.checked){
-      // Some feeds include bt; if missing, compute from By,Bz
-      const bt = interpLinear(noaa.mag, tMs, "bt");
-      if(isFinite(bt)) return bt;
-    }
-    const by = getByAtHours(h);
-    const bz = getBzAtHours(h);
-    const bt = Math.sqrt((by||0)*(by||0) + (bz||0)*(bz||0));
-    return bt;
-  }
-
-  // ===== Newell coupling (full spec) =====
-  function newellCoupling(v, by, bz, bt){
-    // C = v^(4/3) * Bt^(2/3) * sin^(8/3)(theta/2)
-    // theta = atan2(By, Bz) in GSM
-    if(!isFinite(v) || !isFinite(bt)) return 0;
-
-    const By = (isFinite(by) ? by : 0);
-    const Bz = (isFinite(bz) ? bz : 0);
-
-    const theta = Math.atan2(By, Bz); // [-pi, pi]
-    const sinTerm = Math.sin(theta/2);
-    const sinPow = Math.pow(Math.abs(sinTerm), 8/3);
-
-    const vPow = Math.pow(Math.max(0, v), 4/3);
-    const btPow = Math.pow(Math.max(0, bt), 2/3);
-
-    const C = vPow * btPow * sinPow;
-    return isFinite(C) ? C : 0;
-  }
-
-  function pdynIndex(n, v){
-    // relative dynamic pressure index (dimensionless)
-    // ~ (n/5)*(v/400)^2
-    const nRef = 5.0;
-    const vRef = 400.0;
-    let idx = (n/nRef) * Math.pow(v/vRef, 2);
-    if(!isFinite(idx) || idx <= 0) idx = 1.0;
-    return clamp(idx, 0.3, 6.0);
-  }
-
-  // Normalize coupling so quiet-ish baseline is around 1
-  function couplingNorm(C){
-    // Reference: v0=400, Bt0=5, theta=pi -> sin(theta/2)=1
-    const v0 = 400;
-    const bt0 = 5;
-    const C0 = Math.pow(v0,4/3) * Math.pow(bt0,2/3) * 1.0;
-    if(!isFinite(C0) || C0<=0) return C;
-    return C / C0;
-  }
-
-  // ===== Kp-hat series (heavy ok) =====
-  let kpSeries = new Array(121).fill(2.0);  // kp at each hour 0..120
-  let bzSeries = new Array(121).fill(0.0);  // for logic/status
-  let vSeries  = new Array(121).fill(400);
-  let nSeries  = new Array(121).fill(5);
-  let stormActiveSeries = new Array(121).fill(false);
-
-  function movingAverage(arr, win){
-    if(win <= 1) return arr.slice();
-    const out = new Array(arr.length).fill(0);
-    const half = Math.floor(win/2);
-    for(let i=0;i<arr.length;i++){
-      let sum=0, cnt=0;
-      for(let k=-half;k<=half;k++){
-        const j=i+k;
-        if(j>=0 && j<arr.length){
-          sum += arr[j];
-          cnt++;
-        }
+    if(near){
+      near.sources=[...new Set([...near.sources,...c.sources])];
+      near.confidence=Math.min(1,Math.max(near.confidence,c.confidence)+0.08);
+      if(c.confidence>near.confidence){
+        Object.assign(near,c);
       }
-      out[i] = (cnt>0) ? (sum/cnt) : arr[i];
+    }else{
+      merged.push(c);
     }
-    return out;
   }
 
-  function recomputeKpSeries(){
-    const lagMin = Number(lagMinInput.value);
-    const alpha = Number(alphaInput.value);
-    const a = Number(aInput.value);
-    const b = Number(bInput.value);
-    const smoothH = Number(smoothHInput.value);
+  return merged;
+}
 
-    // Build Cp at each hour (0..120)
-    const cp = new Array(121).fill(0);
+function updateTimeline(){
+  const h=Number(document.getElementById("timeSlider").value);
+  const t=new Date(STATE.startTime.getTime()+h*3600*1000);
+  document.getElementById("timeLabel").innerHTML=`<b>${t.toISOString().slice(0,16).replace("T"," ")} UTC</b> / 現在+${h}h`;
+  drawSun(STATE.cmes,t);
+  drawFlow(STATE.cmes,t);
+  renderHazard(t);
+}
 
-    for(let h=0; h<=120; h++){
-      // Apply lag: use solar wind at (h - lag)
-      const lagH = lagMin/60;
-      const hs = h - lagH;
+function drawSun(cmes,time){
+  const {ctx,cx,cy,r,w,h}=setup("sunCanvas");
+  ctx.clearRect(0,0,w,h);
 
-      // sample solar wind at fractional hour hs (linear between floor/ceil)
-      function sampleAtFrac(getter){
-        const h0 = Math.floor(hs);
-        const h1 = Math.ceil(hs);
-        if(h0 < 0) return getter(0);
-        if(h1 > 120) return getter(120);
-        if(h0 === h1) return getter(h0);
-        const t = hs - h0;
-        return lerp(getter(h0), getter(h1), clamp(t,0,1));
-      }
+  const g=ctx.createRadialGradient(cx-r*.25,cy-r*.25,r*.1,cx,cy,r);
+  g.addColorStop(0,"#fff59d");
+  g.addColorStop(.55,"#ffb300");
+  g.addColorStop(1,"#e65100");
 
-      const v = sampleAtFrac(getVAtHours);
-      const n = sampleAtFrac(getNAtHours);
-      const by = sampleAtFrac(getByAtHours);
-      const bz = sampleAtFrac(getBzAtHours);
-      const bt = sampleAtFrac(getBtAtHours);
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fillStyle=g;
+  ctx.fill();
+  ctx.strokeStyle="#fff5";
+  ctx.lineWidth=2;
+  ctx.stroke();
 
-      vSeries[h] = v;
-      nSeries[h] = n;
-      bzSeries[h] = bz;
+  drawSolarGrid(ctx,cx,cy,r);
+  drawSolarLabels(ctx,cx,cy,r);
 
-      const C = newellCoupling(v, by, bz, bt);
-      const Cn = couplingNorm(C);
-      const P = pdynIndex(n, v);
-      const Cp = Cn * Math.pow(P, clamp(alpha, 0, 1));
-      cp[h] = isFinite(Cp) ? Math.max(0, Cp) : 0;
-    }
+  let visible=0,hidden=0;
 
-    // Heavy smoothing on Cp (optional)
-    const cpSm = (smoothH && smoothH>0) ? movingAverage(cp, Math.max(1, Math.round(smoothH))) : cp;
+  cmes.slice(0,40).forEach(c=>{
+    const displayLon=normalizeLon(c.lon+SOLAR_ROTATION*((time-c.t0)/3600000));
+    const p=solarProject(c.lat,displayLon);
 
-    // Map to Kp-hat (saturating)
-    const kp = new Array(121).fill(0);
-    for(let h=0; h<=120; h++){
-      const val = a * Math.log(1 + cpSm[h]) + b;
-      kp[h] = clamp(val, 0, 9);
-    }
+    if(!p.visible){hidden++;return;}
+    visible++;
 
-    // Optional smoothing on Kp itself (if you want it even heavier)
-    const kpSm = (smoothH && smoothH>0) ? movingAverage(kp, Math.max(1, Math.round(smoothH))) : kp;
-
-    kpSeries = kpSm;
-    const thr = Number(kpStormThresh.value);
-    stormActiveSeries = kpSeries.map(x => x >= thr);
-  }
-
-  function kpAtHour(h){
-    const i = clamp(Math.round(h), 0, 120);
-    return kpSeries[i] ?? 2.0;
-  }
-  function bzAtHour(h){
-    const i = clamp(Math.round(h), 0, 120);
-    return bzSeries[i] ?? 0;
-  }
-
-  // ===== Radiation belt term (global) =====
-  // Define radiation window after storm ends:
-  //  - Detect contiguous storm segments (kp>=thr). Use the first segment as main storm.
-  //  - radStart = stormEnd + 24h, radEnd = radStart + 48h
-  let radWindow = { exists:false, start:0, end:0 };
-  function recomputeRadiationWindow(){
-    const thr = Number(kpStormThresh.value);
-    let inSeg=false, segStart=0, segEnd=0;
-    for(let h=0; h<=120; h++){
-      const on = (kpSeries[h] >= thr);
-      if(on && !inSeg){ inSeg=true; segStart=h; segEnd=h; }
-      if(on && inSeg){ segEnd=h; }
-      if(!on && inSeg){ break; } // take first segment
-    }
-    if(inSeg){
-      const start = segEnd + 24;
-      const end = start + 48;
-      if(start <= 120){
-        radWindow = { exists:true, start, end: Math.min(120, end) };
-        return;
-      }
-    }
-    radWindow = { exists:false, start:0, end:0 };
-  }
-  function isRadActive(h){
-    return radWindow.exists && h >= radWindow.start && h <= radWindow.end;
-  }
-  function radiationTerm(h){
-    if(!isRadActive(h)) return 0;
-    const mid = (radWindow.start + radWindow.end)/2;
-    const span = Math.max(1e-6, (radWindow.end - radWindow.start)/2);
-    const dist = Math.abs(h - mid)/span;
-    const shape = Math.max(0, 1 - dist);
-    return 3.5 * shape; // amp
-  }
-
-  // ===== Global quiet =====
-  function isGloballyQuiet(h){
-    // Use Kp̂ itself as primary "quiet" gate, plus optional dst
-    const kp = kpAtHour(h);
-    const dst = Number(dstInput.value);
-    const quietByKp = (kp <= 2.0);
-    const dstQuiet = (Math.abs(dst) <= 20);
-    return quietByKp && dstQuiet;
-  }
-
-  // ===== Colors =====
-  function getColors(){
-    const low = lowColorInput.value || "#2ecc71";
-    const med = medColorInput.value || "#f1c40f";
-    const high = highColorInput.value || "#e67e22";
-    const ext = extColorInput.value || "#e74c3c";
-    lowColorBox.style.background = low;
-    medColorBox.style.background = med;
-    highColorBox.style.background = high;
-    extColorBox.style.background = ext;
-    return { low, med, high, ext };
-  }
-  function riskToColor(r){
-    const c = getColors();
-    if(r < 3) return c.low;
-    if(r < 6) return c.med;
-    if(r < 8) return c.high;
-    return c.ext;
-  }
-
-  // ===== Risk model =====
-  function computeSurfaceRisk(h, lon){
-    if(isGloballyQuiet(h)) return { value:0.5, sector:getSector(lon,h) };
-
-    const sector = getSector(lon,h);
-    const quietKp = Number(quietKpInput.value);
-    const kp = kpAtHour(h);
-
-    // stormBase: Kp above quiet
-    const stormBase = Math.max(0, kp - quietKp);
-
-    // Southward IMF indicator (time-varying if NOAA)
-    const bz = bzAtHour(h);
-    const bzTerm = (bz < 0) ? 1.0 : 0.0;
-
-    // Direct impact (optional): compressions from CME/HSS (fallback windows)
-    const directOn = directImpactCheckbox.checked;
-    let direct = 0;
-    if(directOn){
-      if(isCmeImpact(h)) direct += 0.9;
-      if(isHssActive(h)) direct += 0.4;
-    }
-
-    // LT weights (night boost moderated)
-    let stormMult=1.0, bzMult=1.0, offset=0.4;
-    switch(sector.code){
-      case "D_MORN": stormMult=0.55; bzMult=0.65; offset=0.25; break;
-      case "D_NOON": stormMult=0.45; bzMult=0.60; offset=0.22; break;
-      case "D_AFTER":stormMult=0.60; bzMult=0.75; offset=0.30; break;
-      case "N_EVE":  stormMult=1.10; bzMult=1.15; offset=0.60; break;
-      case "N_MID":  stormMult=1.25; bzMult=1.25; offset=0.70; break;
-      case "N_MORN": stormMult=1.05; bzMult=1.10; offset=0.58; break;
-    }
-
-    let risk = stormBase*stormMult + bzTerm*bzMult + offset + direct;
-    // clamp
-    risk = clamp(risk, 0, 10);
-    return { value:risk, sector };
-  }
-
-  function computeDeepRisk(h, lon){
-    if(isGloballyQuiet(h)) return { value:0.5, sector:getSector(lon,h) };
-
-    const sector = getSector(lon,h);
-    const quietKp = Number(quietKpInput.value);
-    const kp = kpAtHour(h);
-
-    const stormBase = Math.max(0, kp - quietKp);
-    const rad = radiationTerm(h); // global
-
-    // Bz term is weaker for deep (it's mainly radiation belts + prolonged activity)
-    const bz = bzAtHour(h);
-    const bzTerm = (bz < 0) ? 0.6 : 0.0;
-
-    const directOn = directImpactCheckbox.checked;
-    let direct = 0;
-    if(directOn){
-      if(isCmeImpact(h)) direct += 0.35;
-      if(isHssActive(h)) direct += 0.20;
-    }
-
-    // LT dependence minimized (no nightside boost)
-    const offset = 0.45;
-    let risk = stormBase*0.95 + rad*1.0 + bzTerm + offset + direct;
-
-    // If radiation active, deep risk should not depend on night/day (already global)
-    risk = clamp(risk, 0, 10);
-    return { value:risk, sector };
-  }
-
-  // ===== Drawing =====
-  function drawGeoRings(){
-    const h = Number(timeSlider.value);
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    ctx.fillStyle = "#141b24";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    const step = 10;
-    for(let lon=0; lon<360; lon+=step){
-      const mid = lon + step/2;
-
-      const s = computeSurfaceRisk(h, mid).value;
-      const d = computeDeepRisk(h, mid).value;
-
-      const sCol = riskToColor(s);
-      const dCol = riskToColor(d);
-
-      const a0 = degToRad(lon);
-      const a1 = degToRad(lon + step);
-
-      // Surface ring
-      ctx.beginPath();
-      ctx.arc(cx, cy, surfaceOuterR, a0, a1, false);
-      ctx.arc(cx, cy, surfaceInnerR, a1, a0, true);
-      ctx.closePath();
-      ctx.fillStyle = sCol;
-      ctx.fill();
-
-      // Deep ring
-      ctx.beginPath();
-      ctx.arc(cx, cy, deepOuterR, a0, a1, false);
-      ctx.arc(cx, cy, deepInnerR, a1, a0, true);
-      ctx.closePath();
-      ctx.fillStyle = dCol;
-      ctx.fill();
-    }
-
-    // Nightside band (visual aid only)
-    const sub = getSubsolarLongitude(h);
-    const nightCenter = (sub + 180) % 360;
-    const ns = nightCenter - 90;
-    const ne = nightCenter + 90;
+    const x=cx+p.x*r;
+    const y=cy+p.y*r;
+    const col=riskColor(c.arrivalScore);
+    const size=Math.max(5,Math.min(30,c.halfAngle/3));
 
     ctx.beginPath();
-    ctx.arc(cx, cy, nightRadiusOuter, degToRad(ns), degToRad(ne), false);
-    ctx.arc(cx, cy, nightRadiusInner, degToRad(ne), degToRad(ns), true);
-    ctx.closePath();
-    ctx.fillStyle = "rgba(52,93,255,0.35)";
+    ctx.arc(x,y,size+5,0,Math.PI*2);
+    ctx.fillStyle=col+"55";
     ctx.fill();
 
-    // Earth
     ctx.beginPath();
-    ctx.arc(cx, cy, earthRadius, 0, Math.PI*2);
-    ctx.fillStyle = "#0f1724";
+    ctx.arc(x,y,size,0,Math.PI*2);
+    ctx.fillStyle=col;
     ctx.fill();
-    ctx.strokeStyle = "#324055";
-    ctx.lineWidth = 2;
+
+    ctx.strokeStyle="#000";
+    ctx.lineWidth=1;
     ctx.stroke();
 
-    // Longitude labels
-    ctx.fillStyle = "#f5f5f5";
-    ctx.font = "11px system-ui";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    for(let lon=0; lon<360; lon+=30){
-      const ang = degToRad(lon);
-      const r = surfaceOuterR + 18;
-      ctx.fillText(String(lon), cx + r*Math.cos(ang), cy + r*Math.sin(ang));
+    ctx.beginPath();
+    ctx.arc(x,y,Math.min(r*.35,size+c.halfAngle*.75),0,Math.PI*2);
+    ctx.strokeStyle=col+"99";
+    ctx.lineWidth=2;
+    ctx.stroke();
+
+    ctx.fillStyle="#fff";
+    ctx.font="11px system-ui";
+    ctx.fillText(shortId(c.id),x+size+6,y-2);
+    ctx.fillStyle="#ddd";
+    const lonLabel=displayLon>0?`W${displayLon.toFixed(0)}`:displayLon<0?`E${Math.abs(displayLon).toFixed(0)}`:"0";
+    ctx.fillText(lonLabel,x+size+6,y+12);
+  });
+
+  document.getElementById("sunSummary").innerHTML=
+    `Visible CME sources: <b>${visible}</b> / backside-limb: <b>${hidden}</b><br>`+
+    `Merged events: <b>${cmes.length}</b><br>`+
+    `中央=0°、右=W、左=E。緯度は上=N、下=S。`;
+}
+
+function drawSolarGrid(ctx,cx,cy,r){
+  ctx.save();
+
+  ctx.strokeStyle="rgba(255,255,255,.17)";
+  ctx.lineWidth=1;
+
+  [-60,-30,0,30,60].forEach(lat=>{
+    ctx.beginPath();
+    let started=false;
+    for(let lon=-90;lon<=90;lon+=2){
+      const p=solarProject(lat,lon);
+      if(!p.visible) continue;
+      const x=cx+p.x*r,y=cy+p.y*r;
+      if(!started){ctx.moveTo(x,y);started=true;}
+      else ctx.lineTo(x,y);
     }
+    ctx.stroke();
+  });
 
-    // Center label
-    ctx.fillStyle = "#f5f5f5";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = "bold 14px system-ui";
-    ctx.fillText("Surface / Deep Charging Risk", cx, cy - 14);
-    ctx.font = "11px system-ui";
-    const utcZ = new Date(getUtcMsAtHoursAhead(h)).toISOString().slice(0,16).replace("T"," ") + "Z";
-    ctx.fillText(utcZ, cx, cy + 10);
+  [-60,-30,0,30,60].forEach(lon=>{
+    ctx.beginPath();
+    let started=false;
+    for(let lat=-89;lat<=89;lat+=2){
+      const p=solarProject(lat,lon);
+      if(!p.visible) continue;
+      const x=cx+p.x*r,y=cy+p.y*r;
+      if(!started){ctx.moveTo(x,y);started=true;}
+      else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  });
+
+  ctx.strokeStyle="rgba(255,255,255,.35)";
+  ctx.lineWidth=1.5;
+
+  ctx.beginPath();
+  for(let lon=-90;lon<=90;lon+=2){
+    const p=solarProject(0,lon);
+    const x=cx+p.x*r,y=cy+p.y*r;
+    if(lon===-90)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  ctx.beginPath();
+  for(let lat=-89;lat<=89;lat+=2){
+    const p=solarProject(lat,0);
+    const x=cx+p.x*r,y=cy+p.y*r;
+    if(lat===-89)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  ctx.fillStyle="rgba(255,255,255,.6)";
+  ctx.font="10px system-ui";
+  [-60,-30,30,60].forEach(lat=>{
+    const p=solarProject(lat,-86);
+    if(p.visible){
+      ctx.fillText(`${lat>0?"N":"S"}${Math.abs(lat)}`,cx+p.x*r-34,cy+p.y*r+3);
+    }
+  });
+
+  [-60,-30,0,30,60].forEach(lon=>{
+    const p=solarProject(-72,lon);
+    if(p.visible){
+      const label=lon===0?"0":lon>0?`W${lon}`:`E${Math.abs(lon)}`;
+      ctx.fillText(label,cx+p.x*r-10,cy+p.y*r+16);
+    }
+  });
+
+  ctx.restore();
+}
+
+function drawSolarLabels(ctx,cx,cy,r){
+  ctx.fillStyle="#fff";
+  ctx.font="13px system-ui";
+  ctx.fillText("N",cx-4,cy-r-10);
+  ctx.fillText("S",cx-4,cy+r+22);
+  ctx.fillText("E",cx-r-24,cy+4);
+  ctx.fillText("W",cx+r+12,cy+4);
+  ctx.fillText("Solar disk: W-positive display",12,24);
+}
+
+function solarProject(latDeg,lonWestDeg){
+  const lat=latDeg*Math.PI/180;
+  const lon=lonWestDeg*Math.PI/180;
+  const x=Math.cos(lat)*Math.sin(lon);
+  const y=-Math.sin(lat);
+  const z=Math.cos(lat)*Math.cos(lon);
+  return {x,y,z,visible:z>0};
+}
+
+function drawFlow(cmes,time){
+  const {ctx,w,h}=setupWide("flowCanvas");
+  ctx.clearRect(0,0,w,h);
+
+  const sx=70,ex=w-80,y=h/2,len=ex-sx;
+
+  ctx.strokeStyle="#ffffff22";
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(sx,y);
+  ctx.lineTo(ex,y);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(sx,y,28,0,Math.PI*2);
+  ctx.fillStyle="#ffb300";
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(ex,y,14,0,Math.PI*2);
+  ctx.fillStyle="#4fc3f7";
+  ctx.fill();
+
+  ctx.fillStyle="#fff";
+  ctx.font="12px system-ui";
+  ctx.fillText("Sun",sx-10,y+45);
+  ctx.fillText("Earth/GEO",ex-42,y+36);
+  ctx.fillText("CME plasma propagation / Earth arrival",12,24);
+
+  cmes.slice(0,15).forEach((c,idx)=>{
+    const total=c.arrival.date-c.t0;
+    const elapsed=time-c.t0;
+    if(total<=0) return;
+
+    const frac=elapsed/total;
+    if(frac<-0.05||frac>1.25) return;
+
+    const x=sx+Math.max(0,Math.min(1.15,frac))*len;
+    const lane=y-82+(idx%7)*26;
+    const col=riskColor(c.arrivalScore);
+
+    ctx.strokeStyle=col;
+    ctx.lineWidth=Math.max(2,Math.min(18,c.halfAngle/4));
+    ctx.globalAlpha=.75;
+
+    ctx.beginPath();
+    ctx.arc(x,lane,20+c.halfAngle*.7,-.9,.9);
+    ctx.stroke();
+    ctx.globalAlpha=1;
+
+    ctx.fillStyle=col;
+    ctx.beginPath();
+    ctx.arc(x,lane,5,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle="#fff";
+    ctx.font="11px system-ui";
+    ctx.fillText(`${shortId(c.id)} ${Math.round(frac*100)}%`,x+8,lane-8);
+
+    if(time>=c.shockStart&&time<=c.shockEnd){
+      ctx.fillStyle="#ff1744";
+      ctx.fillText("SHOCK",ex-65,lane-8);
+    }else if(time>=c.surfaceStart&&time<=c.surfaceEnd){
+      ctx.fillStyle="#ff9100";
+      ctx.fillText("SURFACE",ex-75,lane-8);
+    }else if(time>=c.deepStart&&time<=c.deepEnd){
+      ctx.fillStyle="#ffee58";
+      ctx.fillText("DEEP",ex-55,lane-8);
+    }
+  });
+}
+
+function renderHazard(time){
+  const active=STATE.cmes.filter(c=>time>=c.activeStart&&time<=c.activeEnd).sort((a,b)=>b.arrivalScore-a.arrivalScore);
+  const top=active[0];
+
+  if(!top){
+    document.getElementById("hazardPanel").innerHTML=`<div class="phase"><b style="color:#8bc34a">🟢 Quiet</b><br>No active CME hazard window.</div>`;
+    return;
   }
 
-  // ===== Labels =====
-  function updateLabels(){
-    const h = Number(timeSlider.value);
-    const baseUtc = computeBaseTimeUtc();
+  const dt=(time-top.arrival.date)/3600000;
+  const phase=dt<0?"🟡 CME Shock Approaching":dt<3?"🟠 Magnetosphere Compression":dt<12?"🟠 Surface Charging Risk":"🔴 Deep Charging Risk";
 
-    baseTimeLabel.textContent = `Forecast start: ${formatUtc(baseUtc.getTime())}`;
-    const tMs = getUtcMsAtHoursAhead(h);
-    timeUtcLabel.textContent = formatUtc(tMs);
+  const seu=STATE.env.p10>=10?80:top.arrivalScore*0.5;
+  const surface=top.arrivalScore+STATE.env.dynamicPressure*2;
+  const deep=dt>12?top.arrivalScore+20:top.arrivalScore*0.5;
+  const gnss=STATE.env.kp*12;
+  const drag=STATE.env.kp*8;
 
-    const kp = kpAtHour(h);
-    kpNowLabel.textContent = kp.toFixed(2);
+  document.getElementById("hazardPanel").innerHTML=`
+  <div class="phase"><b>${phase}</b><br>
+  Top event: ${shortId(top.id)}<br>
+  Sources: ${top.sources.join(", ")}<br>
+  Confidence: ${(top.confidence*100).toFixed(0)}%<br>
+  Arrival: ${top.arrival.utc.slice(0,16).replace("T"," ")} UTC / ${top.arrival.source}</div>
+  ${hazardCard("SEU Risk",seu,"GOES proton / SEPによるSEU・センサー雑音")}
+  ${hazardCard("Surface Charging",surface,"磁気圏圧縮・電子環境変化による表面帯電")}
+  ${hazardCard("Deep Charging",deep,"到達後12〜48hの内部帯電リスク")}
+  ${hazardCard("GNSS Error",gnss,"Kp上昇・電離圏擾乱による測位誤差")}
+  ${hazardCard("LEO Drag",drag,"熱圏膨張による軌道抵抗増加")}
+  `;
+}
 
-    const parts = [];
-    const thr = Number(kpStormThresh.value);
-    if(kp >= thr) parts.push("Geomagnetic storm (by Kp̂)");
-    if(isRadActive(h)) parts.push("Radiation belt disturbance (global)");
-    if(isCmeImpact(h)) parts.push("CME (fallback window)");
-    if(isHssActive(h)) parts.push("HSS (fallback window)");
-    statusLabel.textContent = parts.length ? parts.join(" + ") : "Quiet";
+function hazardCard(title,val,desc){
+  val=Math.max(0,Math.min(100,Math.round(val)));
+  const col=riskColor(val);
+  return `<div class="phase"><b>${title}: <span style="color:${col}">${label(val)}</span></b>
+  <div class="bar"><div class="fill" style="width:${val}%;background:${col}"></div></div>
+  <div class="small">${desc}</div></div>`;
+}
 
-    const v = vSeries[Math.round(h)] ?? getVAtHours(h);
-    const n = nSeries[Math.round(h)] ?? getNAtHours(h);
-    const bz = bzAtHour(h);
-    const alpha = Number(alphaInput.value);
-    const lagMin = Number(lagMinInput.value);
-    const smoothH = Number(smoothHInput.value);
+function renderStatus(){
+  document.getElementById("statusBox").innerHTML=
+    Object.entries(STATE.sources).map(([k,v])=>{
+      const col=v.status.startsWith("OK")?"#8bc34a":v.status.startsWith("FAILED")?"#ff5252":"#aaa";
+      return `<b>${v.label}</b>: <span style="color:${col};font-weight:800">${v.status}</span>`;
+    }).join("<br>")+
+    `<hr>Solar wind: V=${STATE.env.speed} km/s, Bz=${STATE.env.bz}, Clock=${STATE.env.clockAngle.toFixed(1)}°, Kp=${STATE.env.kp}<br>`+
+    `GOES ≥10MeV: ${STATE.env.p10} pfu / ${STATE.env.radiationScale}`;
+}
 
-    const globalQuiet = isGloballyQuiet(h);
-
-    logicSummary.textContent =
-`現在（UTC=${formatUtc(tMs)}）
- - NOAA API: ${useNoaaCheckbox.checked ? "ON" : "OFF"} / lastOK=${noaa.lastOkMs ? new Date(noaa.lastOkMs).toISOString().slice(11,16)+"Z" : "--"}${noaa.lastErr ? " / err="+noaa.lastErr : ""}
- - v=${v.toFixed(0)} km/s, n=${n.toFixed(1)} cm⁻³, Bz=${isFinite(bz)?bz.toFixed(2):"--"} nT
- - Kp̂=${kp.toFixed(2)}（Newell + Pdyn^α, lag=${lagMin}min, smooth=${smoothH}h, α=${alpha.toFixed(2)}）
- - stormThreshold=${thr.toFixed(1)} / radWindow=${radWindow.exists ? (radWindow.start.toFixed(0)+"–"+radWindow.end.toFixed(0)+"h") : "none"}
- - globalQuiet=${globalQuiet ? "YES (low forced)" : "NO"}`;
+function renderTable(cmes){
+  if(!cmes.length){
+    document.getElementById("table").innerHTML="CMEデータなし。必要なデータ源を個別にLOADしてください。";
+    return;
   }
 
-  // ===== Update pipeline =====
-  function updateAll(){
-    // heavy part first
-    recomputeKpSeries();
-    recomputeRadiationWindow();
+  document.getElementById("table").innerHTML=`<table>
+  <tr><th>ID</th><th>Sources</th><th>Conf.</th><th>Lon</th><th>Lat</th><th>Speed</th><th>Half</th><th>Risk</th><th>Arrival</th><th>Source</th></tr>
+  ${cmes.map(c=>`<tr>
+  <td>${c.id}</td>
+  <td>${c.sources.join("+")}</td>
+  <td>${(c.confidence*100).toFixed(0)}%</td>
+  <td>${c.lon>0 ? "W"+c.lon.toFixed(0) : c.lon<0 ? "E"+Math.abs(c.lon).toFixed(0) : "0"}</td>
+  <td>${c.lat}</td>
+  <td>${c.speed}</td>
+  <td>${c.halfAngle.toFixed?c.halfAngle.toFixed(0):c.halfAngle}</td>
+  <td style="color:${riskColor(c.arrivalScore)};font-weight:700">${c.arrivalScore}</td>
+  <td>${c.arrival.utc.slice(0,16).replace("T"," ")}</td>
+  <td>${c.arrival.source}</td>
+  </tr>`).join("")}
+  </table>`;
+}
 
-    setNoaaBadge();
-    updateLabels();
-    getColors();
-    drawGeoRings();
-  }
+function setup(id){
+  const c=document.getElementById(id),dpr=devicePixelRatio||1,rect=c.getBoundingClientRect();
+  c.width=rect.width*dpr;
+  c.height=rect.height*dpr;
+  const ctx=c.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w:rect.width,h:rect.height,cx:rect.width/2,cy:rect.height/2,r:Math.min(rect.width,rect.height)*.38};
+}
 
-  // ===== Events =====
-  function hookInputs(){
-    const els = [
-      startDateInput, startHourInput, tzJST, tzUTC,
-      useNoaaCheckbox, noaaRefreshMin,
-      lagMinInput, smoothHInput, alphaInput, aInput, bInput, kpStormThresh,
-      bzInput, vswInput, nAmbInput,
-      cmeEtaInput, cmeSpeedInput, cmeDensityInput, cmeDurInput,
-      hssEtaInput, hssSpeedInput, hssDensityInput, hssDurInput,
-      quietKpInput, dstInput,
-      lowColorInput, medColorInput, highColorInput, extColorInput,
-      directImpactCheckbox
-    ];
-    els.forEach(el => el.addEventListener("input", () => updateAll()));
-    useNoaaCheckbox.addEventListener("change", async () => { await refreshNoaa(); updateAll(); });
-    timeSlider.addEventListener("input", () => updateAll());
-  }
-  hookInputs();
+function setupWide(id){
+  const c=document.getElementById(id),dpr=devicePixelRatio||1,rect=c.getBoundingClientRect();
+  c.width=rect.width*dpr;
+  c.height=rect.height*dpr;
+  const ctx=c.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w:rect.width,h:rect.height};
+}
 
-  // ===== Scheduler =====
-  let refreshTimer = null;
-  function startRefreshLoop(){
-    if(refreshTimer) clearInterval(refreshTimer);
-    const min = clamp(Number(noaaRefreshMin.value)||5, 1, 60);
-    refreshTimer = setInterval(async ()=>{
-      await refreshNoaa();
-      updateAll();
-    }, min*60*1000);
-  }
-  noaaRefreshMin.addEventListener("input", startRefreshLoop);
+function normalizeLon(lon){
+  while(lon>180)lon-=360;
+  while(lon<-180)lon+=360;
+  return lon;
+}
 
-  // ===== Boot =====
-  (async function boot(){
-    await refreshNoaa();
-    startRefreshLoop();
-    updateAll();
-  })();
+function riskColor(v){
+  if(v>=85)return"#d500f9";
+  if(v>=70)return"#ff1744";
+  if(v>=45)return"#ff9800";
+  if(v>=20)return"#ffee58";
+  return"#8bc34a";
+}
+
+function label(v){
+  if(v>=85)return"EXTREME";
+  if(v>=70)return"HIGH";
+  if(v>=45)return"MODERATE";
+  if(v>=20)return"LOW";
+  return"MINIMAL";
+}
+
+function shortId(id){
+  const s=String(id||"CME");
+  return s.includes("CME") ? "CME"+s.split("CME").pop().replace(/[^0-9]/g,"").slice(-4) : s.slice(-6);
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+}
+
+function playTimeline(){
+  stopTimeline();
+  STATE.timer=setInterval(()=>{
+    const s=document.getElementById("timeSlider");
+    let v=Number(s.value)+1;
+    if(v>168)v=0;
+    s.value=v;
+    updateTimeline();
+  },300);
+}
+
+function stopTimeline(){
+  if(STATE.timer)clearInterval(STATE.timer);
+  STATE.timer=null;
+}
+
+renderSourcePanel();
+rebuildAll();
 </script>
 </body>
 </html>
