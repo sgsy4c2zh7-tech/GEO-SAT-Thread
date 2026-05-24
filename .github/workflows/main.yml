@@ -23,7 +23,9 @@ jobs:
           python3 <<'PY'
           import os
           import json
+          import time
           import urllib.request
+          import urllib.error
           from datetime import datetime, timedelta, timezone
           from pathlib import Path
 
@@ -47,29 +49,49 @@ jobs:
               "flr": f"https://api.nasa.gov/DONKI/FLR?startDate={start}&endDate={end}&api_key={api_key}"
           }
 
-          def fetch_json(url):
-              req = urllib.request.Request(
-                  url,
-                  headers={"User-Agent": "donki-cache-github-actions"}
-              )
-              with urllib.request.urlopen(req, timeout=60) as r:
-                  return json.loads(r.read().decode("utf-8"))
+          def fetch_json_with_retry(url, tries=5):
+              last_error = None
+
+              for i in range(tries):
+                  try:
+                      req = urllib.request.Request(
+                          url,
+                          headers={
+                              "User-Agent": "donki-cache-github-actions",
+                              "Accept": "application/json"
+                          }
+                      )
+
+                      with urllib.request.urlopen(req, timeout=90) as r:
+                          text = r.read().decode("utf-8")
+                          return json.loads(text)
+
+                  except Exception as e:
+                      last_error = e
+                      wait = 10 * (i + 1)
+                      print(f"Retry {i+1}/{tries} failed: {e}")
+                      time.sleep(wait)
+
+              raise last_error
 
           payload = {
               "generated_at": now.isoformat(),
               "startDate": start,
               "endDate": end,
+              "any_ok": False,
               "sources": {}
           }
 
           for name, url in urls.items():
               try:
-                  data = fetch_json(url)
+                  data = fetch_json_with_retry(url)
                   payload["sources"][name] = {
                       "ok": True,
                       "count": len(data) if isinstance(data, list) else 1,
                       "data": data
                   }
+                  payload["any_ok"] = True
+
               except Exception as e:
                   payload["sources"][name] = {
                       "ok": False,
@@ -94,21 +116,36 @@ jobs:
               if f.stem not in keep_dates:
                   f.unlink()
 
-          files = sorted(
+          all_files = sorted(
               [f for f in base_dir.glob("*.json") if f.name != "index.json"],
               reverse=True
           )
 
+          valid_files = []
+
+          for f in all_files:
+              try:
+                  obj = json.loads(f.read_text(encoding="utf-8"))
+                  if obj.get("any_ok"):
+                      valid_files.append(f)
+              except Exception:
+                  pass
+
+          latest_file = valid_files[0].name if valid_files else None
+
           index = {
               "updated_at": now.isoformat(),
               "retention_days": 7,
-              "latest": files[0].name if files else None,
+              "latest": latest_file,
+              "latest_policy": "latest file with any successful DONKI source",
+              "last_attempt": f"{today}.json",
               "files": [
                   {
                       "date": f.stem,
-                      "path": f"./data/donki/{f.name}"
+                      "path": f"./data/donki/{f.name}",
+                      "valid": f in valid_files
                   }
-                  for f in files
+                  for f in all_files
               ]
           }
 
@@ -116,6 +153,8 @@ jobs:
               json.dumps(index, ensure_ascii=False, indent=2),
               encoding="utf-8"
           )
+
+          print(json.dumps(index, indent=2))
           PY
 
       - name: Commit and push
