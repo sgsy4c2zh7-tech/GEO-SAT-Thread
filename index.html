@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Modular CME Satellite Hazard Console</title>
+<title>CME Satellite Hazard Console - Cached DONKI</title>
+
 <style>
 body{margin:0;background:#070b12;color:#eee;font-family:system-ui,sans-serif}
 header{background:#101826;border-bottom:1px solid #333;padding:16px}
 button{padding:9px 12px;margin:3px;border:0;border-radius:8px;font-weight:700;cursor:pointer}
-input{padding:8px;border-radius:8px;border:1px solid #333;background:#0b1220;color:#eee}
 main{padding:16px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px}
 .card{background:#141b27;border:1px solid #333;border-radius:14px;padding:14px}
@@ -26,19 +26,23 @@ pre{background:#050608;border-radius:10px;padding:10px;white-space:pre-wrap;max-
 .phase{margin-top:8px;padding:10px;border-radius:10px;background:#0d1320}
 .bar{height:16px;border-radius:999px;background:#222;overflow:hidden;margin-top:6px}
 .fill{height:100%}
+.ok{color:#8bc34a}.warn{color:#ffee58}.bad{color:#ff5252}
 </style>
 </head>
 
 <body>
+
 <header>
-<h2>Modular CME → Satellite Hazard Console</h2>
+<h2>CME → Satellite Hazard Console / DONKI Cached Mode</h2>
 <div class="small">
-NASA API Key:
-<input id="apiKey" value="PASTE_YOUR_NASA_API_KEY_HERE" style="width:320px">
-<button onclick="loadAllSources()">全ソース取得</button>
+<button onclick="loadDONKICache()">DONKI Cache読込</button>
+<button onclick="loadAllPublicSources()">公開ソース全取得</button>
 <button onclick="rebuildAll()">再計算</button>
 <button onclick="playTimeline()">▶ 再生</button>
 <button onclick="stopTimeline()">停止</button>
+</div>
+<div class="small">
+DONKIは <code>./data/donki/index.json</code> から読み込みます。NASA APIキーはHTML側に不要です。
 </div>
 </header>
 
@@ -91,13 +95,7 @@ const DONKI_LON_POSITIVE_WEST = true;
 const AU_KM = 149597870;
 const SOLAR_ROTATION = 13.2 / 24;
 
-const DONKI = {
-  cmeAnalysis:"https://api.nasa.gov/DONKI/CMEAnalysis",
-  cme:"https://api.nasa.gov/DONKI/CME",
-  sep:"https://api.nasa.gov/DONKI/SEP",
-  flr:"https://api.nasa.gov/DONKI/FLR"
-};
-
+const DONKI_CACHE_INDEX = "./data/donki/index.json";
 const CACTUS_URL = "https://www.sidc.be/cactus/out/latestCMEs.html";
 
 const NOAA = {
@@ -112,6 +110,7 @@ const NOAA = {
 
 const STATE = {
   sources:{
+    donkiCache:src("DONKI Cache","未取得"),
     donkiAnalysis:src("DONKI CMEAnalysis","未取得"),
     donkiCME:src("DONKI CME","未取得"),
     donkiSEP:src("DONKI SEP","未取得"),
@@ -122,6 +121,7 @@ const STATE = {
     noaaKp:src("NOAA Kp","未取得"),
     goesProton:src("GOES Proton","未取得")
   },
+  donkiIndex:null,
   env:defaultEnv(),
   cmes:[],
   startTime:new Date(),
@@ -136,18 +136,6 @@ function raw(x){
   document.getElementById("raw").textContent=x;
 }
 
-function apiKey(){
-  return document.getElementById("apiKey").value.trim() || "DEMO_KEY";
-}
-
-function dateRange(){
-  const now = new Date();
-  return {
-    start:new Date(now.getTime()-7*86400000).toISOString().slice(0,10),
-    end:now.toISOString().slice(0,10)
-  };
-}
-
 function setSource(key,status,data=null,error=null){
   STATE.sources[key].status=status;
   STATE.sources[key].data=data;
@@ -158,10 +146,7 @@ function setSource(key,status,data=null,error=null){
 
 function renderSourcePanel(){
   const rows=[
-    ["donkiAnalysis","DONKI CMEAnalysis",loadDONKIAnalysis],
-    ["donkiCME","DONKI CME",loadDONKICME],
-    ["donkiSEP","DONKI SEP",loadDONKISEP],
-    ["donkiFLR","DONKI FLR",loadDONKIFLR],
+    ["donkiCache","DONKI Cache",loadDONKICache],
     ["cactus","CACTus CME",loadCACTus],
     ["noaaWind","NOAA Wind",loadNOAAWind],
     ["noaaMag","NOAA IMF",loadNOAAMag],
@@ -171,59 +156,105 @@ function renderSourcePanel(){
 
   document.getElementById("sourcePanel").innerHTML = rows.map(([key,title,fn])=>{
     const x=STATE.sources[key];
-    const col = x.status.startsWith("OK") ? "#8bc34a" :
-                x.status.startsWith("FAILED") ? "#ff5252" :
-                x.status.startsWith("LOADING") ? "#ffee58" : "#aaa";
+
+    const col =
+      x.status.startsWith("OK") ? "#8bc34a" :
+      x.status.startsWith("FAILED") ? "#ff5252" :
+      x.status.startsWith("LOADING") ? "#ffee58" :
+      "#aaa";
+
     const when = x.time ? x.time.toISOString().slice(11,19)+" UTC" : "-";
+
     return `
       <div class="sourceCard">
         <div class="sourceTitle">${title}</div>
         <div style="color:${col};font-weight:800">${x.status}</div>
         <div class="small">Last: ${when}</div>
-        ${x.error ? `<div class="small" style="color:#ff8a80">${escapeHtml(x.error).slice(0,140)}</div>` : ""}
+        ${x.error ? `<div class="small" style="color:#ff8a80">${escapeHtml(x.error).slice(0,160)}</div>` : ""}
         <button onclick="${fn.name}()">LOAD</button>
       </div>
     `;
   }).join("");
 }
 
-async function loadAllSources(){
+async function loadAllPublicSources(){
   await Promise.allSettled([
-    loadDONKIAnalysis(),
-    loadDONKICME(),
-    loadDONKISEP(),
-    loadDONKIFLR(),
+    loadDONKICache(),
     loadCACTus(),
     loadNOAAWind(),
     loadNOAAMag(),
     loadNOAAKp(),
     loadGOESProton()
   ]);
+
   rebuildAll();
 }
 
-async function loadDONKIAnalysis(){
-  const {start,end}=dateRange();
-  const url=`${DONKI.cmeAnalysis}?startDate=${start}&endDate=${end}&mostAccurateOnly=true&speed=300&api_key=${apiKey()}`;
-  return loadJsonSource("donkiAnalysis",url);
+async function loadDONKICache(){
+  setSource("donkiCache","LOADING...");
+  try{
+    const index = await fetchJson(DONKI_CACHE_INDEX);
+
+    if(!index.latest){
+      throw new Error("DONKI cache index has no latest file");
+    }
+
+    STATE.donkiIndex = index;
+
+    const latestPath = "./data/donki/" + index.latest;
+    const payload = await fetchJson(latestPath);
+
+    const analysis = payload.sources?.cmeAnalysis?.data || [];
+    const cme = payload.sources?.cme?.data || [];
+    const sep = payload.sources?.sep?.data || [];
+    const flr = payload.sources?.flr?.data || [];
+
+    setSource(
+      "donkiCache",
+      `OK: latest ${index.latest}, files ${index.files?.length || 0}`,
+      payload
+    );
+
+    setSource(
+      "donkiAnalysis",
+      `OK cached: ${analysis.length} records`,
+      analysis
+    );
+
+    setSource(
+      "donkiCME",
+      `OK cached: ${cme.length} records`,
+      cme
+    );
+
+    setSource(
+      "donkiSEP",
+      `OK cached: ${sep.length} records`,
+      sep
+    );
+
+    setSource(
+      "donkiFLR",
+      `OK cached: ${flr.length} records`,
+      flr
+    );
+
+    rebuildAll();
+
+  }catch(e){
+    setSource("donkiCache","FAILED",null,e.message);
+  }
 }
 
-async function loadDONKICME(){
-  const {start,end}=dateRange();
-  const url=`${DONKI.cme}?startDate=${start}&endDate=${end}&api_key=${apiKey()}`;
-  return loadJsonSource("donkiCME",url);
-}
-
-async function loadDONKISEP(){
-  const {start,end}=dateRange();
-  const url=`${DONKI.sep}?startDate=${start}&endDate=${end}&api_key=${apiKey()}`;
-  return loadJsonSource("donkiSEP",url,false);
-}
-
-async function loadDONKIFLR(){
-  const {start,end}=dateRange();
-  const url=`${DONKI.flr}?startDate=${start}&endDate=${end}&api_key=${apiKey()}`;
-  return loadJsonSource("donkiFLR",url,false);
+async function loadCACTus(){
+  setSource("cactus","LOADING...");
+  try{
+    const text=await fetchCactus(CACTUS_URL);
+    setSource("cactus","OK",text);
+    rebuildAll();
+  }catch(e){
+    setSource("cactus","FAILED",null,e.message);
+  }
 }
 
 async function loadNOAAWind(){
@@ -260,45 +291,41 @@ async function loadNOAAKp(){
 }
 
 async function loadGOESProton(){
-  return loadJsonSource("goesProton",NOAA.proton);
-}
-
-async function loadCACTus(){
-  setSource("cactus","LOADING...");
+  setSource("goesProton","LOADING...");
   try{
-    const text=await fetchCactus(CACTUS_URL);
-    setSource("cactus","OK",text);
+    const data = await fetchJson(NOAA.proton);
+    setSource("goesProton",`OK: ${Array.isArray(data)?data.length:1} records`,data);
     rebuildAll();
   }catch(e){
-    setSource("cactus","FAILED",null,e.message);
-  }
-}
-
-async function loadJsonSource(key,url,rebuild=true){
-  setSource(key,"LOADING...");
-  try{
-    const data=await fetchJson(url);
-    setSource(key,`OK: ${Array.isArray(data)?data.length:1} records`,data);
-    if(rebuild) rebuildAll();
-  }catch(e){
-    setSource(key,"FAILED",null,e.message);
+    setSource("goesProton","FAILED",null,e.message);
   }
 }
 
 async function fetchJson(url){
   const sep=url.includes("?")?"&":"?";
   const r=await fetch(url+sep+"t="+Date.now());
-  if(!r.ok) throw new Error("HTTP "+r.status);
+
+  if(!r.ok){
+    throw new Error("HTTP "+r.status+" : "+url);
+  }
+
   const text=await r.text();
-  try{return JSON.parse(text);}
-  catch(e){throw new Error("JSON parse failed: "+text.slice(0,120));}
+
+  try{
+    return JSON.parse(text);
+  }catch(e){
+    throw new Error("JSON parse failed: "+text.slice(0,160));
+  }
 }
 
 async function fetchJsonAny(urls){
   let err="";
   for(const u of urls){
-    try{return await fetchJson(u);}
-    catch(e){err=e.message;}
+    try{
+      return await fetchJson(u);
+    }catch(e){
+      err=e.message;
+    }
   }
   throw new Error(err);
 }
@@ -341,15 +368,22 @@ function rebuildAll(){
     events.push(...parseCACTus(cactus,STATE.env));
   }
 
-  STATE.cmes=dedupeCMEs(events).sort((a,b)=>b.confidence-b.confidence || b.arrivalScore-a.arrivalScore);
+  STATE.cmes=dedupeCMEs(events)
+    .sort((a,b)=>b.confidence-b.confidence || b.arrivalScore-a.arrivalScore);
 
   renderStatus();
   renderTable(STATE.cmes);
   updateTimeline();
 
   raw(JSON.stringify({
-    note:"DONKIは太陽面緯度経度、CACTusはPA/DAなので太陽面上には置かず外側コーン表示",
-    dataHealth:Object.fromEntries(Object.entries(STATE.sources).map(([k,v])=>[k,{status:v.status,time:v.time,error:v.error}])),
+    note:"DONKIはGitHub Actions保存キャッシュから読込。HTML側ではNASA APIキー不要。",
+    donkiIndex:STATE.donkiIndex,
+    dataHealth:Object.fromEntries(
+      Object.entries(STATE.sources).map(([k,v])=>[
+        k,
+        {status:v.status,time:v.time,error:v.error}
+      ])
+    ),
     env:STATE.env,
     mergedCount:STATE.cmes.length,
     cmes:STATE.cmes.slice(0,30)
@@ -357,7 +391,20 @@ function rebuildAll(){
 }
 
 function defaultEnv(){
-  return {speed:400,density:0,bt:0,by:0,bz:0,kp:0,dynamicPressure:0,clockAngle:0,p10:0,p50:0,p100:0,radiationScale:"S0"};
+  return {
+    speed:400,
+    density:0,
+    bt:0,
+    by:0,
+    bz:0,
+    kp:0,
+    dynamicPressure:0,
+    clockAngle:0,
+    p10:0,
+    p50:0,
+    p100:0,
+    radiationScale:"S0"
+  };
 }
 
 function parseEnvironment(wind,mag,kp,protons){
@@ -381,24 +428,35 @@ function parseEnvironment(wind,mag,kp,protons){
 
   return {
     time:getTime(w)||getTime(b)||getTime(k)||"",
-    speed,density,bt,by,bz,kp:kpVal,
+    speed,
+    density,
+    bt,
+    by,
+    bz,
+    kp:kpVal,
     dynamicPressure:pdyn,
     clockAngle:clock,
-    p10,p50,p100,
+    p10,
+    p50,
+    p100,
     radiationScale:radiationScale(p10)
   };
 }
 
 function latest(arr){
   if(!Array.isArray(arr)) return {};
+
   for(let i=arr.length-1;i>=0;i--){
     const r=arr[i];
+
     if(Array.isArray(r)){
       if(String(r[0]).toLowerCase().includes("time")) continue;
       return r;
     }
+
     if(r&&typeof r==="object") return r;
   }
+
   return {};
 }
 
@@ -408,11 +466,13 @@ function pick(obj,names){
       const v=Number(obj[n]);
       if(Number.isFinite(v)) return v;
     }
+
     if(typeof n==="string"&&obj&&obj[n]!==undefined){
       const v=Number(obj[n]);
       if(Number.isFinite(v)) return v;
     }
   }
+
   return 0;
 }
 
@@ -424,10 +484,15 @@ function getTime(obj){
 
 function latestEnergy(arr,energy){
   if(!Array.isArray(arr)) return null;
+
   for(let i=arr.length-1;i>=0;i--){
     const x=arr[i];
-    if(String(x?.energy||"").includes(energy)) return x;
+
+    if(String(x?.energy||"").includes(energy)){
+      return x;
+    }
   }
+
   return null;
 }
 
@@ -447,7 +512,10 @@ function parseDONKIAnalysis(c,env){
   const speed=finiteOr(c.speed,500);
   const half=finiteOr(c.halfAngle,30);
 
-  const t0=c.time21_5?new Date(c.time21_5):new Date(c.activityStartTime||Date.now());
+  const t0=c.time21_5
+    ? new Date(c.time21_5)
+    : new Date(c.activityStartTime||Date.now());
+
   const arrival=computeArrivalDONKI(c,env);
   const score=scoreDONKI(lon,lat,speed,half);
   const hasEnlil=arrival.source==="ENLIL";
@@ -456,7 +524,9 @@ function parseDONKIAnalysis(c,env){
     id:c.activityID||"DONKI",
     type:"DONKI",
     coordType:"heliographic",
-    rawLon,lon,lat,
+    rawLon,
+    lon,
+    lat,
     speed,
     halfAngle:half,
     t0,
@@ -469,11 +539,18 @@ function parseDONKIAnalysis(c,env){
 
 function parseDONKICME(list,env){
   const out=[];
+
   for(const c of list){
     const analyses=Array.isArray(c.cmeAnalyses)?c.cmeAnalyses:[];
+
     if(analyses.length){
       for(const a of analyses){
-        const item=parseDONKIAnalysis({...a,activityID:c.activityID,activityStartTime:c.startTime},env);
+        const item=parseDONKIAnalysis({
+          ...a,
+          activityID:c.activityID,
+          activityStartTime:c.startTime
+        },env);
+
         if(item){
           item.sources.push("DONKI-CME");
           item.confidence=Math.max(item.confidence,0.88);
@@ -485,7 +562,9 @@ function parseDONKICME(list,env){
         id:c.activityID||"DONKI-CME",
         type:"DONKI-basic",
         coordType:"none",
-        rawLon:null,lon:null,lat:null,
+        rawLon:null,
+        lon:null,
+        lat:null,
         speed:500,
         halfAngle:30,
         t0:new Date(c.startTime||Date.now()),
@@ -496,6 +575,7 @@ function parseDONKICME(list,env){
       }));
     }
   }
+
   return out.filter(Boolean);
 }
 
@@ -505,11 +585,18 @@ function parseCACTus(html,env){
     .replace(/<\/p>/gi,"\n")
     .replace(/<[^>]+>/g," ");
 
-  const lines=text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const lines=text
+    .split(/\r?\n/)
+    .map(x=>x.trim())
+    .filter(Boolean);
+
   const out=[];
 
   for(const line of lines){
-    const m=line.match(/^(\d{4})\s*\|\s*(\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2})\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*([IVX]*)/);
+    const m=line.match(
+      /^(\d{4})\s*\|\s*(\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2})\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*([IVX]*)/
+    );
+
     if(!m) continue;
 
     const id="CACTus-"+m[1];
@@ -548,6 +635,7 @@ function parseCACTus(html,env){
 
 function buildCME(c){
   const dur=durationBy(c.halfAngle,c.speed);
+
   return {
     ...c,
     activeStart:new Date(c.arrival.date.getTime()-6*3600*1000),
@@ -568,9 +656,20 @@ function finiteOr(v,def){
 
 function scoreDONKI(lon,lat,speed,half){
   const d=Math.sqrt(lon*lon+lat*lat);
-  const earth=d<=half?45:d<=half+20?30:d<=half+40?18:5;
-  const sp=speed>=2000?30:speed>=1500?24:speed>=1000?16:speed>=700?10:4;
+
+  const earth =
+    d<=half ? 45 :
+    d<=half+20 ? 30 :
+    d<=half+40 ? 18 : 5;
+
+  const sp =
+    speed>=2000 ? 30 :
+    speed>=1500 ? 24 :
+    speed>=1000 ? 16 :
+    speed>=700 ? 10 : 4;
+
   const wd=Math.min(25,half*0.45);
+
   return Math.min(100,Math.round(earth+sp+wd));
 }
 
@@ -597,13 +696,19 @@ function scoreCACTus(pa,da,speed,halo){
 }
 
 function computeArrivalDONKI(c,env){
-  const enlil=Array.isArray(c.enlilList)?c.enlilList.find(x=>x?.estimatedShockArrivalTime):null;
+  const enlil=Array.isArray(c.enlilList)
+    ? c.enlilList.find(x=>x?.estimatedShockArrivalTime)
+    : null;
+
   if(enlil){
     const d=new Date(enlil.estimatedShockArrivalTime);
     return {source:"ENLIL",date:d,utc:d.toISOString()};
   }
 
-  const t0=c.time21_5?new Date(c.time21_5):new Date(c.activityStartTime||Date.now());
+  const t0=c.time21_5
+    ? new Date(c.time21_5)
+    : new Date(c.activityStartTime||Date.now());
+
   return computeArrivalBasic(t0,finiteOr(c.speed,500),env);
 }
 
@@ -618,13 +723,26 @@ function computeArrivalBasic(t0,speed,env){
   const hours=AU_KM/v/3600;
   const d=new Date(t0.getTime()+hours*3600*1000);
 
-  return {source:"DBM-lite",date:d,utc:d.toISOString(),speed:Math.round(v)};
+  return {
+    source:"DBM-lite",
+    date:d,
+    utc:d.toISOString(),
+    speed:Math.round(v)
+  };
 }
 
 function parseCactusTime(s){
   const m=s.match(/(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/);
+
   if(!m) return new Date();
-  return new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]));
+
+  return new Date(Date.UTC(
+    +m[1],
+    +m[2]-1,
+    +m[3],
+    +m[4],
+    +m[5]
+  ));
 }
 
 function durationBy(half,speed){
@@ -728,7 +846,7 @@ function drawSun(cmes,time){
   document.getElementById("sunSummary").innerHTML =
     `DONKI太陽面座標: <b>${donkiEvents.length}</b>件<br>`+
     `CACTus PAコーン: <b>${cactusEvents.length}</b>件<br>`+
-    `※ CACTusは緯度経度ではなくPA/DAなので、太陽面上の点にはしない。<br>`+
+    `DONKI cache: <b>${STATE.sources.donkiCache.status}</b><br>`+
     `表示座標: 中央=0°、右=W、左=E、上=N、下=S`;
 }
 
@@ -810,6 +928,7 @@ function drawCactusPACones(ctx,cx,cy,r,events){
     ctx.stroke();
 
     const mid=pointAtPA(cx,cy,outer+14,pa);
+
     if(i<10){
       ctx.globalAlpha=1;
       ctx.fillStyle=col;
@@ -827,10 +946,12 @@ function drawPAArc(ctx,cx,cy,rad,pa1,pa2){
   ctx.beginPath();
 
   let first=true;
+
   if(pa2<pa1) pa2+=360;
 
   for(let pa=pa1; pa<=pa2; pa+=step){
     const p=pointAtPA(cx,cy,rad,pa);
+
     if(first){
       ctx.moveTo(p.x,p.y);
       first=false;
@@ -847,7 +968,6 @@ function drawPAArc(ctx,cx,cy,rad,pa1,pa2){
 function pointAtPA(cx,cy,rad,paDeg){
   const a=paDeg*Math.PI/180;
 
-  // PA: 0=N, 90=E/left, 180=S, 270=W/right
   return {
     x:cx - Math.sin(a)*rad,
     y:cy - Math.cos(a)*rad
@@ -863,26 +983,40 @@ function drawSolarGrid(ctx,cx,cy,r){
   [-60,-30,0,30,60].forEach(lat=>{
     ctx.beginPath();
     let started=false;
+
     for(let lon=-90;lon<=90;lon+=2){
       const p=solarProject(lat,lon);
       const x=cx+p.x*r;
       const y=cy+p.y*r;
-      if(!started){ctx.moveTo(x,y);started=true;}
-      else ctx.lineTo(x,y);
+
+      if(!started){
+        ctx.moveTo(x,y);
+        started=true;
+      }else{
+        ctx.lineTo(x,y);
+      }
     }
+
     ctx.stroke();
   });
 
   [-60,-30,0,30,60].forEach(lon=>{
     ctx.beginPath();
     let started=false;
+
     for(let lat=-89;lat<=89;lat+=2){
       const p=solarProject(lat,lon);
       const x=cx+p.x*r;
       const y=cy+p.y*r;
-      if(!started){ctx.moveTo(x,y);started=true;}
-      else ctx.lineTo(x,y);
+
+      if(!started){
+        ctx.moveTo(x,y);
+        started=true;
+      }else{
+        ctx.lineTo(x,y);
+      }
     }
+
     ctx.stroke();
   });
 
@@ -894,7 +1028,9 @@ function drawSolarGrid(ctx,cx,cy,r){
     const p=solarProject(0,lon);
     const x=cx+p.x*r;
     const y=cy+p.y*r;
-    if(lon===-90)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+
+    if(lon===-90) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
   }
   ctx.stroke();
 
@@ -903,7 +1039,9 @@ function drawSolarGrid(ctx,cx,cy,r){
     const p=solarProject(lat,0);
     const x=cx+p.x*r;
     const y=cy+p.y*r;
-    if(lat===-89)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+
+    if(lat===-89) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
   }
   ctx.stroke();
 
@@ -931,14 +1069,13 @@ function drawSolarLabels(ctx,cx,cy,r){
   ctx.fillText("S",cx-4,cy+r+22);
   ctx.fillText("E",cx-r-24,cy+4);
   ctx.fillText("W",cx+r+12,cy+4);
-  ctx.fillText("DONKI: heliographic / CACTus: PA cone",12,24);
+  ctx.fillText("DONKI: cached lat/lon / CACTus: PA cone",12,24);
 }
 
 function solarProject(latDeg,lonWestDeg){
   const lat=latDeg*Math.PI/180;
   const lon=lonWestDeg*Math.PI/180;
 
-  // 表示座標：W正を右側へ、E負を左側へ
   const x=Math.cos(lat)*Math.sin(lon);
   const y=-Math.sin(lat);
   const z=Math.cos(lat)*Math.cos(lon);
@@ -981,9 +1118,11 @@ function drawFlow(cmes,time){
   cmes.slice(0,15).forEach((c,idx)=>{
     const total=c.arrival.date-c.t0;
     const elapsed=time-c.t0;
+
     if(total<=0) return;
 
     const frac=elapsed/total;
+
     if(frac<-0.05||frac>1.25) return;
 
     const x=sx+Math.max(0,Math.min(1.15,frac))*len;
@@ -997,9 +1136,10 @@ function drawFlow(cmes,time){
     ctx.beginPath();
     ctx.arc(x,lane,20+c.halfAngle*.7,-.9,.9);
     ctx.stroke();
-    ctx.globalAlpha=1;
 
+    ctx.globalAlpha=1;
     ctx.fillStyle=col;
+
     ctx.beginPath();
     ctx.arc(x,lane,5,0,Math.PI*2);
     ctx.fill();
@@ -1035,6 +1175,7 @@ function renderHazard(time){
   }
 
   const dt=(time-top.arrival.date)/3600000;
+
   const phase =
     dt<0 ? "🟡 CME Shock Approaching" :
     dt<3 ? "🟠 Magnetosphere Compression" :
@@ -1065,12 +1206,17 @@ function renderHazard(time){
 function hazardCard(title,val,desc){
   val=Math.max(0,Math.min(100,Math.round(val)));
   const col=riskColor(val);
+
   return `<div class="phase"><b>${title}: <span style="color:${col}">${label(val)}</span></b>
   <div class="bar"><div class="fill" style="width:${val}%;background:${col}"></div></div>
   <div class="small">${desc}</div></div>`;
 }
 
 function renderStatus(){
+  const cacheInfo = STATE.donkiIndex
+    ? `<hr>DONKI Cache latest: <b>${STATE.donkiIndex.latest}</b><br>Retention: <b>${STATE.donkiIndex.retention_days}</b> days / Files: <b>${STATE.donkiIndex.files?.length || 0}</b>`
+    : "";
+
   document.getElementById("statusBox").innerHTML =
     Object.entries(STATE.sources).map(([k,v])=>{
       const col=v.status.startsWith("OK")?"#8bc34a":v.status.startsWith("FAILED")?"#ff5252":"#aaa";
@@ -1078,12 +1224,13 @@ function renderStatus(){
     }).join("<br>")+
     `<hr>`+
     `Solar wind: V=${STATE.env.speed} km/s, Bz=${STATE.env.bz}, Clock=${STATE.env.clockAngle.toFixed(1)}°, Kp=${STATE.env.kp}<br>`+
-    `GOES ≥10MeV: ${STATE.env.p10} pfu / ${STATE.env.radiationScale}`;
+    `GOES ≥10MeV: ${STATE.env.p10} pfu / ${STATE.env.radiationScale}`+
+    cacheInfo;
 }
 
 function renderTable(cmes){
   if(!cmes.length){
-    document.getElementById("table").innerHTML="CMEデータなし。必要なデータ源を個別にLOADしてください。";
+    document.getElementById("table").innerHTML="CMEデータなし。DONKI CacheまたはCACTusをLOADしてください。";
     return;
   }
 
@@ -1165,8 +1312,8 @@ function setupWide(id){
 }
 
 function normalizeLon(lon){
-  while(lon>180)lon-=360;
-  while(lon<-180)lon+=360;
+  while(lon>180) lon-=360;
+  while(lon<-180) lon+=360;
   return lon;
 }
 
@@ -1175,23 +1322,24 @@ function paDistance(a,b){
 }
 
 function riskColor(v){
-  if(v>=85)return"#d500f9";
-  if(v>=70)return"#ff1744";
-  if(v>=45)return"#ff9800";
-  if(v>=20)return"#ffee58";
-  return"#8bc34a";
+  if(v>=85) return "#d500f9";
+  if(v>=70) return "#ff1744";
+  if(v>=45) return "#ff9800";
+  if(v>=20) return "#ffee58";
+  return "#8bc34a";
 }
 
 function label(v){
-  if(v>=85)return"EXTREME";
-  if(v>=70)return"HIGH";
-  if(v>=45)return"MODERATE";
-  if(v>=20)return"LOW";
-  return"MINIMAL";
+  if(v>=85) return "EXTREME";
+  if(v>=70) return "HIGH";
+  if(v>=45) return "MODERATE";
+  if(v>=20) return "LOW";
+  return "MINIMAL";
 }
 
 function shortId(id){
   const s=String(id||"CME");
+
   return s.includes("CME")
     ? "CME"+s.split("CME").pop().replace(/[^0-9]/g,"").slice(-4)
     : s.slice(-6);
@@ -1209,22 +1357,26 @@ function escapeHtml(s){
 
 function playTimeline(){
   stopTimeline();
+
   STATE.timer=setInterval(()=>{
     const s=document.getElementById("timeSlider");
     let v=Number(s.value)+1;
-    if(v>168)v=0;
+
+    if(v>168) v=0;
+
     s.value=v;
     updateTimeline();
   },300);
 }
 
 function stopTimeline(){
-  if(STATE.timer)clearInterval(STATE.timer);
+  if(STATE.timer) clearInterval(STATE.timer);
   STATE.timer=null;
 }
 
 renderSourcePanel();
 rebuildAll();
 </script>
+
 </body>
 </html>
