@@ -26,8 +26,6 @@ pre{background:#050608;border-radius:10px;padding:10px;white-space:pre-wrap;max-
 .phase{margin-top:8px;padding:10px;border-radius:10px;background:#0d1320}
 .bar{height:16px;border-radius:999px;background:#222;overflow:hidden;margin-top:6px}
 .fill{height:100%}
-.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:800;font-size:12px}
-.ok{color:#8bc34a}.warn{color:#ffee58}.mid{color:#ff9800}.bad{color:#ff5252}.extreme{color:#d500f9}
 </style>
 </head>
 
@@ -36,7 +34,7 @@ pre{background:#050608;border-radius:10px;padding:10px;white-space:pre-wrap;max-
 <h2>Modular CME → Satellite Hazard Console</h2>
 <div class="small">
 NASA API Key:
-<input id="apiKey" value="PASTE_YOUR_NASA_API_KEY_HERE" style="width:300px">
+<input id="apiKey" value="PASTE_YOUR_NASA_API_KEY_HERE" style="width:320px">
 <button onclick="loadAllSources()">全ソース取得</button>
 <button onclick="rebuildAll()">再計算</button>
 <button onclick="playTimeline()">▶ 再生</button>
@@ -53,7 +51,7 @@ NASA API Key:
 
 <div class="grid" style="margin-top:16px">
 <section class="card">
-<h3>① CME Source / Solar Disk</h3>
+<h3>① Solar Disk / DONKI座標 + CACTus PAコーン</h3>
 <div class="box"><canvas id="sunCanvas"></canvas></div>
 <div id="sunSummary" class="small">未取得</div>
 </section>
@@ -134,7 +132,9 @@ function src(label,status){
   return {label,status,data:null,time:null,error:null};
 }
 
-function raw(x){document.getElementById("raw").textContent=x;}
+function raw(x){
+  document.getElementById("raw").textContent=x;
+}
 
 function apiKey(){
   return document.getElementById("apiKey").value.trim() || "DEMO_KEY";
@@ -157,7 +157,6 @@ function setSource(key,status,data=null,error=null){
 }
 
 function renderSourcePanel(){
-  const s=STATE.sources;
   const rows=[
     ["donkiAnalysis","DONKI CMEAnalysis",loadDONKIAnalysis],
     ["donkiCME","DONKI CME",loadDONKICME],
@@ -171,7 +170,7 @@ function renderSourcePanel(){
   ];
 
   document.getElementById("sourcePanel").innerHTML = rows.map(([key,title,fn])=>{
-    const x=s[key];
+    const x=STATE.sources[key];
     const col = x.status.startsWith("OK") ? "#8bc34a" :
                 x.status.startsWith("FAILED") ? "#ff5252" :
                 x.status.startsWith("LOADING") ? "#ffee58" : "#aaa";
@@ -233,7 +232,9 @@ async function loadNOAAWind(){
     const data = await fetchJsonAny([NOAA.wind,NOAA.windOld]);
     setSource("noaaWind",`OK: ${Array.isArray(data)?data.length:1} records`,data);
     rebuildAll();
-  }catch(e){setSource("noaaWind","FAILED",null,e.message);}
+  }catch(e){
+    setSource("noaaWind","FAILED",null,e.message);
+  }
 }
 
 async function loadNOAAMag(){
@@ -242,7 +243,9 @@ async function loadNOAAMag(){
     const data = await fetchJsonAny([NOAA.mag,NOAA.magOld]);
     setSource("noaaMag",`OK: ${Array.isArray(data)?data.length:1} records`,data);
     rebuildAll();
-  }catch(e){setSource("noaaMag","FAILED",null,e.message);}
+  }catch(e){
+    setSource("noaaMag","FAILED",null,e.message);
+  }
 }
 
 async function loadNOAAKp(){
@@ -251,7 +254,9 @@ async function loadNOAAKp(){
     const data = await fetchJsonAny([NOAA.kp,NOAA.kpAlt]);
     setSource("noaaKp",`OK: ${Array.isArray(data)?data.length:1} records`,data);
     rebuildAll();
-  }catch(e){setSource("noaaKp","FAILED",null,e.message);}
+  }catch(e){
+    setSource("noaaKp","FAILED",null,e.message);
+  }
 }
 
 async function loadGOESProton(){
@@ -337,17 +342,17 @@ function rebuildAll(){
   }
 
   STATE.cmes=dedupeCMEs(events).sort((a,b)=>b.confidence-b.confidence || b.arrivalScore-a.arrivalScore);
-  STATE.startTime = STATE.startTime || new Date();
 
   renderStatus();
   renderTable(STATE.cmes);
   updateTimeline();
 
   raw(JSON.stringify({
+    note:"DONKIは太陽面緯度経度、CACTusはPA/DAなので太陽面上には置かず外側コーン表示",
     dataHealth:Object.fromEntries(Object.entries(STATE.sources).map(([k,v])=>[k,{status:v.status,time:v.time,error:v.error}])),
     env:STATE.env,
     mergedCount:STATE.cmes.length,
-    cmes:STATE.cmes.slice(0,25)
+    cmes:STATE.cmes.slice(0,30)
   },null,2));
 }
 
@@ -400,10 +405,12 @@ function latest(arr){
 function pick(obj,names){
   for(const n of names){
     if(typeof n==="number"&&Array.isArray(obj)){
-      const v=Number(obj[n]); if(Number.isFinite(v)) return v;
+      const v=Number(obj[n]);
+      if(Number.isFinite(v)) return v;
     }
     if(typeof n==="string"&&obj&&obj[n]!==undefined){
-      const v=Number(obj[n]); if(Number.isFinite(v)) return v;
+      const v=Number(obj[n]);
+      if(Number.isFinite(v)) return v;
     }
   }
   return 0;
@@ -439,15 +446,21 @@ function parseDONKIAnalysis(c,env){
   const lat=finiteOr(c.latitude,0);
   const speed=finiteOr(c.speed,500);
   const half=finiteOr(c.halfAngle,30);
+
   const t0=c.time21_5?new Date(c.time21_5):new Date(c.activityStartTime||Date.now());
   const arrival=computeArrivalDONKI(c,env);
-  const score=scoreArrival(lon,lat,speed,half);
+  const score=scoreDONKI(lon,lat,speed,half);
   const hasEnlil=arrival.source==="ENLIL";
 
   return buildCME({
     id:c.activityID||"DONKI",
     type:"DONKI",
-    rawLon,lon,lat,speed,halfAngle:half,t0,arrival,
+    coordType:"heliographic",
+    rawLon,lon,lat,
+    speed,
+    halfAngle:half,
+    t0,
+    arrival,
     arrivalScore:score,
     sources:["DONKI"],
     confidence:hasEnlil?1.0:0.82
@@ -461,13 +474,20 @@ function parseDONKICME(list,env){
     if(analyses.length){
       for(const a of analyses){
         const item=parseDONKIAnalysis({...a,activityID:c.activityID,activityStartTime:c.startTime},env);
-        if(item){item.sources.push("DONKI-CME"); item.confidence=Math.max(item.confidence,0.88); out.push(item);}
+        if(item){
+          item.sources.push("DONKI-CME");
+          item.confidence=Math.max(item.confidence,0.88);
+          out.push(item);
+        }
       }
     }else{
       out.push(buildCME({
         id:c.activityID||"DONKI-CME",
         type:"DONKI-basic",
-        rawLon:0,lon:0,lat:0,speed:500,halfAngle:30,
+        coordType:"none",
+        rawLon:null,lon:null,lat:null,
+        speed:500,
+        halfAngle:30,
         t0:new Date(c.startTime||Date.now()),
         arrival:computeArrivalBasic(new Date(c.startTime||Date.now()),500,env),
         arrivalScore:35,
@@ -480,9 +500,14 @@ function parseDONKICME(list,env){
 }
 
 function parseCACTus(html,env){
-  const text=html.replace(/<br\s*\/?>/gi,"\n").replace(/<\/p>/gi,"\n").replace(/<[^>]+>/g," ");
+  const text=html
+    .replace(/<br\s*\/?>/gi,"\n")
+    .replace(/<\/p>/gi,"\n")
+    .replace(/<[^>]+>/g," ");
+
   const lines=text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   const out=[];
+
   for(const line of lines){
     const m=line.match(/^(\d{4})\s*\|\s*(\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2})\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*([IVX]*)/);
     if(!m) continue;
@@ -492,19 +517,32 @@ function parseCACTus(html,env){
     const pa=Number(m[4]);
     const da=Number(m[5]);
     const speed=Number(m[6]);
+    const halo=m[10]||"";
     const half=Math.max(15,Math.min(90,da/2));
-    const lon=paToApproxLon(pa);
-    const lat=0;
+
     const arrival=computeArrivalBasic(t0,speed,env);
-    const score=scoreArrival(lon,lat,speed,half);
+    const score=scoreCACTus(pa,da,speed,halo);
 
     out.push(buildCME({
-      id,type:"CACTus",rawLon:lon,lon,lat,speed,halfAngle:half,t0,arrival,
-      arrivalScore:score,pa,da,
+      id,
+      type:"CACTus",
+      coordType:"pa",
+      rawLon:null,
+      lon:null,
+      lat:null,
+      pa,
+      da,
+      halo,
+      speed,
+      halfAngle:half,
+      t0,
+      arrival,
+      arrivalScore:score,
       sources:["CACTus"],
       confidence:0.55
     }));
   }
+
   return out;
 }
 
@@ -528,12 +566,34 @@ function finiteOr(v,def){
   return Number.isFinite(n)?n:def;
 }
 
-function scoreArrival(lon,lat,speed,half){
+function scoreDONKI(lon,lat,speed,half){
   const d=Math.sqrt(lon*lon+lat*lat);
   const earth=d<=half?45:d<=half+20?30:d<=half+40?18:5;
   const sp=speed>=2000?30:speed>=1500?24:speed>=1000?16:speed>=700?10:4;
   const wd=Math.min(25,half*0.45);
   return Math.min(100,Math.round(earth+sp+wd));
+}
+
+function scoreCACTus(pa,da,speed,halo){
+  const width =
+    da>=300 ? 45 :
+    da>=220 ? 35 :
+    da>=120 ? 22 :
+    da>=70  ? 12 : 5;
+
+  const sp =
+    speed>=2000 ? 30 :
+    speed>=1500 ? 24 :
+    speed>=1000 ? 16 :
+    speed>=700  ? 10 : 4;
+
+  const haloBonus =
+    halo==="IV" ? 20 :
+    halo==="III" ? 14 :
+    halo==="II" ? 8 :
+    halo==="I" ? 4 : 0;
+
+  return Math.min(100,Math.round(width+sp+haloBonus));
 }
 
 function computeArrivalDONKI(c,env){
@@ -542,6 +602,7 @@ function computeArrivalDONKI(c,env){
     const d=new Date(enlil.estimatedShockArrivalTime);
     return {source:"ENLIL",date:d,utc:d.toISOString()};
   }
+
   const t0=c.time21_5?new Date(c.time21_5):new Date(c.activityStartTime||Date.now());
   return computeArrivalBasic(t0,finiteOr(c.speed,500),env);
 }
@@ -549,11 +610,14 @@ function computeArrivalDONKI(c,env){
 function computeArrivalBasic(t0,speed,env){
   const bg=env.speed||400;
   let v=speed;
+
   if(v>bg) v=bg+(v-bg)*0.62;
   if(v<bg) v=v+(bg-v)*0.25;
   if(v<320) v=320;
+
   const hours=AU_KM/v/3600;
   const d=new Date(t0.getTime()+hours*3600*1000);
+
   return {source:"DBM-lite",date:d,utc:d.toISOString(),speed:Math.round(v)};
 }
 
@@ -561,12 +625,6 @@ function parseCactusTime(s){
   const m=s.match(/(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/);
   if(!m) return new Date();
   return new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]));
-}
-
-function paToApproxLon(pa){
-  if(pa>=45&&pa<=135) return -70;
-  if(pa>=225&&pa<=315) return 70;
-  return 0;
 }
 
 function durationBy(half,speed){
@@ -585,15 +643,32 @@ function dedupeCMEs(items){
   for(const c of sorted){
     const near=merged.find(m=>{
       const dt=Math.abs(m.t0-c.t0)/3600000;
-      const dl=Math.abs((m.lon||0)-(c.lon||0));
-      return dt<=3 && dl<=35;
+
+      if(dt>3) return false;
+
+      if(m.coordType==="heliographic" && c.coordType==="heliographic"){
+        const dl=Math.abs((m.lon||0)-(c.lon||0));
+        const db=Math.abs((m.lat||0)-(c.lat||0));
+        return dl<=35 && db<=30;
+      }
+
+      if(m.coordType==="pa" && c.coordType==="pa"){
+        return paDistance(m.pa,c.pa)<=45;
+      }
+
+      return dt<=1.5;
     });
 
     if(near){
       near.sources=[...new Set([...near.sources,...c.sources])];
       near.confidence=Math.min(1,Math.max(near.confidence,c.confidence)+0.08);
-      if(c.confidence>near.confidence){
+
+      if(sourceRank(c)>sourceRank(near)){
+        const mergedSources=near.sources;
+        const mergedConfidence=near.confidence;
         Object.assign(near,c);
+        near.sources=mergedSources;
+        near.confidence=mergedConfidence;
       }
     }else{
       merged.push(c);
@@ -603,10 +678,21 @@ function dedupeCMEs(items){
   return merged;
 }
 
+function sourceRank(c){
+  if(c.type==="DONKI" && c.arrival.source==="ENLIL") return 5;
+  if(c.type==="DONKI") return 4;
+  if(c.type==="DONKI-basic") return 2;
+  if(c.type==="CACTus") return 1;
+  return 0;
+}
+
 function updateTimeline(){
   const h=Number(document.getElementById("timeSlider").value);
   const t=new Date(STATE.startTime.getTime()+h*3600*1000);
-  document.getElementById("timeLabel").innerHTML=`<b>${t.toISOString().slice(0,16).replace("T"," ")} UTC</b> / 現在+${h}h`;
+
+  document.getElementById("timeLabel").innerHTML =
+    `<b>${t.toISOString().slice(0,16).replace("T"," ")} UTC</b> / 現在+${h}h`;
+
   drawSun(STATE.cmes,t);
   drawFlow(STATE.cmes,t);
   renderHazard(t);
@@ -625,6 +711,7 @@ function drawSun(cmes,time){
   ctx.arc(cx,cy,r,0,Math.PI*2);
   ctx.fillStyle=g;
   ctx.fill();
+
   ctx.strokeStyle="#fff5";
   ctx.lineWidth=2;
   ctx.stroke();
@@ -632,19 +719,32 @@ function drawSun(cmes,time){
   drawSolarGrid(ctx,cx,cy,r);
   drawSolarLabels(ctx,cx,cy,r);
 
-  let visible=0,hidden=0;
+  const donkiEvents=cmes.filter(c=>c.coordType==="heliographic");
+  const cactusEvents=cmes.filter(c=>c.coordType==="pa");
 
-  cmes.slice(0,40).forEach(c=>{
+  drawCactusPACones(ctx,cx,cy,r,cactusEvents);
+  drawDonkiSolarPoints(ctx,cx,cy,r,donkiEvents,time);
+
+  document.getElementById("sunSummary").innerHTML =
+    `DONKI太陽面座標: <b>${donkiEvents.length}</b>件<br>`+
+    `CACTus PAコーン: <b>${cactusEvents.length}</b>件<br>`+
+    `※ CACTusは緯度経度ではなくPA/DAなので、太陽面上の点にはしない。<br>`+
+    `表示座標: 中央=0°、右=W、左=E、上=N、下=S`;
+}
+
+function drawDonkiSolarPoints(ctx,cx,cy,r,events,time){
+  let labelCount=0;
+
+  events.slice(0,30).forEach(c=>{
     const displayLon=normalizeLon(c.lon+SOLAR_ROTATION*((time-c.t0)/3600000));
     const p=solarProject(c.lat,displayLon);
 
-    if(!p.visible){hidden++;return;}
-    visible++;
+    if(!p.visible) return;
 
     const x=cx+p.x*r;
     const y=cy+p.y*r;
     const col=riskColor(c.arrivalScore);
-    const size=Math.max(5,Math.min(30,c.halfAngle/3));
+    const size=Math.max(5,Math.min(26,c.halfAngle/3));
 
     ctx.beginPath();
     ctx.arc(x,y,size+5,0,Math.PI*2);
@@ -661,29 +761,103 @@ function drawSun(cmes,time){
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.arc(x,y,Math.min(r*.35,size+c.halfAngle*.75),0,Math.PI*2);
+    ctx.arc(x,y,Math.min(r*.30,size+c.halfAngle*.55),0,Math.PI*2);
     ctx.strokeStyle=col+"99";
     ctx.lineWidth=2;
     ctx.stroke();
 
-    ctx.fillStyle="#fff";
-    ctx.font="11px system-ui";
-    ctx.fillText(shortId(c.id),x+size+6,y-2);
-    ctx.fillStyle="#ddd";
-    const lonLabel=displayLon>0?`W${displayLon.toFixed(0)}`:displayLon<0?`E${Math.abs(displayLon).toFixed(0)}`:"0";
-    ctx.fillText(lonLabel,x+size+6,y+12);
+    if(labelCount<12){
+      ctx.fillStyle="#fff";
+      ctx.font="11px system-ui";
+      const lonLabel=displayLon>0?`W${displayLon.toFixed(0)}`:displayLon<0?`E${Math.abs(displayLon).toFixed(0)}`:"0";
+      const latLabel=c.lat>0?`N${c.lat.toFixed(0)}`:c.lat<0?`S${Math.abs(c.lat).toFixed(0)}`:"0";
+      ctx.fillText(shortId(c.id),x+size+6,y-8);
+      ctx.fillText(`${latLabel} ${lonLabel}`,x+size+6,y+6);
+      labelCount++;
+    }
+  });
+}
+
+function drawCactusPACones(ctx,cx,cy,r,events){
+  ctx.save();
+
+  events.slice(0,18).forEach((c,i)=>{
+    const col=riskColor(c.arrivalScore);
+    const pa=c.pa;
+    const da=Math.max(8,Math.min(180,c.da || c.halfAngle*2 || 40));
+
+    const inner=r*1.04;
+    const outer=r*(1.12 + (i%4)*0.055);
+    const a1=pa-da/2;
+    const a2=pa+da/2;
+
+    ctx.globalAlpha=0.72;
+    ctx.strokeStyle=col;
+    ctx.lineWidth=2.2;
+
+    drawPAArc(ctx,cx,cy,outer,a1,a2);
+
+    const p1=pointAtPA(cx,cy,inner,a1);
+    const p2=pointAtPA(cx,cy,outer,a1);
+    const p3=pointAtPA(cx,cy,inner,a2);
+    const p4=pointAtPA(cx,cy,outer,a2);
+
+    ctx.beginPath();
+    ctx.moveTo(p1.x,p1.y);
+    ctx.lineTo(p2.x,p2.y);
+    ctx.moveTo(p3.x,p3.y);
+    ctx.lineTo(p4.x,p4.y);
+    ctx.stroke();
+
+    const mid=pointAtPA(cx,cy,outer+14,pa);
+    if(i<10){
+      ctx.globalAlpha=1;
+      ctx.fillStyle=col;
+      ctx.font="11px system-ui";
+      ctx.fillText(`PA${pa.toFixed(0)}`,mid.x-16,mid.y);
+    }
   });
 
-  document.getElementById("sunSummary").innerHTML=
-    `Visible CME sources: <b>${visible}</b> / backside-limb: <b>${hidden}</b><br>`+
-    `Merged events: <b>${cmes.length}</b><br>`+
-    `中央=0°、右=W、左=E。緯度は上=N、下=S。`;
+  ctx.globalAlpha=1;
+  ctx.restore();
+}
+
+function drawPAArc(ctx,cx,cy,rad,pa1,pa2){
+  const step=3;
+  ctx.beginPath();
+
+  let first=true;
+  if(pa2<pa1) pa2+=360;
+
+  for(let pa=pa1; pa<=pa2; pa+=step){
+    const p=pointAtPA(cx,cy,rad,pa);
+    if(first){
+      ctx.moveTo(p.x,p.y);
+      first=false;
+    }else{
+      ctx.lineTo(p.x,p.y);
+    }
+  }
+
+  const pend=pointAtPA(cx,cy,rad,pa2);
+  ctx.lineTo(pend.x,pend.y);
+  ctx.stroke();
+}
+
+function pointAtPA(cx,cy,rad,paDeg){
+  const a=paDeg*Math.PI/180;
+
+  // PA: 0=N, 90=E/left, 180=S, 270=W/right
+  return {
+    x:cx - Math.sin(a)*rad,
+    y:cy - Math.cos(a)*rad
+  };
 }
 
 function drawSolarGrid(ctx,cx,cy,r){
   ctx.save();
 
-  ctx.strokeStyle="rgba(255,255,255,.17)";
+  ctx.strokeStyle="rgba(255,255,255,.18)";
   ctx.lineWidth=1;
 
   [-60,-30,0,30,60].forEach(lat=>{
@@ -691,8 +865,8 @@ function drawSolarGrid(ctx,cx,cy,r){
     let started=false;
     for(let lon=-90;lon<=90;lon+=2){
       const p=solarProject(lat,lon);
-      if(!p.visible) continue;
-      const x=cx+p.x*r,y=cy+p.y*r;
+      const x=cx+p.x*r;
+      const y=cy+p.y*r;
       if(!started){ctx.moveTo(x,y);started=true;}
       else ctx.lineTo(x,y);
     }
@@ -704,21 +878,22 @@ function drawSolarGrid(ctx,cx,cy,r){
     let started=false;
     for(let lat=-89;lat<=89;lat+=2){
       const p=solarProject(lat,lon);
-      if(!p.visible) continue;
-      const x=cx+p.x*r,y=cy+p.y*r;
+      const x=cx+p.x*r;
+      const y=cy+p.y*r;
       if(!started){ctx.moveTo(x,y);started=true;}
       else ctx.lineTo(x,y);
     }
     ctx.stroke();
   });
 
-  ctx.strokeStyle="rgba(255,255,255,.35)";
-  ctx.lineWidth=1.5;
+  ctx.strokeStyle="rgba(255,255,255,.42)";
+  ctx.lineWidth=1.6;
 
   ctx.beginPath();
   for(let lon=-90;lon<=90;lon+=2){
     const p=solarProject(0,lon);
-    const x=cx+p.x*r,y=cy+p.y*r;
+    const x=cx+p.x*r;
+    const y=cy+p.y*r;
     if(lon===-90)ctx.moveTo(x,y); else ctx.lineTo(x,y);
   }
   ctx.stroke();
@@ -726,26 +901,24 @@ function drawSolarGrid(ctx,cx,cy,r){
   ctx.beginPath();
   for(let lat=-89;lat<=89;lat+=2){
     const p=solarProject(lat,0);
-    const x=cx+p.x*r,y=cy+p.y*r;
+    const x=cx+p.x*r;
+    const y=cy+p.y*r;
     if(lat===-89)ctx.moveTo(x,y); else ctx.lineTo(x,y);
   }
   ctx.stroke();
 
-  ctx.fillStyle="rgba(255,255,255,.6)";
+  ctx.fillStyle="rgba(255,255,255,.70)";
   ctx.font="10px system-ui";
+
   [-60,-30,30,60].forEach(lat=>{
     const p=solarProject(lat,-86);
-    if(p.visible){
-      ctx.fillText(`${lat>0?"N":"S"}${Math.abs(lat)}`,cx+p.x*r-34,cy+p.y*r+3);
-    }
+    ctx.fillText(`${lat>0?"N":"S"}${Math.abs(lat)}`,cx+p.x*r-34,cy+p.y*r+3);
   });
 
   [-60,-30,0,30,60].forEach(lon=>{
     const p=solarProject(-72,lon);
-    if(p.visible){
-      const label=lon===0?"0":lon>0?`W${lon}`:`E${Math.abs(lon)}`;
-      ctx.fillText(label,cx+p.x*r-10,cy+p.y*r+16);
-    }
+    const label=lon===0?"0":lon>0?`W${lon}`:`E${Math.abs(lon)}`;
+    ctx.fillText(label,cx+p.x*r-10,cy+p.y*r+16);
   });
 
   ctx.restore();
@@ -758,15 +931,18 @@ function drawSolarLabels(ctx,cx,cy,r){
   ctx.fillText("S",cx-4,cy+r+22);
   ctx.fillText("E",cx-r-24,cy+4);
   ctx.fillText("W",cx+r+12,cy+4);
-  ctx.fillText("Solar disk: W-positive display",12,24);
+  ctx.fillText("DONKI: heliographic / CACTus: PA cone",12,24);
 }
 
 function solarProject(latDeg,lonWestDeg){
   const lat=latDeg*Math.PI/180;
   const lon=lonWestDeg*Math.PI/180;
+
+  // 表示座標：W正を右側へ、E負を左側へ
   const x=Math.cos(lat)*Math.sin(lon);
   const y=-Math.sin(lat);
   const z=Math.cos(lat)*Math.cos(lon);
+
   return {x,y,z,visible:z>0};
 }
 
@@ -774,7 +950,10 @@ function drawFlow(cmes,time){
   const {ctx,w,h}=setupWide("flowCanvas");
   ctx.clearRect(0,0,w,h);
 
-  const sx=70,ex=w-80,y=h/2,len=ex-sx;
+  const sx=70;
+  const ex=w-80;
+  const y=h/2;
+  const len=ex-sx;
 
   ctx.strokeStyle="#ffffff22";
   ctx.lineWidth=2;
@@ -843,16 +1022,24 @@ function drawFlow(cmes,time){
 }
 
 function renderHazard(time){
-  const active=STATE.cmes.filter(c=>time>=c.activeStart&&time<=c.activeEnd).sort((a,b)=>b.arrivalScore-a.arrivalScore);
+  const active=STATE.cmes
+    .filter(c=>time>=c.activeStart&&time<=c.activeEnd)
+    .sort((a,b)=>b.arrivalScore-a.arrivalScore);
+
   const top=active[0];
 
   if(!top){
-    document.getElementById("hazardPanel").innerHTML=`<div class="phase"><b style="color:#8bc34a">🟢 Quiet</b><br>No active CME hazard window.</div>`;
+    document.getElementById("hazardPanel").innerHTML =
+      `<div class="phase"><b style="color:#8bc34a">🟢 Quiet</b><br>No active CME hazard window.</div>`;
     return;
   }
 
   const dt=(time-top.arrival.date)/3600000;
-  const phase=dt<0?"🟡 CME Shock Approaching":dt<3?"🟠 Magnetosphere Compression":dt<12?"🟠 Surface Charging Risk":"🔴 Deep Charging Risk";
+  const phase =
+    dt<0 ? "🟡 CME Shock Approaching" :
+    dt<3 ? "🟠 Magnetosphere Compression" :
+    dt<12 ? "🟠 Surface Charging Risk" :
+    "🔴 Deep Charging Risk";
 
   const seu=STATE.env.p10>=10?80:top.arrivalScore*0.5;
   const surface=top.arrivalScore+STATE.env.dynamicPressure*2;
@@ -864,6 +1051,7 @@ function renderHazard(time){
   <div class="phase"><b>${phase}</b><br>
   Top event: ${shortId(top.id)}<br>
   Sources: ${top.sources.join(", ")}<br>
+  Coord: ${top.coordType==="heliographic" ? "DONKI lat/lon" : top.coordType==="pa" ? "CACTus PA/DA" : "none"}<br>
   Confidence: ${(top.confidence*100).toFixed(0)}%<br>
   Arrival: ${top.arrival.utc.slice(0,16).replace("T"," ")} UTC / ${top.arrival.source}</div>
   ${hazardCard("SEU Risk",seu,"GOES proton / SEPによるSEU・センサー雑音")}
@@ -883,12 +1071,13 @@ function hazardCard(title,val,desc){
 }
 
 function renderStatus(){
-  document.getElementById("statusBox").innerHTML=
+  document.getElementById("statusBox").innerHTML =
     Object.entries(STATE.sources).map(([k,v])=>{
       const col=v.status.startsWith("OK")?"#8bc34a":v.status.startsWith("FAILED")?"#ff5252":"#aaa";
       return `<b>${v.label}</b>: <span style="color:${col};font-weight:800">${v.status}</span>`;
     }).join("<br>")+
-    `<hr>Solar wind: V=${STATE.env.speed} km/s, Bz=${STATE.env.bz}, Clock=${STATE.env.clockAngle.toFixed(1)}°, Kp=${STATE.env.kp}<br>`+
+    `<hr>`+
+    `Solar wind: V=${STATE.env.speed} km/s, Bz=${STATE.env.bz}, Clock=${STATE.env.clockAngle.toFixed(1)}°, Kp=${STATE.env.kp}<br>`+
     `GOES ≥10MeV: ${STATE.env.p10} pfu / ${STATE.env.radiationScale}`;
 }
 
@@ -899,37 +1088,79 @@ function renderTable(cmes){
   }
 
   document.getElementById("table").innerHTML=`<table>
-  <tr><th>ID</th><th>Sources</th><th>Conf.</th><th>Lon</th><th>Lat</th><th>Speed</th><th>Half</th><th>Risk</th><th>Arrival</th><th>Source</th></tr>
+  <tr>
+    <th>ID</th>
+    <th>Sources</th>
+    <th>Coord</th>
+    <th>Position</th>
+    <th>Speed</th>
+    <th>Width</th>
+    <th>Risk</th>
+    <th>Conf.</th>
+    <th>Arrival</th>
+    <th>Source</th>
+  </tr>
   ${cmes.map(c=>`<tr>
-  <td>${c.id}</td>
-  <td>${c.sources.join("+")}</td>
-  <td>${(c.confidence*100).toFixed(0)}%</td>
-  <td>${c.lon>0 ? "W"+c.lon.toFixed(0) : c.lon<0 ? "E"+Math.abs(c.lon).toFixed(0) : "0"}</td>
-  <td>${c.lat}</td>
-  <td>${c.speed}</td>
-  <td>${c.halfAngle.toFixed?c.halfAngle.toFixed(0):c.halfAngle}</td>
-  <td style="color:${riskColor(c.arrivalScore)};font-weight:700">${c.arrivalScore}</td>
-  <td>${c.arrival.utc.slice(0,16).replace("T"," ")}</td>
-  <td>${c.arrival.source}</td>
+    <td>${c.id}</td>
+    <td>${c.sources.join("+")}</td>
+    <td>${c.coordType}</td>
+    <td>${positionLabel(c)}</td>
+    <td>${c.speed}</td>
+    <td>${c.coordType==="pa" ? "DA "+c.da : "Half "+Math.round(c.halfAngle)}</td>
+    <td style="color:${riskColor(c.arrivalScore)};font-weight:700">${c.arrivalScore}</td>
+    <td>${(c.confidence*100).toFixed(0)}%</td>
+    <td>${c.arrival.utc.slice(0,16).replace("T"," ")}</td>
+    <td>${c.arrival.source}</td>
   </tr>`).join("")}
   </table>`;
 }
 
+function positionLabel(c){
+  if(c.coordType==="heliographic"){
+    const lon=c.lon>0 ? "W"+c.lon.toFixed(0) : c.lon<0 ? "E"+Math.abs(c.lon).toFixed(0) : "0";
+    const lat=c.lat>0 ? "N"+c.lat.toFixed(0) : c.lat<0 ? "S"+Math.abs(c.lat).toFixed(0) : "0";
+    return `${lat} ${lon}`;
+  }
+
+  if(c.coordType==="pa"){
+    return `PA ${c.pa}° / DA ${c.da}° ${c.halo ? "/ halo "+c.halo : ""}`;
+  }
+
+  return "-";
+}
+
 function setup(id){
-  const c=document.getElementById(id),dpr=devicePixelRatio||1,rect=c.getBoundingClientRect();
+  const c=document.getElementById(id);
+  const dpr=devicePixelRatio||1;
+  const rect=c.getBoundingClientRect();
+
   c.width=rect.width*dpr;
   c.height=rect.height*dpr;
+
   const ctx=c.getContext("2d");
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  return {ctx,w:rect.width,h:rect.height,cx:rect.width/2,cy:rect.height/2,r:Math.min(rect.width,rect.height)*.38};
+
+  return {
+    ctx,
+    w:rect.width,
+    h:rect.height,
+    cx:rect.width/2,
+    cy:rect.height/2,
+    r:Math.min(rect.width,rect.height)*.34
+  };
 }
 
 function setupWide(id){
-  const c=document.getElementById(id),dpr=devicePixelRatio||1,rect=c.getBoundingClientRect();
+  const c=document.getElementById(id);
+  const dpr=devicePixelRatio||1;
+  const rect=c.getBoundingClientRect();
+
   c.width=rect.width*dpr;
   c.height=rect.height*dpr;
+
   const ctx=c.getContext("2d");
   ctx.setTransform(dpr,0,0,dpr,0,0);
+
   return {ctx,w:rect.width,h:rect.height};
 }
 
@@ -937,6 +1168,10 @@ function normalizeLon(lon){
   while(lon>180)lon-=360;
   while(lon<-180)lon+=360;
   return lon;
+}
+
+function paDistance(a,b){
+  return Math.abs(((a-b+180)%360+360)%360-180);
 }
 
 function riskColor(v){
@@ -957,11 +1192,19 @@ function label(v){
 
 function shortId(id){
   const s=String(id||"CME");
-  return s.includes("CME") ? "CME"+s.split("CME").pop().replace(/[^0-9]/g,"").slice(-4) : s.slice(-6);
+  return s.includes("CME")
+    ? "CME"+s.split("CME").pop().replace(/[^0-9]/g,"").slice(-4)
+    : s.slice(-6);
 }
 
 function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  return String(s).replace(/[&<>"']/g,m=>({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  }[m]));
 }
 
 function playTimeline(){
