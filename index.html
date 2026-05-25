@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CME Satellite Hazard Console - Cached DONKI</title>
+<title>CME Satellite Hazard Console - Earth Directed Filter</title>
 
 <style>
 body{margin:0;background:#070b12;color:#eee;font-family:system-ui,sans-serif}
@@ -13,11 +13,11 @@ main{padding:16px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px}
 .card{background:#141b27;border:1px solid #333;border-radius:14px;padding:14px}
 .box{position:relative;width:100%;aspect-ratio:1/1;background:#000;border-radius:12px;overflow:hidden}
-.widebox{position:relative;width:100%;height:330px;background:#000;border-radius:12px;overflow:hidden}
+.widebox{position:relative;width:100%;height:340px;background:#000;border-radius:12px;overflow:hidden}
 canvas{position:absolute;inset:0;width:100%;height:100%}
 input[type=range]{width:100%}
-table{width:100%;border-collapse:collapse;font-size:13px}
-td,th{border-bottom:1px solid #333;padding:6px;text-align:left}
+table{width:100%;border-collapse:collapse;font-size:12px}
+td,th{border-bottom:1px solid #333;padding:6px;text-align:left;vertical-align:top}
 pre{background:#050608;border-radius:10px;padding:10px;white-space:pre-wrap;max-height:320px;overflow:auto}
 .small{font-size:13px;color:#bbb;line-height:1.5}
 .sourceGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
@@ -26,14 +26,18 @@ pre{background:#050608;border-radius:10px;padding:10px;white-space:pre-wrap;max-
 .phase{margin-top:8px;padding:10px;border-radius:10px;background:#0d1320}
 .bar{height:16px;border-radius:999px;background:#222;overflow:hidden;margin-top:6px}
 .fill{height:100%}
-.ok{color:#8bc34a}.warn{color:#ffee58}.bad{color:#ff5252}
+.ok{color:#8bc34a}.warn{color:#ffee58}.bad{color:#ff5252}.mid{color:#ff9800}
+.pill{display:inline-block;padding:2px 7px;border-radius:999px;font-weight:800;font-size:11px}
+.yes{background:#17351b;color:#8bc34a}
+.no{background:#351717;color:#ff8a80}
+.maybe{background:#3a3214;color:#ffee58}
 </style>
 </head>
 
 <body>
 
 <header>
-<h2>CME → Satellite Hazard Console / DONKI Cached Mode</h2>
+<h2>CME → Satellite Hazard Console / Earth Directed Filter</h2>
 <div class="small">
 <button onclick="loadDONKICache()">DONKI Cache読込</button>
 <button onclick="loadAllPublicSources()">公開ソース全取得</button>
@@ -42,7 +46,7 @@ pre{background:#050608;border-radius:10px;padding:10px;white-space:pre-wrap;max-
 <button onclick="stopTimeline()">停止</button>
 </div>
 <div class="small">
-DONKIは <code>./data/donki/index.json</code> から読み込みます。NASA APIキーはHTML側に不要です。
+DONKIは <code>./data/donki/index.json</code> から読み込みます。DONKI緯度経度＋halfAngleで地球到達判定します。
 </div>
 </header>
 
@@ -55,7 +59,7 @@ DONKIは <code>./data/donki/index.json</code> から読み込みます。NASA AP
 
 <div class="grid" style="margin-top:16px">
 <section class="card">
-<h3>① Solar Disk / DONKI座標 + CACTus PAコーン</h3>
+<h3>① Solar Disk / DONKI緯度経度 + CACTus PAコーン</h3>
 <div class="box"><canvas id="sunCanvas"></canvas></div>
 <div id="sunSummary" class="small">未取得</div>
 </section>
@@ -67,7 +71,7 @@ DONKIは <code>./data/donki/index.json</code> から読み込みます。NASA AP
 </div>
 
 <section class="card" style="margin-top:16px">
-<h3>③ CME Propagation / Earth Arrival</h3>
+<h3>③ Earth-directed CME Propagation / 地球到達候補のみ</h3>
 <input id="timeSlider" type="range" min="0" max="168" value="0" step="1" oninput="updateTimeline()">
 <div id="timeLabel" class="small"></div>
 <div class="widebox"><canvas id="flowCanvas"></canvas></div>
@@ -170,7 +174,7 @@ function renderSourcePanel(){
         <div class="sourceTitle">${title}</div>
         <div style="color:${col};font-weight:800">${x.status}</div>
         <div class="small">Last: ${when}</div>
-        ${x.error ? `<div class="small" style="color:#ff8a80">${escapeHtml(x.error).slice(0,160)}</div>` : ""}
+        ${x.error ? `<div class="small" style="color:#ff8a80">${escapeHtml(x.error).slice(0,180)}</div>` : ""}
         <button onclick="${fn.name}()">LOAD</button>
       </div>
     `;
@@ -192,11 +196,12 @@ async function loadAllPublicSources(){
 
 async function loadDONKICache(){
   setSource("donkiCache","LOADING...");
+
   try{
     const index = await fetchJson(DONKI_CACHE_INDEX);
 
     if(!index.latest){
-      throw new Error("DONKI cache index has no latest file");
+      throw new Error("DONKI cache index has no latest successful file");
     }
 
     STATE.donkiIndex = index;
@@ -215,29 +220,10 @@ async function loadDONKICache(){
       payload
     );
 
-    setSource(
-      "donkiAnalysis",
-      `OK cached: ${analysis.length} records`,
-      analysis
-    );
-
-    setSource(
-      "donkiCME",
-      `OK cached: ${cme.length} records`,
-      cme
-    );
-
-    setSource(
-      "donkiSEP",
-      `OK cached: ${sep.length} records`,
-      sep
-    );
-
-    setSource(
-      "donkiFLR",
-      `OK cached: ${flr.length} records`,
-      flr
-    );
+    setSource("donkiAnalysis",`OK cached: ${analysis.length} records`,analysis);
+    setSource("donkiCME",`OK cached: ${cme.length} records`,cme);
+    setSource("donkiSEP",`OK cached: ${sep.length} records`,sep);
+    setSource("donkiFLR",`OK cached: ${flr.length} records`,flr);
 
     rebuildAll();
 
@@ -248,6 +234,7 @@ async function loadDONKICache(){
 
 async function loadCACTus(){
   setSource("cactus","LOADING...");
+
   try{
     const text=await fetchCactus(CACTUS_URL);
     setSource("cactus","OK",text);
@@ -259,6 +246,7 @@ async function loadCACTus(){
 
 async function loadNOAAWind(){
   setSource("noaaWind","LOADING...");
+
   try{
     const data = await fetchJsonAny([NOAA.wind,NOAA.windOld]);
     setSource("noaaWind",`OK: ${Array.isArray(data)?data.length:1} records`,data);
@@ -270,6 +258,7 @@ async function loadNOAAWind(){
 
 async function loadNOAAMag(){
   setSource("noaaMag","LOADING...");
+
   try{
     const data = await fetchJsonAny([NOAA.mag,NOAA.magOld]);
     setSource("noaaMag",`OK: ${Array.isArray(data)?data.length:1} records`,data);
@@ -281,6 +270,7 @@ async function loadNOAAMag(){
 
 async function loadNOAAKp(){
   setSource("noaaKp","LOADING...");
+
   try{
     const data = await fetchJsonAny([NOAA.kp,NOAA.kpAlt]);
     setSource("noaaKp",`OK: ${Array.isArray(data)?data.length:1} records`,data);
@@ -292,6 +282,7 @@ async function loadNOAAKp(){
 
 async function loadGOESProton(){
   setSource("goesProton","LOADING...");
+
   try{
     const data = await fetchJson(NOAA.proton);
     setSource("goesProton",`OK: ${Array.isArray(data)?data.length:1} records`,data);
@@ -314,12 +305,13 @@ async function fetchJson(url){
   try{
     return JSON.parse(text);
   }catch(e){
-    throw new Error("JSON parse failed: "+text.slice(0,160));
+    throw new Error("JSON parse failed: "+text.slice(0,180));
   }
 }
 
 async function fetchJsonAny(urls){
   let err="";
+
   for(const u of urls){
     try{
       return await fetchJson(u);
@@ -327,18 +319,28 @@ async function fetchJsonAny(urls){
       err=e.message;
     }
   }
+
   throw new Error(err);
 }
 
 async function fetchCactus(url){
   try{
     const r=await fetch(url+"?t="+Date.now());
-    if(!r.ok) throw new Error("direct "+r.status);
+
+    if(!r.ok){
+      throw new Error("direct "+r.status);
+    }
+
     return await r.text();
+
   }catch(e){
     const proxy="https://api.allorigins.win/raw?url="+encodeURIComponent(url);
     const r=await fetch(proxy+"&t="+Date.now());
-    if(!r.ok) throw new Error("proxy "+r.status);
+
+    if(!r.ok){
+      throw new Error("proxy "+r.status);
+    }
+
     return await r.text();
   }
 }
@@ -369,14 +371,19 @@ function rebuildAll(){
   }
 
   STATE.cmes=dedupeCMEs(events)
-    .sort((a,b)=>b.confidence-b.confidence || b.arrivalScore-a.arrivalScore);
+    .sort((a,b)=>{
+      if((b.earthCandidate?1:0)!==(a.earthCandidate?1:0)){
+        return (b.earthCandidate?1:0)-(a.earthCandidate?1:0);
+      }
+      return b.confidence-b.confidence || b.arrivalScore-a.arrivalScore;
+    });
 
   renderStatus();
   renderTable(STATE.cmes);
   updateTimeline();
 
   raw(JSON.stringify({
-    note:"DONKIはGitHub Actions保存キャッシュから読込。HTML側ではNASA APIキー不要。",
+    note:"Earth-directed filter enabled: DONKI lon/lat/halfAngle used for impact filtering. Non-Earth-directed CMEs remain on solar disk/table but are excluded from propagation/hazard.",
     donkiIndex:STATE.donkiIndex,
     dataHealth:Object.fromEntries(
       Object.entries(STATE.sources).map(([k,v])=>[
@@ -386,7 +393,8 @@ function rebuildAll(){
     ),
     env:STATE.env,
     mergedCount:STATE.cmes.length,
-    cmes:STATE.cmes.slice(0,30)
+    earthDirectedCount:STATE.cmes.filter(c=>c.earthCandidate).length,
+    cmes:STATE.cmes.slice(0,40)
   },null,2));
 }
 
@@ -517,7 +525,16 @@ function parseDONKIAnalysis(c,env){
     : new Date(c.activityStartTime||Date.now());
 
   const arrival=computeArrivalDONKI(c,env);
-  const score=scoreDONKI(lon,lat,speed,half);
+  const earth=evaluateDonkiEarthImpact(lon,lat,half,arrival.source);
+
+  let score=scoreDONKI(lon,lat,speed,half);
+
+  if(!earth.earthCandidate){
+    score=Math.min(score,15);
+  }else{
+    score=Math.min(100,Math.round(score * (0.8 + earth.earthConfidence*0.35)));
+  }
+
   const hasEnlil=arrival.source==="ENLIL";
 
   return buildCME({
@@ -532,8 +549,12 @@ function parseDONKIAnalysis(c,env){
     t0,
     arrival,
     arrivalScore:score,
+    earthCandidate:earth.earthCandidate,
+    earthConfidence:earth.earthConfidence,
+    earthReason:earth.earthReason,
+    angularSeparation:earth.angularSeparation,
     sources:["DONKI"],
-    confidence:hasEnlil?1.0:0.82
+    confidence:hasEnlil?1.0:Math.max(0.55,0.82*earth.earthConfidence)
   });
 }
 
@@ -558,6 +579,8 @@ function parseDONKICME(list,env){
         }
       }
     }else{
+      const t0=new Date(c.startTime||Date.now());
+
       out.push(buildCME({
         id:c.activityID||"DONKI-CME",
         type:"DONKI-basic",
@@ -567,11 +590,15 @@ function parseDONKICME(list,env){
         lat:null,
         speed:500,
         halfAngle:30,
-        t0:new Date(c.startTime||Date.now()),
-        arrival:computeArrivalBasic(new Date(c.startTime||Date.now()),500,env),
-        arrivalScore:35,
+        t0,
+        arrival:computeArrivalBasic(t0,500,env),
+        arrivalScore:10,
+        earthCandidate:false,
+        earthConfidence:0.05,
+        earthReason:"DONKI basic CME has no lon/lat/halfAngle; excluded from Earth propagation",
+        angularSeparation:null,
         sources:["DONKI-basic"],
-        confidence:0.45
+        confidence:0.30
       }));
     }
   }
@@ -608,7 +635,14 @@ function parseCACTus(html,env){
     const half=Math.max(15,Math.min(90,da/2));
 
     const arrival=computeArrivalBasic(t0,speed,env);
-    const score=scoreCACTus(pa,da,speed,halo);
+    const earth=evaluateCactusEarthImpact(pa,da,halo);
+    const baseScore=scoreCACTus(pa,da,speed,halo);
+
+    let score=baseScore;
+
+    if(!earth.earthCandidate){
+      score=Math.min(score,12);
+    }
 
     out.push(buildCME({
       id,
@@ -625,8 +659,12 @@ function parseCACTus(html,env){
       t0,
       arrival,
       arrivalScore:score,
+      earthCandidate:earth.earthCandidate,
+      earthConfidence:earth.earthConfidence,
+      earthReason:earth.earthReason,
+      angularSeparation:null,
       sources:["CACTus"],
-      confidence:0.55
+      confidence:earth.earthCandidate ? 0.55 : 0.25
     }));
   }
 
@@ -654,13 +692,88 @@ function finiteOr(v,def){
   return Number.isFinite(n)?n:def;
 }
 
+function angularSeparationFromEarth(lonDeg,latDeg){
+  const lon=lonDeg*Math.PI/180;
+  const lat=latDeg*Math.PI/180;
+
+  const cosD=Math.cos(lat)*Math.cos(lon);
+  const d=Math.acos(Math.max(-1,Math.min(1,cosD)));
+
+  return d*180/Math.PI;
+}
+
+function evaluateDonkiEarthImpact(lon,lat,halfAngle,arrivalSource){
+  const sep=angularSeparationFromEarth(lon,lat);
+
+  if(arrivalSource==="ENLIL"){
+    return {
+      earthCandidate:true,
+      earthConfidence:1.0,
+      angularSeparation:sep,
+      earthReason:`ENLIL shock arrival. sep=${sep.toFixed(1)}°, half=${halfAngle.toFixed(1)}°`
+    };
+  }
+
+  const margin=10;
+  const hit=sep<=halfAngle+margin;
+
+  let conf=0.05;
+  let candidate=false;
+
+  if(sep<=halfAngle){
+    candidate=true;
+    conf=0.80;
+  }else if(sep<=halfAngle+margin){
+    candidate=true;
+    conf=0.55;
+  }else if(sep<=halfAngle+25){
+    candidate=false;
+    conf=0.25;
+  }
+
+  return {
+    earthCandidate:candidate,
+    earthConfidence:conf,
+    angularSeparation:sep,
+    earthReason:`DONKI cone check: sep=${sep.toFixed(1)}°, half=${halfAngle.toFixed(1)}°, margin=${margin}°`
+  };
+}
+
+function evaluateCactusEarthImpact(pa,da,halo){
+  const isHalo=halo && halo.length>0;
+  const wide=da>=180;
+  const veryWide=da>=270;
+
+  if(isHalo || veryWide){
+    return {
+      earthCandidate:true,
+      earthConfidence:0.45,
+      earthReason:`CACTus wide/halo CME: PA=${pa}, DA=${da}, halo=${halo || "-"}`
+    };
+  }
+
+  if(wide){
+    return {
+      earthCandidate:true,
+      earthConfidence:0.25,
+      earthReason:`CACTus broad CME: PA=${pa}, DA=${da}`
+    };
+  }
+
+  return {
+    earthCandidate:false,
+    earthConfidence:0.05,
+    earthReason:`CACTus non-halo/narrow CME: PA=${pa}, DA=${da}`
+  };
+}
+
 function scoreDONKI(lon,lat,speed,half){
-  const d=Math.sqrt(lon*lon+lat*lat);
+  const sep=angularSeparationFromEarth(lon,lat);
 
   const earth =
-    d<=half ? 45 :
-    d<=half+20 ? 30 :
-    d<=half+40 ? 18 : 5;
+    sep<=half ? 45 :
+    sep<=half+10 ? 30 :
+    sep<=half+25 ? 12 : 3;
 
   const sp =
     speed>=2000 ? 30 :
@@ -747,10 +860,12 @@ function parseCactusTime(s){
 
 function durationBy(half,speed){
   let h=12;
+
   if(half>=35) h=24;
   if(half>=60) h=36;
   if(half>=90) h=48;
   if(speed>=1200) h+=6;
+
   return h;
 }
 
@@ -765,9 +880,13 @@ function dedupeCMEs(items){
       if(dt>3) return false;
 
       if(m.coordType==="heliographic" && c.coordType==="heliographic"){
+        const sep1=m.angularSeparation ?? angularSeparationFromEarth(m.lon||0,m.lat||0);
+        const sep2=c.angularSeparation ?? angularSeparationFromEarth(c.lon||0,c.lat||0);
+
         const dl=Math.abs((m.lon||0)-(c.lon||0));
         const db=Math.abs((m.lat||0)-(c.lat||0));
-        return dl<=35 && db<=30;
+
+        return dl<=35 && db<=30 && Math.abs(sep1-sep2)<=35;
       }
 
       if(m.coordType==="pa" && c.coordType==="pa"){
@@ -780,13 +899,19 @@ function dedupeCMEs(items){
     if(near){
       near.sources=[...new Set([...near.sources,...c.sources])];
       near.confidence=Math.min(1,Math.max(near.confidence,c.confidence)+0.08);
+      near.earthCandidate=near.earthCandidate || c.earthCandidate;
+      near.earthConfidence=Math.max(near.earthConfidence||0,c.earthConfidence||0);
 
       if(sourceRank(c)>sourceRank(near)){
         const mergedSources=near.sources;
         const mergedConfidence=near.confidence;
+        const earthCandidate=near.earthCandidate;
+        const earthConfidence=near.earthConfidence;
         Object.assign(near,c);
         near.sources=mergedSources;
         near.confidence=mergedConfidence;
+        near.earthCandidate=earthCandidate;
+        near.earthConfidence=earthConfidence;
       }
     }else{
       merged.push(c);
@@ -843,9 +968,13 @@ function drawSun(cmes,time){
   drawCactusPACones(ctx,cx,cy,r,cactusEvents);
   drawDonkiSolarPoints(ctx,cx,cy,r,donkiEvents,time);
 
+  const earthDirected=cmes.filter(c=>c.earthCandidate).length;
+  const nonEarth=cmes.filter(c=>!c.earthCandidate).length;
+
   document.getElementById("sunSummary").innerHTML =
     `DONKI太陽面座標: <b>${donkiEvents.length}</b>件<br>`+
     `CACTus PAコーン: <b>${cactusEvents.length}</b>件<br>`+
+    `Earth-directed候補: <b style="color:#8bc34a">${earthDirected}</b>件 / 非地球方向: <b style="color:#ff8a80">${nonEarth}</b>件<br>`+
     `DONKI cache: <b>${STATE.sources.donkiCache.status}</b><br>`+
     `表示座標: 中央=0°、右=W、左=E、上=N、下=S`;
 }
@@ -853,7 +982,7 @@ function drawSun(cmes,time){
 function drawDonkiSolarPoints(ctx,cx,cy,r,events,time){
   let labelCount=0;
 
-  events.slice(0,30).forEach(c=>{
+  events.slice(0,40).forEach(c=>{
     const displayLon=normalizeLon(c.lon+SOLAR_ROTATION*((time-c.t0)/3600000));
     const p=solarProject(c.lat,displayLon);
 
@@ -861,7 +990,7 @@ function drawDonkiSolarPoints(ctx,cx,cy,r,events,time){
 
     const x=cx+p.x*r;
     const y=cy+p.y*r;
-    const col=riskColor(c.arrivalScore);
+    const col=c.earthCandidate ? riskColor(c.arrivalScore) : "#90a4ae";
     const size=Math.max(5,Math.min(26,c.halfAngle/3));
 
     ctx.beginPath();
@@ -874,22 +1003,23 @@ function drawDonkiSolarPoints(ctx,cx,cy,r,events,time){
     ctx.fillStyle=col;
     ctx.fill();
 
-    ctx.strokeStyle="#000";
-    ctx.lineWidth=1;
+    ctx.strokeStyle=c.earthCandidate ? "#ffffff" : "#263238";
+    ctx.lineWidth=c.earthCandidate ? 2 : 1;
     ctx.stroke();
 
     ctx.beginPath();
     ctx.arc(x,y,Math.min(r*.30,size+c.halfAngle*.55),0,Math.PI*2);
     ctx.strokeStyle=col+"99";
-    ctx.lineWidth=2;
+    ctx.lineWidth=c.earthCandidate ? 2.5 : 1.2;
     ctx.stroke();
 
-    if(labelCount<12){
+    if(labelCount<16){
       ctx.fillStyle="#fff";
       ctx.font="11px system-ui";
       const lonLabel=displayLon>0?`W${displayLon.toFixed(0)}`:displayLon<0?`E${Math.abs(displayLon).toFixed(0)}`:"0";
       const latLabel=c.lat>0?`N${c.lat.toFixed(0)}`:c.lat<0?`S${Math.abs(c.lat).toFixed(0)}`:"0";
-      ctx.fillText(shortId(c.id),x+size+6,y-8);
+      const mark=c.earthCandidate?"✓":"×";
+      ctx.fillText(`${mark} ${shortId(c.id)}`,x+size+6,y-8);
       ctx.fillText(`${latLabel} ${lonLabel}`,x+size+6,y+6);
       labelCount++;
     }
@@ -900,7 +1030,7 @@ function drawCactusPACones(ctx,cx,cy,r,events){
   ctx.save();
 
   events.slice(0,18).forEach((c,i)=>{
-    const col=riskColor(c.arrivalScore);
+    const col=c.earthCandidate ? riskColor(c.arrivalScore) : "#607d8b";
     const pa=c.pa;
     const da=Math.max(8,Math.min(180,c.da || c.halfAngle*2 || 40));
 
@@ -909,9 +1039,9 @@ function drawCactusPACones(ctx,cx,cy,r,events){
     const a1=pa-da/2;
     const a2=pa+da/2;
 
-    ctx.globalAlpha=0.72;
+    ctx.globalAlpha=c.earthCandidate ? 0.78 : 0.38;
     ctx.strokeStyle=col;
-    ctx.lineWidth=2.2;
+    ctx.lineWidth=c.earthCandidate ? 2.4 : 1.5;
 
     drawPAArc(ctx,cx,cy,outer,a1,a2);
 
@@ -1069,7 +1199,13 @@ function drawSolarLabels(ctx,cx,cy,r){
   ctx.fillText("S",cx-4,cy+r+22);
   ctx.fillText("E",cx-r-24,cy+4);
   ctx.fillText("W",cx+r+12,cy+4);
-  ctx.fillText("DONKI: cached lat/lon / CACTus: PA cone",12,24);
+  ctx.fillText("DONKI: lat/lon cone filter / CACTus: PA cone",12,24);
+
+  ctx.font="11px system-ui";
+  ctx.fillStyle="#8bc34a";
+  ctx.fillText("✓ Earth-directed",12,42);
+  ctx.fillStyle="#90a4ae";
+  ctx.fillText("× non-Earth-directed",125,42);
 }
 
 function solarProject(latDeg,lonWestDeg){
@@ -1084,6 +1220,8 @@ function solarProject(latDeg,lonWestDeg){
 }
 
 function drawFlow(cmes,time){
+  const earthCMEs=cmes.filter(c=>c.earthCandidate);
+
   const {ctx,w,h}=setupWide("flowCanvas");
   ctx.clearRect(0,0,w,h);
 
@@ -1113,9 +1251,16 @@ function drawFlow(cmes,time){
   ctx.font="12px system-ui";
   ctx.fillText("Sun",sx-10,y+45);
   ctx.fillText("Earth/GEO",ex-42,y+36);
-  ctx.fillText("CME plasma propagation / Earth arrival",12,24);
+  ctx.fillText("Only Earth-directed CME candidates are propagated",12,24);
 
-  cmes.slice(0,15).forEach((c,idx)=>{
+  if(!earthCMEs.length){
+    ctx.fillStyle="#aaa";
+    ctx.font="14px system-ui";
+    ctx.fillText("No Earth-directed CME candidates.",sx+70,y);
+    return;
+  }
+
+  earthCMEs.slice(0,15).forEach((c,idx)=>{
     const total=c.arrival.date-c.t0;
     const elapsed=time-c.t0;
 
@@ -1146,7 +1291,7 @@ function drawFlow(cmes,time){
 
     ctx.fillStyle="#fff";
     ctx.font="11px system-ui";
-    ctx.fillText(`${shortId(c.id)} ${Math.round(frac*100)}%`,x+8,lane-8);
+    ctx.fillText(`${shortId(c.id)} ${(c.earthConfidence*100).toFixed(0)}% ${Math.round(frac*100)}%`,x+8,lane-8);
 
     if(time>=c.shockStart&&time<=c.shockEnd){
       ctx.fillStyle="#ff1744";
@@ -1163,6 +1308,7 @@ function drawFlow(cmes,time){
 
 function renderHazard(time){
   const active=STATE.cmes
+    .filter(c=>c.earthCandidate)
     .filter(c=>time>=c.activeStart&&time<=c.activeEnd)
     .sort((a,b)=>b.arrivalScore-a.arrivalScore);
 
@@ -1170,7 +1316,7 @@ function renderHazard(time){
 
   if(!top){
     document.getElementById("hazardPanel").innerHTML =
-      `<div class="phase"><b style="color:#8bc34a">🟢 Quiet</b><br>No active CME hazard window.</div>`;
+      `<div class="phase"><b style="color:#8bc34a">🟢 Quiet</b><br>No active Earth-directed CME hazard window.</div>`;
     return;
   }
 
@@ -1192,8 +1338,9 @@ function renderHazard(time){
   <div class="phase"><b>${phase}</b><br>
   Top event: ${shortId(top.id)}<br>
   Sources: ${top.sources.join(", ")}<br>
-  Coord: ${top.coordType==="heliographic" ? "DONKI lat/lon" : top.coordType==="pa" ? "CACTus PA/DA" : "none"}<br>
-  Confidence: ${(top.confidence*100).toFixed(0)}%<br>
+  Coord: ${top.coordType==="heliographic" ? "DONKI lat/lon + halfAngle" : top.coordType==="pa" ? "CACTus PA/DA" : "none"}<br>
+  Earth confidence: ${(top.earthConfidence*100).toFixed(0)}%<br>
+  Reason: ${escapeHtml(top.earthReason || "")}<br>
   Arrival: ${top.arrival.utc.slice(0,16).replace("T"," ")} UTC / ${top.arrival.source}</div>
   ${hazardCard("SEU Risk",seu,"GOES proton / SEPによるSEU・センサー雑音")}
   ${hazardCard("Surface Charging",surface,"磁気圏圧縮・電子環境変化による表面帯電")}
@@ -1217,6 +1364,9 @@ function renderStatus(){
     ? `<hr>DONKI Cache latest: <b>${STATE.donkiIndex.latest}</b><br>Retention: <b>${STATE.donkiIndex.retention_days}</b> days / Files: <b>${STATE.donkiIndex.files?.length || 0}</b>`
     : "";
 
+  const earthDirected=STATE.cmes.filter(c=>c.earthCandidate).length;
+  const nonEarth=STATE.cmes.filter(c=>!c.earthCandidate).length;
+
   document.getElementById("statusBox").innerHTML =
     Object.entries(STATE.sources).map(([k,v])=>{
       const col=v.status.startsWith("OK")?"#8bc34a":v.status.startsWith("FAILED")?"#ff5252":"#aaa";
@@ -1224,7 +1374,8 @@ function renderStatus(){
     }).join("<br>")+
     `<hr>`+
     `Solar wind: V=${STATE.env.speed} km/s, Bz=${STATE.env.bz}, Clock=${STATE.env.clockAngle.toFixed(1)}°, Kp=${STATE.env.kp}<br>`+
-    `GOES ≥10MeV: ${STATE.env.p10} pfu / ${STATE.env.radiationScale}`+
+    `GOES ≥10MeV: ${STATE.env.p10} pfu / ${STATE.env.radiationScale}<br>`+
+    `CME filter: Earth-directed <b style="color:#8bc34a">${earthDirected}</b> / Non-Earth-directed <b style="color:#ff8a80">${nonEarth}</b>`+
     cacheInfo;
 }
 
@@ -1238,28 +1389,44 @@ function renderTable(cmes){
   <tr>
     <th>ID</th>
     <th>Sources</th>
+    <th>Earth?</th>
     <th>Coord</th>
     <th>Position</th>
+    <th>Sep/Half</th>
     <th>Speed</th>
     <th>Width</th>
     <th>Risk</th>
     <th>Conf.</th>
     <th>Arrival</th>
-    <th>Source</th>
+    <th>Reason</th>
   </tr>
   ${cmes.map(c=>`<tr>
     <td>${c.id}</td>
     <td>${c.sources.join("+")}</td>
+    <td>${earthBadge(c)}</td>
     <td>${c.coordType}</td>
     <td>${positionLabel(c)}</td>
+    <td>${sepHalfLabel(c)}</td>
     <td>${c.speed}</td>
     <td>${c.coordType==="pa" ? "DA "+c.da : "Half "+Math.round(c.halfAngle)}</td>
     <td style="color:${riskColor(c.arrivalScore)};font-weight:700">${c.arrivalScore}</td>
     <td>${(c.confidence*100).toFixed(0)}%</td>
-    <td>${c.arrival.utc.slice(0,16).replace("T"," ")}</td>
-    <td>${c.arrival.source}</td>
+    <td>${c.arrival.utc.slice(0,16).replace("T"," ")}<br>${c.arrival.source}</td>
+    <td class="small">${escapeHtml(c.earthReason || "")}</td>
   </tr>`).join("")}
   </table>`;
+}
+
+function earthBadge(c){
+  if(c.earthCandidate){
+    return `<span class="pill yes">YES</span><br><span class="small">${(c.earthConfidence*100).toFixed(0)}%</span>`;
+  }
+
+  if((c.earthConfidence||0)>=0.25){
+    return `<span class="pill maybe">NEAR</span><br><span class="small">${(c.earthConfidence*100).toFixed(0)}%</span>`;
+  }
+
+  return `<span class="pill no">NO</span><br><span class="small">${(c.earthConfidence*100).toFixed(0)}%</span>`;
 }
 
 function positionLabel(c){
@@ -1271,6 +1438,14 @@ function positionLabel(c){
 
   if(c.coordType==="pa"){
     return `PA ${c.pa}° / DA ${c.da}° ${c.halo ? "/ halo "+c.halo : ""}`;
+  }
+
+  return "-";
+}
+
+function sepHalfLabel(c){
+  if(c.coordType==="heliographic"){
+    return `sep ${c.angularSeparation?.toFixed ? c.angularSeparation.toFixed(1) : "-"}°<br>half ${c.halfAngle.toFixed(1)}°`;
   }
 
   return "-";
