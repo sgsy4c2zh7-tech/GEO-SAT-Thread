@@ -17,24 +17,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch WSA solar wind model
-        env:
-          # 例:
-          # https://example.nasa.gov/wsa/api?start={start}&end={end}
-          # {start} と {end} があれば自動置換
-          WSA_API_URL: ${{ secrets.WSA_API_URL }}
-
-          # APIキーが必要な場合だけ設定
-          WSA_API_KEY: ${{ secrets.WSA_API_KEY }}
+      - name: Fetch WSA Dashboard solar wind model
         run: |
           python3 <<'PY'
-          import os
-          import re
-          import csv
           import json
           import time
           import urllib.request
-          from io import StringIO
+          import urllib.parse
           from pathlib import Path
           from datetime import datetime, timedelta, timezone
 
@@ -47,7 +36,10 @@ jobs:
           now = datetime.now(timezone.utc)
           today = now.strftime("%Y-%m-%d")
 
+          # 初回も毎回も過去27日分を取得
           history_days = 27
+
+          # 日次ファイルは35日分保持
           retention_days = 35
 
           start_dt = now - timedelta(days=history_days)
@@ -56,131 +48,74 @@ jobs:
           start = start_dt.strftime("%Y-%m-%d")
           end = end_dt.strftime("%Y-%m-%d")
 
-          url_template = os.environ.get("WSA_API_URL", "").strip()
-          api_key = os.environ.get("WSA_API_KEY", "").strip()
+          # CCMC WSA Dashboard API
+          # input_map: AGONG or AHMI
+          # sat: ACE, DSCOVR, Earth, STEREOA など
+          input_map = "AGONG"
+          sat = "ACE"
 
-          if not url_template:
-              raise SystemExit(
-                  "WSA_API_URL is not set. Add it to GitHub Secrets or Variables. "
-                  "Example: https://.../api?start={start}&end={end}"
-              )
+          base_url = "https://ccmc.gsfc.nasa.gov/wsa-dashboard/api/get_solarwind_simple"
 
-          # =========================
-          # URL builder
-          # =========================
-          def build_url(template):
-              url = template.replace("{start}", start).replace("{end}", end)
+          params = {
+              "start_date": start,
+              "end_date": end,
+              "input_map": input_map,
+              "sat": sat
+          }
 
-              if api_key:
-                  if "{api_key}" in url:
-                      url = url.replace("{api_key}", api_key)
-                  else:
-                      sep = "&" if "?" in url else "?"
-                      url = f"{url}{sep}api_key={api_key}"
+          url = base_url + "?" + urllib.parse.urlencode(params)
 
-              return url
-
-          url = build_url(url_template)
-
-          print("WSA start:", start)
-          print("WSA end:", end)
-          print("WSA URL:", url.replace(api_key, "***") if api_key else url)
+          print("WSA Dashboard API")
+          print("start_date:", start)
+          print("end_date:", end)
+          print("input_map:", input_map)
+          print("sat:", sat)
+          print("url:", url)
 
           # =========================
-          # Fetch
+          # Fetch helper
           # =========================
-          def fetch_text(url, tries=5, timeout=120):
-              last = None
+          def fetch_json(url, tries=5, timeout=120):
+              last_error = None
 
               for i in range(tries):
                   try:
                       req = urllib.request.Request(
                           url,
                           headers={
-                              "User-Agent": "wsa-cache-github-actions",
-                              "Accept": "application/json,text/csv,text/plain,*/*"
+                              "User-Agent": "github-actions-wsa-cache",
+                              "Accept": "application/json,*/*"
                           }
                       )
 
                       with urllib.request.urlopen(req, timeout=timeout) as r:
                           text = r.read().decode("utf-8", errors="replace")
                           print("HTTP status:", r.status)
-                          print("Response head:", text[:300].replace("\n", " "))
-                          return text
+                          print("Response head:", text[:500].replace("\n", " "))
+
+                          return json.loads(text)
 
                   except Exception as e:
-                      last = e
+                      last_error = e
                       wait = 20 * (i + 1)
-                      print(f"Retry {i+1}/{tries} failed: {e}")
+                      print(f"Retry {i+1}/{tries} failed:", e)
                       print(f"Waiting {wait} sec...")
                       time.sleep(wait)
 
-              raise last
-
-          text = fetch_text(url)
+              raise last_error
 
           # =========================
-          # Flexible parser
+          # Parse helpers
           # =========================
-          time_keys = [
-              "time", "time_tag", "datetime", "date", "timestamp",
-              "utc", "model_time", "valid_time"
-          ]
-
-          speed_keys = [
-              "speed", "v", "vr", "solar_wind_speed", "wind_speed",
-              "velocity", "v_sw", "V", "Vsw"
-          ]
-
-          density_keys = [
-              "density", "n", "np", "proton_density", "solar_wind_density"
-          ]
-
-          bt_keys = ["bt", "b", "b_total", "magnetic_field", "B"]
-          bz_keys = ["bz", "Bz", "bz_gsm", "Bz_gsm"]
-
-          def find_value(d, keys):
-              if not isinstance(d, dict):
+          def parse_time(value):
+              if value is None:
                   return None
 
-              lower = {str(k).lower(): v for k, v in d.items()}
+              s = str(value).strip()
 
-              for k in keys:
-                  if k in d:
-                      return d[k]
-                  lk = str(k).lower()
-                  if lk in lower:
-                      return lower[lk]
-
-              return None
-
-          def to_float(x):
-              try:
-                  if x is None:
-                      return None
-                  s = str(x).strip()
-                  if s == "" or s.lower() in ("nan", "none", "null"):
-                      return None
-                  return float(s)
-              except Exception:
-                  return None
-
-          def normalize_time(x):
-              if x is None:
-                  return None
-
-              s = str(x).strip()
-
-              # Unix epoch seconds
-              if re.fullmatch(r"\d{10}", s):
-                  return datetime.fromtimestamp(int(s), tz=timezone.utc).isoformat()
-
-              # Unix epoch milliseconds
-              if re.fullmatch(r"\d{13}", s):
-                  return datetime.fromtimestamp(int(s) / 1000, tz=timezone.utc).isoformat()
-
-              # ISO-ish
-              s = s.replace("Z", "+00:00")
+              # APIは "2026-03-09T00:00:00" 形式の可能性あり
+              if s.endswith("Z"):
+                  s = s[:-1] + "+00:00"
 
               try:
                   dt = datetime.fromisoformat(s)
@@ -188,137 +123,141 @@ jobs:
                       dt = dt.replace(tzinfo=timezone.utc)
                   return dt.astimezone(timezone.utc).isoformat()
               except Exception:
-                  pass
+                  return None
 
-              # Common format: YYYY-MM-DD HH:MM
-              for fmt in ("%Y-%m-%d %H:%M", "%Y/%m/%d %H:%M", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S"):
-                  try:
-                      dt = datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
-                      return dt.isoformat()
-                  except Exception:
-                      pass
+          def to_float(value):
+              try:
+                  if value is None:
+                      return None
+                  s = str(value).strip()
+                  if s == "" or s.lower() in ("nan", "none", "null"):
+                      return None
+                  return float(s)
+              except Exception:
+                  return None
 
-              return None
+          # =========================
+          # Fetch WSA
+          # =========================
+          obj = fetch_json(url)
 
-          def flatten_json(obj):
-              if isinstance(obj, list):
-                  return obj
+          if not isinstance(obj, dict):
+              raise SystemExit("WSA response is not JSON object")
 
-              if isinstance(obj, dict):
-                  for key in ("records", "data", "results", "items", "values", "wind", "solar_wind"):
-                      if isinstance(obj.get(key), list):
-                          return obj[key]
+          solarwind = obj.get("solarwind")
 
-                  # dict of time -> values
-                  rows = []
-                  for k, v in obj.items():
-                      if isinstance(v, dict):
-                          row = {"time": k}
-                          row.update(v)
-                          rows.append(row)
-                  if rows:
-                      return rows
+          if not isinstance(solarwind, list):
+              print("Response keys:", list(obj.keys()))
+              raise SystemExit("No solarwind list in WSA response")
 
-              return []
+          records = []
 
-          def parse_json(text):
-              obj = json.loads(text)
-              rows = flatten_json(obj)
-              return rows, obj
+          for row in solarwind:
+              if not isinstance(row, dict):
+                  continue
 
-          def parse_csv_text(text):
-              # delimiter auto-ish
-              sample = text[:2000]
-              dialect = csv.Sniffer().sniff(sample, delimiters=",\t; |")
-              reader = csv.DictReader(StringIO(text), dialect=dialect)
-              rows = list(reader)
-              return rows
+              t = parse_time(row.get("time"))
 
-          def normalize_rows(rows):
-              records = []
+              # WSA Dashboard get_solarwind_simple の速度キー
+              # Vp = solar wind proton speed
+              speed = to_float(row.get("Vp"))
 
-              for row in rows:
-                  if not isinstance(row, dict):
-                      continue
+              if not t or speed is None:
+                  continue
 
-                  t_raw = find_value(row, time_keys)
-                  t = normalize_time(t_raw)
-                  speed = to_float(find_value(row, speed_keys))
+              # 常識的な範囲だけ採用
+              if speed < 150 or speed > 1200:
+                  continue
 
-                  if not t or speed is None:
-                      continue
+              rec = {
+                  "time": t,
+                  "speed": round(speed, 2)
+              }
 
-                  density = to_float(find_value(row, density_keys))
-                  bt = to_float(find_value(row, bt_keys))
-                  bz = to_float(find_value(row, bz_keys))
+              # 追加情報があれば保存
+              if "imf_polarity" in row:
+                  pol = to_float(row.get("imf_polarity"))
+                  if pol is not None:
+                      rec["imf_polarity"] = int(pol)
 
-                  # 常識的な範囲だけ採用
-                  if speed < 150 or speed > 1200:
-                      continue
+              # 将来API側に密度や磁場が入った場合に拾えるようにしておく
+              optional_map = {
+                  "density": ["density", "Np", "n", "proton_density"],
+                  "bt": ["Bt", "bt", "B"],
+                  "bz": ["Bz", "bz"]
+              }
 
-                  rec = {
-                      "time": t,
-                      "speed": round(speed, 2)
-                  }
+              for out_key, keys in optional_map.items():
+                  for k in keys:
+                      if k in row:
+                          v = to_float(row.get(k))
+                          if v is not None:
+                              rec[out_key] = round(v, 3)
+                              break
 
-                  if density is not None:
-                      rec["density"] = round(density, 3)
-                  if bt is not None:
-                      rec["bt"] = round(bt, 3)
-                  if bz is not None:
-                      rec["bz"] = round(bz, 3)
+              records.append(rec)
 
-                  records.append(rec)
+          # 時刻順に整列
+          records.sort(key=lambda x: x["time"])
 
-              records.sort(key=lambda x: x["time"])
+          # 重複削除
+          dedup = {}
+          for r in records:
+              dedup[r["time"]] = r
 
-              # 重複時刻を削除
-              dedup = {}
-              for r in records:
-                  dedup[r["time"]] = r
-
-              return list(dedup.values())
-
-          raw_obj = None
-
-          try:
-              rows, raw_obj = parse_json(text)
-              records = normalize_rows(rows)
-              parser = "json"
-          except Exception:
-              rows = parse_csv_text(text)
-              records = normalize_rows(rows)
-              parser = "csv"
+          records = list(dedup.values())
 
           if not records:
-              raise SystemExit("No valid WSA records parsed. Check WSA_API_URL response format.")
+              raise SystemExit("No valid WSA solar wind records parsed")
 
-          print("Parser:", parser)
-          print("Records:", len(records))
+          print("Parsed WSA records:", len(records))
           print("First:", records[0])
           print("Last:", records[-1])
 
           # =========================
-          # Save files
+          # Save payload
           # =========================
-          daily_payload = {
+          payload = {
               "generated_at": now.isoformat(),
-              "source": "WSA Dashboard / NASA CCMC",
-              "parser": parser,
+              "source": "NASA CCMC WSA Dashboard",
+              "api": "get_solarwind_simple",
+              "url": url,
+              "input_map": input_map,
+              "sat": sat,
               "startDate": start,
               "endDate": end,
               "history_days": history_days,
               "record_count": len(records),
-              "records": records
+              "records": records,
+              "raw_meta": {
+                  "comment": obj.get("comment"),
+                  "input_map": obj.get("input_map"),
+                  "sat": obj.get("sat")
+              }
           }
 
           daily_file = base_dir / f"{today}.json"
           latest_file = base_dir / "latest.json"
           history_file = base_dir / "history-27d.json"
 
-          daily_file.write_text(json.dumps(daily_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-          latest_file.write_text(json.dumps(daily_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-          history_file.write_text(json.dumps(daily_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+          daily_file.write_text(
+              json.dumps(payload, ensure_ascii=False, indent=2),
+              encoding="utf-8"
+          )
+
+          latest_file.write_text(
+              json.dumps(payload, ensure_ascii=False, indent=2),
+              encoding="utf-8"
+          )
+
+          history_file.write_text(
+              json.dumps(payload, ensure_ascii=False, indent=2),
+              encoding="utf-8"
+          )
+
+          print("Saved:", daily_file)
+          print("Saved:", latest_file)
+          print("Saved:", history_file)
 
           # =========================
           # Retention
@@ -331,10 +270,14 @@ jobs:
           for f in base_dir.glob("*.json"):
               if f.name in ("index.json", "latest.json", "history-27d.json"):
                   continue
+
               if f.stem not in keep_dates:
                   print("Delete old file:", f)
                   f.unlink()
 
+          # =========================
+          # Build index.json
+          # =========================
           all_files = sorted(
               [
                   f for f in base_dir.glob("*.json")
@@ -347,16 +290,20 @@ jobs:
 
           for f in all_files:
               try:
-                  obj = json.loads(f.read_text(encoding="utf-8"))
+                  item = json.loads(f.read_text(encoding="utf-8"))
+
                   file_entries.append({
                       "date": f.stem,
                       "file": f.name,
                       "path": f"./data/wsa/{f.name}",
-                      "generated_at": obj.get("generated_at"),
-                      "startDate": obj.get("startDate"),
-                      "endDate": obj.get("endDate"),
-                      "record_count": obj.get("record_count", 0)
+                      "generated_at": item.get("generated_at"),
+                      "startDate": item.get("startDate"),
+                      "endDate": item.get("endDate"),
+                      "input_map": item.get("input_map"),
+                      "sat": item.get("sat"),
+                      "record_count": item.get("record_count", 0)
                   })
+
               except Exception as e:
                   file_entries.append({
                       "date": f.stem,
@@ -367,24 +314,27 @@ jobs:
 
           index = {
               "updated_at": now.isoformat(),
-              "source": "WSA Dashboard / NASA CCMC",
+              "source": "NASA CCMC WSA Dashboard",
+              "api": "get_solarwind_simple",
+              "input_map": input_map,
+              "sat": sat,
               "history_days": history_days,
               "retention_days": retention_days,
               "latest": "latest.json",
               "history": "history-27d.json",
+              "latest_daily": f"{today}.json",
               "files": file_entries
           }
 
-          (base_dir / "index.json").write_text(
+          index_file = base_dir / "index.json"
+          index_file.write_text(
               json.dumps(index, ensure_ascii=False, indent=2),
               encoding="utf-8"
           )
 
-          print("Saved:")
-          print(daily_file)
-          print(latest_file)
-          print(history_file)
-          print(base_dir / "index.json")
+          print("Saved:", index_file)
+          print(json.dumps(index, ensure_ascii=False, indent=2))
+
           PY
 
       - name: Commit and push
