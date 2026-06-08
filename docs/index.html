@@ -251,18 +251,24 @@ pre{
 
 <section class="card" style="margin-top:16px">
   <h3>③ CME Propagation / Earth-directed only</h3>
-  <input id="timeSlider" type="range" min="0" max="168" value="0" step="1" oninput="updateTimeline()">
+  <input id="timeSlider" type="range" min="0" max="336" value="168" step="1" oninput="updateTimeline()">
   <div id="timeLabel" class="small"></div>
   <div class="widebox"><canvas id="flowCanvas"></canvas></div>
 </section>
 
 <section class="card" style="margin-top:16px">
-  <h3>④ Environment / Model Status</h3>
+  <h3>④ Background Solar Wind / WSA time series</h3>
+  <div id="windSummary" class="small">WSA未読込</div>
+  <div class="widebox" style="height:240px"><canvas id="windCanvas"></canvas></div>
+</section>
+
+<section class="card" style="margin-top:16px">
+  <h3>⑤ Environment / Model Status</h3>
   <div id="statusBox" class="small"></div>
 </section>
 
 <section class="card" style="margin-top:16px">
-  <h3>⑤ CME Event Table</h3>
+  <h3>⑥ CME Event Table</h3>
   <div id="table"></div>
 </section>
 
@@ -326,7 +332,10 @@ const STATE = {
   wsaModel:null,
   env:defaultEnv(),
   cmes:[],
-  startTime:new Date(),
+  timelineCenter:new Date(),
+  timelineStart:new Date(Date.now()-168*3600*1000),
+  timelineEnd:new Date(Date.now()+168*3600*1000),
+  selectedTime:new Date(),
   timer:null
 };
 
@@ -378,6 +387,21 @@ function paDistance(a,b){
 function raw(x){
   document.getElementById("raw").textContent=x;
 }
+
+function initTimelineWindow(){
+  STATE.timelineCenter = new Date();
+  STATE.timelineStart = new Date(STATE.timelineCenter.getTime() - 168*3600*1000);
+  STATE.timelineEnd = new Date(STATE.timelineCenter.getTime() + 168*3600*1000);
+  STATE.selectedTime = new Date(STATE.timelineCenter);
+
+  const slider=document.getElementById("timeSlider");
+  if(slider){
+    slider.min=0;
+    slider.max=336;
+    slider.value=168;
+  }
+}
+
 
 /* =========================================================
    FETCHERS
@@ -771,7 +795,7 @@ function radiationScale(p10){
    WSA WIND MODEL
 ========================================================= */
 
-function getBackgroundWindSpeedFromWSA(time,rKm){
+function getBackgroundWindSpeedFromWSA(time,rKm=null){
   if(!STATE.wsaModel || !Array.isArray(STATE.wsaModel.records)){
     return null;
   }
@@ -1591,14 +1615,23 @@ function setupWide(id){
 }
 
 function updateTimeline(){
-  const h=Number(document.getElementById("timeSlider").value);
-  const t=new Date(STATE.startTime.getTime()+h*3600*1000);
+  const slider=document.getElementById("timeSlider");
+  const h=Number(slider?.value ?? 168);
+
+  const t=new Date(STATE.timelineStart.getTime()+h*3600*1000);
+  STATE.selectedTime=t;
+
+  const offset=h-168;
+  const sign=offset>=0 ? "+" : "";
+  const wind=getBackgroundWindSpeedFromWSA(t);
+  const windTxt=wind!==null ? `${Math.round(wind)} km/s` : "N/A";
 
   document.getElementById("timeLabel").innerHTML=
-    `<b>${t.toISOString().slice(0,16).replace("T"," ")} UTC</b> / 現在+${h}h`;
+    `<b>${t.toISOString().slice(0,16).replace("T"," ")} UTC</b> / 現在${sign}${offset}h / 背景風=${windTxt}`;
 
   drawSun(STATE.cmes,t);
   drawFlow(STATE.cmes,t);
+  drawWindSeries(t);
   renderHazard(t);
 }
 
@@ -1640,6 +1673,7 @@ function drawSun(cmes,time){
     `DONKI太陽面座標: <b>${cmes.filter(c=>c.coordType==="heliographic").length}</b>件<br>`+
     `CACTus PAコーン: <b>${cactusEvents.length}</b>件<br>`+
     `Earth-directed: <b class="goodText">${earthDirected}</b> / MISS・参考: <b class="badText">${miss}</b><br>`+
+    `太陽面表示は <b>回転なし</b>。各点は <b>CME発生位置</b> を固定表示。<br>`+
     `判定: sep/halfAngle → CORE/BODY/FLANK/MISS<br>`+
     `速度: DONKI speed → geometry補正 effectiveSpeed → DBM-lite arrivalSpeed<br>`+
     `背景風: <b>${wsaText}</b>`;
@@ -1736,8 +1770,8 @@ function drawDonkiSolarPoints(ctx,cx,cy,r,events,time){
   let labelCount=0;
 
   events.slice(0,60).forEach(c=>{
-    const dtHours=(time-c.t0)/3600000;
-    const displayLon=normalizeLon(c.lon + SOLAR_ROTATION_DEG_PER_HOUR*dtHours);
+    // 太陽面は回転させず、DONKIに記録されたCME発生位置を固定表示
+    const displayLon=c.lon;
     const p=solarProject(c.lat,displayLon);
 
     if(!p.visible) return;
@@ -1746,11 +1780,11 @@ function drawDonkiSolarPoints(ctx,cx,cy,r,events,time){
     const y=cy+p.y*r;
 
     const col=c.earthCandidate ? classColor(c.impactClass,c.arrivalScore) : "#78909c";
-    const size=c.earthCandidate ? Math.max(5,Math.min(22,c.halfAngle/3)) : 5;
+    const size=c.earthCandidate ? Math.max(5,Math.min(20,c.halfAngle/4)) : 5;
 
     ctx.beginPath();
-    ctx.arc(x,y,size+5,0,Math.PI*2);
-    ctx.fillStyle=col+"55";
+    ctx.arc(x,y,size+7,0,Math.PI*2);
+    ctx.fillStyle=col+"44";
     ctx.fill();
 
     ctx.beginPath();
@@ -1758,14 +1792,24 @@ function drawDonkiSolarPoints(ctx,cx,cy,r,events,time){
     ctx.fillStyle=col;
     ctx.fill();
 
-    ctx.strokeStyle=c.earthCandidate ? "#fff" : "#263238";
-    ctx.lineWidth=c.earthCandidate ? 2 : 1;
+    ctx.strokeStyle="#fff";
+    ctx.lineWidth=c.earthCandidate ? 2 : 1.2;
+    ctx.stroke();
+
+    // 発生位置を示す十字マーカー
+    ctx.strokeStyle="#ffffffbb";
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(x-7,y);
+    ctx.lineTo(x+7,y);
+    ctx.moveTo(x,y-7);
+    ctx.lineTo(x,y+7);
     ctx.stroke();
 
     if(c.earthCandidate){
       ctx.beginPath();
-      ctx.arc(x,y,Math.min(r*.30,size+c.halfAngle*.55),0,Math.PI*2);
-      ctx.strokeStyle=col+"99";
+      ctx.arc(x,y,Math.min(r*.22,size+10),0,Math.PI*2);
+      ctx.strokeStyle=col+"aa";
       ctx.lineWidth=2;
       ctx.stroke();
     }
@@ -1778,8 +1822,8 @@ function drawDonkiSolarPoints(ctx,cx,cy,r,events,time){
       const latLabel=c.lat>0 ? `N${c.lat.toFixed(0)}` : c.lat<0 ? `S${Math.abs(c.lat).toFixed(0)}` : "0";
       const mark=c.earthCandidate ? "✓" : "×";
 
-      ctx.fillText(`${mark} ${shortId(c.id)} ${c.impactClass}`,x+size+6,y-8);
-      ctx.fillText(`${latLabel} ${lonLabel} r=${formatNum(c.edgeRatio,2)}`,x+size+6,y+6);
+      ctx.fillText(`${mark} ${shortId(c.id)} ${c.impactClass}`,x+size+7,y-8);
+      ctx.fillText(`${latLabel} ${lonLabel} r=${formatNum(c.edgeRatio,2)}`,x+size+7,y+6);
       labelCount++;
     }
   });
@@ -1898,7 +1942,19 @@ function drawFlow(cmes,time){
   ctx.font="12px system-ui";
   ctx.fillText("Sun",sx-10,y+45);
   ctx.fillText("Earth/GEO",ex-42,y+38);
-  ctx.fillText("MISS excluded / speed corrected / DBM-lite + WSA wind if loaded",12,24);
+  ctx.fillText("Timeline: now-7d to now+7d / MISS excluded / DBM-lite + WSA wind if loaded",12,24);
+
+  const nowFrac=(STATE.timelineCenter-STATE.timelineStart)/(STATE.timelineEnd-STATE.timelineStart);
+  const nowX=sx+nowFrac*len;
+  ctx.strokeStyle="rgba(79,195,247,.65)";
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(nowX,40);
+  ctx.lineTo(nowX,h-30);
+  ctx.stroke();
+  ctx.fillStyle="#4fc3f7";
+  ctx.font="11px system-ui";
+  ctx.fillText("NOW",nowX-14,36);
 
   if(!earthCMEs.length){
     ctx.fillStyle="#aaa";
@@ -1909,46 +1965,69 @@ function drawFlow(cmes,time){
 
   earthCMEs.slice(0,16).forEach((c,idx)=>{
     const total=c.arrival.date-c.t0;
-    const elapsed=time-c.t0;
-
     if(!total || total<=0) return;
 
+    const elapsed=time-c.t0;
     const frac=elapsed/total;
 
-    if(frac<-0.05 || frac>1.25) return;
-
-    const x=sx+clamp(frac,0,1.15)*len;
     const lane=y-95+(idx%8)*25;
     const col=classColor(c.impactClass,c.arrivalScore);
+
+    let drawX;
+    let phasePct;
+
+    if(time < c.t0){
+      drawX=sx;
+      phasePct=0;
+    }else if(time > c.arrival.date){
+      drawX=ex;
+      phasePct=100;
+    }else{
+      drawX=sx+clamp(frac,0,1)*len;
+      phasePct=Math.round(frac*100);
+    }
 
     ctx.strokeStyle=col;
     ctx.lineWidth=Math.max(2,Math.min(18,(c.halfAngle||20)/4));
     ctx.globalAlpha=.75;
 
     ctx.beginPath();
-    ctx.arc(x,lane,18+(c.halfAngle||20)*0.55,-.9,.9);
+    ctx.arc(drawX,lane,18+(c.halfAngle||20)*0.55,-.9,.9);
     ctx.stroke();
 
     ctx.globalAlpha=1;
     ctx.fillStyle=col;
     ctx.beginPath();
-    ctx.arc(x,lane,5,0,Math.PI*2);
+    ctx.arc(drawX,lane,5,0,Math.PI*2);
     ctx.fill();
 
     ctx.fillStyle="#fff";
     ctx.font="11px system-ui";
     ctx.fillText(
-      `${shortId(c.id)} ${c.impactClass} ${Math.round(frac*100)}%`,
-      x+8,
+      `${shortId(c.id)} ${c.impactClass} ${phasePct}%`,
+      drawX+8,
       lane-8
     );
 
     ctx.fillStyle="#b0bec5";
     ctx.fillText(
       `${Math.round(c.effectiveSpeed||0)}→${Math.round(c.arrival.arrivalSpeed||0)} km/s ${c.arrival.usedWSA ? "WSA" : ""}`,
-      x+8,
+      drawX+8,
       lane+6
     );
+
+    const arrFrac=(c.arrival.date-STATE.timelineStart)/(STATE.timelineEnd-STATE.timelineStart);
+    if(arrFrac>=0 && arrFrac<=1){
+      const arrX=sx+arrFrac*len;
+      ctx.strokeStyle=col+"aa";
+      ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(arrX,lane-15);
+      ctx.lineTo(arrX,lane+15);
+      ctx.stroke();
+      ctx.fillStyle=col;
+      ctx.fillText("arrival",arrX+3,lane+18);
+    }
 
     if(time>=c.shockStart && time<=c.shockEnd){
       ctx.fillStyle="#ff1744";
@@ -1961,6 +2040,160 @@ function drawFlow(cmes,time){
       ctx.fillText("DEEP",ex-55,lane-8);
     }
   });
+}
+
+
+function drawWindSeries(selectedTime){
+  const canvas=document.getElementById("windCanvas");
+  const summary=document.getElementById("windSummary");
+  if(!canvas || !summary) return;
+
+  const {ctx,w,h}=setupWide("windCanvas");
+  ctx.clearRect(0,0,w,h);
+
+  ctx.fillStyle="#fff";
+  ctx.font="12px system-ui";
+  ctx.fillText("WSA background solar wind speed",12,20);
+
+  const model=STATE.wsaModel;
+  if(!model || !Array.isArray(model.records) || !model.records.length){
+    ctx.fillStyle="#aaa";
+    ctx.fillText("WSA data not loaded.",12,44);
+    summary.innerHTML="WSA未読込";
+    return;
+  }
+
+  const padL=55;
+  const padR=20;
+  const padT=30;
+  const padB=35;
+  const x0=padL;
+  const y0=padT;
+  const ww=w-padL-padR;
+  const hh=h-padT-padB;
+
+  const tMin=STATE.timelineStart.getTime();
+  const tMax=STATE.timelineEnd.getTime();
+
+  const subset=model.records.filter(r=>r._t>=tMin && r._t<=tMax);
+  const arr=subset.length ? subset : model.records;
+
+  const speeds=arr.map(r=>Number(r.speed)).filter(v=>Number.isFinite(v));
+  if(!speeds.length){
+    ctx.fillStyle="#aaa";
+    ctx.fillText("No valid WSA speed records.",12,44);
+    summary.innerHTML="WSA速度データなし";
+    return;
+  }
+
+  const minV=Math.min(...speeds,300);
+  const maxV=Math.max(...speeds,800);
+  const yMin=Math.floor((minV-20)/50)*50;
+  const yMax=Math.ceil((maxV+20)/50)*50;
+
+  ctx.strokeStyle="rgba(255,255,255,.18)";
+  ctx.lineWidth=1;
+
+  for(let i=0;i<=4;i++){
+    const y=y0+hh*i/4;
+    ctx.beginPath();
+    ctx.moveTo(x0,y);
+    ctx.lineTo(x0+ww,y);
+    ctx.stroke();
+
+    const v=Math.round(yMax-(yMax-yMin)*i/4);
+    ctx.fillStyle="rgba(255,255,255,.72)";
+    ctx.font="11px system-ui";
+    ctx.fillText(`${v}`,8,y+4);
+  }
+
+  ctx.strokeStyle="rgba(255,255,255,.20)";
+  ctx.lineWidth=1;
+  for(let i=0;i<=14;i++){
+    const x=x0+ww*i/14;
+    ctx.beginPath();
+    ctx.moveTo(x,y0);
+    ctx.lineTo(x,y0+hh);
+    ctx.stroke();
+  }
+
+  ctx.beginPath();
+  let started=false;
+
+  arr.forEach(r=>{
+    const x=x0+(r._t-tMin)/(tMax-tMin)*ww;
+    const y=y0+(yMax-r.speed)/(yMax-yMin)*hh;
+
+    if(!started){
+      ctx.moveTo(x,y);
+      started=true;
+    }else{
+      ctx.lineTo(x,y);
+    }
+  });
+
+  ctx.strokeStyle="#4fc3f7";
+  ctx.lineWidth=2.2;
+  ctx.stroke();
+
+  arr.forEach(r=>{
+    const x=x0+(r._t-tMin)/(tMax-tMin)*ww;
+    if(x<x0-5 || x>x0+ww+5) return;
+    const y=y0+(yMax-r.speed)/(yMax-yMin)*hh;
+    ctx.beginPath();
+    ctx.arc(x,y,2.3,0,Math.PI*2);
+    ctx.fillStyle="#4fc3f7";
+    ctx.fill();
+  });
+
+  const nowFrac=(STATE.timelineCenter-STATE.timelineStart)/(STATE.timelineEnd-STATE.timelineStart);
+  const nowX=x0+nowFrac*ww;
+  ctx.strokeStyle="rgba(79,195,247,.55)";
+  ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.moveTo(nowX,y0);
+  ctx.lineTo(nowX,y0+hh);
+  ctx.stroke();
+  ctx.fillStyle="#4fc3f7";
+  ctx.font="11px system-ui";
+  ctx.fillText("NOW",nowX-14,y0-6);
+
+  const selT=selectedTime.getTime();
+  const selX=x0+(selT-tMin)/(tMax-tMin)*ww;
+
+  ctx.beginPath();
+  ctx.moveTo(selX,y0);
+  ctx.lineTo(selX,y0+hh);
+  ctx.strokeStyle="rgba(255,235,88,.95)";
+  ctx.lineWidth=2;
+  ctx.stroke();
+
+  const wNow=getBackgroundWindSpeedFromWSA(selectedTime);
+  if(wNow!==null){
+    const wy=y0+(yMax-wNow)/(yMax-yMin)*hh;
+    ctx.beginPath();
+    ctx.arc(selX,wy,5,0,Math.PI*2);
+    ctx.fillStyle="#ffee58";
+    ctx.fill();
+    ctx.strokeStyle="#fff";
+    ctx.lineWidth=1.5;
+    ctx.stroke();
+
+    ctx.fillStyle="#ffee58";
+    ctx.font="12px system-ui";
+    ctx.fillText(`${Math.round(wNow)} km/s`,selX+8,wy-8);
+  }
+
+  ctx.fillStyle="rgba(255,255,255,.75)";
+  ctx.font="11px system-ui";
+  ctx.fillText("now-7d",x0,y0+hh+18);
+  ctx.fillText("now",x0+ww/2-10,y0+hh+18);
+  ctx.fillText("now+7d",x0+ww-42,y0+hh+18);
+  ctx.fillText("km/s",12,y0-6);
+
+  summary.innerHTML =
+    `WSA records: <b>${model.records.length}</b> / 表示範囲: <b>現在±7日</b><br>`+
+    `選択時刻の背景風: <b>${wNow!==null ? Math.round(wNow)+" km/s" : "N/A"}</b>`;
 }
 
 /* =========================================================
@@ -2047,6 +2280,7 @@ function hazardCard(title,val,desc){
 function renderStatus(){
   const earth=STATE.cmes.filter(c=>c.earthCandidate);
   const miss=STATE.cmes.filter(c=>!c.earthCandidate);
+  const selectedWind=getBackgroundWindSpeedFromWSA(STATE.selectedTime || new Date());
 
   const cacheInfo=STATE.donkiIndex
     ? `<hr>
@@ -2059,7 +2293,8 @@ function renderStatus(){
     ? `<hr>
        WSA model: <b>${STATE.wsaModel.record_count || STATE.wsaModel.records?.length || 0}</b> records<br>
        WSA range: <b>${escapeHtml(STATE.wsaModel.startDate || "-")}</b> → <b>${escapeHtml(STATE.wsaModel.endDate || "-")}</b><br>
-       DBM background wind: <b class="goodText">WSA w(t)</b>`
+       DBM background wind: <b class="goodText">WSA w(t)</b><br>
+       Selected time wind: <b>${selectedWind!==null ? Math.round(selectedWind)+" km/s" : "N/A"}</b>`
     : `<hr>
        WSA model: <b class="warnText">not loaded</b><br>
        DBM background wind: <b>NOAA RTSW / fallback 425 km/s</b>`;
@@ -2082,6 +2317,7 @@ function renderStatus(){
       <div>GOES ≥10MeV</div><div><b>${formatNum(STATE.env.p10,2)}</b> pfu / ${STATE.env.radiationScale}</div>
       <div>DBM gamma</div><div><b>${DBM.gamma}</b> km⁻¹</div>
       <div>DBM start distance</div><div><b>21.5 R☉</b></div>
+      <div>Timeline</div><div><b>now-7d → now+7d</b></div>
       <div>Earth-directed</div><div><b class="goodText">${earth.length}</b></div>
       <div>MISS / Reference</div><div><b class="badText">${miss.length}</b></div>
     </div>`+
@@ -2239,7 +2475,7 @@ function playTimeline(){
   STATE.timer=setInterval(()=>{
     const s=document.getElementById("timeSlider");
     let v=Number(s.value)+1;
-    if(v>168) v=0;
+    if(v>336) v=0;
     s.value=v;
     updateTimeline();
   },300);
@@ -2257,6 +2493,7 @@ function stopTimeline(){
 window.addEventListener("resize",()=>updateTimeline());
 
 renderSourcePanel();
+initTimelineWindow();
 rebuildAll();
 </script>
 
