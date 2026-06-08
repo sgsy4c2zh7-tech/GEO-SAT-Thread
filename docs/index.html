@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CME Earth-Directed Satellite Hazard Console / Advanced</title>
+<title>CME Earth-Directed Satellite Hazard Console / Advanced + WSA</title>
 
 <style>
 :root{
@@ -177,7 +177,7 @@ pre{
 .pill.info{background:#132b3f;color:#4fc3f7}
 .kv{
   display:grid;
-  grid-template-columns:180px 1fr;
+  grid-template-columns:190px 1fr;
   gap:4px 10px;
 }
 .toggleBox{
@@ -203,9 +203,10 @@ pre{
 <body>
 
 <header>
-  <h2>CME Earth-Directed Satellite Hazard Console / Advanced</h2>
+  <h2>CME Earth-Directed Satellite Hazard Console / Advanced + WSA</h2>
   <div>
     <button class="primary" onclick="loadDONKICache()">DONKI Cache読込</button>
+    <button onclick="loadWSA()">WSA背景風読込</button>
     <button onclick="loadCACTus()">CACTus取得</button>
     <button onclick="loadNOAAAll()">NOAA環境取得</button>
     <button onclick="loadAll()">全部取得</button>
@@ -215,6 +216,7 @@ pre{
   </div>
   <div class="small">
     DONKI: <code>./data/donki/index.json</code> を読込。  
+    WSA: <code>./data/wsa/index.json</code> を読込し、DBM-liteの背景太陽風 <b>w(t)</b> に使用。  
     地球到達判定は <b>DONKI longitude / latitude / halfAngle</b> → <b>sep / halfAngle</b> → <b>CORE/BODY/FLANK/MISS</b>。  
     MISSは地球伝播・衛星影響から排除。
   </div>
@@ -277,6 +279,7 @@ pre{
 ========================================================= */
 
 const DONKI_CACHE_INDEX = "./data/donki/index.json";
+const WSA_CACHE_INDEX = "./data/wsa/index.json";
 const DONKI_LON_POSITIVE_WEST = true;
 
 const CACTUS_URL = "https://www.sidc.be/cactus/out/latestCMEs.html";
@@ -295,11 +298,6 @@ const AU_KM = 149597870;
 const R_SUN_KM = 695700;
 const SOLAR_ROTATION_DEG_PER_HOUR = 13.2 / 24;
 
-/*
-  DBM-lite parameters.
-  gamma = 0.3e-7 km^-1 を標準値として使用。
-  r0 は DONKI time21_5 に合わせて 21.5 solar radii。
-*/
 const DBM = {
   gamma:0.3e-7,
   r0Km:21.5 * R_SUN_KM,
@@ -315,6 +313,7 @@ const STATE = {
     donkiCME:src("DONKI CME","未取得"),
     donkiSEP:src("DONKI SEP","未取得"),
     donkiFLR:src("DONKI FLR","未取得"),
+    wsa:src("WSA Wind Model","未取得"),
     cactus:src("CACTus CME","未取得"),
     noaaWind:src("NOAA Wind","未取得"),
     noaaMag:src("NOAA IMF","未取得"),
@@ -323,6 +322,8 @@ const STATE = {
   },
   donkiIndex:null,
   donkiPayloads:[],
+  wsaIndex:null,
+  wsaModel:null,
   env:defaultEnv(),
   cmes:[],
   startTime:new Date(),
@@ -422,6 +423,10 @@ async function fetchCactusText(){
   }
 }
 
+/* =========================================================
+   LOADERS
+========================================================= */
+
 async function loadDONKICache(){
   setSource("donkiCache","LOADING...");
   try{
@@ -434,10 +439,10 @@ async function loadDONKICache(){
     if(mergeSeven){
       files=(index.files || [])
         .filter(f=>f.valid !== false && f.path)
-        .slice(0,7);
+        .slice(0,56);
     }else{
       if(index.latest){
-        files=[{date:index.latest.replace(".json",""),path:"./data/donki/"+index.latest,valid:true}];
+        files=[{path:"./data/donki/"+index.latest,valid:true}];
       }
     }
 
@@ -482,6 +487,58 @@ async function loadDONKICache(){
 
   }catch(e){
     setSource("donkiCache","FAILED",null,e.message);
+  }
+}
+
+async function loadWSA(){
+  setSource("wsa","LOADING...");
+
+  try{
+    const index=await fetchJson(WSA_CACHE_INDEX);
+    STATE.wsaIndex=index;
+
+    const latestName=index.latest || "latest.json";
+    const latestPath="./data/wsa/" + latestName;
+
+    const model=await fetchJson(latestPath);
+
+    if(!model.records || !Array.isArray(model.records) || !model.records.length){
+      throw new Error("WSA model has no records");
+    }
+
+    const records=model.records
+      .map(r=>({
+        ...r,
+        _t:new Date(r.time).getTime(),
+        speed:Number(r.speed),
+        density:r.density!==undefined ? Number(r.density) : null,
+        bt:r.bt!==undefined ? Number(r.bt) : null,
+        bz:r.bz!==undefined ? Number(r.bz) : null
+      }))
+      .filter(r=>Number.isFinite(r._t) && Number.isFinite(r.speed))
+      .sort((a,b)=>a._t-b._t);
+
+    if(!records.length){
+      throw new Error("WSA records could not be normalized");
+    }
+
+    STATE.wsaModel={
+      ...model,
+      records
+    };
+
+    setSource(
+      "wsa",
+      `OK: ${records.length} records`,
+      STATE.wsaModel
+    );
+
+    rebuildAll();
+
+  }catch(e){
+    STATE.wsaIndex=null;
+    STATE.wsaModel=null;
+    setSource("wsa","FAILED",null,e.message);
   }
 }
 
@@ -553,6 +610,7 @@ async function loadNOAAAll(){
 async function loadAll(){
   await Promise.allSettled([
     loadDONKICache(),
+    loadWSA(),
     loadCACTus(),
     loadNOAAWind(),
     loadNOAAMag(),
@@ -569,6 +627,7 @@ async function loadAll(){
 function renderSourcePanel(){
   const rows=[
     ["donkiCache","DONKI Cache",loadDONKICache],
+    ["wsa","WSA Wind Model",loadWSA],
     ["cactus","CACTus CME",loadCACTus],
     ["noaaWind","NOAA Wind",loadNOAAWind],
     ["noaaMag","NOAA IMF",loadNOAAMag],
@@ -709,14 +768,61 @@ function radiationScale(p10){
 }
 
 /* =========================================================
+   WSA WIND MODEL
+========================================================= */
+
+function getBackgroundWindSpeedFromWSA(time,rKm){
+  if(!STATE.wsaModel || !Array.isArray(STATE.wsaModel.records)){
+    return null;
+  }
+
+  const records=STATE.wsaModel.records;
+  if(!records.length) return null;
+
+  const target=time.getTime();
+
+  let prev=null;
+  let next=null;
+
+  for(const rec of records){
+    if(rec._t <= target){
+      prev=rec;
+      continue;
+    }
+
+    if(rec._t > target){
+      next=rec;
+      break;
+    }
+  }
+
+  if(!prev && next){
+    return clamp(Number(next.speed),300,800);
+  }
+
+  if(prev && !next){
+    return clamp(Number(prev.speed),300,800);
+  }
+
+  if(!prev && !next){
+    return null;
+  }
+
+  if(next._t === prev._t){
+    return clamp(Number(prev.speed),300,800);
+  }
+
+  const f=(target-prev._t)/(next._t-prev._t);
+  const speed=Number(prev.speed) + (Number(next.speed)-Number(prev.speed))*f;
+
+  return clamp(speed,300,800);
+}
+
+/* =========================================================
    ADVANCED EARTH-DIRECTED GEOMETRY
 ========================================================= */
 
 function angularSeparationFromEarth(lonDeg,latDeg){
-  /*
-    Earth direction = Sun-Earth line = lon 0, lat 0.
-    DONKI longitude is interpreted as west-positive after conversion.
-  */
   const lon=lonDeg*Math.PI/180;
   const lat=latDeg*Math.PI/180;
 
@@ -727,17 +833,6 @@ function angularSeparationFromEarth(lonDeg,latDeg){
 }
 
 function classifyConeHit(sep,halfAngle){
-  /*
-    Main threshold:
-    sep <= halfAngle  : Earth is inside CME cone
-    sep > halfAngle   : MISS
-
-    Internal classes:
-    0.00-0.50 : CORE-HIT
-    0.50-0.85 : BODY-HIT
-    0.85-1.00 : FLANK-HIT
-    >1.00     : MISS
-  */
   const ratio = halfAngle > 0 ? sep / halfAngle : 999;
 
   if(ratio <= 0.50){
@@ -835,11 +930,6 @@ function evaluateDonkiEarthImpactAdvanced(lon,lat,halfAngle,speed,arrivalSource)
 }
 
 function evaluateCactusEarthImpact(pa,da,halo){
-  /*
-    CACTus has PA/DA, not heliographic lon/lat.
-    Therefore it is not used as the main Earth-directed classifier.
-    Only optional wide/halo reference candidates are allowed.
-  */
   const useCactus=document.getElementById("useCactusHazard")?.checked ?? false;
   const isHalo=Boolean(halo && halo.length);
   const veryWide=da>=270;
@@ -897,7 +987,7 @@ function evaluateCactusEarthImpact(pa,da,halo){
 }
 
 /* =========================================================
-   DBM-LITE
+   DBM-LITE + WSA WIND
 ========================================================= */
 
 function computeArrivalDBMLite(t0,v0,env,options={}){
@@ -907,20 +997,37 @@ function computeArrivalDBMLite(t0,v0,env,options={}){
   const dt=options.dtSec || DBM.dtSec;
   const maxT=(options.maxDays || DBM.maxDays)*86400;
 
-  const w=clamp(env.speed || 425,300,800);
-
   let r=r0;
   let v=clamp(v0 || 425,250,3000);
   let t=0;
 
-  while(r<target && t<maxT){
-    const dv=v-w;
+  let usedWSA=false;
+  let wSum=0;
+  let wCount=0;
+  let wMin=9999;
+  let wMax=0;
 
-    /*
-      Drag acceleration:
-      a = -gamma * (v-w) * |v-w|
-      Unit: gamma [km^-1], speed [km/s], a [km/s^2]
-    */
+  while(r<target && t<maxT){
+    const currentTime=new Date(t0.getTime()+t*1000);
+
+    const wsaSpeed=getBackgroundWindSpeedFromWSA(currentTime,r);
+
+    const w=clamp(
+      wsaSpeed ?? env.speed ?? 425,
+      300,
+      800
+    );
+
+    if(wsaSpeed !== null){
+      usedWSA=true;
+    }
+
+    wSum += w;
+    wCount += 1;
+    wMin = Math.min(wMin,w);
+    wMax = Math.max(wMax,w);
+
+    const dv=v-w;
     const a=-gamma * dv * Math.abs(dv);
 
     v += a*dt;
@@ -931,14 +1038,18 @@ function computeArrivalDBMLite(t0,v0,env,options={}){
   }
 
   const arrival=new Date(t0.getTime()+t*1000);
+  const avgW=wSum/Math.max(1,wCount);
 
   return {
-    source:"DBM-lite",
+    source:usedWSA ? "DBM-lite + WSA wind" : "DBM-lite",
     date:arrival,
     utc:arrival.toISOString(),
     transitHours:t/3600,
     arrivalSpeed:Math.round(v),
-    backgroundWind:Math.round(w),
+    backgroundWind:Math.round(avgW),
+    backgroundWindMin:Math.round(wMin===9999 ? avgW : wMin),
+    backgroundWindMax:Math.round(wMax || avgW),
+    usedWSA,
     gamma
   };
 }
@@ -957,6 +1068,9 @@ function computeInitialDONKIArrival(c,env,t0,speed){
       transitHours:(d-t0)/3600000,
       arrivalSpeed:null,
       backgroundWind:Math.round(env.speed || 425),
+      backgroundWindMin:null,
+      backgroundWindMax:null,
+      usedWSA:false,
       gamma:DBM.gamma
     };
   }
@@ -985,10 +1099,6 @@ function parseDONKIAnalysis(c,env){
   let arrival;
 
   if(preliminary.source==="ENLIL"){
-    /*
-      ENLIL arrival time is prioritized.
-      DBM-lite is still used to estimate arrivalSpeed only.
-    */
     const dbm=computeArrivalDBMLite(t0,Math.max(250,earth.effectiveSpeed || speed),env);
     arrival={
       ...preliminary,
@@ -996,6 +1106,9 @@ function parseDONKIAnalysis(c,env){
       dbmTransitHours:dbm.transitHours,
       dbmUtc:dbm.utc,
       backgroundWind:dbm.backgroundWind,
+      backgroundWindMin:dbm.backgroundWindMin,
+      backgroundWindMax:dbm.backgroundWindMax,
+      usedWSA:dbm.usedWSA,
       gamma:dbm.gamma
     };
   }else if(earth.earthCandidate){
@@ -1008,6 +1121,9 @@ function parseDONKIAnalysis(c,env){
       transitHours:null,
       arrivalSpeed:0,
       backgroundWind:Math.round(env.speed || 425),
+      backgroundWindMin:null,
+      backgroundWindMax:null,
+      usedWSA:false,
       gamma:DBM.gamma
     };
   }
@@ -1085,7 +1201,11 @@ function parseDONKICME(list,env){
           date:t0,
           utc:t0.toISOString(),
           transitHours:null,
-          arrivalSpeed:0
+          arrivalSpeed:0,
+          backgroundWind:0,
+          backgroundWindMin:null,
+          backgroundWindMax:null,
+          usedWSA:false
         },
         arrivalScore:0,
         earthCandidate:false,
@@ -1144,7 +1264,11 @@ function parseCACTus(html,env){
           date:t0,
           utc:t0.toISOString(),
           transitHours:null,
-          arrivalSpeed:0
+          arrivalSpeed:0,
+          backgroundWind:0,
+          backgroundWindMin:null,
+          backgroundWindMax:null,
+          usedWSA:false
         };
 
     const score=earth.earthCandidate
@@ -1374,11 +1498,6 @@ function rebuildAll(){
 
   let merged=dedupeCMEs(events);
 
-  /*
-    Strict DONKI mode:
-    If DONKI Earth-directed candidates exist, CACTus candidates are kept as reference
-    but do not dominate hazard.
-  */
   const strict=document.getElementById("strictDonkiOnly")?.checked ?? true;
   const donkiHits=merged.filter(c=>c.earthCandidate && c.type==="DONKI").length;
 
@@ -1409,8 +1528,11 @@ function rebuildAll(){
   updateTimeline();
 
   raw(JSON.stringify({
-    note:"Advanced model: DONKI lon/lat/halfAngle -> sep/halfAngle -> CORE/BODY/FLANK/MISS. MISS excluded from propagation and hazard. Speed corrected by geometrySpeedFactor, then DBM-lite computes arrival.",
+    note:"Advanced model with WSA wind: DONKI lon/lat/halfAngle -> Earth-directed filter -> effective speed -> DBM-lite using WSA w(t) if available.",
     donkiIndex:STATE.donkiIndex,
+    wsaIndex:STATE.wsaIndex,
+    wsaLoaded:Boolean(STATE.wsaModel),
+    wsaRecords:STATE.wsaModel?.records?.length || 0,
     env:STATE.env,
     counts:{
       total:STATE.cmes.length,
@@ -1512,13 +1634,15 @@ function drawSun(cmes,time){
 
   const earthDirected=cmes.filter(c=>c.earthCandidate).length;
   const miss=cmes.filter(c=>!c.earthCandidate).length;
+  const wsaText=STATE.wsaModel ? "WSA w(t) used in DBM-lite" : "WSA未読込: NOAA/fallback wind";
 
   document.getElementById("sunSummary").innerHTML=
     `DONKI太陽面座標: <b>${cmes.filter(c=>c.coordType==="heliographic").length}</b>件<br>`+
     `CACTus PAコーン: <b>${cactusEvents.length}</b>件<br>`+
     `Earth-directed: <b class="goodText">${earthDirected}</b> / MISS・参考: <b class="badText">${miss}</b><br>`+
     `判定: sep/halfAngle → CORE/BODY/FLANK/MISS<br>`+
-    `速度: DONKI speed → geometry補正 effectiveSpeed → DBM-lite arrivalSpeed`;
+    `速度: DONKI speed → geometry補正 effectiveSpeed → DBM-lite arrivalSpeed<br>`+
+    `背景風: <b>${wsaText}</b>`;
 }
 
 function drawSolarGrid(ctx,cx,cy,r){
@@ -1774,7 +1898,7 @@ function drawFlow(cmes,time){
   ctx.font="12px system-ui";
   ctx.fillText("Sun",sx-10,y+45);
   ctx.fillText("Earth/GEO",ex-42,y+38);
-  ctx.fillText("MISS excluded / speed corrected / DBM-lite propagation",12,24);
+  ctx.fillText("MISS excluded / speed corrected / DBM-lite + WSA wind if loaded",12,24);
 
   if(!earthCMEs.length){
     ctx.fillStyle="#aaa";
@@ -1821,7 +1945,7 @@ function drawFlow(cmes,time){
 
     ctx.fillStyle="#b0bec5";
     ctx.fillText(
-      `${Math.round(c.effectiveSpeed||0)}→${Math.round(c.arrival.arrivalSpeed||0)} km/s`,
+      `${Math.round(c.effectiveSpeed||0)}→${Math.round(c.arrival.arrivalSpeed||0)} km/s ${c.arrival.usedWSA ? "WSA" : ""}`,
       x+8,
       lane+6
     );
@@ -1890,6 +2014,9 @@ function renderHazard(time){
       DONKI speed: ${Math.round(top.speed||0)} km/s<br>
       Effective speed: ${Math.round(top.effectiveSpeed||0)} km/s<br>
       Arrival speed: ${Math.round(top.arrival.arrivalSpeed||0)} km/s<br>
+      Background wind avg: ${Math.round(top.arrival.backgroundWind||0)} km/s<br>
+      Background wind range: ${Math.round(top.arrival.backgroundWindMin||0)}–${Math.round(top.arrival.backgroundWindMax||0)} km/s<br>
+      Wind model: ${top.arrival.usedWSA ? "WSA w(t)" : "NOAA RTSW / fallback"}<br>
       Arrival: ${top.arrival.utc.slice(0,16).replace("T"," ")} UTC / ${top.arrival.source}<br>
       Reason: ${escapeHtml(top.earthReason)}
     </div>
@@ -1924,9 +2051,18 @@ function renderStatus(){
   const cacheInfo=STATE.donkiIndex
     ? `<hr>
        DONKI latest: <b>${escapeHtml(STATE.donkiIndex.latest || "-")}</b><br>
-       Cache files: <b>${STATE.donkiIndex.files?.length || 0}</b> /
+       DONKI cache files: <b>${STATE.donkiIndex.files?.length || 0}</b> /
        loaded payloads: <b>${STATE.donkiPayloads.length}</b>`
     : "";
+
+  const wsaInfo=STATE.wsaModel
+    ? `<hr>
+       WSA model: <b>${STATE.wsaModel.record_count || STATE.wsaModel.records?.length || 0}</b> records<br>
+       WSA range: <b>${escapeHtml(STATE.wsaModel.startDate || "-")}</b> → <b>${escapeHtml(STATE.wsaModel.endDate || "-")}</b><br>
+       DBM background wind: <b class="goodText">WSA w(t)</b>`
+    : `<hr>
+       WSA model: <b class="warnText">not loaded</b><br>
+       DBM background wind: <b>NOAA RTSW / fallback 425 km/s</b>`;
 
   document.getElementById("statusBox").innerHTML=
     Object.entries(STATE.sources).map(([k,v])=>{
@@ -1949,7 +2085,8 @@ function renderStatus(){
       <div>Earth-directed</div><div><b class="goodText">${earth.length}</b></div>
       <div>MISS / Reference</div><div><b class="badText">${miss.length}</b></div>
     </div>`+
-    cacheInfo;
+    cacheInfo+
+    wsaInfo;
 }
 
 function renderTable(cmes){
@@ -1972,7 +2109,7 @@ function renderTable(cmes){
         <th>Position</th>
         <th>sep / half</th>
         <th>Speed</th>
-        <th>DBM</th>
+        <th>DBM / WSA</th>
         <th>Risk</th>
         <th>Arrival</th>
         <th>Reason</th>
@@ -1991,7 +2128,9 @@ function renderTable(cmes){
           </td>
           <td>
             arrival speed: <b>${Math.round(c.arrival.arrivalSpeed||0)}</b><br>
-            wind: ${Math.round(c.arrival.backgroundWind||STATE.env.speed||0)}<br>
+            wind avg: ${Math.round(c.arrival.backgroundWind||STATE.env.speed||0)}<br>
+            wind min/max: ${Math.round(c.arrival.backgroundWindMin||0)} / ${Math.round(c.arrival.backgroundWindMax||0)}<br>
+            ${c.arrival.usedWSA ? '<span class="goodText">WSA used</span>' : '<span class="warnText">NOAA/fallback</span>'}<br>
             gamma: ${c.arrival.gamma || "-"}
           </td>
           <td style="color:${riskColor(c.arrivalScore)};font-weight:900">${c.arrivalScore}</td>
