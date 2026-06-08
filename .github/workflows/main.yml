@@ -1,317 +1,390 @@
-name: Update DONKI Cache
+name: Update WSA Solar Wind Cache
 
 on:
   workflow_dispatch:
   schedule:
-    # 3時間ごとに実行 UTC
-    # 日本時間: 09,12,15,18,21,00,03,06時
-    - cron: "0 */3 * * *"
+    # 1日1回 UTC 02:00 / 日本時間 11:00
+    - cron: "0 2 * * *"
 
 permissions:
   contents: write
 
 jobs:
-  update-donki:
+  update-wsa:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch DONKI and update cache
+      - name: Fetch WSA solar wind model
         env:
-          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+          # 例:
+          # https://example.nasa.gov/wsa/api?start={start}&end={end}
+          # {start} と {end} があれば自動置換
+          WSA_API_URL: ${{ secrets.WSA_API_URL }}
+
+          # APIキーが必要な場合だけ設定
+          WSA_API_KEY: ${{ secrets.WSA_API_KEY }}
         run: |
           python3 <<'PY'
           import os
+          import re
+          import csv
           import json
           import time
           import urllib.request
-          import urllib.error
-          from datetime import datetime, timedelta, timezone
+          from io import StringIO
           from pathlib import Path
-
-          api_key = os.environ.get("NASA_API_KEY", "").strip()
-
-          if not api_key:
-              raise SystemExit("NASA_API_KEY is not set")
-
-          print("NASA_API_KEY exists: true")
-          print("NASA_API_KEY length:", len(api_key))
+          from datetime import datetime, timedelta, timezone
 
           # =========================
           # Settings
           # =========================
-          base_dir = Path("docs/data/donki")
+          base_dir = Path("docs/data/wsa")
           base_dir.mkdir(parents=True, exist_ok=True)
 
           now = datetime.now(timezone.utc)
+          today = now.strftime("%Y-%m-%d")
 
-          # 3時間ごとなので時刻付きファイル名にする
-          stamp = now.strftime("%Y-%m-%dT%H00Z")
+          history_days = 27
+          retention_days = 35
 
-          # DONKI取得範囲
-          # 3時間ごとに回すが、DONKI側の登録遅れを考えて過去3日を毎回取得
-          fetch_days = 3
+          start_dt = now - timedelta(days=history_days)
+          end_dt = now
 
-          # 3時間ごと × 7日 = 56ファイル保持
-          max_files = 56
+          start = start_dt.strftime("%Y-%m-%d")
+          end = end_dt.strftime("%Y-%m-%d")
 
-          start = (now - timedelta(days=fetch_days)).strftime("%Y-%m-%d")
-          end = now.strftime("%Y-%m-%d")
+          url_template = os.environ.get("WSA_API_URL", "").strip()
+          api_key = os.environ.get("WSA_API_KEY", "").strip()
 
-          print("DONKI startDate:", start)
-          print("DONKI endDate:", end)
-          print("Cache stamp:", stamp)
-          print("Max cache files:", max_files)
+          if not url_template:
+              raise SystemExit(
+                  "WSA_API_URL is not set. Add it to GitHub Secrets or Variables. "
+                  "Example: https://.../api?start={start}&end={end}"
+              )
 
           # =========================
-          # Fetch helpers
+          # URL builder
           # =========================
-          def fetch_text(url, tries=5, timeout=90):
-              last_error = None
+          def build_url(template):
+              url = template.replace("{start}", start).replace("{end}", end)
+
+              if api_key:
+                  if "{api_key}" in url:
+                      url = url.replace("{api_key}", api_key)
+                  else:
+                      sep = "&" if "?" in url else "?"
+                      url = f"{url}{sep}api_key={api_key}"
+
+              return url
+
+          url = build_url(url_template)
+
+          print("WSA start:", start)
+          print("WSA end:", end)
+          print("WSA URL:", url.replace(api_key, "***") if api_key else url)
+
+          # =========================
+          # Fetch
+          # =========================
+          def fetch_text(url, tries=5, timeout=120):
+              last = None
 
               for i in range(tries):
                   try:
                       req = urllib.request.Request(
                           url,
                           headers={
-                              "User-Agent": "donki-cache-github-actions",
-                              "Accept": "application/json"
+                              "User-Agent": "wsa-cache-github-actions",
+                              "Accept": "application/json,text/csv,text/plain,*/*"
                           }
                       )
 
                       with urllib.request.urlopen(req, timeout=timeout) as r:
-                          text = r.read().decode("utf-8")
+                          text = r.read().decode("utf-8", errors="replace")
                           print("HTTP status:", r.status)
+                          print("Response head:", text[:300].replace("\n", " "))
                           return text
 
                   except Exception as e:
-                      last_error = e
+                      last = e
                       wait = 20 * (i + 1)
                       print(f"Retry {i+1}/{tries} failed: {e}")
                       print(f"Waiting {wait} sec...")
                       time.sleep(wait)
 
-              raise last_error
+              raise last
 
-          def fetch_json(url, tries=5):
-              text = fetch_text(url, tries=tries)
+          text = fetch_text(url)
+
+          # =========================
+          # Flexible parser
+          # =========================
+          time_keys = [
+              "time", "time_tag", "datetime", "date", "timestamp",
+              "utc", "model_time", "valid_time"
+          ]
+
+          speed_keys = [
+              "speed", "v", "vr", "solar_wind_speed", "wind_speed",
+              "velocity", "v_sw", "V", "Vsw"
+          ]
+
+          density_keys = [
+              "density", "n", "np", "proton_density", "solar_wind_density"
+          ]
+
+          bt_keys = ["bt", "b", "b_total", "magnetic_field", "B"]
+          bz_keys = ["bz", "Bz", "bz_gsm", "Bz_gsm"]
+
+          def find_value(d, keys):
+              if not isinstance(d, dict):
+                  return None
+
+              lower = {str(k).lower(): v for k, v in d.items()}
+
+              for k in keys:
+                  if k in d:
+                      return d[k]
+                  lk = str(k).lower()
+                  if lk in lower:
+                      return lower[lk]
+
+              return None
+
+          def to_float(x):
+              try:
+                  if x is None:
+                      return None
+                  s = str(x).strip()
+                  if s == "" or s.lower() in ("nan", "none", "null"):
+                      return None
+                  return float(s)
+              except Exception:
+                  return None
+
+          def normalize_time(x):
+              if x is None:
+                  return None
+
+              s = str(x).strip()
+
+              # Unix epoch seconds
+              if re.fullmatch(r"\d{10}", s):
+                  return datetime.fromtimestamp(int(s), tz=timezone.utc).isoformat()
+
+              # Unix epoch milliseconds
+              if re.fullmatch(r"\d{13}", s):
+                  return datetime.fromtimestamp(int(s) / 1000, tz=timezone.utc).isoformat()
+
+              # ISO-ish
+              s = s.replace("Z", "+00:00")
 
               try:
-                  return json.loads(text)
+                  dt = datetime.fromisoformat(s)
+                  if dt.tzinfo is None:
+                      dt = dt.replace(tzinfo=timezone.utc)
+                  return dt.astimezone(timezone.utc).isoformat()
               except Exception:
-                  print("Response text head:")
-                  print(text[:500])
-                  raise
+                  pass
 
-          # =========================
-          # NASA API key test
-          # =========================
-          apod_ok = False
-          apod_error = None
+              # Common format: YYYY-MM-DD HH:MM
+              for fmt in ("%Y-%m-%d %H:%M", "%Y/%m/%d %H:%M", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S"):
+                  try:
+                      dt = datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
+                      return dt.isoformat()
+                  except Exception:
+                      pass
+
+              return None
+
+          def flatten_json(obj):
+              if isinstance(obj, list):
+                  return obj
+
+              if isinstance(obj, dict):
+                  for key in ("records", "data", "results", "items", "values", "wind", "solar_wind"):
+                      if isinstance(obj.get(key), list):
+                          return obj[key]
+
+                  # dict of time -> values
+                  rows = []
+                  for k, v in obj.items():
+                      if isinstance(v, dict):
+                          row = {"time": k}
+                          row.update(v)
+                          rows.append(row)
+                  if rows:
+                      return rows
+
+              return []
+
+          def parse_json(text):
+              obj = json.loads(text)
+              rows = flatten_json(obj)
+              return rows, obj
+
+          def parse_csv_text(text):
+              # delimiter auto-ish
+              sample = text[:2000]
+              dialect = csv.Sniffer().sniff(sample, delimiters=",\t; |")
+              reader = csv.DictReader(StringIO(text), dialect=dialect)
+              rows = list(reader)
+              return rows
+
+          def normalize_rows(rows):
+              records = []
+
+              for row in rows:
+                  if not isinstance(row, dict):
+                      continue
+
+                  t_raw = find_value(row, time_keys)
+                  t = normalize_time(t_raw)
+                  speed = to_float(find_value(row, speed_keys))
+
+                  if not t or speed is None:
+                      continue
+
+                  density = to_float(find_value(row, density_keys))
+                  bt = to_float(find_value(row, bt_keys))
+                  bz = to_float(find_value(row, bz_keys))
+
+                  # 常識的な範囲だけ採用
+                  if speed < 150 or speed > 1200:
+                      continue
+
+                  rec = {
+                      "time": t,
+                      "speed": round(speed, 2)
+                  }
+
+                  if density is not None:
+                      rec["density"] = round(density, 3)
+                  if bt is not None:
+                      rec["bt"] = round(bt, 3)
+                  if bz is not None:
+                      rec["bz"] = round(bz, 3)
+
+                  records.append(rec)
+
+              records.sort(key=lambda x: x["time"])
+
+              # 重複時刻を削除
+              dedup = {}
+              for r in records:
+                  dedup[r["time"]] = r
+
+              return list(dedup.values())
+
+          raw_obj = None
 
           try:
-              print("")
-              print("Testing NASA API key with APOD...")
-              apod_url = f"https://api.nasa.gov/planetary/apod?api_key={api_key}"
-              apod = fetch_json(apod_url, tries=2)
-              apod_ok = True
-              print("APOD API key test: OK")
-              if isinstance(apod, dict):
-                  print("APOD title:", apod.get("title", "no title"))
-          except Exception as e:
-              apod_error = str(e)
-              print("APOD API key test: FAILED")
-              print("APOD error:", apod_error)
+              rows, raw_obj = parse_json(text)
+              records = normalize_rows(rows)
+              parser = "json"
+          except Exception:
+              rows = parse_csv_text(text)
+              records = normalize_rows(rows)
+              parser = "csv"
+
+          if not records:
+              raise SystemExit("No valid WSA records parsed. Check WSA_API_URL response format.")
+
+          print("Parser:", parser)
+          print("Records:", len(records))
+          print("First:", records[0])
+          print("Last:", records[-1])
 
           # =========================
-          # DONKI URLs
+          # Save files
           # =========================
-          urls = {
-              "cmeAnalysis": (
-                  "https://api.nasa.gov/DONKI/CMEAnalysis"
-                  f"?startDate={start}&endDate={end}"
-                  f"&mostAccurateOnly=true"
-                  f"&speed=300"
-                  f"&api_key={api_key}"
-              ),
-              "cme": (
-                  "https://api.nasa.gov/DONKI/CME"
-                  f"?startDate={start}&endDate={end}"
-                  f"&api_key={api_key}"
-              ),
-              "sep": (
-                  "https://api.nasa.gov/DONKI/SEP"
-                  f"?startDate={start}&endDate={end}"
-                  f"&api_key={api_key}"
-              ),
-              "flr": (
-                  "https://api.nasa.gov/DONKI/FLR"
-                  f"?startDate={start}&endDate={end}"
-                  f"&api_key={api_key}"
-              )
-          }
-
-          payload = {
+          daily_payload = {
               "generated_at": now.isoformat(),
-              "stamp": stamp,
+              "source": "WSA Dashboard / NASA CCMC",
+              "parser": parser,
               "startDate": start,
               "endDate": end,
-              "fetch_days": fetch_days,
-              "max_files": max_files,
-              "schedule": "every 3 hours",
-              "api_key_test": {
-                  "apod_ok": apod_ok,
-                  "apod_error": apod_error
-              },
-              "any_ok": False,
-              "sources": {}
+              "history_days": history_days,
+              "record_count": len(records),
+              "records": records
           }
 
-          # =========================
-          # Fetch DONKI
-          # =========================
-          for name, url in urls.items():
-              print("")
-              print("Fetching:", name)
-              print("URL:", url.replace(api_key, "***"))
+          daily_file = base_dir / f"{today}.json"
+          latest_file = base_dir / "latest.json"
+          history_file = base_dir / "history-27d.json"
 
-              try:
-                  data = fetch_json(url, tries=5)
-
-                  count = len(data) if isinstance(data, list) else 1
-
-                  payload["sources"][name] = {
-                      "ok": True,
-                      "count": count,
-                      "data": data
-                  }
-
-                  payload["any_ok"] = True
-
-                  print(f"{name}: OK, count={count}")
-
-              except Exception as e:
-                  payload["sources"][name] = {
-                      "ok": False,
-                      "error": str(e),
-                      "data": []
-                  }
-
-                  print(f"{name}: FAILED")
-                  print(str(e))
+          daily_file.write_text(json.dumps(daily_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+          latest_file.write_text(json.dumps(daily_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+          history_file.write_text(json.dumps(daily_payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
           # =========================
-          # Save current attempt
+          # Retention
           # =========================
-          out_file = base_dir / f"{stamp}.json"
-          out_file.write_text(
-              json.dumps(payload, ensure_ascii=False, indent=2),
-              encoding="utf-8"
-          )
+          keep_dates = {
+              (now - timedelta(days=i)).strftime("%Y-%m-%d")
+              for i in range(retention_days)
+          }
 
-          print("")
-          print("Saved:", out_file)
+          for f in base_dir.glob("*.json"):
+              if f.name in ("index.json", "latest.json", "history-27d.json"):
+                  continue
+              if f.stem not in keep_dates:
+                  print("Delete old file:", f)
+                  f.unlink()
 
-          # =========================
-          # Retention: keep latest 56 files
-          # =========================
-          all_cache_files = sorted(
-              [f for f in base_dir.glob("*.json") if f.name != "index.json"],
+          all_files = sorted(
+              [
+                  f for f in base_dir.glob("*.json")
+                  if f.name not in ("index.json", "latest.json", "history-27d.json")
+              ],
               reverse=True
           )
 
-          for f in all_cache_files[max_files:]:
-              print("Delete old file:", f)
-              f.unlink()
-
-          # Re-read after deletion
-          all_cache_files = sorted(
-              [f for f in base_dir.glob("*.json") if f.name != "index.json"],
-              reverse=True
-          )
-
-          # =========================
-          # Build index.json
-          # =========================
-          valid_files = []
           file_entries = []
 
-          for f in all_cache_files:
-              valid = False
-              any_ok = False
-              counts = {}
-              generated_at = None
-              start_date = None
-              end_date = None
-              stamp_value = f.stem
-
+          for f in all_files:
               try:
                   obj = json.loads(f.read_text(encoding="utf-8"))
-
-                  generated_at = obj.get("generated_at")
-                  start_date = obj.get("startDate")
-                  end_date = obj.get("endDate")
-                  stamp_value = obj.get("stamp", f.stem)
-                  any_ok = bool(obj.get("any_ok"))
-
-                  for source_name, source_obj in obj.get("sources", {}).items():
-                      if source_obj.get("ok"):
-                          counts[source_name] = source_obj.get("count", 0)
-                      else:
-                          counts[source_name] = 0
-
-                  if any_ok:
-                      valid = True
-                      valid_files.append(f)
-
+                  file_entries.append({
+                      "date": f.stem,
+                      "file": f.name,
+                      "path": f"./data/wsa/{f.name}",
+                      "generated_at": obj.get("generated_at"),
+                      "startDate": obj.get("startDate"),
+                      "endDate": obj.get("endDate"),
+                      "record_count": obj.get("record_count", 0)
+                  })
               except Exception as e:
-                  print("Failed to inspect:", f, e)
-
-              file_entries.append({
-                  "stamp": stamp_value,
-                  "file": f.name,
-                  "path": f"./data/donki/{f.name}",
-                  "valid": valid,
-                  "any_ok": any_ok,
-                  "generated_at": generated_at,
-                  "startDate": start_date,
-                  "endDate": end_date,
-                  "counts": counts
-              })
-
-          latest_file = valid_files[0].name if valid_files else None
+                  file_entries.append({
+                      "date": f.stem,
+                      "file": f.name,
+                      "path": f"./data/wsa/{f.name}",
+                      "error": str(e)
+                  })
 
           index = {
               "updated_at": now.isoformat(),
-              "schedule": "every 3 hours",
-              "fetch_days": fetch_days,
-              "max_files": max_files,
-              "retention_note": "3-hourly cache, latest 56 files are retained, approximately 7 days",
-              "latest": latest_file,
-              "last_attempt": f"{stamp}.json",
-              "latest_policy": "latest valid cache file with any successful DONKI source",
+              "source": "WSA Dashboard / NASA CCMC",
+              "history_days": history_days,
+              "retention_days": retention_days,
+              "latest": "latest.json",
+              "history": "history-27d.json",
               "files": file_entries
           }
 
-          index_file = base_dir / "index.json"
-          index_file.write_text(
+          (base_dir / "index.json").write_text(
               json.dumps(index, ensure_ascii=False, indent=2),
               encoding="utf-8"
           )
 
-          print("")
-          print("Saved:", index_file)
-          print(json.dumps(index, ensure_ascii=False, indent=2))
-
-          # DONKIが全部失敗してもworkflowは成功扱いにする
-          # 理由：過去の成功キャッシュをlatestとして残すため
-          if not payload["any_ok"]:
-              print("")
-              print("WARNING: All DONKI sources failed in this attempt.")
-              print("This workflow still succeeds so previous valid cache can remain latest.")
-
+          print("Saved:")
+          print(daily_file)
+          print(latest_file)
+          print(history_file)
+          print(base_dir / "index.json")
           PY
 
       - name: Commit and push
@@ -319,7 +392,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add docs/data/donki
+          git add docs/data/wsa
 
-          git commit -m "Update DONKI cache" || echo "No changes"
+          git commit -m "Update WSA solar wind cache" || echo "No changes"
           git push
