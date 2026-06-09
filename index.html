@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CME Earth-Directed Satellite Hazard Console / Advanced + WSA</title>
+<title>CME Earth-Directed Satellite Hazard Console / Strongest WSA Forecast</title>
 
 <style>
 :root{
@@ -203,7 +203,7 @@ pre{
 <body>
 
 <header>
-  <h2>CME Earth-Directed Satellite Hazard Console / Advanced + WSA</h2>
+  <h2>CME Earth-Directed Satellite Hazard Console / Strongest WSA Forecast</h2>
   <div>
     <button class="primary" onclick="loadDONKICache()">DONKI Cache読込</button>
     <button onclick="loadWSA()">WSA背景風読込</button>
@@ -251,7 +251,7 @@ pre{
 
 <section class="card" style="margin-top:16px">
   <h3>③ CME Propagation / Earth-directed only</h3>
-  <input id="timeSlider" type="range" min="0" max="336" value="168" step="1" oninput="updateTimeline()">
+  <input id="timeSlider" type="range" min="0" max="264" value="168" step="1" oninput="updateTimeline()">
   <div id="timeLabel" class="small"></div>
   <div class="widebox"><canvas id="flowCanvas"></canvas></div>
 </section>
@@ -334,7 +334,7 @@ const STATE = {
   cmes:[],
   timelineCenter:new Date(),
   timelineStart:new Date(Date.now()-168*3600*1000),
-  timelineEnd:new Date(Date.now()+168*3600*1000),
+  timelineEnd:new Date(Date.now()+96*3600*1000),
   selectedTime:new Date(),
   timer:null
 };
@@ -390,14 +390,17 @@ function raw(x){
 
 function initTimelineWindow(){
   STATE.timelineCenter = new Date();
+
+  // 表示期間は「現在-7日」から「現在+4日」
+  // スライダーは 0〜264h、現在は 168h の位置
   STATE.timelineStart = new Date(STATE.timelineCenter.getTime() - 168*3600*1000);
-  STATE.timelineEnd = new Date(STATE.timelineCenter.getTime() + 168*3600*1000);
+  STATE.timelineEnd = new Date(STATE.timelineCenter.getTime() + 96*3600*1000);
   STATE.selectedTime = new Date(STATE.timelineCenter);
 
   const slider=document.getElementById("timeSlider");
   if(slider){
     slider.min=0;
-    slider.max=336;
+    slider.max=264;
     slider.value=168;
   }
 }
@@ -1625,9 +1628,10 @@ function updateTimeline(){
   const sign=offset>=0 ? "+" : "";
   const wind=getBackgroundWindSpeedFromWSA(t);
   const windTxt=wind!==null ? `${Math.round(wind)} km/s` : "N/A";
+  const mode=t.getTime()>STATE.timelineCenter.getTime() ? "WSA予報" : "WSA過去/解析";
 
   document.getElementById("timeLabel").innerHTML=
-    `<b>${t.toISOString().slice(0,16).replace("T"," ")} UTC</b> / 現在${sign}${offset}h / 背景風=${windTxt}`;
+    `<b>${t.toISOString().slice(0,16).replace("T"," ")} UTC</b> / 現在${sign}${offset}h / 背景風=${windTxt} / ${mode}`;
 
   drawSun(STATE.cmes,t);
   drawFlow(STATE.cmes,t);
@@ -1921,6 +1925,7 @@ function drawFlow(cmes,time){
   const y=h/2;
   const len=ex-sx;
 
+  // 背景軸
   ctx.strokeStyle="#ffffff22";
   ctx.lineWidth=2;
   ctx.beginPath();
@@ -1928,25 +1933,39 @@ function drawFlow(cmes,time){
   ctx.lineTo(ex,y);
   ctx.stroke();
 
+  // Sun
+  const sunGrad=ctx.createRadialGradient(sx-8,y-8,4,sx,y,30);
+  sunGrad.addColorStop(0,"#fff59d");
+  sunGrad.addColorStop(.55,"#ffb300");
+  sunGrad.addColorStop(1,"#e65100");
   ctx.beginPath();
   ctx.arc(sx,y,28,0,Math.PI*2);
-  ctx.fillStyle="#ffb300";
+  ctx.fillStyle=sunGrad;
   ctx.fill();
 
+  // Earth/GEO
   ctx.beginPath();
   ctx.arc(ex,y,15,0,Math.PI*2);
   ctx.fillStyle="#4fc3f7";
   ctx.fill();
 
+  // GEO ring
+  ctx.beginPath();
+  ctx.arc(ex,y,24,0,Math.PI*2);
+  ctx.strokeStyle="rgba(79,195,247,.45)";
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+
   ctx.fillStyle="#fff";
   ctx.font="12px system-ui";
   ctx.fillText("Sun",sx-10,y+45);
   ctx.fillText("Earth/GEO",ex-42,y+38);
-  ctx.fillText("Timeline: now-7d to now+7d / MISS excluded / DBM-lite + WSA wind if loaded",12,24);
+  ctx.fillText("Timeline: now-7d to now+4d / CME shock appears at launch and disappears after Earth passage",12,24);
 
+  // now line
   const nowFrac=(STATE.timelineCenter-STATE.timelineStart)/(STATE.timelineEnd-STATE.timelineStart);
   const nowX=sx+nowFrac*len;
-  ctx.strokeStyle="rgba(79,195,247,.65)";
+  ctx.strokeStyle="rgba(79,195,247,.70)";
   ctx.lineWidth=2;
   ctx.beginPath();
   ctx.moveTo(nowX,40);
@@ -1955,6 +1974,12 @@ function drawFlow(cmes,time){
   ctx.fillStyle="#4fc3f7";
   ctx.font="11px system-ui";
   ctx.fillText("NOW",nowX-14,36);
+
+  // 未来予報背景
+  ctx.fillStyle="rgba(255,235,59,.055)";
+  ctx.fillRect(nowX,40,Math.max(0,ex-nowX),h-70);
+  ctx.fillStyle="rgba(255,235,59,.75)";
+  ctx.fillText("forecast window",nowX+8,52);
 
   if(!earthCMEs.length){
     ctx.fillStyle="#aaa";
@@ -1967,47 +1992,83 @@ function drawFlow(cmes,time){
     const total=c.arrival.date-c.t0;
     if(!total || total<=0) return;
 
+    // 発生前は表示しない。地球到達後は衝撃波を消す。
+    if(time < c.t0 || time > c.arrival.date) return;
+
     const elapsed=time-c.t0;
-    const frac=elapsed/total;
+    const frac=clamp(elapsed/total,0,1);
 
     const lane=y-95+(idx%8)*25;
     const col=classColor(c.impactClass,c.arrivalScore);
+    const drawX=sx+frac*len;
+    const phasePct=Math.round(frac*100);
 
-    let drawX;
-    let phasePct;
-
-    if(time < c.t0){
-      drawX=sx;
-      phasePct=0;
-    }else if(time > c.arrival.date){
-      drawX=ex;
-      phasePct=100;
-    }else{
-      drawX=sx+clamp(frac,0,1)*len;
-      phasePct=Math.round(frac*100);
+    // launch marker
+    const launchFrac=(c.t0-STATE.timelineStart)/(STATE.timelineEnd-STATE.timelineStart);
+    if(launchFrac>=0 && launchFrac<=1){
+      const launchX=sx+launchFrac*len;
+      ctx.strokeStyle=col+"88";
+      ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(launchX,lane-12);
+      ctx.lineTo(launchX,lane+12);
+      ctx.stroke();
+      ctx.fillStyle=col;
+      ctx.font="10px system-ui";
+      ctx.fillText("launch",launchX+3,lane-14);
     }
 
-    ctx.strokeStyle=col;
-    ctx.lineWidth=Math.max(2,Math.min(18,(c.halfAngle||20)/4));
-    ctx.globalAlpha=.75;
+    // arrival marker
+    const arrFrac=(c.arrival.date-STATE.timelineStart)/(STATE.timelineEnd-STATE.timelineStart);
+    if(arrFrac>=0 && arrFrac<=1){
+      const arrX=sx+arrFrac*len;
+      ctx.strokeStyle=col+"bb";
+      ctx.lineWidth=1.2;
+      ctx.beginPath();
+      ctx.moveTo(arrX,lane-17);
+      ctx.lineTo(arrX,lane+17);
+      ctx.stroke();
+      ctx.fillStyle=col;
+      ctx.font="10px system-ui";
+      ctx.fillText("arrival",arrX+3,lane+21);
+    }
 
+    // propagation trail
+    ctx.strokeStyle=col+"55";
+    ctx.lineWidth=2;
     ctx.beginPath();
-    ctx.arc(drawX,lane,18+(c.halfAngle||20)*0.55,-.9,.9);
+    ctx.moveTo(sx,lane);
+    ctx.lineTo(drawX,lane);
     ctx.stroke();
 
+    // CME shock shell
+    const shellR=18+(c.halfAngle||20)*0.55;
+    ctx.save();
+    ctx.globalAlpha=.82;
+    ctx.strokeStyle=col;
+    ctx.lineWidth=Math.max(2,Math.min(18,(c.halfAngle||20)/4));
+    ctx.beginPath();
+    ctx.arc(drawX,lane,shellR,-.95,.95);
+    ctx.stroke();
+
+    // outer shock front
+    ctx.globalAlpha=.35;
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.arc(drawX,lane,shellR+10,-.95,.95);
+    ctx.stroke();
+
+    // leading point
     ctx.globalAlpha=1;
     ctx.fillStyle=col;
     ctx.beginPath();
-    ctx.arc(drawX,lane,5,0,Math.PI*2);
+    ctx.arc(drawX,lane,5.5,0,Math.PI*2);
     ctx.fill();
+    ctx.restore();
 
     ctx.fillStyle="#fff";
     ctx.font="11px system-ui";
-    ctx.fillText(
-      `${shortId(c.id)} ${c.impactClass} ${phasePct}%`,
-      drawX+8,
-      lane-8
-    );
+    ctx.fillText(`${shortId(c.id)} ${c.impactClass} ${phasePct}%`,drawX+8,lane-8);
 
     ctx.fillStyle="#b0bec5";
     ctx.fillText(
@@ -2016,22 +2077,9 @@ function drawFlow(cmes,time){
       lane+6
     );
 
-    const arrFrac=(c.arrival.date-STATE.timelineStart)/(STATE.timelineEnd-STATE.timelineStart);
-    if(arrFrac>=0 && arrFrac<=1){
-      const arrX=sx+arrFrac*len;
-      ctx.strokeStyle=col+"aa";
-      ctx.lineWidth=1;
-      ctx.beginPath();
-      ctx.moveTo(arrX,lane-15);
-      ctx.lineTo(arrX,lane+15);
-      ctx.stroke();
-      ctx.fillStyle=col;
-      ctx.fillText("arrival",arrX+3,lane+18);
-    }
-
     if(time>=c.shockStart && time<=c.shockEnd){
       ctx.fillStyle="#ff1744";
-      ctx.fillText("SHOCK",ex-65,lane-8);
+      ctx.fillText("SHOCK window",ex-92,lane-8);
     }else if(time>=c.surfaceStart && time<=c.surfaceEnd){
       ctx.fillStyle="#ff9800";
       ctx.fillText("SURFACE",ex-78,lane-8);
@@ -2053,7 +2101,7 @@ function drawWindSeries(selectedTime){
 
   ctx.fillStyle="#fff";
   ctx.font="12px system-ui";
-  ctx.fillText("WSA background solar wind speed",12,20);
+  ctx.fillText("WSA background solar wind speed / history + forecast",12,20);
 
   const model=STATE.wsaModel;
   if(!model || !Array.isArray(model.records) || !model.records.length){
@@ -2074,23 +2122,34 @@ function drawWindSeries(selectedTime){
 
   const tMin=STATE.timelineStart.getTime();
   const tMax=STATE.timelineEnd.getTime();
+  const nowT=STATE.timelineCenter.getTime();
 
-  const subset=model.records.filter(r=>r._t>=tMin && r._t<=tMax);
-  const arr=subset.length ? subset : model.records;
+  const arr=model.records
+    .filter(r=>Number.isFinite(r._t) && Number.isFinite(Number(r.speed)))
+    .filter(r=>r._t>=tMin && r._t<=tMax);
 
-  const speeds=arr.map(r=>Number(r.speed)).filter(v=>Number.isFinite(v));
-  if(!speeds.length){
+  if(!arr.length){
     ctx.fillStyle="#aaa";
-    ctx.fillText("No valid WSA speed records.",12,44);
-    summary.innerHTML="WSA速度データなし";
+    ctx.fillText("No WSA records inside displayed range.",12,44);
+    summary.innerHTML="表示範囲内にWSAデータなし";
     return;
   }
 
+  const speeds=arr.map(r=>Number(r.speed)).filter(v=>Number.isFinite(v));
   const minV=Math.min(...speeds,300);
   const maxV=Math.max(...speeds,800);
   const yMin=Math.floor((minV-20)/50)*50;
   const yMax=Math.ceil((maxV+20)/50)*50;
 
+  const xOf=t=>x0+(t-tMin)/(tMax-tMin)*ww;
+  const yOf=v=>y0+(yMax-v)/(yMax-yMin)*hh;
+
+  // forecast area
+  const nowX=xOf(nowT);
+  ctx.fillStyle="rgba(255,235,59,.06)";
+  ctx.fillRect(nowX,y0,Math.max(0,x0+ww-nowX),hh);
+
+  // grid
   ctx.strokeStyle="rgba(255,255,255,.18)";
   ctx.lineWidth=1;
 
@@ -2107,49 +2166,60 @@ function drawWindSeries(selectedTime){
     ctx.fillText(`${v}`,8,y+4);
   }
 
-  ctx.strokeStyle="rgba(255,255,255,.20)";
-  ctx.lineWidth=1;
-  for(let i=0;i<=14;i++){
-    const x=x0+ww*i/14;
+  const totalHours=(tMax-tMin)/3600000;
+  const vLines=11;
+  ctx.strokeStyle="rgba(255,255,255,.16)";
+  for(let i=0;i<=vLines;i++){
+    const x=x0+ww*i/vLines;
     ctx.beginPath();
     ctx.moveTo(x,y0);
     ctx.lineTo(x,y0+hh);
     ctx.stroke();
   }
 
-  ctx.beginPath();
-  let started=false;
-
-  arr.forEach(r=>{
-    const x=x0+(r._t-tMin)/(tMax-tMin)*ww;
-    const y=y0+(yMax-r.speed)/(yMax-yMin)*hh;
-
-    if(!started){
-      ctx.moveTo(x,y);
-      started=true;
-    }else{
-      ctx.lineTo(x,y);
-    }
-  });
-
-  ctx.strokeStyle="#4fc3f7";
-  ctx.lineWidth=2.2;
-  ctx.stroke();
-
-  arr.forEach(r=>{
-    const x=x0+(r._t-tMin)/(tMax-tMin)*ww;
-    if(x<x0-5 || x>x0+ww+5) return;
-    const y=y0+(yMax-r.speed)/(yMax-yMin)*hh;
+  function drawSegment(points,color,dash=[]){
+    if(points.length<2) return;
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(x,y,2.3,0,Math.PI*2);
-    ctx.fillStyle="#4fc3f7";
+    let started=false;
+    points.forEach(r=>{
+      const x=xOf(r._t);
+      const y=yOf(Number(r.speed));
+      if(!started){ctx.moveTo(x,y);started=true;}
+      else ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle=color;
+    ctx.lineWidth=2.4;
+    ctx.setLineDash(dash);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const history=arr.filter(r=>r._t<=nowT);
+  const forecast=arr.filter(r=>r._t>=nowT);
+
+  // connect one point across now if available
+  if(history.length && forecast.length && history[history.length-1]._t !== forecast[0]._t){
+    forecast.unshift(history[history.length-1]);
+  }
+
+  drawSegment(history,"#4fc3f7",[]);
+  drawSegment(forecast,"#ffee58",[7,5]);
+
+  // points
+  arr.forEach(r=>{
+    const x=xOf(r._t);
+    const y=yOf(Number(r.speed));
+    const isFuture=r._t>nowT || r.is_forecast===true;
+    ctx.beginPath();
+    ctx.arc(x,y,isFuture?3.1:2.4,0,Math.PI*2);
+    ctx.fillStyle=isFuture ? "#ffee58" : "#4fc3f7";
     ctx.fill();
   });
 
-  const nowFrac=(STATE.timelineCenter-STATE.timelineStart)/(STATE.timelineEnd-STATE.timelineStart);
-  const nowX=x0+nowFrac*ww;
-  ctx.strokeStyle="rgba(79,195,247,.55)";
-  ctx.lineWidth=1.5;
+  // now line
+  ctx.strokeStyle="rgba(79,195,247,.65)";
+  ctx.lineWidth=1.7;
   ctx.beginPath();
   ctx.moveTo(nowX,y0);
   ctx.lineTo(nowX,y0+hh);
@@ -2158,42 +2228,56 @@ function drawWindSeries(selectedTime){
   ctx.font="11px system-ui";
   ctx.fillText("NOW",nowX-14,y0-6);
 
+  // selected time line
   const selT=selectedTime.getTime();
-  const selX=x0+(selT-tMin)/(tMax-tMin)*ww;
-
+  const selX=xOf(selT);
   ctx.beginPath();
   ctx.moveTo(selX,y0);
   ctx.lineTo(selX,y0+hh);
-  ctx.strokeStyle="rgba(255,235,88,.95)";
+  ctx.strokeStyle="rgba(255,255,255,.9)";
   ctx.lineWidth=2;
   ctx.stroke();
 
   const wNow=getBackgroundWindSpeedFromWSA(selectedTime);
   if(wNow!==null){
-    const wy=y0+(yMax-wNow)/(yMax-yMin)*hh;
+    const wy=yOf(wNow);
     ctx.beginPath();
-    ctx.arc(selX,wy,5,0,Math.PI*2);
-    ctx.fillStyle="#ffee58";
+    ctx.arc(selX,wy,5.5,0,Math.PI*2);
+    ctx.fillStyle=selT>nowT ? "#ffee58" : "#ffffff";
     ctx.fill();
     ctx.strokeStyle="#fff";
     ctx.lineWidth=1.5;
     ctx.stroke();
 
-    ctx.fillStyle="#ffee58";
+    ctx.fillStyle=selT>nowT ? "#ffee58" : "#fff";
     ctx.font="12px system-ui";
     ctx.fillText(`${Math.round(wNow)} km/s`,selX+8,wy-8);
   }
 
+  // labels
   ctx.fillStyle="rgba(255,255,255,.75)";
   ctx.font="11px system-ui";
   ctx.fillText("now-7d",x0,y0+hh+18);
-  ctx.fillText("now",x0+ww/2-10,y0+hh+18);
-  ctx.fillText("now+7d",x0+ww-42,y0+hh+18);
-  ctx.fillText("km/s",12,y0-6);
+  ctx.fillText("now",nowX-10,y0+hh+18);
+  ctx.fillText("now+4d",x0+ww-48,y0+hh+18);
+
+  // legend
+  ctx.fillStyle="#4fc3f7";
+  ctx.fillText("solid: past/model history",x0+95,20);
+  ctx.fillStyle="#ffee58";
+  ctx.fillText("dashed: forecast",x0+250,20);
+
+  const first=new Date(arr[0]._t).toISOString().slice(0,16).replace("T"," ");
+  const last=new Date(arr[arr.length-1]._t).toISOString().slice(0,16).replace("T"," ");
+  const histCount=arr.filter(r=>r._t<=nowT).length;
+  const fCount=arr.filter(r=>r._t>nowT || r.is_forecast===true).length;
+  const mode=selT>nowT ? "予報" : "過去/解析";
 
   summary.innerHTML =
-    `WSA records: <b>${model.records.length}</b> / 表示範囲: <b>現在±7日</b><br>`+
-    `選択時刻の背景風: <b>${wNow!==null ? Math.round(wNow)+" km/s" : "N/A"}</b>`;
+    `WSA records in view: <b>${arr.length}</b> `+
+    `（過去/解析 ${histCount}・予報 ${fCount}）<br>`+
+    `範囲: <b>${first} UTC</b> → <b>${last} UTC</b><br>`+
+    `選択時刻の背景風: <b>${wNow!==null ? Math.round(wNow)+" km/s" : "N/A"}</b> / <b>${mode}</b>`;
 }
 
 /* =========================================================
@@ -2317,7 +2401,7 @@ function renderStatus(){
       <div>GOES ≥10MeV</div><div><b>${formatNum(STATE.env.p10,2)}</b> pfu / ${STATE.env.radiationScale}</div>
       <div>DBM gamma</div><div><b>${DBM.gamma}</b> km⁻¹</div>
       <div>DBM start distance</div><div><b>21.5 R☉</b></div>
-      <div>Timeline</div><div><b>now-7d → now+7d</b></div>
+      <div>Timeline</div><div><b>now-7d → now+4d</b></div>
       <div>Earth-directed</div><div><b class="goodText">${earth.length}</b></div>
       <div>MISS / Reference</div><div><b class="badText">${miss.length}</b></div>
     </div>`+
@@ -2474,8 +2558,9 @@ function playTimeline(){
   stopTimeline();
   STATE.timer=setInterval(()=>{
     const s=document.getElementById("timeSlider");
+    const max=Number(s.max || 264);
     let v=Number(s.value)+1;
-    if(v>336) v=0;
+    if(v>max) v=0;
     s.value=v;
     updateTimeline();
   },300);
