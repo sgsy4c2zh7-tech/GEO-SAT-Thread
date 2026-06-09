@@ -36,21 +36,20 @@ jobs:
           now = datetime.now(timezone.utc)
           today = now.strftime("%Y-%m-%d")
 
-          # 初回も毎回も過去27日分を取得
+          # 過去27日 + 将来4日
           history_days = 27
-
-          # 日次ファイルは35日分保持
+          forecast_days = 4
           retention_days = 35
 
           start_dt = now - timedelta(days=history_days)
-          end_dt = now
+          end_dt = now + timedelta(days=forecast_days)
 
           start = start_dt.strftime("%Y-%m-%d")
           end = end_dt.strftime("%Y-%m-%d")
 
           # CCMC WSA Dashboard API
-          # input_map: AGONG or AHMI
-          # sat: ACE, DSCOVR, Earth, STEREOA など
+          # input_map: AGONG / AHMI
+          # sat: ACE / DSCOVR / Earth など
           input_map = "AGONG"
           sat = "ACE"
 
@@ -66,8 +65,11 @@ jobs:
           url = base_url + "?" + urllib.parse.urlencode(params)
 
           print("WSA Dashboard API")
+          print("now:", now.isoformat())
           print("start_date:", start)
           print("end_date:", end)
+          print("history_days:", history_days)
+          print("forecast_days:", forecast_days)
           print("input_map:", input_map)
           print("sat:", sat)
           print("url:", url)
@@ -113,7 +115,6 @@ jobs:
 
               s = str(value).strip()
 
-              # APIは "2026-03-09T00:00:00" 形式の可能性あり
               if s.endswith("Z"):
                   s = s[:-1] + "+00:00"
 
@@ -121,7 +122,7 @@ jobs:
                   dt = datetime.fromisoformat(s)
                   if dt.tzinfo is None:
                       dt = dt.replace(tzinfo=timezone.utc)
-                  return dt.astimezone(timezone.utc).isoformat()
+                  return dt.astimezone(timezone.utc)
               except Exception:
                   return None
 
@@ -129,10 +130,14 @@ jobs:
               try:
                   if value is None:
                       return None
+
                   s = str(value).strip()
+
                   if s == "" or s.lower() in ("nan", "none", "null"):
                       return None
+
                   return float(s)
+
               except Exception:
                   return None
 
@@ -148,6 +153,8 @@ jobs:
 
           if not isinstance(solarwind, list):
               print("Response keys:", list(obj.keys()))
+              print("Full response head:")
+              print(json.dumps(obj, ensure_ascii=False, indent=2)[:1500])
               raise SystemExit("No solarwind list in WSA response")
 
           records = []
@@ -156,31 +163,32 @@ jobs:
               if not isinstance(row, dict):
                   continue
 
-              t = parse_time(row.get("time"))
+              dt = parse_time(row.get("time"))
 
-              # WSA Dashboard get_solarwind_simple の速度キー
+              # get_solarwind_simple の速度キー
               # Vp = solar wind proton speed
               speed = to_float(row.get("Vp"))
 
-              if not t or speed is None:
+              if not dt or speed is None:
                   continue
 
-              # 常識的な範囲だけ採用
+              # 常識的な範囲のみ採用
               if speed < 150 or speed > 1200:
                   continue
 
               rec = {
-                  "time": t,
-                  "speed": round(speed, 2)
+                  "time": dt.isoformat(),
+                  "speed": round(speed, 2),
+                  "is_forecast": dt > now
               }
 
-              # 追加情報があれば保存
+              # IMF polarity
               if "imf_polarity" in row:
                   pol = to_float(row.get("imf_polarity"))
                   if pol is not None:
                       rec["imf_polarity"] = int(pol)
 
-              # 将来API側に密度や磁場が入った場合に拾えるようにしておく
+              # 将来API側に密度や磁場が入った場合に拾う
               optional_map = {
                   "density": ["density", "Np", "n", "proton_density"],
                   "bt": ["Bt", "bt", "B"],
@@ -210,7 +218,12 @@ jobs:
           if not records:
               raise SystemExit("No valid WSA solar wind records parsed")
 
+          forecast_count = sum(1 for r in records if r.get("is_forecast"))
+          history_count = len(records) - forecast_count
+
           print("Parsed WSA records:", len(records))
+          print("History records:", history_count)
+          print("Forecast records:", forecast_count)
           print("First:", records[0])
           print("Last:", records[-1])
 
@@ -227,7 +240,11 @@ jobs:
               "startDate": start,
               "endDate": end,
               "history_days": history_days,
+              "forecast_days": forecast_days,
               "record_count": len(records),
+              "history_record_count": history_count,
+              "forecast_record_count": forecast_count,
+              "now_utc": now.isoformat(),
               "records": records,
               "raw_meta": {
                   "comment": obj.get("comment"),
@@ -238,7 +255,7 @@ jobs:
 
           daily_file = base_dir / f"{today}.json"
           latest_file = base_dir / "latest.json"
-          history_file = base_dir / "history-27d.json"
+          history_file = base_dir / "history-27d-plus-4d.json"
 
           daily_file.write_text(
               json.dumps(payload, ensure_ascii=False, indent=2),
@@ -268,7 +285,12 @@ jobs:
           }
 
           for f in base_dir.glob("*.json"):
-              if f.name in ("index.json", "latest.json", "history-27d.json"):
+              if f.name in (
+                  "index.json",
+                  "latest.json",
+                  "history-27d.json",
+                  "history-27d-plus-4d.json"
+              ):
                   continue
 
               if f.stem not in keep_dates:
@@ -281,7 +303,12 @@ jobs:
           all_files = sorted(
               [
                   f for f in base_dir.glob("*.json")
-                  if f.name not in ("index.json", "latest.json", "history-27d.json")
+                  if f.name not in (
+                      "index.json",
+                      "latest.json",
+                      "history-27d.json",
+                      "history-27d-plus-4d.json"
+                  )
               ],
               reverse=True
           )
@@ -299,9 +326,13 @@ jobs:
                       "generated_at": item.get("generated_at"),
                       "startDate": item.get("startDate"),
                       "endDate": item.get("endDate"),
+                      "history_days": item.get("history_days"),
+                      "forecast_days": item.get("forecast_days"),
                       "input_map": item.get("input_map"),
                       "sat": item.get("sat"),
-                      "record_count": item.get("record_count", 0)
+                      "record_count": item.get("record_count", 0),
+                      "history_record_count": item.get("history_record_count", 0),
+                      "forecast_record_count": item.get("forecast_record_count", 0)
                   })
 
               except Exception as e:
@@ -319,9 +350,10 @@ jobs:
               "input_map": input_map,
               "sat": sat,
               "history_days": history_days,
+              "forecast_days": forecast_days,
               "retention_days": retention_days,
               "latest": "latest.json",
-              "history": "history-27d.json",
+              "history": "history-27d-plus-4d.json",
               "latest_daily": f"{today}.json",
               "files": file_entries
           }
@@ -344,5 +376,5 @@ jobs:
 
           git add docs/data/wsa
 
-          git commit -m "Update WSA solar wind cache" || echo "No changes"
+          git commit -m "Update WSA solar wind cache with forecast" || echo "No changes"
           git push
