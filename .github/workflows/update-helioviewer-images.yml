@@ -1,1 +1,342 @@
+name: Update Helioviewer AIA193 and LASCO C2 Images
 
+on:
+  workflow_dispatch:
+  schedule:
+    # 1時間ごと。15分刻みの不足画像を補完
+    - cron: "7 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-helioviewer-images:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch Helioviewer images
+        run: |
+          python3 <<'PY'
+          import json
+          import time
+          import math
+          import urllib.request
+          import urllib.parse
+          from pathlib import Path
+          from datetime import datetime, timedelta, timezone
+
+          OUT_DIR = Path("docs/data/helioviewer")
+          IMG_DIR = OUT_DIR / "images"
+          IMG_DIR.mkdir(parents=True, exist_ok=True)
+
+          now = datetime.now(timezone.utc)
+
+          # 過去2日分のみ
+          past_days = 2
+
+          # 15分刻み
+          step_minutes = 15
+
+          # 2日より前は削除
+          delete_before = now - timedelta(days=past_days)
+
+          # 取得範囲
+          start_dt = now - timedelta(days=past_days)
+          end_dt = now
+
+          def floor_to_step(dt, minutes):
+              discard = timedelta(
+                  minutes=dt.minute % minutes,
+                  seconds=dt.second,
+                  microseconds=dt.microsecond
+              )
+              return dt - discard
+
+          start_dt = floor_to_step(start_dt, step_minutes)
+          end_dt = floor_to_step(end_dt, step_minutes)
+
+          # この2つだけ
+          CHANNELS = [
+              {
+                  "key": "aia193",
+                  "label": "SDO/AIA 193",
+                  "kind": "AIA193",
+                  "layer": "[SDO,AIA,AIA,193,1,100]",
+                  "imageScale": 2.4204409,
+                  "width": 1024,
+                  "height": 1024,
+                  "x0": 0,
+                  "y0": 0
+              },
+              {
+                  "key": "lasco_c2",
+                  "label": "SOHO/LASCO C2",
+                  "kind": "LASCO_C2",
+                  "layer": "[SOHO,LASCO,C2,white-light,1,100]",
+                  "imageScale": 11.42,
+                  "width": 1024,
+                  "height": 1024,
+                  "x0": 0,
+                  "y0": 0
+              }
+          ]
+
+          def iso_min(dt):
+              return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+          def stamp(dt):
+              return dt.strftime("%Y%m%d_%H%M")
+
+          def fetch_bytes(url, tries=3, timeout=120):
+              last_error = None
+
+              for i in range(tries):
+                  try:
+                      req = urllib.request.Request(
+                          url,
+                          headers={
+                              "User-Agent": "github-actions-helioviewer-cache",
+                              "Accept": "image/png,image/jpeg,application/json,*/*"
+                          }
+                      )
+
+                      with urllib.request.urlopen(req, timeout=timeout) as r:
+                          data = r.read()
+                          ctype = r.headers.get("Content-Type", "")
+                          return data, ctype
+
+                  except Exception as e:
+                      last_error = str(e)
+                      wait = 12 * (i + 1)
+                      print(f"Retry {i+1}/{tries} failed:", e)
+                      print(f"Waiting {wait}s")
+                      time.sleep(wait)
+
+              raise RuntimeError(last_error)
+
+          def take_screenshot_url(dt, ch):
+              params = {
+                  "date": iso_min(dt),
+                  "layers": ch["layer"],
+                  "imageScale": ch["imageScale"],
+                  "width": ch["width"],
+                  "height": ch["height"],
+                  "x0": ch["x0"],
+                  "y0": ch["y0"],
+                  "display": "true",
+                  "watermark": "false"
+              }
+
+              return "https://api.helioviewer.org/v2/takeScreenshot/?" + urllib.parse.urlencode(params)
+
+          def save_image_for_time(dt, ch):
+              filename = f"{ch['key']}_{stamp(dt)}.png"
+              out_path = IMG_DIR / filename
+
+              rel_path = f"./data/helioviewer/images/{filename}"
+
+              if out_path.exists() and out_path.stat().st_size > 1000:
+                  return {
+                      "time": dt.isoformat(),
+                      "kind": ch["kind"],
+                      "label": ch["label"],
+                      "file": filename,
+                      "path": rel_path,
+                      "cached": True,
+                      "ok": True
+                  }
+
+              url = take_screenshot_url(dt, ch)
+              print("GET:", ch["label"], iso_min(dt))
+              print(url)
+
+              try:
+                  data, ctype = fetch_bytes(url)
+
+                  # HelioviewerがJSONでURLを返す場合に備える
+                  if b"{" in data[:20] and "json" in ctype.lower():
+                      obj = json.loads(data.decode("utf-8", errors="replace"))
+                      img_url = obj.get("url") or obj.get("uri") or obj.get("path")
+                      if img_url:
+                          if img_url.startswith("/"):
+                              img_url = "https://api.helioviewer.org" + img_url
+                          print("Resolved image URL:", img_url)
+                          data, ctype = fetch_bytes(img_url)
+
+                  if len(data) < 1000:
+                      raise RuntimeError(f"Image too small: {len(data)} bytes")
+
+                  # PNG/JPEG以外が返った場合は保存しない
+                  head = data[:20]
+                  is_png = head.startswith(b"\x89PNG")
+                  is_jpg = head.startswith(b"\xff\xd8")
+
+                  if not (is_png or is_jpg):
+                      print("Unexpected head:", head)
+                      raise RuntimeError(f"Not PNG/JPEG. content-type={ctype}")
+
+                  out_path.write_bytes(data)
+
+                  return {
+                      "time": dt.isoformat(),
+                      "kind": ch["kind"],
+                      "label": ch["label"],
+                      "file": filename,
+                      "path": rel_path,
+                      "cached": False,
+                      "ok": True
+                  }
+
+              except Exception as e:
+                  print("Failed:", ch["label"], iso_min(dt), e)
+                  return {
+                      "time": dt.isoformat(),
+                      "kind": ch["kind"],
+                      "label": ch["label"],
+                      "file": filename,
+                      "path": rel_path,
+                      "cached": False,
+                      "ok": False,
+                      "error": str(e)
+                  }
+
+          # 2日より古い画像を削除
+          for f in IMG_DIR.glob("*.png"):
+              try:
+                  # aia193_YYYYMMDD_HHMM.png / lasco_c2_YYYYMMDD_HHMM.png
+                  parts = f.stem.split("_")
+
+                  if len(parts) >= 3 and parts[-2].isdigit() and parts[-1].isdigit():
+                      dt = datetime.strptime(parts[-2] + "_" + parts[-1], "%Y%m%d_%H%M")
+                      dt = dt.replace(tzinfo=timezone.utc)
+
+                      if dt < delete_before:
+                          print("Delete old image:", f)
+                          f.unlink()
+
+              except Exception:
+                  # パース不能ファイルは残す
+                  pass
+
+          # 15分刻みの時刻一覧
+          times = []
+          t = start_dt
+
+          while t <= end_dt:
+              times.append(t)
+              t += timedelta(minutes=step_minutes)
+
+          print("Time slots:", len(times))
+          print("Start:", start_dt.isoformat())
+          print("End:", end_dt.isoformat())
+
+          items = []
+          errors = []
+
+          for dt in times:
+              for ch in CHANNELS:
+                  item = save_image_for_time(dt, ch)
+                  if item.get("ok"):
+                      items.append(item)
+                  else:
+                      errors.append(item)
+
+                  # API負荷軽減
+                  time.sleep(0.25)
+
+          # 実ファイルからindexを再構築
+          all_items = []
+
+          for f in sorted(IMG_DIR.glob("*.png")):
+              try:
+                  name = f.name
+
+                  if name.startswith("aia193_"):
+                      kind = "AIA193"
+                      label = "SDO/AIA 193"
+                      prefix = "aia193_"
+                  elif name.startswith("lasco_c2_"):
+                      kind = "LASCO_C2"
+                      label = "SOHO/LASCO C2"
+                      prefix = "lasco_c2_"
+                  else:
+                      continue
+
+                  s = f.stem.replace(prefix, "")
+                  dt = datetime.strptime(s, "%Y%m%d_%H%M").replace(tzinfo=timezone.utc)
+
+                  if dt < delete_before:
+                      continue
+
+                  all_items.append({
+                      "time": dt.isoformat(),
+                      "kind": kind,
+                      "label": label,
+                      "file": name,
+                      "path": f"./data/helioviewer/images/{name}",
+                      "size_bytes": f.stat().st_size
+                  })
+
+              except Exception as e:
+                  print("Index skip:", f, e)
+
+          all_items.sort(key=lambda x: (x["time"], x["kind"]))
+
+          by_kind = {}
+          for item in all_items:
+              by_kind[item["kind"]] = by_kind.get(item["kind"], 0) + 1
+
+          index = {
+              "updated_at": now.isoformat(),
+              "source": "Helioviewer API takeScreenshot",
+              "description": "Past 2 days only, 15-minute cadence, SDO/AIA 193 and SOHO/LASCO C2 only.",
+              "past_days": past_days,
+              "step_minutes": step_minutes,
+              "start": start_dt.isoformat(),
+              "end": end_dt.isoformat(),
+              "delete_before": delete_before.isoformat(),
+              "channels": [
+                  {
+                      "kind": ch["kind"],
+                      "key": ch["key"],
+                      "label": ch["label"],
+                      "layer": ch["layer"],
+                      "imageScale": ch["imageScale"]
+                  }
+                  for ch in CHANNELS
+              ],
+              "image_count": len(all_items),
+              "by_kind": by_kind,
+              "errors_count": len(errors),
+              "errors_sample": errors[:20],
+              "items": all_items
+          }
+
+          OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+          (OUT_DIR / "index.json").write_text(
+              json.dumps(index, ensure_ascii=False, indent=2),
+              encoding="utf-8"
+          )
+
+          print("Saved:", OUT_DIR / "index.json")
+          print(json.dumps({
+              "image_count": index["image_count"],
+              "by_kind": index["by_kind"],
+              "errors_count": index["errors_count"]
+          }, ensure_ascii=False, indent=2))
+
+          PY
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add docs/data/helioviewer
+
+          git commit -m "Update Helioviewer AIA193 and LASCO C2 images" || echo "No changes"
+          git push
