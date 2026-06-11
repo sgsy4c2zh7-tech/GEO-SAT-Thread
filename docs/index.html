@@ -378,7 +378,7 @@ pre{
   <div>
     <button class="primary" onclick="loadDONKICache()">DONKI Cache読込</button>
     <button onclick="loadWSA()">WSA背景風読込</button>
-    <button onclick="loadCDAWImages()">CDAW画像読込</button>
+    <button onclick="loadCDAWImages()">AIA193/C2画像読込</button>
     <button onclick="loadCACTus()">CACTus取得</button>
     <button onclick="loadNOAAAll()">NOAA環境取得</button>
     <button onclick="loadAll()">全部取得</button>
@@ -391,7 +391,7 @@ pre{
     WSA: <code>./data/wsa/index.json</code> を読込し、DBM-liteの背景太陽風 <b>w(t)</b> に使用。  
     地球到達判定は <b>DONKI longitude / latitude / halfAngle</b> → <b>sep / halfAngle</b> → <b>CORE/BODY/FLANK/MISS</b>。  
     MISSは地球伝播・衛星影響から排除。<br>
-    CDAW/SOHO画像: <code>./data/cdaw/index.json</code> を読込して、過去2日分の太陽面・LASCO C2/C3をタイムスライダー連動表示。
+    Helioviewer画像: <code>./data/helioviewer/index.json</code> を読込して、過去2日分の <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> だけをタイムスライダー連動表示。
   </div>
 </header>
 
@@ -447,18 +447,17 @@ pre{
 
 
 <section class="card" style="margin-top:16px">
-  <h3>⑦ CDAW / SOHO Solar Image Player / past 2 days</h3>
+  <h3>⑦ SDO/AIA 193 + SOHO/LASCO C2 Image Player / past 2 days</h3>
   <div id="cdawSummary" class="small">未取得</div>
   <div class="cdawHint">
-    保存対象は <b>過去2日分のみ</b>。CME Propagationのタイムスライダーに連動して、選択時刻に最も近い画像を大画面表示します。画像再生を押すと、保存画像そのものを時系列再生します。
+    保存対象は <b>過去2日分のみ</b>。画像は <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> の2種類だけ。CME Propagationのタイムスライダーに連動して、選択時刻に最も近い画像を大画面表示します。画像再生を押すと、保存画像そのものを15分刻みで再生します。
   </div>
 
   <div class="cdawPlayerControls">
     <label>表示画像
       <select id="cdawChannel" onchange="syncCDAWFrameToTime(STATE.selectedTime || new Date(), true)">
-        <option value="solar">Solar disk / 太陽面</option>
-        <option value="c2">LASCO C2</option>
-        <option value="c3">LASCO C3</option>
+        <option value="solar">SDO/AIA 193 / 太陽面</option>
+        <option value="c2">SOHO/LASCO C2</option>
       </select>
     </label>
     <button onclick="stepCDAWFrame(-1)">◀ 1枚</button>
@@ -470,9 +469,9 @@ pre{
 
   <div id="cdawMainStage" class="cdawMainStage"></div>
 
-  <div class="cdawSectionTitle">Selected time nearest images</div>
+  <div class="cdawSectionTitle">Selected time nearest images / AIA193 + LASCO C2</div>
   <div id="cdawTimeline" class="cdawTimelineGrid"></div>
-  <div class="cdawSectionTitle">Past 2-day saved image strip</div>
+  <div class="cdawSectionTitle">Past 2-day saved image strip / AIA193 + C2 only</div>
   <div id="cdawGallery" class="cdawGrid"></div>
 </section>
 
@@ -498,7 +497,7 @@ pre{
 
 const DONKI_CACHE_INDEX = "./data/donki/index.json";
 const WSA_CACHE_INDEX = "./data/wsa/index.json";
-const CDAW_IMAGE_INDEX = "./data/cdaw/index.json";
+const CDAW_IMAGE_INDEX = "./data/helioviewer/index.json";
 const DONKI_LON_POSITIVE_WEST = true;
 
 const CACTUS_URL = "https://www.sidc.be/cactus/out/latestCMEs.html";
@@ -533,7 +532,7 @@ const STATE = {
     donkiSEP:src("DONKI SEP","未取得"),
     donkiFLR:src("DONKI FLR","未取得"),
     wsa:src("WSA Wind Model","未取得"),
-    cdawImages:src("CDAW/SOHO Images","未取得"),
+    cdawImages:src("AIA193/C2 Images","未取得"),
     cactus:src("CACTus CME","未取得"),
     noaaWind:src("NOAA Wind","未取得"),
     noaaMag:src("NOAA IMF","未取得"),
@@ -921,7 +920,7 @@ function renderSourcePanel(){
   const rows=[
     ["donkiCache","DONKI Cache",loadDONKICache],
     ["wsa","WSA Wind Model",loadWSA],
-    ["cdawImages","CDAW/SOHO Images",loadCDAWImages],
+    ["cdawImages","AIA193/C2 Images",loadCDAWImages],
     ["cactus","CACTus CME",loadCACTus],
     ["noaaWind","NOAA Wind",loadNOAAWind],
     ["noaaMag","NOAA IMF",loadNOAAMag],
@@ -2553,7 +2552,7 @@ function drawWindSeries(selectedTime){
 
 
 /* =========================================================
-   CDAW / SOHO IMAGE GALLERY
+   HELIOVIEWER AIA193 / LASCO C2 IMAGE GALLERY
 ========================================================= */
 
 function cdawKindText(img){
@@ -2562,16 +2561,18 @@ function cdawKindText(img){
 
 function isCDAWSolar(img){
   const s=cdawKindText(img);
-  return s.includes("aia") || s.includes("eit") || s.includes("hmi") ||
-         s.includes("solar") || s.includes("sun") || s.includes("sdo");
+  // 今回は SDO/AIA 193 だけを太陽面画像として扱う
+  return s.includes("aia193") || (s.includes("aia") && s.includes("193")) || s.includes("sdo/aia 193") || s.includes("solar");
 }
 
 function isCDAWC2(img){
-  return cdawKindText(img).includes("c2");
+  // 今回は SOHO/LASCO C2 だけをCME画像として扱う
+  return cdawKindText(img).includes("c2") || cdawKindText(img).includes("lasco_c2");
 }
 
 function isCDAWC3(img){
-  return cdawKindText(img).includes("c3");
+  // C3は使わない
+  return false;
 }
 
 function nearestCDAWImage(predicate,time,maxHours=18){
@@ -2606,7 +2607,6 @@ function getCDAWChannel(){
 
 function cdawPredicateForChannel(channel){
   if(channel==="c2") return isCDAWC2;
-  if(channel==="c3") return isCDAWC3;
   return isCDAWSolar;
 }
 
@@ -2717,7 +2717,7 @@ function renderCDAWMain(img,selectedTime,frames=[]){
 
   const t=selectedTime instanceof Date ? selectedTime : new Date(selectedTime);
   const channel=getCDAWChannel();
-  const channelLabel=channel==="c2" ? "LASCO C2" : channel==="c3" ? "LASCO C3" : "Solar disk";
+  const channelLabel=channel==="c2" ? "SOHO/LASCO C2" : "SDO/AIA 193";
 
   if(!img){
     stage.innerHTML=`
@@ -2759,11 +2759,10 @@ function renderCDAWTimeline(selectedTime){
 
   const imgs=STATE.cdawImages || [];
   if(!imgs.length){
-    summary.innerHTML='CDAW/SOHO画像未読込。<button onclick="loadCDAWImages()">画像読込</button>';
+    summary.innerHTML='AIA193/C2画像未読込。<button onclick="loadCDAWImages()">画像読込</button>';
     box.innerHTML=`
-      <div class="cdawHero"><div class="cdawHeroTitle">Solar disk</div><div class="cdawHeroEmpty">画像未読込</div></div>
-      <div class="cdawHero"><div class="cdawHeroTitle">LASCO C2</div><div class="cdawHeroEmpty">画像未読込</div></div>
-      <div class="cdawHero"><div class="cdawHeroTitle">LASCO C3</div><div class="cdawHeroEmpty">画像未読込</div></div>
+      <div class="cdawHero"><div class="cdawHeroTitle">SDO/AIA 193</div><div class="cdawHeroEmpty">画像未読込</div></div>
+      <div class="cdawHero"><div class="cdawHeroTitle">SOHO/LASCO C2</div><div class="cdawHeroEmpty">画像未読込</div></div>
     `;
     return;
   }
@@ -2773,9 +2772,8 @@ function renderCDAWTimeline(selectedTime){
   const last=ordered[ordered.length-1];
   const t=selectedTime instanceof Date ? selectedTime : new Date(selectedTime);
 
-  const solar=nearestCDAWImage(isCDAWSolar,t,6);
-  const c2=nearestCDAWImage(isCDAWC2,t,6);
-  const c3=nearestCDAWImage(isCDAWC3,t,6);
+  const solar=nearestCDAWImage(isCDAWSolar,t,3);
+  const c2=nearestCDAWImage(isCDAWC2,t,3);
 
   const availableKinds={};
   imgs.forEach(x=>{
@@ -2793,12 +2791,11 @@ function renderCDAWTimeline(selectedTime){
     `保存画像: <b>${imgs.length}</b>枚 / ${kindText}<br>`+
     `画像範囲: <b>${formatDateTime(first._t)}</b> → <b>${formatDateTime(last._t)}</b><br>`+
     `選択時刻: <b>${formatDateTime(t)}</b>${outside ? ` <span class="warnText">※過去2日分の画像範囲外</span>` : ""}<br>`+
-    `表示: 選択時刻に最も近い Solar / C2 / C3 画像`;
+    `表示: 選択時刻に最も近い SDO/AIA 193 / SOHO/LASCO C2 画像`;
 
   box.innerHTML =
-    renderCDAWTimelineSlot("Solar disk",solar,t,"SDO/AIA・SOHO/EIT等") +
-    renderCDAWTimelineSlot("LASCO C2",c2,t,"inner corona CME") +
-    renderCDAWTimelineSlot("LASCO C3",c3,t,"outer corona CME");
+    renderCDAWTimelineSlot("SDO/AIA 193",solar,t,"solar disk / EUV") +
+    renderCDAWTimelineSlot("SOHO/LASCO C2",c2,t,"inner corona CME");
 }
 
 function renderCDAWTimelineSlot(title,img,selectedTime,sub){
@@ -2839,7 +2836,7 @@ function renderCDAWGallery(){
 
   const imgs=STATE.cdawImages || [];
   if(!imgs.length){
-    summary.innerHTML='CDAW/SOHO画像未読込。<button onclick="loadCDAWImages()">画像読込</button>';
+    summary.innerHTML='AIA193/C2画像未読込。<button onclick="loadCDAWImages()">画像読込</button>';
     gallery.innerHTML="";
     return;
   }
@@ -2862,7 +2859,7 @@ function renderCDAWGallery(){
     `保存画像: <b>${imgs.length}</b>枚 / ${kinds}<br>`+
     `範囲: <b>${formatDateTime(oldest._t)}</b> → <b>${formatDateTime(latest._t)}</b><br>`+
     `更新: <b>${escapeHtml(STATE.cdawIndex?.updated_at || "-")}</b> / `+
-    `保存先: <code>./data/cdaw/images/</code>`;
+    `保存先: <code>./data/helioviewer/images/</code>`;
 
   const top=imgs.slice(0,72);
 
@@ -2870,8 +2867,8 @@ function renderCDAWGallery(){
     const src=img.path;
     const time=formatDateTime(img._t);
     const kind=escapeHtml(img.kind || img.label || "Image");
-    const label=escapeHtml(img.label || img.instrument || img.kind || "CDAW/SOHO");
-    const source=escapeHtml(img.source_name || img.source || "CDAW/SOHO");
+    const label=escapeHtml(img.label || img.instrument || img.kind || "AIA193/C2");
+    const source=escapeHtml(img.source_name || img.source || "AIA193/C2");
     const badge = kind.toLowerCase().includes("c2") ? "pill mid" :
                   kind.toLowerCase().includes("c3") ? "pill info" :
                   kind.toLowerCase().includes("aia") || kind.toLowerCase().includes("eit") ? "pill good" :
@@ -2902,7 +2899,7 @@ function openCDAWImage(index){
 
   image.src=img.path;
   cap.innerHTML =
-    `<b>${escapeHtml(img.label || img.kind || "CDAW/SOHO image")}</b><br>`+
+    `<b>${escapeHtml(img.label || img.kind || "AIA193/C2 image")}</b><br>`+
     `${formatDateTime(img._t)} / ${escapeHtml(img.kind || "-")}<br>`+
     `file: <code>${escapeHtml(img.path || "")}</code><br>`+
     `${img.source_url ? `source: <a href="${escapeHtml(img.source_url)}" target="_blank" style="color:#4fc3f7">${escapeHtml(img.source_url)}</a>` : ""}`;
