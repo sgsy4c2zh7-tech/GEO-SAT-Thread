@@ -287,6 +287,19 @@ pre{
   padding:7px 10px;
   font-weight:800;
 }
+
+.cdawPlayerControls input[type=datetime-local]{
+  background:#05070d;
+  color:#fff;
+  border:1px solid #34496e;
+  border-radius:8px;
+  padding:7px 10px;
+  font-weight:800;
+}
+.cdawPlayerControls .miniNote{
+  color:var(--muted);
+  font-size:12px;
+}
 .cdawMainStage{
   margin-top:12px;
   background:#03060c;
@@ -455,11 +468,18 @@ pre{
 
   <div class="cdawPlayerControls">
     <label>表示画像
-      <select id="cdawChannel" onchange="syncCDAWFrameToTime(STATE.selectedTime || new Date(), true)">
+      <select id="cdawChannel" onchange="setCDAWPickerBounds(); syncCDAWFrameToTime(STATE.selectedTime || new Date(), true)">
         <option value="solar">SDO/AIA 193 / 太陽面</option>
         <option value="c2">SOHO/LASCO C2</option>
       </select>
     </label>
+    <label>画像開始時刻
+      <input id="cdawStartTime" type="datetime-local" onchange="applyCDAWStartPicker()">
+    </label>
+    <button onclick="applyCDAWStartPicker()">この時刻から表示</button>
+    <button onclick="setCDAWStartToFirst()">最古画像へ</button>
+    <button onclick="setCDAWStartToNow()">現在へ</button>
+    <span id="cdawPickerNote" class="miniNote"></span>
     <button onclick="stepCDAWFrame(-1)">◀ 1枚</button>
     <button onclick="playCDAWFrames()">▶ 画像再生</button>
     <button class="danger" onclick="stopCDAWFrames()">画像停止</button>
@@ -791,13 +811,15 @@ async function loadCDAWImages(){
   setSource("cdawImages","LOADING...");
   try{
     const index=await fetchJson(CDAW_IMAGE_INDEX);
-    const images=Array.isArray(index.images) ? index.images : [];
+    const images = Array.isArray(index.images) ? index.images :
+                   Array.isArray(index.items) ? index.items :
+                   Array.isArray(index.files) ? index.files : [];
 
     const normalized=images.map((img,i)=>({
       ...img,
       _i:i,
       _t:new Date(img.time || img.observation_time || img.downloaded_at || index.updated_at || Date.now()).getTime(),
-      path:img.path || img.file || img.url || "",
+      path:img.path || (img.file ? `./data/helioviewer/images/${img.file}` : "") || img.url || "",
       label:img.label || img.kind || "image",
       kind:img.kind || classifyCDAWKind(img)
     }))
@@ -809,8 +831,8 @@ async function loadCDAWImages(){
 
     setSource("cdawImages",`OK: ${normalized.length} images`,{index,images:normalized});
     renderCDAWGallery();
+    setCDAWPickerBounds();
     renderCDAWTimeline(STATE.selectedTime || new Date());
-    syncCDAWFrameToTime(STATE.selectedTime || new Date(), true);
     syncCDAWFrameToTime(STATE.selectedTime || new Date(), true);
 
   }catch(e){
@@ -818,6 +840,7 @@ async function loadCDAWImages(){
     STATE.cdawImages=[];
     setSource("cdawImages","FAILED",null,e.message);
     renderCDAWGallery();
+    setCDAWPickerBounds();
     renderCDAWTimeline(STATE.selectedTime || new Date());
     syncCDAWFrameToTime(STATE.selectedTime || new Date(), true);
   }
@@ -2601,6 +2624,91 @@ function nearestCDAWImage(predicate,time,maxHours=18){
 }
 
 
+
+function toDateTimeLocalValue(date){
+  const d=date instanceof Date ? date : new Date(date);
+  if(!Number.isFinite(d.getTime())) return "";
+  const pad=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function setCDAWPickerBounds(){
+  const picker=document.getElementById("cdawStartTime");
+  const note=document.getElementById("cdawPickerNote");
+  if(!picker) return;
+
+  const frames=getCDAWFramesForChannel();
+  if(!frames.length){
+    picker.removeAttribute("min");
+    picker.removeAttribute("max");
+    picker.value="";
+    if(note) note.textContent="画像未読込";
+    return;
+  }
+
+  const first=new Date(frames[0]._t);
+  const last=new Date(frames[frames.length-1]._t);
+  picker.min=toDateTimeLocalValue(first);
+  picker.max=toDateTimeLocalValue(last);
+
+  const current=STATE.selectedTime instanceof Date ? STATE.selectedTime : new Date();
+  const clamped=new Date(clamp(current.getTime(), first.getTime(), last.getTime()));
+  picker.value=toDateTimeLocalValue(clamped);
+
+  if(note){
+    note.textContent=`画像範囲 ${formatDateTime(first)} 〜 ${formatDateTime(last)}`;
+  }
+}
+
+function applyCDAWStartPicker(){
+  const picker=document.getElementById("cdawStartTime");
+  if(!picker || !picker.value){
+    syncCDAWFrameToTime(STATE.selectedTime || new Date(), true);
+    return;
+  }
+
+  // datetime-local はブラウザのローカル時刻として解釈する
+  const d=new Date(picker.value);
+  if(!Number.isFinite(d.getTime())) return;
+  jumpCDAWToDate(d,true);
+}
+
+function setCDAWStartToFirst(){
+  const frames=getCDAWFramesForChannel();
+  if(!frames.length) return;
+  const d=new Date(frames[0]._t);
+  const picker=document.getElementById("cdawStartTime");
+  if(picker) picker.value=toDateTimeLocalValue(d);
+  jumpCDAWToDate(d,true);
+}
+
+function setCDAWStartToNow(){
+  const frames=getCDAWFramesForChannel();
+  const d=new Date();
+  const picker=document.getElementById("cdawStartTime");
+  if(picker){
+    if(frames.length){
+      const first=frames[0]._t;
+      const last=frames[frames.length-1]._t;
+      picker.value=toDateTimeLocalValue(new Date(clamp(d.getTime(),first,last)));
+    }else{
+      picker.value=toDateTimeLocalValue(d);
+    }
+  }
+  jumpCDAWToDate(d,true);
+}
+
+function jumpCDAWToDate(date,force=false){
+  STATE.selectedTime=date;
+  setMainTimelineToDate(date);
+  renderCDAWTimeline(date);
+  syncCDAWFrameToTime(date,force);
+  drawSun(STATE.cmes,date);
+  drawFlow(STATE.cmes,date);
+  drawWindSeries(date);
+  renderHazard(date);
+}
+
 function getCDAWChannel(){
   return document.getElementById("cdawChannel")?.value || "solar";
 }
@@ -2648,6 +2756,11 @@ function syncCDAWFrameToTime(time, force=false){
   const img=frames[bestIndex];
   img._deltaHours=bestDt/3600000;
 
+  const picker=document.getElementById("cdawStartTime");
+  if(picker && force){
+    picker.value=toDateTimeLocalValue(new Date(img._t));
+  }
+
   // 未来側など、画像範囲から大きく外れている場合は大画面にもその旨を出す。
   if(img._deltaHours>6 && !force){
     renderCDAWMain(null,time,frames);
@@ -2665,6 +2778,8 @@ function selectCDAWFrameBySlider(){
   STATE.cdawFrameIndex=i;
   const img=frames[i];
   const t=new Date(img._t);
+  const picker=document.getElementById("cdawStartTime");
+  if(picker) picker.value=toDateTimeLocalValue(t);
   STATE.selectedTime=t;
   setMainTimelineToDate(t);
   renderCDAWMain(img,t,frames);
@@ -3220,6 +3335,7 @@ window.addEventListener("resize",()=>updateTimeline());
 renderSourcePanel();
 initTimelineWindow();
 renderCDAWGallery();
+setCDAWPickerBounds();
 renderCDAWTimeline(STATE.selectedTime || new Date());
 rebuildAll();
 </script>
