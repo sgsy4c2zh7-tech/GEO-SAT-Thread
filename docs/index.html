@@ -268,6 +268,59 @@ pre{
   line-height:1.45;
 }
 .cdawHeroMeta b{color:#fff}
+.cdawPlayerControls{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  margin-top:10px;
+  padding:8px 10px;
+  background:#0b1220;
+  border:1px solid #263044;
+  border-radius:12px;
+}
+.cdawPlayerControls select{
+  background:#05070d;
+  color:#fff;
+  border:1px solid #34496e;
+  border-radius:8px;
+  padding:7px 10px;
+  font-weight:800;
+}
+.cdawMainStage{
+  margin-top:12px;
+  background:#03060c;
+  border:1px solid #34496e;
+  border-radius:16px;
+  overflow:hidden;
+}
+.cdawMainStage img{
+  width:100%;
+  max-height:72vh;
+  object-fit:contain;
+  display:block;
+  background:#000;
+  cursor:pointer;
+}
+.cdawMainMeta{
+  padding:10px 12px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.55;
+  border-top:1px solid #263044;
+}
+.cdawMainMeta b{color:#fff}
+.cdawBigEmpty{
+  min-height:420px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#000;
+  color:#78909c;
+  text-align:center;
+  padding:20px;
+}
+
 .cdawHint{
   margin-top:8px;
   padding:8px 10px;
@@ -338,7 +391,7 @@ pre{
     WSA: <code>./data/wsa/index.json</code> を読込し、DBM-liteの背景太陽風 <b>w(t)</b> に使用。  
     地球到達判定は <b>DONKI longitude / latitude / halfAngle</b> → <b>sep / halfAngle</b> → <b>CORE/BODY/FLANK/MISS</b>。  
     MISSは地球伝播・衛星影響から排除。<br>
-    CDAW/SOHO画像: <code>./data/cdaw/index.json</code> を読込して、太陽面・LASCO C2/C3を2日分表示。
+    CDAW/SOHO画像: <code>./data/cdaw/index.json</code> を読込して、過去2日分の太陽面・LASCO C2/C3をタイムスライダー連動表示。
   </div>
 </header>
 
@@ -371,7 +424,7 @@ pre{
 
 <section class="card" style="margin-top:16px">
   <h3>③ CME Propagation / Earth-directed only</h3>
-  <input id="timeSlider" type="range" min="0" max="264" value="168" step="1" oninput="updateTimeline()">
+  <input id="timeSlider" type="range" min="0" max="168" value="48" step="1" oninput="updateTimeline()">
   <div id="timeLabel" class="small"></div>
   <div class="widebox"><canvas id="flowCanvas"></canvas></div>
 </section>
@@ -394,13 +447,32 @@ pre{
 
 
 <section class="card" style="margin-top:16px">
-  <h3>⑦ CDAW / SOHO CME Images / selected by timeline</h3>
+  <h3>⑦ CDAW / SOHO Solar Image Player / past 2 days</h3>
   <div id="cdawSummary" class="small">未取得</div>
   <div class="cdawHint">
-    上のCME Propagationのタイムスライダーに連動。選択時刻に一番近い太陽面画像・LASCO C2・LASCO C3を表示します。
+    保存対象は <b>過去2日分のみ</b>。CME Propagationのタイムスライダーに連動して、選択時刻に最も近い画像を大画面表示します。画像再生を押すと、保存画像そのものを時系列再生します。
   </div>
+
+  <div class="cdawPlayerControls">
+    <label>表示画像
+      <select id="cdawChannel" onchange="syncCDAWFrameToTime(STATE.selectedTime || new Date(), true)">
+        <option value="solar">Solar disk / 太陽面</option>
+        <option value="c2">LASCO C2</option>
+        <option value="c3">LASCO C3</option>
+      </select>
+    </label>
+    <button onclick="stepCDAWFrame(-1)">◀ 1枚</button>
+    <button onclick="playCDAWFrames()">▶ 画像再生</button>
+    <button class="danger" onclick="stopCDAWFrames()">画像停止</button>
+    <button onclick="stepCDAWFrame(1)">1枚 ▶</button>
+  </div>
+  <input id="cdawFrameSlider" type="range" min="0" max="0" value="0" step="1" oninput="selectCDAWFrameBySlider()">
+
+  <div id="cdawMainStage" class="cdawMainStage"></div>
+
+  <div class="cdawSectionTitle">Selected time nearest images</div>
   <div id="cdawTimeline" class="cdawTimelineGrid"></div>
-  <div class="cdawSectionTitle">2-day saved image strip</div>
+  <div class="cdawSectionTitle">Past 2-day saved image strip</div>
   <div id="cdawGallery" class="cdawGrid"></div>
 </section>
 
@@ -474,11 +546,13 @@ const STATE = {
   wsaModel:null,
   cdawIndex:null,
   cdawImages:[],
+  cdawFrameTimer:null,
+  cdawFrameIndex:0,
   env:defaultEnv(),
   cmes:[],
   timelineCenter:new Date(),
-  timelineStart:new Date(Date.now()-168*3600*1000),
-  timelineEnd:new Date(Date.now()+96*3600*1000),
+  timelineStart:new Date(Date.now()-48*3600*1000),
+  timelineEnd:new Date(Date.now()+120*3600*1000),
   selectedTime:new Date(),
   timer:null
 };
@@ -535,17 +609,17 @@ function raw(x){
 function initTimelineWindow(){
   STATE.timelineCenter = new Date();
 
-  // 表示期間は「現在-7日」から「現在+4日」
-  // スライダーは 0〜264h、現在は 168h の位置
-  STATE.timelineStart = new Date(STATE.timelineCenter.getTime() - 168*3600*1000);
-  STATE.timelineEnd = new Date(STATE.timelineCenter.getTime() + 96*3600*1000);
+  // 表示期間は「現在-2日」から「現在+5日」
+  // スライダーは 0〜168h、現在は 48h の位置
+  STATE.timelineStart = new Date(STATE.timelineCenter.getTime() - 48*3600*1000);
+  STATE.timelineEnd = new Date(STATE.timelineCenter.getTime() + 120*3600*1000);
   STATE.selectedTime = new Date(STATE.timelineCenter);
 
   const slider=document.getElementById("timeSlider");
   if(slider){
     slider.min=0;
-    slider.max=264;
-    slider.value=168;
+    slider.max=168;
+    slider.value=48;
   }
 }
 
@@ -737,6 +811,8 @@ async function loadCDAWImages(){
     setSource("cdawImages",`OK: ${normalized.length} images`,{index,images:normalized});
     renderCDAWGallery();
     renderCDAWTimeline(STATE.selectedTime || new Date());
+    syncCDAWFrameToTime(STATE.selectedTime || new Date(), true);
+    syncCDAWFrameToTime(STATE.selectedTime || new Date(), true);
 
   }catch(e){
     STATE.cdawIndex=null;
@@ -744,6 +820,7 @@ async function loadCDAWImages(){
     setSource("cdawImages","FAILED",null,e.message);
     renderCDAWGallery();
     renderCDAWTimeline(STATE.selectedTime || new Date());
+    syncCDAWFrameToTime(STATE.selectedTime || new Date(), true);
   }
 }
 
@@ -1811,12 +1888,12 @@ function setupWide(id){
 
 function updateTimeline(){
   const slider=document.getElementById("timeSlider");
-  const h=Number(slider?.value ?? 168);
+  const h=Number(slider?.value ?? 48);
 
   const t=new Date(STATE.timelineStart.getTime()+h*3600*1000);
   STATE.selectedTime=t;
 
-  const offset=h-168;
+  const offset=h-48;
   const sign=offset>=0 ? "+" : "";
   const wind=getBackgroundWindSpeedFromWSA(t);
   const windTxt=wind!==null ? `${Math.round(wind)} km/s` : "N/A";
@@ -1829,6 +1906,7 @@ function updateTimeline(){
   drawFlow(STATE.cmes,t);
   drawWindSeries(t);
   renderCDAWTimeline(t);
+  syncCDAWFrameToTime(t, false);
   renderHazard(t);
 }
 
@@ -2153,7 +2231,7 @@ function drawFlow(cmes,time){
   ctx.font="12px system-ui";
   ctx.fillText("Sun",sx-10,y+45);
   ctx.fillText("Earth/GEO",ex-42,y+38);
-  ctx.fillText("Timeline: now-7d to now+4d / CME shock appears at launch and disappears after Earth passage",12,24);
+  ctx.fillText("Timeline: now-2d to now+5d / CME shock appears at launch and disappears after Earth passage",12,24);
 
   // now line
   const nowFrac=(STATE.timelineCenter-STATE.timelineStart)/(STATE.timelineEnd-STATE.timelineStart);
@@ -2521,6 +2599,159 @@ function nearestCDAWImage(predicate,time,maxHours=18){
   return best;
 }
 
+
+function getCDAWChannel(){
+  return document.getElementById("cdawChannel")?.value || "solar";
+}
+
+function cdawPredicateForChannel(channel){
+  if(channel==="c2") return isCDAWC2;
+  if(channel==="c3") return isCDAWC3;
+  return isCDAWSolar;
+}
+
+function getCDAWFramesForChannel(channel=getCDAWChannel()){
+  const pred=cdawPredicateForChannel(channel);
+  return (STATE.cdawImages || [])
+    .filter(pred)
+    .filter(x=>Number.isFinite(x._t))
+    .sort((a,b)=>a._t-b._t);
+}
+
+function syncCDAWFrameToTime(time, force=false){
+  const stage=document.getElementById("cdawMainStage");
+  const slider=document.getElementById("cdawFrameSlider");
+  if(!stage || !slider) return;
+
+  const frames=getCDAWFramesForChannel();
+  if(!frames.length){
+    slider.min=0;
+    slider.max=0;
+    slider.value=0;
+    renderCDAWMain(null,time,frames);
+    return;
+  }
+
+  const target=(time instanceof Date ? time : new Date(time)).getTime();
+  let bestIndex=0;
+  let bestDt=Infinity;
+  frames.forEach((img,i)=>{
+    const d=Math.abs(img._t-target);
+    if(d<bestDt){ bestDt=d; bestIndex=i; }
+  });
+
+  STATE.cdawFrameIndex=bestIndex;
+  slider.min=0;
+  slider.max=Math.max(0,frames.length-1);
+  slider.value=bestIndex;
+
+  const img=frames[bestIndex];
+  img._deltaHours=bestDt/3600000;
+
+  // 未来側など、画像範囲から大きく外れている場合は大画面にもその旨を出す。
+  if(img._deltaHours>6 && !force){
+    renderCDAWMain(null,time,frames);
+  }else{
+    renderCDAWMain(img,time,frames);
+  }
+}
+
+function selectCDAWFrameBySlider(){
+  const frames=getCDAWFramesForChannel();
+  const slider=document.getElementById("cdawFrameSlider");
+  if(!frames.length || !slider) return;
+
+  const i=clamp(Number(slider.value)||0,0,frames.length-1);
+  STATE.cdawFrameIndex=i;
+  const img=frames[i];
+  const t=new Date(img._t);
+  STATE.selectedTime=t;
+  setMainTimelineToDate(t);
+  renderCDAWMain(img,t,frames);
+  renderCDAWTimeline(t);
+  drawSun(STATE.cmes,t);
+  drawFlow(STATE.cmes,t);
+  drawWindSeries(t);
+  renderHazard(t);
+}
+
+function setMainTimelineToDate(date){
+  const slider=document.getElementById("timeSlider");
+  if(!slider) return;
+  const h=Math.round((date.getTime()-STATE.timelineStart.getTime())/3600000);
+  if(h>=Number(slider.min) && h<=Number(slider.max)){
+    slider.value=h;
+  }
+}
+
+function stepCDAWFrame(dir){
+  const frames=getCDAWFramesForChannel();
+  if(!frames.length) return;
+  STATE.cdawFrameIndex=clamp((STATE.cdawFrameIndex||0)+dir,0,frames.length-1);
+  const slider=document.getElementById("cdawFrameSlider");
+  if(slider) slider.value=STATE.cdawFrameIndex;
+  selectCDAWFrameBySlider();
+}
+
+function playCDAWFrames(){
+  stopCDAWFrames();
+  const frames=getCDAWFramesForChannel();
+  if(!frames.length) return;
+  STATE.cdawFrameTimer=setInterval(()=>{
+    STATE.cdawFrameIndex=(STATE.cdawFrameIndex||0)+1;
+    if(STATE.cdawFrameIndex>=frames.length) STATE.cdawFrameIndex=0;
+    const slider=document.getElementById("cdawFrameSlider");
+    if(slider) slider.value=STATE.cdawFrameIndex;
+    selectCDAWFrameBySlider();
+  },420);
+}
+
+function stopCDAWFrames(){
+  if(STATE.cdawFrameTimer) clearInterval(STATE.cdawFrameTimer);
+  STATE.cdawFrameTimer=null;
+}
+
+function renderCDAWMain(img,selectedTime,frames=[]){
+  const stage=document.getElementById("cdawMainStage");
+  if(!stage) return;
+
+  const t=selectedTime instanceof Date ? selectedTime : new Date(selectedTime);
+  const channel=getCDAWChannel();
+  const channelLabel=channel==="c2" ? "LASCO C2" : channel==="c3" ? "LASCO C3" : "Solar disk";
+
+  if(!img){
+    stage.innerHTML=`
+      <div class="cdawBigEmpty">
+        <div>
+          <b>${escapeHtml(channelLabel)}</b><br>
+          選択時刻の近傍画像なし<br>
+          <span class="small">選択時刻: ${formatDateTime(t)} / 保存画像は過去2日分のみ</span>
+        </div>
+      </div>
+      <div class="cdawMainMeta">
+        ${escapeHtml(channelLabel)} frames: <b>${frames.length}</b><br>
+        未来側、または保存範囲外では画像は表示されません。
+      </div>
+    `;
+    return;
+  }
+
+  const idx=frames.findIndex(x=>x._i===img._i);
+  const dt=Number.isFinite(img._deltaHours) ? img._deltaHours : Math.abs(img._t-t.getTime())/3600000;
+  const label=escapeHtml(img.label || img.instrument || img.kind || channelLabel);
+  const src=escapeHtml(img.path);
+
+  stage.innerHTML=`
+    <img src="${src}" alt="${label}" onclick="openCDAWImage(${img._i})">
+    <div class="cdawMainMeta">
+      <b>${label}</b> <span class="pill info">${escapeHtml(channelLabel)}</span><br>
+      画像時刻: <b>${formatDateTime(img._t)}</b> / 選択時刻: <b>${formatDateTime(t)}</b><br>
+      差分: <b>${dt.toFixed(1)} h</b> / Frame: <b>${idx>=0 ? idx+1 : "-"}</b> / ${frames.length}<br>
+      ${img.source_url ? `<a href="${escapeHtml(img.source_url)}" target="_blank" style="color:#4fc3f7">source</a>` : ""}
+    </div>
+  `;
+}
+
 function renderCDAWTimeline(selectedTime){
   const box=document.getElementById("cdawTimeline");
   const summary=document.getElementById("cdawSummary");
@@ -2542,9 +2773,9 @@ function renderCDAWTimeline(selectedTime){
   const last=ordered[ordered.length-1];
   const t=selectedTime instanceof Date ? selectedTime : new Date(selectedTime);
 
-  const solar=nearestCDAWImage(isCDAWSolar,t,18);
-  const c2=nearestCDAWImage(isCDAWC2,t,18);
-  const c3=nearestCDAWImage(isCDAWC3,t,18);
+  const solar=nearestCDAWImage(isCDAWSolar,t,6);
+  const c2=nearestCDAWImage(isCDAWC2,t,6);
+  const c3=nearestCDAWImage(isCDAWC3,t,6);
 
   const availableKinds={};
   imgs.forEach(x=>{
@@ -2561,7 +2792,7 @@ function renderCDAWTimeline(selectedTime){
   summary.innerHTML =
     `保存画像: <b>${imgs.length}</b>枚 / ${kindText}<br>`+
     `画像範囲: <b>${formatDateTime(first._t)}</b> → <b>${formatDateTime(last._t)}</b><br>`+
-    `選択時刻: <b>${formatDateTime(t)}</b>${outside ? ` <span class="warnText">※画像2日分の範囲外</span>` : ""}<br>`+
+    `選択時刻: <b>${formatDateTime(t)}</b>${outside ? ` <span class="warnText">※過去2日分の画像範囲外</span>` : ""}<br>`+
     `表示: 選択時刻に最も近い Solar / C2 / C3 画像`;
 
   box.innerHTML =
@@ -2970,7 +3201,7 @@ function playTimeline(){
   stopTimeline();
   STATE.timer=setInterval(()=>{
     const s=document.getElementById("timeSlider");
-    const max=Number(s.max || 264);
+    const max=Number(s.max || 168);
     let v=Number(s.value)+1;
     if(v>max) v=0;
     s.value=v;
