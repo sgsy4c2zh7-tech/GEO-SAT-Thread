@@ -1,1 +1,371 @@
+name: Update WSA Solar Wind Cache
 
+on:
+  workflow_dispatch:
+  schedule:
+    # 1日1回 UTC 02:00 / 日本時間 11:00
+    - cron: "0 2 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-wsa:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch WSA Dashboard solar wind model
+        run: |
+          python3 <<'PY'
+          import json
+          import time
+          import urllib.request
+          import urllib.parse
+          from pathlib import Path
+          from datetime import datetime, timedelta, timezone
+
+          OUT_DIR = Path("docs/data/wsa")
+          OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+          now = datetime.now(timezone.utc)
+          today = now.strftime("%Y-%m-%d")
+
+          history_days = 27
+          forecast_days = 4
+          retention_days = 35
+
+          input_map = "AGONG"
+          sat = "ACE"
+
+          base_url = "https://ccmc.gsfc.nasa.gov/wsa-dashboard/api/get_solarwind_simple"
+
+          def build_url(start_dt, end_dt):
+              params = {
+                  "start_date": start_dt.strftime("%Y-%m-%d"),
+                  "end_date": end_dt.strftime("%Y-%m-%d"),
+                  "input_map": input_map,
+                  "sat": sat
+              }
+              return base_url + "?" + urllib.parse.urlencode(params)
+
+          def fetch_json(url, tries=4, timeout=120):
+              last_error = None
+
+              for i in range(tries):
+                  try:
+                      print("GET:", url)
+
+                      req = urllib.request.Request(
+                          url,
+                          headers={
+                              "User-Agent": "github-actions-wsa-cache",
+                              "Accept": "application/json,*/*"
+                          }
+                      )
+
+                      with urllib.request.urlopen(req, timeout=timeout) as r:
+                          text = r.read().decode("utf-8", errors="replace")
+                          print("HTTP:", r.status)
+                          print("Head:", text[:300].replace("\n", " "))
+                          return json.loads(text)
+
+                  except Exception as e:
+                      last_error = str(e)
+                      wait = 20 * (i + 1)
+                      print(f"Retry {i+1}/{tries} failed:", e)
+                      print(f"Waiting {wait}s")
+                      time.sleep(wait)
+
+              print("Final fetch error:", last_error)
+              return {
+                  "_error": last_error,
+                  "solarwind": []
+              }
+
+          def parse_time(value):
+              if value is None:
+                  return None
+
+              s = str(value).strip()
+
+              if s.endswith("Z"):
+                  s = s[:-1] + "+00:00"
+
+              try:
+                  dt = datetime.fromisoformat(s)
+                  if dt.tzinfo is None:
+                      dt = dt.replace(tzinfo=timezone.utc)
+                  return dt.astimezone(timezone.utc)
+              except Exception:
+                  return None
+
+          def to_float(value):
+              try:
+                  if value is None:
+                      return None
+                  s = str(value).strip()
+                  if s == "" or s.lower() in ("nan", "none", "null"):
+                      return None
+                  return float(s)
+              except Exception:
+                  return None
+
+          def parse_solarwind(obj, label):
+              rows = []
+
+              solarwind = obj.get("solarwind") if isinstance(obj, dict) else None
+
+              if not isinstance(solarwind, list):
+                  print(f"[{label}] No solarwind list")
+                  if isinstance(obj, dict):
+                      print(f"[{label}] keys:", list(obj.keys()))
+                  return rows
+
+              for row in solarwind:
+                  if not isinstance(row, dict):
+                      continue
+
+                  dt = parse_time(row.get("time"))
+                  speed = to_float(row.get("Vp"))
+
+                  if not dt or speed is None:
+                      continue
+
+                  if speed < 150 or speed > 1200:
+                      continue
+
+                  rec = {
+                      "time": dt.isoformat(),
+                      "speed": round(speed, 2),
+                      "is_forecast": dt > now,
+                      "source_range": label
+                  }
+
+                  if "imf_polarity" in row:
+                      pol = to_float(row.get("imf_polarity"))
+                      if pol is not None:
+                          rec["imf_polarity"] = int(pol)
+
+                  optional_map = {
+                      "density": ["density", "Np", "n", "proton_density"],
+                      "bt": ["Bt", "bt", "B"],
+                      "bz": ["Bz", "bz"]
+                  }
+
+                  for out_key, keys in optional_map.items():
+                      for k in keys:
+                          if k in row:
+                              v = to_float(row.get(k))
+                              if v is not None:
+                                  rec[out_key] = round(v, 3)
+                                  break
+
+                  rows.append(rec)
+
+              print(f"[{label}] parsed:", len(rows))
+              return rows
+
+          # 1回目：過去27日〜現在
+          hist_start = now - timedelta(days=history_days)
+          hist_end = now
+
+          # 2回目：現在〜4日後
+          fc_start = now
+          fc_end = now + timedelta(days=forecast_days)
+
+          hist_url = build_url(hist_start, hist_end)
+          fc_url = build_url(fc_start, fc_end)
+
+          hist_obj = fetch_json(hist_url)
+          fc_obj = fetch_json(fc_url)
+
+          records = []
+          records.extend(parse_solarwind(hist_obj, "history"))
+          records.extend(parse_solarwind(fc_obj, "forecast"))
+
+          # 重複削除
+          dedup = {}
+          for r in records:
+              dedup[r["time"]] = r
+
+          records = list(dedup.values())
+          records.sort(key=lambda x: x["time"])
+
+          if not records:
+              print("No records fetched.")
+
+              latest_file = OUT_DIR / "latest.json"
+              if latest_file.exists():
+                  print("Preserve existing latest.json")
+                  old = json.loads(latest_file.read_text(encoding="utf-8"))
+                  old["last_update_error"] = "No WSA records fetched in latest workflow run"
+                  old["last_failed_at"] = now.isoformat()
+
+                  latest_file.write_text(
+                      json.dumps(old, ensure_ascii=False, indent=2),
+                      encoding="utf-8"
+                  )
+
+                  index = {
+                      "updated_at": now.isoformat(),
+                      "source": "NASA CCMC WSA Dashboard",
+                      "api": "get_solarwind_simple",
+                      "input_map": input_map,
+                      "sat": sat,
+                      "history_days": history_days,
+                      "forecast_days": forecast_days,
+                      "latest": "latest.json",
+                      "history": "history-27d-plus-4d.json",
+                      "last_update_error": "No WSA records fetched; preserved previous latest.json"
+                  }
+
+                  (OUT_DIR / "index.json").write_text(
+                      json.dumps(index, ensure_ascii=False, indent=2),
+                      encoding="utf-8"
+                  )
+
+              else:
+                  raise SystemExit("No WSA records and no previous latest.json")
+
+          else:
+              forecast_count = sum(1 for r in records if r.get("is_forecast"))
+              history_count = len(records) - forecast_count
+
+              payload = {
+                  "generated_at": now.isoformat(),
+                  "source": "NASA CCMC WSA Dashboard",
+                  "api": "get_solarwind_simple",
+                  "history_url": hist_url,
+                  "forecast_url": fc_url,
+                  "input_map": input_map,
+                  "sat": sat,
+                  "startDate": hist_start.strftime("%Y-%m-%d"),
+                  "endDate": fc_end.strftime("%Y-%m-%d"),
+                  "history_days": history_days,
+                  "forecast_days": forecast_days,
+                  "record_count": len(records),
+                  "history_record_count": history_count,
+                  "forecast_record_count": forecast_count,
+                  "now_utc": now.isoformat(),
+                  "records": records,
+                  "raw_meta": {
+                      "history_comment": hist_obj.get("comment") if isinstance(hist_obj, dict) else None,
+                      "forecast_comment": fc_obj.get("comment") if isinstance(fc_obj, dict) else None,
+                      "input_map": input_map,
+                      "sat": sat
+                  }
+              }
+
+              daily_file = OUT_DIR / f"{today}.json"
+              latest_file = OUT_DIR / "latest.json"
+              history_file = OUT_DIR / "history-27d-plus-4d.json"
+
+              for f in [daily_file, latest_file, history_file]:
+                  f.write_text(
+                      json.dumps(payload, ensure_ascii=False, indent=2),
+                      encoding="utf-8"
+                  )
+                  print("Saved:", f)
+
+              keep_dates = {
+                  (now - timedelta(days=i)).strftime("%Y-%m-%d")
+                  for i in range(retention_days)
+              }
+
+              for f in OUT_DIR.glob("*.json"):
+                  if f.name in (
+                      "index.json",
+                      "latest.json",
+                      "history-27d.json",
+                      "history-27d-plus-4d.json"
+                  ):
+                      continue
+
+                  if f.stem not in keep_dates:
+                      print("Delete old file:", f)
+                      f.unlink()
+
+              all_files = sorted(
+                  [
+                      f for f in OUT_DIR.glob("*.json")
+                      if f.name not in (
+                          "index.json",
+                          "latest.json",
+                          "history-27d.json",
+                          "history-27d-plus-4d.json"
+                      )
+                  ],
+                  reverse=True
+              )
+
+              file_entries = []
+
+              for f in all_files:
+                  try:
+                      item = json.loads(f.read_text(encoding="utf-8"))
+
+                      file_entries.append({
+                          "date": f.stem,
+                          "file": f.name,
+                          "path": f"./data/wsa/{f.name}",
+                          "generated_at": item.get("generated_at"),
+                          "startDate": item.get("startDate"),
+                          "endDate": item.get("endDate"),
+                          "history_days": item.get("history_days"),
+                          "forecast_days": item.get("forecast_days"),
+                          "input_map": item.get("input_map"),
+                          "sat": item.get("sat"),
+                          "record_count": item.get("record_count", 0),
+                          "history_record_count": item.get("history_record_count", 0),
+                          "forecast_record_count": item.get("forecast_record_count", 0)
+                      })
+
+                  except Exception as e:
+                      file_entries.append({
+                          "date": f.stem,
+                          "file": f.name,
+                          "path": f"./data/wsa/{f.name}",
+                          "error": str(e)
+                      })
+
+              index = {
+                  "updated_at": now.isoformat(),
+                  "source": "NASA CCMC WSA Dashboard",
+                  "api": "get_solarwind_simple",
+                  "input_map": input_map,
+                  "sat": sat,
+                  "history_days": history_days,
+                  "forecast_days": forecast_days,
+                  "retention_days": retention_days,
+                  "latest": "latest.json",
+                  "history": "history-27d-plus-4d.json",
+                  "latest_daily": f"{today}.json",
+                  "record_count": len(records),
+                  "history_record_count": history_count,
+                  "forecast_record_count": forecast_count,
+                  "files": file_entries
+              }
+
+              index_file = OUT_DIR / "index.json"
+              index_file.write_text(
+                  json.dumps(index, ensure_ascii=False, indent=2),
+                  encoding="utf-8"
+              )
+
+              print("Saved:", index_file)
+              print(json.dumps(index, ensure_ascii=False, indent=2))
+
+          PY
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add docs/data/wsa
+
+          git commit -m "Update WSA solar wind cache" || echo "No changes"
+          git push
