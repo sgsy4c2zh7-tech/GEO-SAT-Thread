@@ -34,8 +34,10 @@ jobs:
           # Settings
           # =========================================================
           now = datetime.now(timezone.utc)
+          # 保存対象は「過去2日分」のみ。未来分は保存しない。
           days = 2
           since = now - timedelta(days=days)
+          until = now
 
           base_dir = Path("docs/data/cdaw")
           img_dir = base_dir / "images"
@@ -240,7 +242,8 @@ jobs:
           for c in candidates:
               dt = c.get("time")
               if dt is not None:
-                  if dt >= since - timedelta(hours=6) and dt <= now + timedelta(hours=2):
+                  # 過去2日分のみ採用。古いもの・未来時刻のものは除外。
+                  if since <= dt <= until:
                       filtered.append(c)
               elif c.get("fixed_latest"):
                   filtered.append(c)
@@ -288,9 +291,9 @@ jobs:
                   if c.get("fixed_latest") and dt < since:
                       dt = now
 
-                  # 日付が明らかに範囲外ならスキップ。ただしfixed latestは保存。
+                  # 日付が範囲外ならスキップ。ただしfixed latestはUI用に現在時刻扱いで保存。
                   if not c.get("fixed_latest"):
-                      if dt < since - timedelta(hours=6) or dt > now + timedelta(hours=2):
+                      if dt < since or dt > until:
                           continue
 
                   fname = local_filename(url, kind, dt)
@@ -329,9 +332,24 @@ jobs:
           # =========================================================
           # Cleanup old images
           # =========================================================
+          # 2日より前の画像は削除。今回のindexに入らなかったものも削除。
           keep_files = {Path(x["file"]).name for x in images}
           for f in img_dir.glob("*"):
-              if f.is_file() and f.name not in keep_files:
+              if not f.is_file():
+                  continue
+              delete = f.name not in keep_files
+
+              # ファイル名先頭の YYYYMMDDTHHMMSSZ からも古い画像を判定
+              m = re.match(r"(20\d{6}T\d{6}Z)_", f.name)
+              if m:
+                  try:
+                      fdt = datetime.strptime(m.group(1), "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+                      if fdt < since or fdt > until + timedelta(minutes=5):
+                          delete = True
+                  except Exception:
+                      pass
+
+              if delete:
                   print("Delete old image:", f)
                   f.unlink()
 
@@ -348,6 +366,8 @@ jobs:
               "requested_url": "https://cdaw.gsfc.nasa.gov/movie/mak",
               "days": days,
               "since": since.isoformat(),
+              "until": until.isoformat(),
+              "retention_policy": "keep only past 2 days; delete older images",
               "image_count": len(images),
               "by_kind": by_kind,
               "images": images,
@@ -378,5 +398,5 @@ jobs:
 
           git add docs/data/cdaw
 
-          git commit -m "Update CDAW SOHO CME images" || echo "No changes"
+          git commit -m "Update CDAW SOHO CME images past 2 days" || echo "No changes"
           git push
