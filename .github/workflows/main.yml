@@ -1,372 +1,374 @@
-name: Update WSA Solar Wind Cache
+name: Update CDAW SOHO CME Images
 
 on:
   workflow_dispatch:
   schedule:
-    # 1日1回 UTC 02:00 / 日本時間 11:00
-    - cron: "0 2 * * *"
+    # 1日4回 UTC / 日本時間 00, 06, 12, 18時ごろ
+    - cron: "0 */6 * * *"
 
 permissions:
   contents: write
 
 jobs:
-  update-wsa:
+  update-cdaw-images:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch WSA Dashboard solar wind model
+      - name: Fetch CDAW / SOHO images
         run: |
           python3 <<'PY'
           import json
+          import re
           import time
+          import hashlib
           import urllib.request
           import urllib.parse
           from pathlib import Path
           from datetime import datetime, timedelta, timezone
+          from email.utils import parsedate_to_datetime
 
-          # =========================
+          # =========================================================
           # Settings
-          # =========================
-          base_dir = Path("docs/data/wsa")
-          base_dir.mkdir(parents=True, exist_ok=True)
-
+          # =========================================================
           now = datetime.now(timezone.utc)
-          today = now.strftime("%Y-%m-%d")
+          days = 2
+          since = now - timedelta(days=days)
 
-          # 過去27日 + 将来4日
-          history_days = 27
-          forecast_days = 4
-          retention_days = 35
+          base_dir = Path("docs/data/cdaw")
+          img_dir = base_dir / "images"
+          img_dir.mkdir(parents=True, exist_ok=True)
 
-          start_dt = now - timedelta(days=history_days)
-          end_dt = now + timedelta(days=forecast_days)
+          # User requested CDAW movie/mak. ただし画像URLが直接出ない場合があるので、
+          # SOHO realtime directoriesも併用して2日分を保存する。
+          page_targets = [
+              ("CDAW movie/mak", "https://cdaw.gsfc.nasa.gov/movie/mak"),
+              ("CDAW CME list", "https://cdaw.gsfc.nasa.gov/CME_list/"),
+              ("SOHO realtime images", "https://soho.nascom.nasa.gov/data/realtime-images.html"),
+              ("SOHO LASCO C2 dir", "https://soho.nascom.nasa.gov/data/realtime/c2/512/"),
+              ("SOHO LASCO C3 dir", "https://soho.nascom.nasa.gov/data/realtime/c3/512/"),
+              ("SOHO EIT 195 dir", "https://soho.nascom.nasa.gov/data/realtime/eit_195/512/"),
+              ("SOHO EIT 304 dir", "https://soho.nascom.nasa.gov/data/realtime/eit_304/512/"),
+          ]
 
-          start = start_dt.strftime("%Y-%m-%d")
-          end = end_dt.strftime("%Y-%m-%d")
+          # fallback latest images
+          fixed_images = [
+              ("SOHO LASCO C2 latest", "https://soho.nascom.nasa.gov/data/realtime/c2/512/latest.jpg"),
+              ("SOHO LASCO C3 latest", "https://soho.nascom.nasa.gov/data/realtime/c3/512/latest.jpg"),
+              ("SOHO EIT 195 latest", "https://soho.nascom.nasa.gov/data/realtime/eit_195/512/latest.jpg"),
+              ("SOHO EIT 304 latest", "https://soho.nascom.nasa.gov/data/realtime/eit_304/512/latest.jpg"),
+          ]
 
-          # CCMC WSA Dashboard API
-          # input_map: AGONG / AHMI
-          # sat: ACE / DSCOVR / Earth など
-          input_map = "AGONG"
-          sat = "ACE"
+          image_exts = (".jpg", ".jpeg", ".png", ".gif")
+          max_candidates = 350
+          max_downloads = 180
+          errors = []
 
-          base_url = "https://ccmc.gsfc.nasa.gov/wsa-dashboard/api/get_solarwind_simple"
+          # =========================================================
+          # Helpers
+          # =========================================================
+          def fetch_bytes(url, timeout=45):
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "User-Agent": "github-actions-cdaw-soho-image-cache/1.0",
+                      "Accept": "text/html,image/*,*/*"
+                  }
+              )
+              with urllib.request.urlopen(req, timeout=timeout) as r:
+                  data = r.read()
+                  headers = dict(r.headers.items())
+                  return data, headers, getattr(r, "status", None)
 
-          params = {
-              "start_date": start,
-              "end_date": end,
-              "input_map": input_map,
-              "sat": sat
-          }
+          def fetch_text(url):
+              data, headers, status = fetch_bytes(url)
+              return data.decode("utf-8", errors="replace"), headers, status
 
-          url = base_url + "?" + urllib.parse.urlencode(params)
-
-          print("WSA Dashboard API")
-          print("now:", now.isoformat())
-          print("start_date:", start)
-          print("end_date:", end)
-          print("history_days:", history_days)
-          print("forecast_days:", forecast_days)
-          print("input_map:", input_map)
-          print("sat:", sat)
-          print("url:", url)
-
-          # =========================
-          # Fetch helper
-          # =========================
-          def fetch_json(url, tries=5, timeout=120):
-              last_error = None
-
-              for i in range(tries):
-                  try:
-                      req = urllib.request.Request(
-                          url,
-                          headers={
-                              "User-Agent": "github-actions-wsa-cache",
-                              "Accept": "application/json,*/*"
-                          }
-                      )
-
-                      with urllib.request.urlopen(req, timeout=timeout) as r:
-                          text = r.read().decode("utf-8", errors="replace")
-                          print("HTTP status:", r.status)
-                          print("Response head:", text[:500].replace("\n", " "))
-
-                          return json.loads(text)
-
-                  except Exception as e:
-                      last_error = e
-                      wait = 20 * (i + 1)
-                      print(f"Retry {i+1}/{tries} failed:", e)
-                      print(f"Waiting {wait} sec...")
-                      time.sleep(wait)
-
-              raise last_error
-
-          # =========================
-          # Parse helpers
-          # =========================
-          def parse_time(value):
-              if value is None:
+          def resolve_url(base, href):
+              if not href:
                   return None
+              href = href.strip().strip('"').strip("'")
+              if href.startswith("data:") or href.startswith("javascript:"):
+                  return None
+              return urllib.parse.urljoin(base, href)
 
-              s = str(value).strip()
+          def is_image_url(url):
+              path = urllib.parse.urlparse(url).path.lower()
+              return path.endswith(image_exts)
 
-              if s.endswith("Z"):
-                  s = s[:-1] + "+00:00"
+          def classify_kind(url, label=""):
+              s = (url + " " + label).lower()
+              if "lasco" in s and "c2" in s or "/c2/" in s or "_c2" in s or "c2_" in s:
+                  return "LASCO C2"
+              if "lasco" in s and "c3" in s or "/c3/" in s or "_c3" in s or "c3_" in s:
+                  return "LASCO C3"
+              if "eit_195" in s or "195" in s:
+                  return "SOHO EIT 195"
+              if "eit_304" in s or "304" in s:
+                  return "SOHO EIT 304"
+              if "aia" in s and "193" in s:
+                  return "SDO AIA 193"
+              if "aia" in s and "304" in s:
+                  return "SDO AIA 304"
+              if "eit" in s:
+                  return "SOHO EIT"
+              if "soho" in s:
+                  return "SOHO"
+              if "cdaw" in s:
+                  return "CDAW"
+              return "Solar image"
 
+          def parse_time_from_url(url):
+              name = Path(urllib.parse.urlparse(url).path).name
+
+              patterns = [
+                  r"(20\d{2})(\d{2})(\d{2})[_-]?(\d{2})(\d{2})(\d{2})?",
+                  r"(20\d{2})[-_](\d{2})[-_](\d{2})[T_\- ]?(\d{2})[:_]?(\d{2})(?::?(\d{2}))?",
+              ]
+
+              for pat in patterns:
+                  m = re.search(pat, name)
+                  if not m:
+                      continue
+                  y, mo, d, hh, mm, ss = m.groups()
+                  try:
+                      return datetime(
+                          int(y), int(mo), int(d), int(hh), int(mm), int(ss or 0),
+                          tzinfo=timezone.utc
+                      )
+                  except Exception:
+                      pass
+
+              return None
+
+          def parse_last_modified(headers):
+              lm = headers.get("Last-Modified") or headers.get("last-modified")
+              if not lm:
+                  return None
               try:
-                  dt = datetime.fromisoformat(s)
+                  dt = parsedate_to_datetime(lm)
                   if dt.tzinfo is None:
                       dt = dt.replace(tzinfo=timezone.utc)
                   return dt.astimezone(timezone.utc)
               except Exception:
                   return None
 
-          def to_float(value):
+          def safe_slug(s, limit=80):
+              s = re.sub(r"[^A-Za-z0-9_.-]+", "_", s)
+              s = s.strip("_")
+              return s[:limit] or "image"
+
+          def local_filename(url, kind, dt):
+              ext = Path(urllib.parse.urlparse(url).path).suffix.lower()
+              if ext not in image_exts:
+                  ext = ".jpg"
+              stamp = dt.strftime("%Y%m%dT%H%M%SZ") if dt else now.strftime("%Y%m%dT%H%M%SZ")
+              name = Path(urllib.parse.urlparse(url).path).name
+              stem = safe_slug(Path(name).stem)
+              k = safe_slug(kind.lower().replace(" ", "_"))
+              h = hashlib.sha1(url.encode("utf-8")).hexdigest()[:8]
+              return f"{stamp}_{k}_{stem}_{h}{ext}"
+
+          def extract_image_urls(page_url, html):
+              out = []
+
+              # img/src, a/href, source/src などから拾う
+              for attr in ("src", "href"):
+                  for m in re.finditer(attr + r'\s*=\s*["\']([^"\']+)["\']', html, flags=re.I):
+                      u = resolve_url(page_url, m.group(1))
+                      if u and is_image_url(u):
+                          out.append(u)
+
+              # 生URLも拾う
+              for m in re.finditer(r'https?://[^\s"\'<>]+?\.(?:jpg|jpeg|png|gif)', html, flags=re.I):
+                  u = m.group(0)
+                  if is_image_url(u):
+                      out.append(u)
+
+              # Apache indexで href が相対の場合
+              for m in re.finditer(r'>([^<]+\.(?:jpg|jpeg|png|gif))<', html, flags=re.I):
+                  u = resolve_url(page_url, m.group(1))
+                  if u and is_image_url(u):
+                      out.append(u)
+
+              return out
+
+          # =========================================================
+          # Discover candidates
+          # =========================================================
+          candidates = []
+
+          for label, page in page_targets:
               try:
-                  if value is None:
-                      return None
+                  print("Fetch page:", label, page)
+                  html, headers, status = fetch_text(page)
+                  print("  status:", status, "bytes:", len(html))
+                  urls = extract_image_urls(page, html)
+                  print("  image urls:", len(urls))
+                  for u in urls:
+                      candidates.append({
+                          "source_name": label,
+                          "source_page": page,
+                          "url": u,
+                          "time": parse_time_from_url(u)
+                      })
+              except Exception as e:
+                  msg = f"{label}: {e}"
+                  print("  ERROR:", msg)
+                  errors.append(msg)
 
-                  s = str(value).strip()
+          # fixed latest fallback
+          for label, u in fixed_images:
+              candidates.append({
+                  "source_name": label,
+                  "source_page": u,
+                  "url": u,
+                  "time": None,
+                  "fixed_latest": True
+              })
 
-                  if s == "" or s.lower() in ("nan", "none", "null"):
-                      return None
-
-                  return float(s)
-
-              except Exception:
-                  return None
-
-          # =========================
-          # Fetch WSA
-          # =========================
-          obj = fetch_json(url)
-
-          if not isinstance(obj, dict):
-              raise SystemExit("WSA response is not JSON object")
-
-          solarwind = obj.get("solarwind")
-
-          if not isinstance(solarwind, list):
-              print("Response keys:", list(obj.keys()))
-              print("Full response head:")
-              print(json.dumps(obj, ensure_ascii=False, indent=2)[:1500])
-              raise SystemExit("No solarwind list in WSA response")
-
-          records = []
-
-          for row in solarwind:
-              if not isinstance(row, dict):
-                  continue
-
-              dt = parse_time(row.get("time"))
-
-              # get_solarwind_simple の速度キー
-              # Vp = solar wind proton speed
-              speed = to_float(row.get("Vp"))
-
-              if not dt or speed is None:
-                  continue
-
-              # 常識的な範囲のみ採用
-              if speed < 150 or speed > 1200:
-                  continue
-
-              rec = {
-                  "time": dt.isoformat(),
-                  "speed": round(speed, 2),
-                  "is_forecast": dt > now
-              }
-
-              # IMF polarity
-              if "imf_polarity" in row:
-                  pol = to_float(row.get("imf_polarity"))
-                  if pol is not None:
-                      rec["imf_polarity"] = int(pol)
-
-              # 将来API側に密度や磁場が入った場合に拾う
-              optional_map = {
-                  "density": ["density", "Np", "n", "proton_density"],
-                  "bt": ["Bt", "bt", "B"],
-                  "bz": ["Bz", "bz"]
-              }
-
-              for out_key, keys in optional_map.items():
-                  for k in keys:
-                      if k in row:
-                          v = to_float(row.get(k))
-                          if v is not None:
-                              rec[out_key] = round(v, 3)
-                              break
-
-              records.append(rec)
-
-          # 時刻順に整列
-          records.sort(key=lambda x: x["time"])
-
-          # 重複削除
+          # dedupe by URL
           dedup = {}
-          for r in records:
-              dedup[r["time"]] = r
+          for c in candidates:
+              dedup[c["url"]] = c
+          candidates = list(dedup.values())
 
-          records = list(dedup.values())
+          # Prefer dated recent files; keep latest fallback too
+          filtered = []
+          for c in candidates:
+              dt = c.get("time")
+              if dt is not None:
+                  if dt >= since - timedelta(hours=6) and dt <= now + timedelta(hours=2):
+                      filtered.append(c)
+              elif c.get("fixed_latest"):
+                  filtered.append(c)
+              else:
+                  # 日付不明は候補が少ない場合のみ使う
+                  filtered.append(c)
 
-          if not records:
-              raise SystemExit("No valid WSA solar wind records parsed")
-
-          forecast_count = sum(1 for r in records if r.get("is_forecast"))
-          history_count = len(records) - forecast_count
-
-          print("Parsed WSA records:", len(records))
-          print("History records:", history_count)
-          print("Forecast records:", forecast_count)
-          print("First:", records[0])
-          print("Last:", records[-1])
-
-          # =========================
-          # Save payload
-          # =========================
-          payload = {
-              "generated_at": now.isoformat(),
-              "source": "NASA CCMC WSA Dashboard",
-              "api": "get_solarwind_simple",
-              "url": url,
-              "input_map": input_map,
-              "sat": sat,
-              "startDate": start,
-              "endDate": end,
-              "history_days": history_days,
-              "forecast_days": forecast_days,
-              "record_count": len(records),
-              "history_record_count": history_count,
-              "forecast_record_count": forecast_count,
-              "now_utc": now.isoformat(),
-              "records": records,
-              "raw_meta": {
-                  "comment": obj.get("comment"),
-                  "input_map": obj.get("input_map"),
-                  "sat": obj.get("sat")
-              }
-          }
-
-          daily_file = base_dir / f"{today}.json"
-          latest_file = base_dir / "latest.json"
-          history_file = base_dir / "history-27d-plus-4d.json"
-
-          daily_file.write_text(
-              json.dumps(payload, ensure_ascii=False, indent=2),
-              encoding="utf-8"
+          # Sort: dated recent first, then latest fallback
+          filtered.sort(
+              key=lambda x: (
+                  0 if x.get("time") is not None else 1,
+                  -(x.get("time") or now).timestamp()
+              )
           )
 
-          latest_file.write_text(
-              json.dumps(payload, ensure_ascii=False, indent=2),
-              encoding="utf-8"
-          )
+          filtered = filtered[:max_candidates]
 
-          history_file.write_text(
-              json.dumps(payload, ensure_ascii=False, indent=2),
-              encoding="utf-8"
-          )
+          print("Candidates total:", len(candidates))
+          print("Candidates filtered:", len(filtered))
 
-          print("Saved:", daily_file)
-          print("Saved:", latest_file)
-          print("Saved:", history_file)
+          # =========================================================
+          # Download images
+          # =========================================================
+          images = []
+          seen_files = set()
 
-          # =========================
-          # Retention
-          # =========================
-          keep_dates = {
-              (now - timedelta(days=i)).strftime("%Y-%m-%d")
-              for i in range(retention_days)
-          }
+          for c in filtered:
+              if len(images) >= max_downloads:
+                  break
 
-          for f in base_dir.glob("*.json"):
-              if f.name in (
-                  "index.json",
-                  "latest.json",
-                  "history-27d.json",
-                  "history-27d-plus-4d.json"
-              ):
-                  continue
+              url = c["url"]
+              kind = classify_kind(url, c.get("source_name", ""))
 
-              if f.stem not in keep_dates:
-                  print("Delete old file:", f)
-                  f.unlink()
-
-          # =========================
-          # Build index.json
-          # =========================
-          all_files = sorted(
-              [
-                  f for f in base_dir.glob("*.json")
-                  if f.name not in (
-                      "index.json",
-                      "latest.json",
-                      "history-27d.json",
-                      "history-27d-plus-4d.json"
-                  )
-              ],
-              reverse=True
-          )
-
-          file_entries = []
-
-          for f in all_files:
               try:
-                  item = json.loads(f.read_text(encoding="utf-8"))
+                  data, headers, status = fetch_bytes(url, timeout=60)
+                  if status and int(status) >= 400:
+                      raise RuntimeError(f"HTTP {status}")
 
-                  file_entries.append({
-                      "date": f.stem,
-                      "file": f.name,
-                      "path": f"./data/wsa/{f.name}",
-                      "generated_at": item.get("generated_at"),
-                      "startDate": item.get("startDate"),
-                      "endDate": item.get("endDate"),
-                      "history_days": item.get("history_days"),
-                      "forecast_days": item.get("forecast_days"),
-                      "input_map": item.get("input_map"),
-                      "sat": item.get("sat"),
-                      "record_count": item.get("record_count", 0),
-                      "history_record_count": item.get("history_record_count", 0),
-                      "forecast_record_count": item.get("forecast_record_count", 0)
+                  if len(data) < 2000:
+                      raise RuntimeError(f"too small: {len(data)} bytes")
+
+                  dt = c.get("time") or parse_last_modified(headers) or now
+
+                  # latest fallbackで古いLast-Modifiedの場合も、UI用に取得時刻を使う
+                  if c.get("fixed_latest") and dt < since:
+                      dt = now
+
+                  # 日付が明らかに範囲外ならスキップ。ただしfixed latestは保存。
+                  if not c.get("fixed_latest"):
+                      if dt < since - timedelta(hours=6) or dt > now + timedelta(hours=2):
+                          continue
+
+                  fname = local_filename(url, kind, dt)
+                  if fname in seen_files:
+                      continue
+
+                  fpath = img_dir / fname
+                  fpath.write_bytes(data)
+                  seen_files.add(fname)
+
+                  images.append({
+                      "kind": kind,
+                      "label": kind,
+                      "time": dt.isoformat(),
+                      "downloaded_at": now.isoformat(),
+                      "file": f"images/{fname}",
+                      "path": f"./data/cdaw/images/{fname}",
+                      "source_name": c.get("source_name"),
+                      "source_page": c.get("source_page"),
+                      "source_url": url,
+                      "bytes": len(data),
+                      "is_latest_fallback": bool(c.get("fixed_latest"))
                   })
+
+                  print("Saved:", fname, kind, dt.isoformat(), len(data), "bytes")
 
               except Exception as e:
-                  file_entries.append({
-                      "date": f.stem,
-                      "file": f.name,
-                      "path": f"./data/wsa/{f.name}",
-                      "error": str(e)
-                  })
+                  msg = f"{url}: {e}"
+                  print("  IMAGE ERROR:", msg)
+                  errors.append(msg)
+
+              time.sleep(0.1)
+
+          images.sort(key=lambda x: x["time"], reverse=True)
+
+          # =========================================================
+          # Cleanup old images
+          # =========================================================
+          keep_files = {Path(x["file"]).name for x in images}
+          for f in img_dir.glob("*"):
+              if f.is_file() and f.name not in keep_files:
+                  print("Delete old image:", f)
+                  f.unlink()
+
+          # =========================================================
+          # Save index
+          # =========================================================
+          by_kind = {}
+          for img in images:
+              by_kind[img["kind"]] = by_kind.get(img["kind"], 0) + 1
 
           index = {
               "updated_at": now.isoformat(),
-              "source": "NASA CCMC WSA Dashboard",
-              "api": "get_solarwind_simple",
-              "input_map": input_map,
-              "sat": sat,
-              "history_days": history_days,
-              "forecast_days": forecast_days,
-              "retention_days": retention_days,
-              "latest": "latest.json",
-              "history": "history-27d-plus-4d.json",
-              "latest_daily": f"{today}.json",
-              "files": file_entries
+              "source": "CDAW movie/mak + SOHO realtime fallback",
+              "requested_url": "https://cdaw.gsfc.nasa.gov/movie/mak",
+              "days": days,
+              "since": since.isoformat(),
+              "image_count": len(images),
+              "by_kind": by_kind,
+              "images": images,
+              "errors": errors[-40:]
           }
 
-          index_file = base_dir / "index.json"
-          index_file.write_text(
+          base_dir.mkdir(parents=True, exist_ok=True)
+          (base_dir / "index.json").write_text(
               json.dumps(index, ensure_ascii=False, indent=2),
               encoding="utf-8"
           )
 
-          print("Saved:", index_file)
-          print(json.dumps(index, ensure_ascii=False, indent=2))
+          print("Saved:", base_dir / "index.json")
+          print(json.dumps({
+              "updated_at": index["updated_at"],
+              "image_count": index["image_count"],
+              "by_kind": index["by_kind"],
+              "errors": len(errors)
+          }, ensure_ascii=False, indent=2))
 
+          # 画像0枚でもActionsは失敗させない。UIにエラー表示させる。
           PY
 
       - name: Commit and push
@@ -374,7 +376,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add docs/data/wsa
+          git add docs/data/cdaw
 
-          git commit -m "Update WSA solar wind cache with forecast" || echo "No changes"
+          git commit -m "Update CDAW SOHO CME images" || echo "No changes"
           git push
