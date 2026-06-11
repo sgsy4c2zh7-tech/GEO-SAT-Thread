@@ -197,6 +197,65 @@ pre{
 .warnText{color:#ffcc80}
 .goodText{color:#9ccc65}
 .badText{color:#ff8a80}
+
+.cdawGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:12px;
+  margin-top:12px;
+}
+.cdawCard{
+  background:#05070d;
+  border:1px solid #263044;
+  border-radius:14px;
+  overflow:hidden;
+}
+.cdawCard img{
+  width:100%;
+  display:block;
+  background:#000;
+  aspect-ratio:1/1;
+  object-fit:contain;
+}
+.cdawMeta{
+  padding:8px;
+  font-size:12px;
+  color:var(--muted);
+}
+.cdawMeta b{color:#fff}
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.88);
+  z-index:999;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.modal.show{display:flex}
+.modalInner{
+  max-width:min(1000px,96vw);
+  max-height:96vh;
+  background:#05070d;
+  border:1px solid #34496e;
+  border-radius:16px;
+  padding:12px;
+}
+.modalInner img{
+  max-width:100%;
+  max-height:78vh;
+  display:block;
+  margin:auto;
+  background:#000;
+}
+.modalCaption{
+  color:#dbeafe;
+  font-size:13px;
+  margin-top:8px;
+  line-height:1.5;
+}
+
 </style>
 </head>
 
@@ -207,6 +266,7 @@ pre{
   <div>
     <button class="primary" onclick="loadDONKICache()">DONKI Cache読込</button>
     <button onclick="loadWSA()">WSA背景風読込</button>
+    <button onclick="loadCDAWImages()">CDAW画像読込</button>
     <button onclick="loadCACTus()">CACTus取得</button>
     <button onclick="loadNOAAAll()">NOAA環境取得</button>
     <button onclick="loadAll()">全部取得</button>
@@ -218,7 +278,8 @@ pre{
     DONKI: <code>./data/donki/index.json</code> を読込。  
     WSA: <code>./data/wsa/index.json</code> を読込し、DBM-liteの背景太陽風 <b>w(t)</b> に使用。  
     地球到達判定は <b>DONKI longitude / latitude / halfAngle</b> → <b>sep / halfAngle</b> → <b>CORE/BODY/FLANK/MISS</b>。  
-    MISSは地球伝播・衛星影響から排除。
+    MISSは地球伝播・衛星影響から排除。<br>
+    CDAW/SOHO画像: <code>./data/cdaw/index.json</code> を読込して、太陽面・LASCO C2/C3を2日分表示。
   </div>
 </header>
 
@@ -272,6 +333,21 @@ pre{
   <div id="table"></div>
 </section>
 
+
+<section class="card" style="margin-top:16px">
+  <h3>⑦ CDAW / SOHO CME Images</h3>
+  <div id="cdawSummary" class="small">未取得</div>
+  <div id="cdawGallery" class="cdawGrid"></div>
+</section>
+
+<div id="cdawModal" class="modal" onclick="closeCDAWModal()">
+  <div class="modalInner" onclick="event.stopPropagation()">
+    <button class="danger" onclick="closeCDAWModal()">閉じる</button>
+    <img id="cdawModalImg" src="" alt="CDAW image">
+    <div id="cdawModalCaption" class="modalCaption"></div>
+  </div>
+</div>
+
 <section class="card" style="margin-top:16px">
   <h3>Debug JSON</h3>
   <pre id="raw"></pre>
@@ -286,6 +362,7 @@ pre{
 
 const DONKI_CACHE_INDEX = "./data/donki/index.json";
 const WSA_CACHE_INDEX = "./data/wsa/index.json";
+const CDAW_IMAGE_INDEX = "./data/cdaw/index.json";
 const DONKI_LON_POSITIVE_WEST = true;
 
 const CACTUS_URL = "https://www.sidc.be/cactus/out/latestCMEs.html";
@@ -320,6 +397,7 @@ const STATE = {
     donkiSEP:src("DONKI SEP","未取得"),
     donkiFLR:src("DONKI FLR","未取得"),
     wsa:src("WSA Wind Model","未取得"),
+    cdawImages:src("CDAW/SOHO Images","未取得"),
     cactus:src("CACTus CME","未取得"),
     noaaWind:src("NOAA Wind","未取得"),
     noaaMag:src("NOAA IMF","未取得"),
@@ -330,6 +408,8 @@ const STATE = {
   donkiPayloads:[],
   wsaIndex:null,
   wsaModel:null,
+  cdawIndex:null,
+  cdawImages:[],
   env:defaultEnv(),
   cmes:[],
   timelineCenter:new Date(),
@@ -569,6 +649,48 @@ async function loadWSA(){
   }
 }
 
+
+async function loadCDAWImages(){
+  setSource("cdawImages","LOADING...");
+  try{
+    const index=await fetchJson(CDAW_IMAGE_INDEX);
+    const images=Array.isArray(index.images) ? index.images : [];
+
+    const normalized=images.map((img,i)=>({
+      ...img,
+      _i:i,
+      _t:new Date(img.time || img.observation_time || img.downloaded_at || index.updated_at || Date.now()).getTime(),
+      path:img.path || img.file || img.url || "",
+      label:img.label || img.kind || "image",
+      kind:img.kind || classifyCDAWKind(img)
+    }))
+    .filter(x=>x.path)
+    .sort((a,b)=>b._t-a._t);
+
+    STATE.cdawIndex=index;
+    STATE.cdawImages=normalized;
+
+    setSource("cdawImages",`OK: ${normalized.length} images`,{index,images:normalized});
+    renderCDAWGallery();
+
+  }catch(e){
+    STATE.cdawIndex=null;
+    STATE.cdawImages=[];
+    setSource("cdawImages","FAILED",null,e.message);
+    renderCDAWGallery();
+  }
+}
+
+function classifyCDAWKind(img){
+  const s=String([img.kind,img.label,img.file,img.path,img.source_url].join(" ")).toLowerCase();
+  if(s.includes("c2")) return "LASCO C2";
+  if(s.includes("c3")) return "LASCO C3";
+  if(s.includes("aia")) return "SDO/AIA";
+  if(s.includes("eit")) return "SOHO/EIT";
+  if(s.includes("hmi")) return "SDO/HMI";
+  return "Solar";
+}
+
 async function loadCACTus(){
   setSource("cactus","LOADING...");
   try{
@@ -638,6 +760,7 @@ async function loadAll(){
   await Promise.allSettled([
     loadDONKICache(),
     loadWSA(),
+    loadCDAWImages(),
     loadCACTus(),
     loadNOAAWind(),
     loadNOAAMag(),
@@ -655,6 +778,7 @@ function renderSourcePanel(){
   const rows=[
     ["donkiCache","DONKI Cache",loadDONKICache],
     ["wsa","WSA Wind Model",loadWSA],
+    ["cdawImages","CDAW/SOHO Images",loadCDAWImages],
     ["cactus","CACTus CME",loadCACTus],
     ["noaaWind","NOAA Wind",loadNOAAWind],
     ["noaaMag","NOAA IMF",loadNOAAMag],
@@ -1560,6 +1684,8 @@ function rebuildAll(){
     wsaIndex:STATE.wsaIndex,
     wsaLoaded:Boolean(STATE.wsaModel),
     wsaRecords:STATE.wsaModel?.records?.length || 0,
+    cdawIndex:STATE.cdawIndex,
+    cdawImages:STATE.cdawImages?.length || 0,
     env:STATE.env,
     counts:{
       total:STATE.cmes.length,
@@ -2280,6 +2406,102 @@ function drawWindSeries(selectedTime){
     `選択時刻の背景風: <b>${wNow!==null ? Math.round(wNow)+" km/s" : "N/A"}</b> / <b>${mode}</b>`;
 }
 
+
+/* =========================================================
+   CDAW / SOHO IMAGE GALLERY
+========================================================= */
+
+function renderCDAWGallery(){
+  const summary=document.getElementById("cdawSummary");
+  const gallery=document.getElementById("cdawGallery");
+  if(!summary || !gallery) return;
+
+  const imgs=STATE.cdawImages || [];
+  if(!imgs.length){
+    summary.innerHTML='CDAW/SOHO画像未読込。<button onclick="loadCDAWImages()">画像読込</button>';
+    gallery.innerHTML="";
+    return;
+  }
+
+  const byKind={};
+  imgs.forEach(x=>{
+    const k=x.kind || x.label || "Image";
+    byKind[k]=(byKind[k]||0)+1;
+  });
+
+  const kinds=Object.entries(byKind)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([k,v])=>`${escapeHtml(k)} ${v}`)
+    .join(" / ");
+
+  const latest=imgs[0];
+  const oldest=imgs[imgs.length-1];
+
+  summary.innerHTML =
+    `保存画像: <b>${imgs.length}</b>枚 / ${kinds}<br>`+
+    `範囲: <b>${formatDateTime(oldest._t)}</b> → <b>${formatDateTime(latest._t)}</b><br>`+
+    `更新: <b>${escapeHtml(STATE.cdawIndex?.updated_at || "-")}</b> / `+
+    `保存先: <code>./data/cdaw/images/</code>`;
+
+  const top=imgs.slice(0,72);
+
+  gallery.innerHTML=top.map((img,i)=>{
+    const src=img.path;
+    const time=formatDateTime(img._t);
+    const kind=escapeHtml(img.kind || img.label || "Image");
+    const label=escapeHtml(img.label || img.instrument || img.kind || "CDAW/SOHO");
+    const source=escapeHtml(img.source_name || img.source || "CDAW/SOHO");
+    const badge = kind.toLowerCase().includes("c2") ? "pill mid" :
+                  kind.toLowerCase().includes("c3") ? "pill info" :
+                  kind.toLowerCase().includes("aia") || kind.toLowerCase().includes("eit") ? "pill good" :
+                  "pill info";
+
+    return `
+      <div class="cdawCard">
+        <img src="${escapeHtml(src)}" alt="${label}" loading="lazy" onclick="openCDAWImage(${img._i})">
+        <div class="cdawMeta">
+          <span class="${badge}">${kind}</span><br>
+          <b>${label}</b><br>
+          ${time}<br>
+          <span>${source}</span><br>
+          ${img.source_url ? `<a href="${escapeHtml(img.source_url)}" target="_blank" style="color:#4fc3f7">source</a>` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function openCDAWImage(index){
+  const img=(STATE.cdawImages || []).find(x=>x._i===index);
+  if(!img) return;
+
+  const modal=document.getElementById("cdawModal");
+  const image=document.getElementById("cdawModalImg");
+  const cap=document.getElementById("cdawModalCaption");
+
+  image.src=img.path;
+  cap.innerHTML =
+    `<b>${escapeHtml(img.label || img.kind || "CDAW/SOHO image")}</b><br>`+
+    `${formatDateTime(img._t)} / ${escapeHtml(img.kind || "-")}<br>`+
+    `file: <code>${escapeHtml(img.path || "")}</code><br>`+
+    `${img.source_url ? `source: <a href="${escapeHtml(img.source_url)}" target="_blank" style="color:#4fc3f7">${escapeHtml(img.source_url)}</a>` : ""}`;
+
+  modal.classList.add("show");
+}
+
+function closeCDAWModal(){
+  const modal=document.getElementById("cdawModal");
+  const image=document.getElementById("cdawModalImg");
+  if(modal) modal.classList.remove("show");
+  if(image) image.src="";
+}
+
+function formatDateTime(value){
+  const d=value instanceof Date ? value : new Date(value);
+  if(!Number.isFinite(d.getTime())) return "-";
+  return d.toISOString().slice(0,16).replace("T"," ")+" UTC";
+}
+
 /* =========================================================
    HAZARD
 ========================================================= */
@@ -2579,6 +2801,7 @@ window.addEventListener("resize",()=>updateTimeline());
 
 renderSourcePanel();
 initTimelineWindow();
+renderCDAWGallery();
 rebuildAll();
 </script>
 
