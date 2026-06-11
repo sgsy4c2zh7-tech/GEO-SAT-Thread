@@ -1,402 +1,293 @@
-name: Update CDAW SOHO CME Images
+name: Update Helioviewer AIA193 LASCO C2 Images
 
 on:
   workflow_dispatch:
   schedule:
-    # 1日4回 UTC / 日本時間 00, 06, 12, 18時ごろ
-    - cron: "0 */6 * * *"
+    # 1時間ごとに更新。初回は過去2日分、以後は不足分だけ追加
+    - cron: "8 * * * *"
 
 permissions:
   contents: write
 
 jobs:
-  update-cdaw-images:
+  update-helioviewer-images:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch CDAW / SOHO images
+      - name: Fetch AIA193 and LASCO C2 images from Helioviewer
         run: |
-          python3 <<'PY'
+          python3 <<'PYCODE'
           import json
-          import re
           import time
-          import hashlib
-          import urllib.request
           import urllib.parse
+          import urllib.request
           from pathlib import Path
           from datetime import datetime, timedelta, timezone
-          from email.utils import parsedate_to_datetime
 
           # =========================================================
           # Settings
           # =========================================================
-          now = datetime.now(timezone.utc)
-          # 保存対象は「過去2日分」のみ。未来分は保存しない。
-          days = 2
-          since = now - timedelta(days=days)
-          until = now
-
-          base_dir = Path("docs/data/cdaw")
-          img_dir = base_dir / "images"
-          img_dir.mkdir(parents=True, exist_ok=True)
-
-          # User requested CDAW movie/mak. ただし画像URLが直接出ない場合があるので、
-          # SOHO realtime directoriesも併用して2日分を保存する。
-          page_targets = [
-              ("CDAW movie/mak", "https://cdaw.gsfc.nasa.gov/movie/mak"),
-              ("CDAW CME list", "https://cdaw.gsfc.nasa.gov/CME_list/"),
-              ("SOHO realtime images", "https://soho.nascom.nasa.gov/data/realtime-images.html"),
-              ("SOHO LASCO C2 dir", "https://soho.nascom.nasa.gov/data/realtime/c2/512/"),
-              ("SOHO LASCO C3 dir", "https://soho.nascom.nasa.gov/data/realtime/c3/512/"),
-              ("SOHO EIT 195 dir", "https://soho.nascom.nasa.gov/data/realtime/eit_195/512/"),
-              ("SOHO EIT 304 dir", "https://soho.nascom.nasa.gov/data/realtime/eit_304/512/"),
+          # 保存対象はこの2種類だけ
+          CHANNELS = [
+              {
+                  "kind": "solar",
+                  "channel": "AIA193",
+                  "label": "SDO/AIA 193",
+                  "sourceId": 11,
+                  "layers": "[SDO,AIA,AIA,193,1,100]",
+                  # 太陽円盤が大きく見える設定
+                  "imageScale": 2.42,
+                  "width": 768,
+                  "height": 768,
+                  "x0": 0,
+                  "y0": 0,
+                  "watermark": "true"
+              },
+              {
+                  "kind": "c2",
+                  "channel": "LASCO_C2",
+                  "label": "SOHO/LASCO C2",
+                  "sourceId": 4,
+                  "layers": "[SOHO,LASCO,C2,white-light,1,100]",
+                  # LASCO C2全体が入る設定
+                  "imageScale": 11.0,
+                  "width": 768,
+                  "height": 768,
+                  "x0": 0,
+                  "y0": 0,
+                  "watermark": "true"
+              }
           ]
 
-          # fallback latest images
-          fixed_images = [
-              ("SOHO LASCO C2 latest", "https://soho.nascom.nasa.gov/data/realtime/c2/512/latest.jpg"),
-              ("SOHO LASCO C3 latest", "https://soho.nascom.nasa.gov/data/realtime/c3/512/latest.jpg"),
-              ("SOHO EIT 195 latest", "https://soho.nascom.nasa.gov/data/realtime/eit_195/512/latest.jpg"),
-              ("SOHO EIT 304 latest", "https://soho.nascom.nasa.gov/data/realtime/eit_304/512/latest.jpg"),
-          ]
+          API_BASE = "https://api.helioviewer.org/v2"
+          OUT_DIR = Path("docs/data/helioviewer")
+          IMG_DIR = OUT_DIR / "images"
+          OUT_DIR.mkdir(parents=True, exist_ok=True)
+          IMG_DIR.mkdir(parents=True, exist_ok=True)
 
-          image_exts = (".jpg", ".jpeg", ".png", ".gif")
-          max_candidates = 350
-          max_downloads = 180
-          errors = []
+          # 互換用。既存HTMLが ./data/cdaw/index.json を読んでも使えるよう同じJSONを置く。
+          COMPAT_DIR = Path("docs/data/cdaw")
+          COMPAT_DIR.mkdir(parents=True, exist_ok=True)
 
-          # =========================================================
-          # Helpers
-          # =========================================================
-          def fetch_bytes(url, timeout=45):
-              req = urllib.request.Request(
-                  url,
-                  headers={
-                      "User-Agent": "github-actions-cdaw-soho-image-cache/1.0",
-                      "Accept": "text/html,image/*,*/*"
-                  }
-              )
-              with urllib.request.urlopen(req, timeout=timeout) as r:
-                  data = r.read()
-                  headers = dict(r.headers.items())
-                  return data, headers, getattr(r, "status", None)
+          now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+          history_days = 2
+          cadence_minutes = 15
+          start = now - timedelta(days=history_days)
+          cutoff = start
 
-          def fetch_text(url):
-              data, headers, status = fetch_bytes(url)
-              return data.decode("utf-8", errors="replace"), headers, status
+          def floor_to_cadence(dt):
+              m = (dt.minute // cadence_minutes) * cadence_minutes
+              return dt.replace(minute=m, second=0, microsecond=0)
 
-          def resolve_url(base, href):
-              if not href:
-                  return None
-              href = href.strip().strip('"').strip("'")
-              if href.startswith("data:") or href.startswith("javascript:"):
-                  return None
-              return urllib.parse.urljoin(base, href)
+          start_slot = floor_to_cadence(start)
+          end_slot = floor_to_cadence(now)
 
-          def is_image_url(url):
-              path = urllib.parse.urlparse(url).path.lower()
-              return path.endswith(image_exts)
+          def iso_z(dt):
+              return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-          def classify_kind(url, label=""):
-              s = (url + " " + label).lower()
-              if "lasco" in s and "c2" in s or "/c2/" in s or "_c2" in s or "c2_" in s:
-                  return "LASCO C2"
-              if "lasco" in s and "c3" in s or "/c3/" in s or "_c3" in s or "c3_" in s:
-                  return "LASCO C3"
-              if "eit_195" in s or "195" in s:
-                  return "SOHO EIT 195"
-              if "eit_304" in s or "304" in s:
-                  return "SOHO EIT 304"
-              if "aia" in s and "193" in s:
-                  return "SDO AIA 193"
-              if "aia" in s and "304" in s:
-                  return "SDO AIA 304"
-              if "eit" in s:
-                  return "SOHO EIT"
-              if "soho" in s:
-                  return "SOHO"
-              if "cdaw" in s:
-                  return "CDAW"
-              return "Solar image"
+          def safe_stamp(dt):
+              return dt.astimezone(timezone.utc).strftime("%Y%m%d_%H%M")
 
-          def parse_time_from_url(url):
-              name = Path(urllib.parse.urlparse(url).path).name
+          def image_filename(ch, dt):
+              return f"{ch['channel'].lower()}_{safe_stamp(dt)}.png"
 
-              patterns = [
-                  r"(20\d{2})(\d{2})(\d{2})[_-]?(\d{2})(\d{2})(\d{2})?",
-                  r"(20\d{2})[-_](\d{2})[-_](\d{2})[T_\- ]?(\d{2})[:_]?(\d{2})(?::?(\d{2}))?",
-              ]
-
-              for pat in patterns:
-                  m = re.search(pat, name)
-                  if not m:
-                      continue
-                  y, mo, d, hh, mm, ss = m.groups()
+          def fetch_bytes(url, tries=3, timeout=120):
+              last = None
+              for i in range(tries):
                   try:
-                      return datetime(
-                          int(y), int(mo), int(d), int(hh), int(mm), int(ss or 0),
-                          tzinfo=timezone.utc
+                      req = urllib.request.Request(
+                          url,
+                          headers={
+                              "User-Agent": "github-actions-helioviewer-aia193-c2-cache/1.0",
+                              "Accept": "image/png,image/*,*/*"
+                          }
                       )
-                  except Exception:
-                      pass
+                      with urllib.request.urlopen(req, timeout=timeout) as r:
+                          data = r.read()
+                          headers = dict(r.headers.items())
+                          status = getattr(r, "status", None)
+                          return data, headers, status
+                  except Exception as e:
+                      last = e
+                      print(f"  retry {i+1}/{tries} failed:", e)
+                      time.sleep(5 * (i + 1))
+              raise last
 
-              return None
-
-          def parse_last_modified(headers):
-              lm = headers.get("Last-Modified") or headers.get("last-modified")
-              if not lm:
-                  return None
-              try:
-                  dt = parsedate_to_datetime(lm)
-                  if dt.tzinfo is None:
-                      dt = dt.replace(tzinfo=timezone.utc)
-                  return dt.astimezone(timezone.utc)
-              except Exception:
-                  return None
-
-          def safe_slug(s, limit=80):
-              s = re.sub(r"[^A-Za-z0-9_.-]+", "_", s)
-              s = s.strip("_")
-              return s[:limit] or "image"
-
-          def local_filename(url, kind, dt):
-              ext = Path(urllib.parse.urlparse(url).path).suffix.lower()
-              if ext not in image_exts:
-                  ext = ".jpg"
-              stamp = dt.strftime("%Y%m%dT%H%M%SZ") if dt else now.strftime("%Y%m%dT%H%M%SZ")
-              name = Path(urllib.parse.urlparse(url).path).name
-              stem = safe_slug(Path(name).stem)
-              k = safe_slug(kind.lower().replace(" ", "_"))
-              h = hashlib.sha1(url.encode("utf-8")).hexdigest()[:8]
-              return f"{stamp}_{k}_{stem}_{h}{ext}"
-
-          def extract_image_urls(page_url, html):
-              out = []
-
-              # img/src, a/href, source/src などから拾う
-              for attr in ("src", "href"):
-                  for m in re.finditer(attr + r'\s*=\s*["\']([^"\']+)["\']', html, flags=re.I):
-                      u = resolve_url(page_url, m.group(1))
-                      if u and is_image_url(u):
-                          out.append(u)
-
-              # 生URLも拾う
-              for m in re.finditer(r'https?://[^\s"\'<>]+?\.(?:jpg|jpeg|png|gif)', html, flags=re.I):
-                  u = m.group(0)
-                  if is_image_url(u):
-                      out.append(u)
-
-              # Apache indexで href が相対の場合
-              for m in re.finditer(r'>([^<]+\.(?:jpg|jpeg|png|gif))<', html, flags=re.I):
-                  u = resolve_url(page_url, m.group(1))
-                  if u and is_image_url(u):
-                      out.append(u)
-
-              return out
+          def build_screenshot_url(dt, ch):
+              params = {
+                  "date": iso_z(dt),
+                  "imageScale": str(ch["imageScale"]),
+                  "layers": ch["layers"],
+                  "events": "",
+                  "eventLabels": "false",
+                  "scale": "false",
+                  "x0": str(ch["x0"]),
+                  "y0": str(ch["y0"]),
+                  "width": str(ch["width"]),
+                  "height": str(ch["height"]),
+                  "display": "true",
+                  "watermark": ch["watermark"]
+              }
+              # layers の [] と , はエンコードしない
+              return API_BASE + "/takeScreenshot/?" + urllib.parse.urlencode(params, safe="[],")
 
           # =========================================================
-          # Discover candidates
+          # Build target slots: now-2d to now, every 15 minutes
           # =========================================================
-          candidates = []
+          times = []
+          t = start_slot
+          while t <= end_slot:
+              times.append(t)
+              t += timedelta(minutes=cadence_minutes)
 
-          for label, page in page_targets:
-              try:
-                  print("Fetch page:", label, page)
-                  html, headers, status = fetch_text(page)
-                  print("  status:", status, "bytes:", len(html))
-                  urls = extract_image_urls(page, html)
-                  print("  image urls:", len(urls))
-                  for u in urls:
-                      candidates.append({
-                          "source_name": label,
-                          "source_page": page,
-                          "url": u,
-                          "time": parse_time_from_url(u)
-                      })
-              except Exception as e:
-                  msg = f"{label}: {e}"
-                  print("  ERROR:", msg)
-                  errors.append(msg)
-
-          # fixed latest fallback
-          for label, u in fixed_images:
-              candidates.append({
-                  "source_name": label,
-                  "source_page": u,
-                  "url": u,
-                  "time": None,
-                  "fixed_latest": True
-              })
-
-          # dedupe by URL
-          dedup = {}
-          for c in candidates:
-              dedup[c["url"]] = c
-          candidates = list(dedup.values())
-
-          # Prefer dated recent files; keep latest fallback too
-          filtered = []
-          for c in candidates:
-              dt = c.get("time")
-              if dt is not None:
-                  # 過去2日分のみ採用。古いもの・未来時刻のものは除外。
-                  if since <= dt <= until:
-                      filtered.append(c)
-              elif c.get("fixed_latest"):
-                  filtered.append(c)
-              else:
-                  # 日付不明は候補が少ない場合のみ使う
-                  filtered.append(c)
-
-          # Sort: dated recent first, then latest fallback
-          filtered.sort(
-              key=lambda x: (
-                  0 if x.get("time") is not None else 1,
-                  -(x.get("time") or now).timestamp()
-              )
-          )
-
-          filtered = filtered[:max_candidates]
-
-          print("Candidates total:", len(candidates))
-          print("Candidates filtered:", len(filtered))
+          print("Now:", iso_z(now))
+          print("Start:", iso_z(start_slot))
+          print("End:", iso_z(end_slot))
+          print("Cadence minutes:", cadence_minutes)
+          print("Time slots:", len(times))
+          print("Channels:", ", ".join(ch["label"] for ch in CHANNELS))
 
           # =========================================================
-          # Download images
+          # Download only missing files
           # =========================================================
           images = []
-          seen_files = set()
+          failures = []
+          downloaded = 0
+          reused = 0
 
-          for c in filtered:
-              if len(images) >= max_downloads:
-                  break
+          for dt in times:
+              for ch in CHANNELS:
+                  filename = image_filename(ch, dt)
+                  out_file = IMG_DIR / filename
+                  screenshot_url = build_screenshot_url(dt, ch)
 
-              url = c["url"]
-              kind = classify_kind(url, c.get("source_name", ""))
+                  ok = False
+                  cached = False
 
-              try:
-                  data, headers, status = fetch_bytes(url, timeout=60)
-                  if status and int(status) >= 400:
-                      raise RuntimeError(f"HTTP {status}")
+                  if out_file.exists() and out_file.stat().st_size > 1000:
+                      ok = True
+                      cached = True
+                      reused += 1
+                  else:
+                      try:
+                          print("Download:", ch["label"], iso_z(dt))
+                          data, headers, status = fetch_bytes(screenshot_url)
+                          ctype = (headers.get("Content-Type") or headers.get("content-type") or "").lower()
+                          if not data or len(data) < 1000:
+                              raise RuntimeError(f"image too small: {len(data) if data else 0}")
+                          if b"<html" in data[:300].lower():
+                              raise RuntimeError("got HTML instead of image")
+                          out_file.write_bytes(data)
+                          ok = True
+                          downloaded += 1
+                      except Exception as e:
+                          msg = f"{ch['label']} {iso_z(dt)}: {e}"
+                          print("ERROR:", msg)
+                          failures.append(msg)
 
-                  if len(data) < 2000:
-                      raise RuntimeError(f"too small: {len(data)} bytes")
+                  if ok:
+                      images.append({
+                          "kind": ch["kind"],
+                          "channel": ch["channel"],
+                          "label": ch["label"],
+                          "instrument": ch["label"],
+                          "time": iso_z(dt),
+                          "target_time": iso_z(dt),
+                          "file": filename,
+                          "path": f"./data/helioviewer/images/{filename}",
+                          "source_url": screenshot_url,
+                          "source": "Helioviewer takeScreenshot",
+                          "sourceId": ch["sourceId"],
+                          "cadence_minutes": cadence_minutes,
+                          "cached": cached
+                      })
 
-                  dt = c.get("time") or parse_last_modified(headers) or now
+          # =========================================================
+          # Delete files older than past 2 days or non-target channels
+          # =========================================================
+          keep_names = {img["file"] for img in images}
+          deleted = []
+          for f in IMG_DIR.glob("*.png"):
+              if f.name not in keep_names:
+                  try:
+                      f.unlink()
+                      deleted.append(f.name)
+                  except Exception as e:
+                      failures.append(f"delete {f.name}: {e}")
 
-                  # latest fallbackで古いLast-Modifiedの場合も、UI用に取得時刻を使う
-                  if c.get("fixed_latest") and dt < since:
-                      dt = now
-
-                  # 日付が範囲外ならスキップ。ただしfixed latestはUI用に現在時刻扱いで保存。
-                  if not c.get("fixed_latest"):
-                      if dt < since or dt > until:
-                          continue
-
-                  fname = local_filename(url, kind, dt)
-                  if fname in seen_files:
-                      continue
-
-                  fpath = img_dir / fname
-                  fpath.write_bytes(data)
-                  seen_files.add(fname)
-
-                  images.append({
-                      "kind": kind,
-                      "label": kind,
-                      "time": dt.isoformat(),
-                      "downloaded_at": now.isoformat(),
-                      "file": f"images/{fname}",
-                      "path": f"./data/cdaw/images/{fname}",
-                      "source_name": c.get("source_name"),
-                      "source_page": c.get("source_page"),
-                      "source_url": url,
-                      "bytes": len(data),
-                      "is_latest_fallback": bool(c.get("fixed_latest"))
-                  })
-
-                  print("Saved:", fname, kind, dt.isoformat(), len(data), "bytes")
-
-              except Exception as e:
-                  msg = f"{url}: {e}"
-                  print("  IMAGE ERROR:", msg)
-                  errors.append(msg)
-
-              time.sleep(0.1)
+          # 古いCDAW互換ディレクトリの画像は混乱防止で削除してよい
+          compat_img_dir = COMPAT_DIR / "images"
+          if compat_img_dir.exists():
+              for f in compat_img_dir.glob("*"):
+                  try:
+                      if f.is_file():
+                          f.unlink()
+                  except Exception:
+                      pass
 
           images.sort(key=lambda x: x["time"], reverse=True)
 
-          # =========================================================
-          # Cleanup old images
-          # =========================================================
-          # 2日より前の画像は削除。今回のindexに入らなかったものも削除。
-          keep_files = {Path(x["file"]).name for x in images}
-          for f in img_dir.glob("*"):
-              if not f.is_file():
-                  continue
-              delete = f.name not in keep_files
-
-              # ファイル名先頭の YYYYMMDDTHHMMSSZ からも古い画像を判定
-              m = re.match(r"(20\d{6}T\d{6}Z)_", f.name)
-              if m:
-                  try:
-                      fdt = datetime.strptime(m.group(1), "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
-                      if fdt < since or fdt > until + timedelta(minutes=5):
-                          delete = True
-                  except Exception:
-                      pass
-
-              if delete:
-                  print("Delete old image:", f)
-                  f.unlink()
-
-          # =========================================================
-          # Save index
-          # =========================================================
-          by_kind = {}
+          by_channel = {}
           for img in images:
-              by_kind[img["kind"]] = by_kind.get(img["kind"], 0) + 1
+              by_channel[img["channel"]] = by_channel.get(img["channel"], 0) + 1
 
           index = {
-              "updated_at": now.isoformat(),
-              "source": "CDAW movie/mak + SOHO realtime fallback",
-              "requested_url": "https://cdaw.gsfc.nasa.gov/movie/mak",
-              "days": days,
-              "since": since.isoformat(),
-              "until": until.isoformat(),
-              "retention_policy": "keep only past 2 days; delete older images",
+              "updated_at": iso_z(now),
+              "source": "Helioviewer API takeScreenshot",
+              "note": "Only SDO/AIA 193 and SOHO/LASCO C2 are saved. Past 2 days only. 15-minute cadence.",
+              "history_days": history_days,
+              "cadence_minutes": cadence_minutes,
+              "start": iso_z(start_slot),
+              "end": iso_z(end_slot),
               "image_count": len(images),
-              "by_kind": by_kind,
-              "images": images,
-              "errors": errors[-40:]
+              "downloaded": downloaded,
+              "reused": reused,
+              "deleted_count": len(deleted),
+              "deleted": deleted[:80],
+              "failure_count": len(failures),
+              "failures": failures[:120],
+              "channels": [
+                  {"channel": ch["channel"], "label": ch["label"], "kind": ch["kind"], "sourceId": ch["sourceId"]}
+                  for ch in CHANNELS
+              ],
+              "by_channel": by_channel,
+              "images": images
           }
 
-          base_dir.mkdir(parents=True, exist_ok=True)
-          (base_dir / "index.json").write_text(
+          (OUT_DIR / "index.json").write_text(
               json.dumps(index, ensure_ascii=False, indent=2),
               encoding="utf-8"
           )
 
-          print("Saved:", base_dir / "index.json")
+          # 互換用 index.json。画像pathは helioviewer 側を指したままにする。
+          (COMPAT_DIR / "index.json").write_text(
+              json.dumps(index, ensure_ascii=False, indent=2),
+              encoding="utf-8"
+          )
+
           print(json.dumps({
-              "updated_at": index["updated_at"],
-              "image_count": index["image_count"],
-              "by_kind": index["by_kind"],
-              "errors": len(errors)
+              "image_count": len(images),
+              "by_channel": by_channel,
+              "downloaded": downloaded,
+              "reused": reused,
+              "deleted_count": len(deleted),
+              "failure_count": len(failures)
           }, ensure_ascii=False, indent=2))
 
-          # 画像0枚でもActionsは失敗させない。UIにエラー表示させる。
-          PY
+          if len(images) == 0:
+              raise SystemExit("No Helioviewer images saved")
+
+          PYCODE
 
       - name: Commit and push
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add docs/data/cdaw
+          git add docs/data/helioviewer docs/data/cdaw/index.json
 
-          git commit -m "Update CDAW SOHO CME images past 2 days" || echo "No changes"
+          git commit -m "Update Helioviewer AIA193 and LASCO C2 images" || echo "No changes"
           git push
