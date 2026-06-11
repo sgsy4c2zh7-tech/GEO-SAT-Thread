@@ -223,6 +223,65 @@ pre{
   color:var(--muted);
 }
 .cdawMeta b{color:#fff}
+.cdawTimelineGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:12px;
+  margin-top:12px;
+}
+.cdawHero{
+  background:#05070d;
+  border:1px solid #263044;
+  border-radius:14px;
+  overflow:hidden;
+}
+.cdawHeroTitle{
+  padding:8px 10px;
+  border-bottom:1px solid #263044;
+  font-weight:900;
+  color:#fff;
+  background:#0b1220;
+}
+.cdawHero img{
+  width:100%;
+  display:block;
+  background:#000;
+  aspect-ratio:1/1;
+  object-fit:contain;
+  cursor:pointer;
+}
+.cdawHeroEmpty{
+  aspect-ratio:1/1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#000;
+  color:#78909c;
+  font-size:13px;
+  text-align:center;
+  padding:12px;
+}
+.cdawHeroMeta{
+  padding:8px 10px;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.45;
+}
+.cdawHeroMeta b{color:#fff}
+.cdawHint{
+  margin-top:8px;
+  padding:8px 10px;
+  border-radius:10px;
+  background:#0b1220;
+  border:1px solid #263044;
+  color:#b9c7dd;
+  font-size:12px;
+}
+.cdawSectionTitle{
+  margin-top:14px;
+  font-weight:900;
+  color:#fff;
+}
 .modal{
   display:none;
   position:fixed;
@@ -335,8 +394,13 @@ pre{
 
 
 <section class="card" style="margin-top:16px">
-  <h3>⑦ CDAW / SOHO CME Images</h3>
+  <h3>⑦ CDAW / SOHO CME Images / selected by timeline</h3>
   <div id="cdawSummary" class="small">未取得</div>
+  <div class="cdawHint">
+    上のCME Propagationのタイムスライダーに連動。選択時刻に一番近い太陽面画像・LASCO C2・LASCO C3を表示します。
+  </div>
+  <div id="cdawTimeline" class="cdawTimelineGrid"></div>
+  <div class="cdawSectionTitle">2-day saved image strip</div>
   <div id="cdawGallery" class="cdawGrid"></div>
 </section>
 
@@ -672,12 +736,14 @@ async function loadCDAWImages(){
 
     setSource("cdawImages",`OK: ${normalized.length} images`,{index,images:normalized});
     renderCDAWGallery();
+    renderCDAWTimeline(STATE.selectedTime || new Date());
 
   }catch(e){
     STATE.cdawIndex=null;
     STATE.cdawImages=[];
     setSource("cdawImages","FAILED",null,e.message);
     renderCDAWGallery();
+    renderCDAWTimeline(STATE.selectedTime || new Date());
   }
 }
 
@@ -1762,6 +1828,7 @@ function updateTimeline(){
   drawSun(STATE.cmes,t);
   drawFlow(STATE.cmes,t);
   drawWindSeries(t);
+  renderCDAWTimeline(t);
   renderHazard(t);
 }
 
@@ -2411,6 +2478,129 @@ function drawWindSeries(selectedTime){
    CDAW / SOHO IMAGE GALLERY
 ========================================================= */
 
+function cdawKindText(img){
+  return String([img.kind,img.label,img.instrument,img.source_name,img.path,img.source_url].join(" ")).toLowerCase();
+}
+
+function isCDAWSolar(img){
+  const s=cdawKindText(img);
+  return s.includes("aia") || s.includes("eit") || s.includes("hmi") ||
+         s.includes("solar") || s.includes("sun") || s.includes("sdo");
+}
+
+function isCDAWC2(img){
+  return cdawKindText(img).includes("c2");
+}
+
+function isCDAWC3(img){
+  return cdawKindText(img).includes("c3");
+}
+
+function nearestCDAWImage(predicate,time,maxHours=18){
+  const imgs=(STATE.cdawImages || []).filter(predicate);
+  if(!imgs.length) return null;
+
+  const target=time.getTime();
+  let best=null;
+  let bestDt=Infinity;
+
+  for(const img of imgs){
+    const dt=Math.abs(img._t-target);
+    if(dt<bestDt){
+      best=img;
+      bestDt=dt;
+    }
+  }
+
+  if(!best) return null;
+  best._deltaHours=bestDt/3600000;
+
+  // 2日分の画像をタイムスライダーで見るため、遠すぎる時刻では「画像なし」にする
+  if(best._deltaHours>maxHours) return null;
+
+  return best;
+}
+
+function renderCDAWTimeline(selectedTime){
+  const box=document.getElementById("cdawTimeline");
+  const summary=document.getElementById("cdawSummary");
+  if(!box || !summary) return;
+
+  const imgs=STATE.cdawImages || [];
+  if(!imgs.length){
+    summary.innerHTML='CDAW/SOHO画像未読込。<button onclick="loadCDAWImages()">画像読込</button>';
+    box.innerHTML=`
+      <div class="cdawHero"><div class="cdawHeroTitle">Solar disk</div><div class="cdawHeroEmpty">画像未読込</div></div>
+      <div class="cdawHero"><div class="cdawHeroTitle">LASCO C2</div><div class="cdawHeroEmpty">画像未読込</div></div>
+      <div class="cdawHero"><div class="cdawHeroTitle">LASCO C3</div><div class="cdawHeroEmpty">画像未読込</div></div>
+    `;
+    return;
+  }
+
+  const ordered=[...imgs].sort((a,b)=>a._t-b._t);
+  const first=ordered[0];
+  const last=ordered[ordered.length-1];
+  const t=selectedTime instanceof Date ? selectedTime : new Date(selectedTime);
+
+  const solar=nearestCDAWImage(isCDAWSolar,t,18);
+  const c2=nearestCDAWImage(isCDAWC2,t,18);
+  const c3=nearestCDAWImage(isCDAWC3,t,18);
+
+  const availableKinds={};
+  imgs.forEach(x=>{
+    const k=x.kind || x.label || "Image";
+    availableKinds[k]=(availableKinds[k]||0)+1;
+  });
+
+  const kindText=Object.entries(availableKinds)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([k,v])=>`${escapeHtml(k)} ${v}`)
+    .join(" / ");
+
+  const outside=t.getTime()<first._t || t.getTime()>last._t;
+  summary.innerHTML =
+    `保存画像: <b>${imgs.length}</b>枚 / ${kindText}<br>`+
+    `画像範囲: <b>${formatDateTime(first._t)}</b> → <b>${formatDateTime(last._t)}</b><br>`+
+    `選択時刻: <b>${formatDateTime(t)}</b>${outside ? ` <span class="warnText">※画像2日分の範囲外</span>` : ""}<br>`+
+    `表示: 選択時刻に最も近い Solar / C2 / C3 画像`;
+
+  box.innerHTML =
+    renderCDAWTimelineSlot("Solar disk",solar,t,"SDO/AIA・SOHO/EIT等") +
+    renderCDAWTimelineSlot("LASCO C2",c2,t,"inner corona CME") +
+    renderCDAWTimelineSlot("LASCO C3",c3,t,"outer corona CME");
+}
+
+function renderCDAWTimelineSlot(title,img,selectedTime,sub){
+  if(!img){
+    return `
+      <div class="cdawHero">
+        <div class="cdawHeroTitle">${escapeHtml(title)}</div>
+        <div class="cdawHeroEmpty">この時刻の近傍画像なし<br>${escapeHtml(sub)}</div>
+        <div class="cdawHeroMeta">選択時刻: <b>${formatDateTime(selectedTime)}</b></div>
+      </div>
+    `;
+  }
+
+  const dt=Number.isFinite(img._deltaHours) ? img._deltaHours : Math.abs(img._t-selectedTime.getTime())/3600000;
+  const label=escapeHtml(img.label || img.instrument || img.kind || title);
+  const kind=escapeHtml(img.kind || title);
+  const src=escapeHtml(img.path);
+
+  return `
+    <div class="cdawHero">
+      <div class="cdawHeroTitle">${escapeHtml(title)} <span class="pill info">nearest</span></div>
+      <img src="${src}" alt="${label}" loading="lazy" onclick="openCDAWImage(${img._i})">
+      <div class="cdawHeroMeta">
+        <b>${label}</b><br>
+        ${kind}<br>
+        画像時刻: <b>${formatDateTime(img._t)}</b><br>
+        選択時刻との差: <b>${dt.toFixed(1)} h</b><br>
+        ${img.source_url ? `<a href="${escapeHtml(img.source_url)}" target="_blank" style="color:#4fc3f7">source</a>` : ""}
+      </div>
+    </div>
+  `;
+}
+
 function renderCDAWGallery(){
   const summary=document.getElementById("cdawSummary");
   const gallery=document.getElementById("cdawGallery");
@@ -2802,6 +2992,7 @@ window.addEventListener("resize",()=>updateTimeline());
 renderSourcePanel();
 initTimelineWindow();
 renderCDAWGallery();
+renderCDAWTimeline(STATE.selectedTime || new Date());
 rebuildAll();
 </script>
 
