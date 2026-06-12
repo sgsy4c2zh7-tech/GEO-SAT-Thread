@@ -392,7 +392,7 @@ pre{
     <button class="primary" onclick="loadDONKICache()">DONKI Cache読込</button>
     <button onclick="loadWSA()">WSA背景風読込</button>
     <button onclick="loadCDAWImages()">AIA193/C2画像読込</button>
-    <button onclick="loadCACTus()">CACTus取得</button>
+    <button onclick="loadCACTusCache()">CACTus Cache読込</button>
     <button onclick="loadNOAAAll()">NOAA環境取得</button>
     <button onclick="loadAll()">全部取得</button>
     <button onclick="rebuildAll()">再計算</button>
@@ -404,6 +404,7 @@ pre{
     WSA: <code>./data/wsa/index.json</code> を読込し、DBM-liteの背景太陽風 <b>w(t)</b> に使用。  
     地球到達判定は <b>DONKI longitude / latitude / halfAngle</b> → <b>sep / halfAngle</b> → <b>CORE/BODY/FLANK/MISS</b>。  
     MISSは地球伝播・衛星影響から排除。<br>
+    CACTus: <code>./data/cactus/index.json</code> を読込して、蓄積済みCACTus CMEを表示。<br>
     Helioviewer画像: <code>./data/helioviewer/index.json</code> を読込して、CME発生時刻 <b>t0±1時間</b> の <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> を表示。
   </div>
 </header>
@@ -417,7 +418,7 @@ pre{
     <label><input id="showMissTable" type="checkbox" onchange="renderTable(STATE.cmes)"> TableにMISSも表示</label>
     <label><input id="useCactusHazard" type="checkbox" onchange="rebuildAll()"> CACTus広幅/haloを参考到達候補に含める</label>
     <label><input id="strictDonkiOnly" type="checkbox" checked onchange="rebuildAll()"> HazardはDONKI優先</label>
-    <label><input id="mergeSevenDays" type="checkbox" checked onchange="loadDONKICache()"> DONKI保存3日分を統合</label>
+    <label><input id="mergeSevenDays" type="checkbox" checked onchange="loadDONKICache()"> DONKI保存14日分を統合</label>
   </div>
   <div class="sourceGrid" id="sourcePanel" style="margin-top:10px"></div>
 </section>
@@ -458,6 +459,11 @@ pre{
   <div id="table"></div>
 </section>
 
+<section class="card" style="margin-top:16px">
+  <h3>⑥-B CACTus Event Cache / local data</h3>
+  <div id="cactusSummary" class="small">未取得</div>
+  <div id="cactusTable" style="margin-top:10px"></div>
+</section>
 
 <section id="cmeImageSection" class="card" style="margin-top:16px">
   <h3>⑦ CME-linked Solar Image Movie / t0 ± 1 hour</h3>
@@ -503,6 +509,7 @@ pre{
 const DONKI_CACHE_INDEX = "./data/donki/index.json";
 const WSA_CACHE_INDEX = "./data/wsa/index.json";
 const CDAW_IMAGE_INDEX = "./data/helioviewer/index.json";
+const CACTUS_CACHE_INDEX = "./data/cactus/index.json";
 const DONKI_LON_POSITIVE_WEST = true;
 
 const CACTUS_URL = "https://www.sidc.be/cactus/out/latestCMEs.html";
@@ -548,6 +555,8 @@ const STATE = {
   donkiPayloads:[],
   wsaIndex:null,
   wsaModel:null,
+  cactusIndex:null,
+  cactusEvents:[],
   cdawIndex:null,
   cdawImages:[],
   cdawFrameTimer:null,
@@ -840,15 +849,48 @@ function classifyCDAWKind(img){
   return "Solar";
 }
 
-async function loadCACTus(){
+async function loadCACTusCache(){
   setSource("cactus","LOADING...");
   try{
-    const text=await fetchCactusText();
-    setSource("cactus","OK",text);
+    const index=await fetchJson(CACTUS_CACHE_INDEX);
+    const events=Array.isArray(index.events) ? index.events : [];
+
+    const normalized=events.map((ev,i)=>{
+      const t=new Date(ev.t0 || ev.time || ev.startTime || ev.generated_at || Date.now());
+      return {
+        ...ev,
+        _i:i,
+        _t:t.getTime(),
+        t0:ev.t0 || ev.time,
+        time:ev.time || ev.t0,
+        id:ev.id || `CACTus-${i+1}`,
+        source:ev.source || "CACTus",
+        pa:Number(ev.pa),
+        da:Number(ev.da),
+        speed:Number(ev.speed),
+        halo:ev.halo || ""
+      };
+    })
+    .filter(ev=>Number.isFinite(ev._t))
+    .sort((a,b)=>b._t-a._t);
+
+    STATE.cactusIndex=index;
+    STATE.cactusEvents=normalized;
+
+    setSource("cactus",`OK local: ${normalized.length} events`,{index,events:normalized});
+    renderCactusCacheTable();
     rebuildAll();
   }catch(e){
+    STATE.cactusIndex=null;
+    STATE.cactusEvents=[];
     setSource("cactus","FAILED",null,e.message);
+    renderCactusCacheTable();
   }
+}
+
+// 後方互換：古いボタン名が残っていてもlocal cacheを読む
+async function loadCACTus(){
+  return loadCACTusCache();
 }
 
 async function loadNOAAWind(){
@@ -910,7 +952,7 @@ async function loadAll(){
     loadDONKICache(),
     loadWSA(),
     loadCDAWImages(),
-    loadCACTus(),
+    loadCACTusCache(),
     loadNOAAWind(),
     loadNOAAMag(),
     loadNOAAKp(),
@@ -928,7 +970,7 @@ function renderSourcePanel(){
     ["donkiCache","DONKI Cache",loadDONKICache],
     ["wsa","WSA Wind Model",loadWSA],
     ["cdawImages","AIA193/C2 Images",loadCDAWImages],
-    ["cactus","CACTus CME",loadCACTus],
+    ["cactus","CACTus Cache",loadCACTusCache],
     ["noaaWind","NOAA Wind",loadNOAAWind],
     ["noaaMag","NOAA IMF",loadNOAAMag],
     ["noaaKp","NOAA Kp",loadNOAAKp],
@@ -1609,6 +1651,79 @@ function parseCACTus(html,env){
   return out;
 }
 
+
+function parseCACTusCacheEvents(events,env){
+  const out=[];
+
+  for(const ev of events || []){
+    const t0=new Date(ev.t0 || ev.time || ev.startTime || Date.now());
+    if(!Number.isFinite(t0.getTime())) continue;
+
+    const pa=Number(ev.pa);
+    const da=Number(ev.da);
+    const speed=Number(ev.speed || 0);
+    const halo=ev.halo || "";
+    const half=Math.max(15,Math.min(90,(Number.isFinite(da) ? da : 60)/2));
+
+    const earth=evaluateCactusEarthImpact(
+      Number.isFinite(pa) ? pa : 0,
+      Number.isFinite(da) ? da : 0,
+      halo
+    );
+
+    const effectiveSpeed=earth.earthCandidate ? Math.max(250,(Number.isFinite(speed) && speed>0 ? speed : 500)*earth.speedFactor) : 0;
+    const arrival=earth.earthCandidate
+      ? computeArrivalDBMLite(t0,effectiveSpeed,env)
+      : {
+          source:"CACTUS-REFERENCE",
+          date:t0,
+          utc:t0.toISOString(),
+          transitHours:null,
+          arrivalSpeed:0,
+          backgroundWind:0,
+          backgroundWindMin:null,
+          backgroundWindMax:null,
+          usedWSA:false
+        };
+
+    const score=earth.earthCandidate
+      ? scoreCACTus(Number.isFinite(pa) ? pa : 0,Number.isFinite(da) ? da : 0,Number.isFinite(speed) ? speed : 0,halo,earth)
+      : 0;
+
+    out.push(buildCME({
+      id:ev.id || `CACTus-${t0.toISOString()}`,
+      type:"CACTus",
+      coordType:"pa",
+      rawLon:null,
+      lon:null,
+      lat:null,
+      pa:Number.isFinite(pa) ? pa : null,
+      da:Number.isFinite(da) ? da : null,
+      halo,
+      speed:Number.isFinite(speed) ? speed : 0,
+      effectiveSpeed,
+      halfAngle:half,
+      t0,
+      arrival,
+      arrivalScore:score,
+      earthCandidate:earth.earthCandidate,
+      earthConfidence:earth.earthConfidence,
+      earthReason:earth.earthReason,
+      angularSeparation:null,
+      edgeRatio:null,
+      impactClass:earth.impactClass,
+      speedFactor:earth.speedFactor,
+      densityFactor:earth.densityFactor,
+      shockFactor:earth.shockFactor,
+      geometryMultiplier:earth.geometryMultiplier,
+      sources:["CACTus"],
+      confidence:earth.earthConfidence
+    }));
+  }
+
+  return out;
+}
+
 function parseCactusTime(s){
   const m=s.match(/(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/);
   if(!m) return new Date();
@@ -1792,7 +1907,11 @@ function rebuildAll(){
   }
 
   const cactus=STATE.sources.cactus.data;
-  if(typeof cactus==="string" && cactus.length){
+  if(cactus && Array.isArray(cactus.events)){
+    events.push(...parseCACTusCacheEvents(cactus.events,STATE.env));
+  }else if(Array.isArray(STATE.cactusEvents) && STATE.cactusEvents.length){
+    events.push(...parseCACTusCacheEvents(STATE.cactusEvents,STATE.env));
+  }else if(typeof cactus==="string" && cactus.length){
     events.push(...parseCACTus(cactus,STATE.env));
   }
 
@@ -1825,6 +1944,7 @@ function rebuildAll(){
 
   renderStatus();
   renderTable(STATE.cmes);
+  renderCactusCacheTable();
   updateTimeline();
 
   raw(JSON.stringify({
@@ -1833,6 +1953,8 @@ function rebuildAll(){
     wsaIndex:STATE.wsaIndex,
     wsaLoaded:Boolean(STATE.wsaModel),
     wsaRecords:STATE.wsaModel?.records?.length || 0,
+    cactusIndex:STATE.cactusIndex,
+    cactusEvents:STATE.cactusEvents?.length || 0,
     cdawIndex:STATE.cdawIndex,
     cdawImages:STATE.cdawImages?.length || 0,
     env:STATE.env,
@@ -3324,6 +3446,97 @@ function renderStatus(){
     </div>`+
     cacheInfo+
     wsaInfo;
+}
+
+
+function renderCactusCacheTable(){
+  const summary=document.getElementById("cactusSummary");
+  const box=document.getElementById("cactusTable");
+  if(!summary || !box) return;
+
+  const events=STATE.cactusEvents || [];
+  const index=STATE.cactusIndex || {};
+
+  if(!events.length){
+    summary.innerHTML='CACTus Cache未読込。<button onclick="loadCACTusCache()">CACTus Cache読込</button>';
+    box.innerHTML='<div class="small">CACTusイベントなし。先に <code>update-cactus.yml</code> を実行して <code>docs/data/cactus/index.json</code> を作ってください。</div>';
+    return;
+  }
+
+  const first=events[events.length-1];
+  const last=events[0];
+  summary.innerHTML=
+    `CACTus cached events: <b>${events.length}</b> / updated: <b>${formatDateTime(index.updated_at)}</b><br>`+
+    `range: <b>${formatDateTime(first._t)}</b> → <b>${formatDateTime(last._t)}</b> / retention: <b>${index.retention_days || 14} days</b>`;
+
+  box.innerHTML=`
+    <div class="tablewrap" style="max-height:420px">
+    <table>
+      <tr>
+        <th>Image</th>
+        <th>ID</th>
+        <th>Time</th>
+        <th>PA</th>
+        <th>DA</th>
+        <th>Speed</th>
+        <th>Halo</th>
+        <th>Raw</th>
+      </tr>
+      ${events.slice(0,200).map(ev=>{
+        const idx=findCMEIndexForCactusEvent(ev);
+        const onclick=idx>=0 ? `selectCMEImageWindow(${idx})` : `selectCactusImageWindow('${escapeJs(ev.id)}','${new Date(ev._t).toISOString()}')`;
+        return `
+          <tr>
+            <td><button class="primary" onclick="${onclick}">画像を見る</button></td>
+            <td>${escapeHtml(ev.id)}</td>
+            <td>${formatDateTime(ev._t)}</td>
+            <td>${Number.isFinite(Number(ev.pa)) ? Math.round(Number(ev.pa)) : '-'}</td>
+            <td>${Number.isFinite(Number(ev.da)) ? Math.round(Number(ev.da)) : '-'}</td>
+            <td><b>${Number.isFinite(Number(ev.speed)) ? Math.round(Number(ev.speed)) : '-'}</b></td>
+            <td>${escapeHtml(ev.halo || '-')}</td>
+            <td><span class="small">${escapeHtml(ev.raw_line || '').slice(0,120)}</span></td>
+          </tr>
+        `;
+      }).join('')}
+    </table>
+    </div>
+  `;
+}
+
+function escapeJs(s){
+  return String(s ?? "").replace(/[\\'"\n\r]/g,m=>({"\\":"\\\\","'":"\\'",'"':'\\"',"\n":" ","\r":" "})[m]);
+}
+
+function findCMEIndexForCactusEvent(ev){
+  const t=Number(ev._t);
+  if(!Number.isFinite(t)) return -1;
+  let best=-1;
+  let bestDt=Infinity;
+  STATE.cmes.forEach((c,i)=>{
+    if(c.type!=="CACTus") return;
+    const dt=Math.abs(c.t0.getTime()-t);
+    if(dt<bestDt){bestDt=dt;best=i;}
+  });
+  return bestDt <= 20*60*1000 ? best : -1;
+}
+
+function selectCactusImageWindow(id,isoTime){
+  const t=new Date(isoTime);
+  if(!Number.isFinite(t.getTime())) return;
+
+  const pseudo={
+    id:id || "CACTus",
+    type:"CACTus",
+    sources:["CACTus"],
+    t0:t,
+    earthCandidate:false,
+    impactClass:"CACTUS-REFERENCE",
+    arrivalScore:0
+  };
+
+  STATE.cmes.push(pseudo);
+  const idx=STATE.cmes.length-1;
+  selectCMEImageWindow(idx);
 }
 
 function renderTable(cmes){
