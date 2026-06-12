@@ -417,7 +417,7 @@ pre{
     <label><input id="showMissTable" type="checkbox" onchange="renderTable(STATE.cmes)"> TableにMISSも表示</label>
     <label><input id="useCactusHazard" type="checkbox" onchange="rebuildAll()"> CACTus広幅/haloを参考到達候補に含める</label>
     <label><input id="strictDonkiOnly" type="checkbox" checked onchange="rebuildAll()"> HazardはDONKI優先</label>
-    <label><input id="mergeSevenDays" type="checkbox" checked onchange="loadDONKICache()"> DONKI保存7日分を統合</label>
+    <label><input id="mergeSevenDays" type="checkbox" checked onchange="loadDONKICache()"> DONKI保存3日分を統合</label>
   </div>
   <div class="sourceGrid" id="sourcePanel" style="margin-top:10px"></div>
 </section>
@@ -437,7 +437,7 @@ pre{
 
 <section class="card" style="margin-top:16px">
   <h3>③ CME Propagation / Earth-directed only</h3>
-  <input id="timeSlider" type="range" min="0" max="168" value="48" step="1" oninput="updateTimeline()">
+  <input id="timeSlider" type="range" min="0" max="192" value="72" step="1" oninput="updateTimeline()">
   <div id="timeLabel" class="small"></div>
   <div class="widebox"><canvas id="flowCanvas"></canvas></div>
 </section>
@@ -463,7 +463,7 @@ pre{
   <h3>⑦ SDO/AIA 193 + SOHO/LASCO C2 Image Player / past 2 days</h3>
   <div id="cdawSummary" class="small">未取得</div>
   <div class="cdawHint">
-    保存対象は <b>過去2日分のみ</b>。画像は <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> の2種類だけ。CME Propagationのタイムスライダーに連動して、選択時刻に最も近い画像を大画面表示します。画像再生を押すと、保存画像そのものを15分刻みで再生します。
+    保存対象は <b>過去2日分のみ</b>。画像は <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> の2種類だけ。CME Propagationのタイムスライダーに連動して、選択時刻以前の最新画像を表示します。画像がない時刻でも直前画像を保持するのでチカチカしません。画像再生を押すと、保存画像そのものを15分刻みで再生します。
   </div>
 
   <div class="cdawPlayerControls">
@@ -487,9 +487,8 @@ pre{
   </div>
   <input id="cdawFrameSlider" type="range" min="0" max="0" value="0" step="1" oninput="selectCDAWFrameBySlider()">
 
-  <div id="cdawMainStage" class="cdawMainStage"></div>
 
-  <div class="cdawSectionTitle">Selected time nearest images / AIA193 + LASCO C2</div>
+  <div class="cdawSectionTitle">Selected time held images / AIA193 + LASCO C2</div>
   <div id="cdawTimeline" class="cdawTimelineGrid"></div>
   <div class="cdawSectionTitle">Past 2-day saved image strip / AIA193 + C2 only</div>
   <div id="cdawGallery" class="cdawGrid"></div>
@@ -570,7 +569,7 @@ const STATE = {
   env:defaultEnv(),
   cmes:[],
   timelineCenter:new Date(),
-  timelineStart:new Date(Date.now()-48*3600*1000),
+  timelineStart:new Date(Date.now()-72*3600*1000),
   timelineEnd:new Date(Date.now()+120*3600*1000),
   selectedTime:new Date(),
   timer:null
@@ -628,17 +627,17 @@ function raw(x){
 function initTimelineWindow(){
   STATE.timelineCenter = new Date();
 
-  // 表示期間は「現在-2日」から「現在+5日」
-  // スライダーは 0〜168h、現在は 48h の位置
-  STATE.timelineStart = new Date(STATE.timelineCenter.getTime() - 48*3600*1000);
+  // 表示期間は「現在-3日」から「現在+5日」
+  // スライダーは 0〜192h、現在は 72h の位置
+  STATE.timelineStart = new Date(STATE.timelineCenter.getTime() - 72*3600*1000);
   STATE.timelineEnd = new Date(STATE.timelineCenter.getTime() + 120*3600*1000);
   STATE.selectedTime = new Date(STATE.timelineCenter);
 
   const slider=document.getElementById("timeSlider");
   if(slider){
     slider.min=0;
-    slider.max=168;
-    slider.value=48;
+    slider.max=192;
+    slider.value=72;
   }
 }
 
@@ -703,7 +702,7 @@ async function loadDONKICache(){
     if(mergeSeven){
       files=(index.files || [])
         .filter(f=>f.valid !== false && f.path)
-        .slice(0,56);
+        .slice(0,24);
     }else{
       if(index.latest){
         files=[{path:"./data/donki/"+index.latest,valid:true}];
@@ -1915,7 +1914,7 @@ function updateTimeline(){
   const t=new Date(STATE.timelineStart.getTime()+h*3600*1000);
   STATE.selectedTime=t;
 
-  const offset=h-48;
+  const offset=h-72;
   const sign=offset>=0 ? "+" : "";
   const wind=getBackgroundWindSpeedFromWSA(t);
   const windTxt=wind!==null ? `${Math.round(wind)} km/s` : "N/A";
@@ -2550,9 +2549,9 @@ function drawWindSeries(selectedTime){
   // labels
   ctx.fillStyle="rgba(255,255,255,.75)";
   ctx.font="11px system-ui";
-  ctx.fillText("now-7d",x0,y0+hh+18);
+  ctx.fillText("now-3d",x0,y0+hh+18);
   ctx.fillText("now",nowX-10,y0+hh+18);
-  ctx.fillText("now+4d",x0+ww-48,y0+hh+18);
+  ctx.fillText("now+5d",x0+ww-48,y0+hh+18);
 
   // legend
   ctx.fillStyle="#4fc3f7";
@@ -2598,29 +2597,27 @@ function isCDAWC3(img){
   return false;
 }
 
-function nearestCDAWImage(predicate,time,maxHours=18){
-  const imgs=(STATE.cdawImages || []).filter(predicate);
+function heldCDAWImage(predicate,time){
+  const imgs=(STATE.cdawImages || [])
+    .filter(predicate)
+    .filter(x=>Number.isFinite(x._t))
+    .sort((a,b)=>a._t-b._t);
   if(!imgs.length) return null;
 
-  const target=time.getTime();
-  let best=null;
-  let bestDt=Infinity;
+  const target=(time instanceof Date ? time : new Date(time)).getTime();
+  let held=imgs[0];
 
   for(const img of imgs){
-    const dt=Math.abs(img._t-target);
-    if(dt<bestDt){
-      best=img;
-      bestDt=dt;
+    if(img._t<=target){
+      held=img;
+    }else{
+      break;
     }
   }
 
-  if(!best) return null;
-  best._deltaHours=bestDt/3600000;
-
-  // 2日分の画像をタイムスライダーで見るため、遠すぎる時刻では「画像なし」にする
-  if(best._deltaHours>maxHours) return null;
-
-  return best;
+  held._deltaHours=Math.abs(held._t-target)/3600000;
+  held._held=true;
+  return held;
 }
 
 
@@ -2741,31 +2738,25 @@ function syncCDAWFrameToTime(time, force=false){
   }
 
   const target=(time instanceof Date ? time : new Date(time)).getTime();
-  let bestIndex=0;
-  let bestDt=Infinity;
+  let heldIndex=0;
+
+  // 選択時刻ちょうどの画像がない場合は、その直前の画像を保持表示する。
+  // これで再生中に画像なし→表示ありを繰り返してチカチカしない。
   frames.forEach((img,i)=>{
-    const d=Math.abs(img._t-target);
-    if(d<bestDt){ bestDt=d; bestIndex=i; }
+    if(img._t<=target) heldIndex=i;
   });
 
-  STATE.cdawFrameIndex=bestIndex;
+  STATE.cdawFrameIndex=heldIndex;
   slider.min=0;
   slider.max=Math.max(0,frames.length-1);
-  slider.value=bestIndex;
+  slider.value=heldIndex;
 
-  const img=frames[bestIndex];
-  img._deltaHours=bestDt/3600000;
+  const img=frames[heldIndex];
+  img._deltaHours=Math.abs(img._t-target)/3600000;
 
   const picker=document.getElementById("cdawStartTime");
   if(picker && force){
     picker.value=toDateTimeLocalValue(new Date(img._t));
-  }
-
-  // 未来側など、画像範囲から大きく外れている場合は大画面にもその旨を出す。
-  if(img._deltaHours>6 && !force){
-    renderCDAWMain(null,time,frames);
-  }else{
-    renderCDAWMain(img,time,frames);
   }
 }
 
@@ -2782,7 +2773,6 @@ function selectCDAWFrameBySlider(){
   if(picker) picker.value=toDateTimeLocalValue(t);
   STATE.selectedTime=t;
   setMainTimelineToDate(t);
-  renderCDAWMain(img,t,frames);
   renderCDAWTimeline(t);
   drawSun(STATE.cmes,t);
   drawFlow(STATE.cmes,t);
@@ -2887,8 +2877,8 @@ function renderCDAWTimeline(selectedTime){
   const last=ordered[ordered.length-1];
   const t=selectedTime instanceof Date ? selectedTime : new Date(selectedTime);
 
-  const solar=nearestCDAWImage(isCDAWSolar,t,3);
-  const c2=nearestCDAWImage(isCDAWC2,t,3);
+  const solar=heldCDAWImage(isCDAWSolar,t);
+  const c2=heldCDAWImage(isCDAWC2,t);
 
   const availableKinds={};
   imgs.forEach(x=>{
@@ -2906,7 +2896,7 @@ function renderCDAWTimeline(selectedTime){
     `保存画像: <b>${imgs.length}</b>枚 / ${kindText}<br>`+
     `画像範囲: <b>${formatDateTime(first._t)}</b> → <b>${formatDateTime(last._t)}</b><br>`+
     `選択時刻: <b>${formatDateTime(t)}</b>${outside ? ` <span class="warnText">※過去2日分の画像範囲外</span>` : ""}<br>`+
-    `表示: 選択時刻に最も近い SDO/AIA 193 / SOHO/LASCO C2 画像`;
+    `表示: 選択時刻以前の最新 SDO/AIA 193 / SOHO/LASCO C2 画像を保持表示`;
 
   box.innerHTML =
     renderCDAWTimelineSlot("SDO/AIA 193",solar,t,"solar disk / EUV") +
@@ -2918,7 +2908,7 @@ function renderCDAWTimelineSlot(title,img,selectedTime,sub){
     return `
       <div class="cdawHero">
         <div class="cdawHeroTitle">${escapeHtml(title)}</div>
-        <div class="cdawHeroEmpty">この時刻の近傍画像なし<br>${escapeHtml(sub)}</div>
+        <div class="cdawHeroEmpty">画像未読込<br>${escapeHtml(sub)}</div>
         <div class="cdawHeroMeta">選択時刻: <b>${formatDateTime(selectedTime)}</b></div>
       </div>
     `;
@@ -2931,13 +2921,13 @@ function renderCDAWTimelineSlot(title,img,selectedTime,sub){
 
   return `
     <div class="cdawHero">
-      <div class="cdawHeroTitle">${escapeHtml(title)} <span class="pill info">nearest</span></div>
+      <div class="cdawHeroTitle">${escapeHtml(title)} <span class="pill info">hold</span></div>
       <img src="${src}" alt="${label}" loading="lazy" onclick="openCDAWImage(${img._i})">
       <div class="cdawHeroMeta">
         <b>${label}</b><br>
         ${kind}<br>
         画像時刻: <b>${formatDateTime(img._t)}</b><br>
-        選択時刻との差: <b>${dt.toFixed(1)} h</b><br>
+        保持画像との差: <b>${dt.toFixed(1)} h</b><br>
         ${img.source_url ? `<a href="${escapeHtml(img.source_url)}" target="_blank" style="color:#4fc3f7">source</a>` : ""}
       </div>
     </div>
