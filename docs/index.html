@@ -404,7 +404,7 @@ pre{
     WSA: <code>./data/wsa/index.json</code> を読込し、DBM-liteの背景太陽風 <b>w(t)</b> に使用。  
     地球到達判定は <b>DONKI longitude / latitude / halfAngle</b> → <b>sep / halfAngle</b> → <b>CORE/BODY/FLANK/MISS</b>。  
     MISSは地球伝播・衛星影響から排除。<br>
-    Helioviewer画像: <code>./data/helioviewer/index.json</code> を読込して、過去2日分の <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> だけをタイムスライダー連動表示。
+    Helioviewer画像: <code>./data/helioviewer/index.json</code> を読込して、CME発生時刻 <b>t0±1時間</b> の <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> を表示。
   </div>
 </header>
 
@@ -459,39 +459,25 @@ pre{
 </section>
 
 
-<section class="card" style="margin-top:16px">
-  <h3>⑦ SDO/AIA 193 + SOHO/LASCO C2 Image Player / past 2 days</h3>
+<section id="cmeImageSection" class="card" style="margin-top:16px">
+  <h3>⑦ CME-linked Solar Image Movie / t0 ± 1 hour</h3>
   <div id="cdawSummary" class="small">未取得</div>
   <div class="cdawHint">
-    保存対象は <b>過去2日分のみ</b>。画像は <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> の2種類だけ。CME Propagationのタイムスライダーに連動して、選択時刻以前の最新画像を表示します。画像がない時刻でも直前画像を保持するのでチカチカしません。画像再生を押すと、保存画像そのものを15分刻みで再生します。
+    使う画像は <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> の2種類だけ。CME Event Tableの <b>画像を見る</b> を押すと、そのCME発生時刻 <b>t0の前後1時間</b> にジャンプして、15分刻みの画像動画を表示します。画像が欠ける時刻は直前画像を保持表示します。
   </div>
 
   <div class="cdawPlayerControls">
-    <label>表示画像
-      <select id="cdawChannel" onchange="setCDAWPickerBounds(); syncCDAWFrameToTime(STATE.selectedTime || new Date(), true)">
-        <option value="solar">SDO/AIA 193 / 太陽面</option>
-        <option value="c2">SOHO/LASCO C2</option>
-      </select>
-    </label>
-    <label>画像開始時刻
-      <input id="cdawStartTime" type="datetime-local" onchange="applyCDAWStartPicker()">
-    </label>
-    <button onclick="applyCDAWStartPicker()">この時刻から表示</button>
-    <button onclick="setCDAWStartToFirst()">最古画像へ</button>
-    <button onclick="setCDAWStartToNow()">現在へ</button>
-    <span id="cdawPickerNote" class="miniNote"></span>
-    <button onclick="stepCDAWFrame(-1)">◀ 1枚</button>
-    <button onclick="playCDAWFrames()">▶ 画像再生</button>
-    <button class="danger" onclick="stopCDAWFrames()">画像停止</button>
-    <button onclick="stepCDAWFrame(1)">1枚 ▶</button>
+    <span id="cmeImageWindowLabel" class="miniNote">CME未選択。下のCME Event Tableから「画像を見る」を押してください。</span>
+    <button onclick="stepCMEImageFrame(-1)">◀ 15分</button>
+    <button onclick="playCMEImageFrames()">▶ CME画像再生</button>
+    <button class="danger" onclick="stopCMEImageFrames()">画像停止</button>
+    <button onclick="stepCMEImageFrame(1)">15分 ▶</button>
   </div>
-  <input id="cdawFrameSlider" type="range" min="0" max="0" value="0" step="1" oninput="selectCDAWFrameBySlider()">
+  <input id="cmeImageFrameSlider" type="range" min="0" max="8" value="4" step="1" oninput="selectCMEImageFrameBySlider()">
 
-
-  <div class="cdawSectionTitle">Selected time held images / AIA193 + LASCO C2</div>
+  <div class="cdawSectionTitle">CME t0 ± 1h / AIA193 + LASCO C2</div>
   <div id="cdawTimeline" class="cdawTimelineGrid"></div>
-  <div class="cdawSectionTitle">Past 2-day saved image strip / AIA193 + C2 only</div>
-  <div id="cdawGallery" class="cdawGrid"></div>
+  <div id="cdawGallery" style="display:none"></div>
 </section>
 
 <div id="cdawModal" class="modal" onclick="closeCDAWModal()">
@@ -566,6 +552,9 @@ const STATE = {
   cdawImages:[],
   cdawFrameTimer:null,
   cdawFrameIndex:0,
+  selectedCMEImage:null,
+  cmeImageFrameTimer:null,
+  cmeImageFrameIndex:4,
   env:defaultEnv(),
   cmes:[],
   timelineCenter:new Date(),
@@ -830,18 +819,14 @@ async function loadCDAWImages(){
 
     setSource("cdawImages",`OK: ${normalized.length} images`,{index,images:normalized});
     renderCDAWGallery();
-    setCDAWPickerBounds();
-    renderCDAWTimeline(STATE.selectedTime || new Date());
-    syncCDAWFrameToTime(STATE.selectedTime || new Date(), true);
+    renderCMEImageWindow(STATE.selectedTime || new Date());
 
   }catch(e){
     STATE.cdawIndex=null;
     STATE.cdawImages=[];
     setSource("cdawImages","FAILED",null,e.message);
     renderCDAWGallery();
-    setCDAWPickerBounds();
-    renderCDAWTimeline(STATE.selectedTime || new Date());
-    syncCDAWFrameToTime(STATE.selectedTime || new Date(), true);
+    renderCMEImageWindow(STATE.selectedTime || new Date());
   }
 }
 
@@ -1926,8 +1911,7 @@ function updateTimeline(){
   drawSun(STATE.cmes,t);
   drawFlow(STATE.cmes,t);
   drawWindSeries(t);
-  renderCDAWTimeline(t);
-  syncCDAWFrameToTime(t, false);
+  renderCMEImageWindow(t);
   renderHazard(t);
 }
 
@@ -3025,6 +3009,194 @@ function formatDateTime(value){
   return d.toISOString().slice(0,16).replace("T"," ")+" UTC";
 }
 
+
+function selectCMEImageWindow(index){
+  const c=STATE.cmes[index];
+  if(!c) return;
+
+  const t0=c.t0 instanceof Date ? c.t0 : new Date(c.t0);
+  const start=new Date(t0.getTime()-60*60000);
+  const end=new Date(t0.getTime()+60*60000);
+
+  STATE.selectedCMEImage={index,cme:c,t0,start,end};
+  STATE.cmeImageFrameIndex=4;
+
+  const slider=document.getElementById("cmeImageFrameSlider");
+  if(slider){
+    slider.min=0;
+    slider.max=8;
+    slider.value=4;
+  }
+
+  STATE.selectedTime=t0;
+  setMainTimelineToDate(t0);
+  drawSun(STATE.cmes,t0);
+  drawFlow(STATE.cmes,t0);
+  drawWindSeries(t0);
+  renderHazard(t0);
+  renderCMEImageWindow(t0);
+
+  document.getElementById("cmeImageSection")?.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function cmeImageFrameTime(){
+  const sel=STATE.selectedCMEImage;
+  if(!sel) return STATE.selectedTime || new Date();
+  const i=clamp(Number(STATE.cmeImageFrameIndex)||0,0,8);
+  return new Date(sel.start.getTime()+i*15*60000);
+}
+
+function heldCMEWindowImage(predicate,time){
+  const sel=STATE.selectedCMEImage;
+  const t=time instanceof Date ? time : new Date(time);
+
+  let imgs=(STATE.cdawImages || [])
+    .filter(predicate)
+    .filter(x=>Number.isFinite(x._t));
+
+  if(sel){
+    const pad=20*60000;
+    imgs=imgs.filter(x=>x._t>=sel.start.getTime()-pad && x._t<=sel.end.getTime()+pad);
+  }
+
+  imgs.sort((a,b)=>a._t-b._t);
+  if(!imgs.length) return null;
+
+  let held=null;
+  for(const img of imgs){
+    if(img._t<=t.getTime()) held=img;
+    else break;
+  }
+  if(!held){
+    // 開始直後に前画像がない場合だけ、最初の画像を使う
+    held=imgs[0];
+  }
+
+  held._deltaHours=Math.abs(held._t-t.getTime())/3600000;
+  return held;
+}
+
+function renderCMEImageWindow(selectedTime){
+  const box=document.getElementById("cdawTimeline");
+  const summary=document.getElementById("cdawSummary");
+  const label=document.getElementById("cmeImageWindowLabel");
+  if(!box || !summary) return;
+
+  const imgs=STATE.cdawImages || [];
+  if(!imgs.length){
+    summary.innerHTML='AIA193/C2画像未読込。<button onclick="loadCDAWImages()">画像読込</button>';
+    box.innerHTML=`
+      <div class="cdawHero"><div class="cdawHeroTitle">SDO/AIA 193</div><div class="cdawHeroEmpty">画像未読込</div></div>
+      <div class="cdawHero"><div class="cdawHeroTitle">SOHO/LASCO C2</div><div class="cdawHeroEmpty">画像未読込</div></div>
+    `;
+    return;
+  }
+
+  const sel=STATE.selectedCMEImage;
+  if(!sel){
+    const ordered=[...imgs].sort((a,b)=>a._t-b._t);
+    const first=ordered[0];
+    const last=ordered[ordered.length-1];
+    summary.innerHTML=`保存画像: <b>${imgs.length}</b>枚 / 範囲: <b>${formatDateTime(first._t)}</b> → <b>${formatDateTime(last._t)}</b><br>CME Event Tableから「画像を見る」を押してください。`;
+    box.innerHTML=`
+      <div class="cdawHero"><div class="cdawHeroTitle">SDO/AIA 193</div><div class="cdawHeroEmpty">CME未選択</div></div>
+      <div class="cdawHero"><div class="cdawHeroTitle">SOHO/LASCO C2</div><div class="cdawHeroEmpty">CME未選択</div></div>
+    `;
+    if(label) label.textContent="CME未選択。下のCME Event Tableから「画像を見る」を押してください。";
+    return;
+  }
+
+  const t=selectedTime instanceof Date ? selectedTime : cmeImageFrameTime();
+  const solar=heldCMEWindowImage(isCDAWSolar,t);
+  const c2=heldCMEWindowImage(isCDAWC2,t);
+  const windowImgs=imgs.filter(x=>x._t>=sel.start.getTime()-20*60000 && x._t<=sel.end.getTime()+20*60000);
+  const aiaCount=windowImgs.filter(isCDAWSolar).length;
+  const c2Count=windowImgs.filter(isCDAWC2).length;
+
+  summary.innerHTML=
+    `選択CME: <b>${escapeHtml(shortId(sel.cme.id))}</b> / t0: <b>${formatDateTime(sel.t0)}</b><br>`+
+    `表示範囲: <b>${formatDateTime(sel.start)}</b> → <b>${formatDateTime(sel.end)}</b> / 現在フレーム: <b>${formatDateTime(t)}</b><br>`+
+    `このCME窓の画像: AIA193 <b>${aiaCount}</b>枚 / LASCO C2 <b>${c2Count}</b>枚`;
+
+  if(label){
+    label.innerHTML=`CME <b>${escapeHtml(shortId(sel.cme.id))}</b> / t0±1h / frame <b>${(STATE.cmeImageFrameIndex||0)+1}</b>/9`;
+  }
+
+  box.innerHTML=
+    renderCMEImageSlot("SDO/AIA 193",solar,t,"solar disk / EUV")+
+    renderCMEImageSlot("SOHO/LASCO C2",c2,t,"inner corona CME");
+}
+
+function renderCMEImageSlot(title,img,selectedTime,sub){
+  if(!img){
+    return `
+      <div class="cdawHero">
+        <div class="cdawHeroTitle">${escapeHtml(title)}</div>
+        <div class="cdawHeroEmpty">このCME窓の画像なし<br>${escapeHtml(sub)}</div>
+        <div class="cdawHeroMeta">フレーム時刻: <b>${formatDateTime(selectedTime)}</b></div>
+      </div>
+    `;
+  }
+
+  const dt=Number.isFinite(img._deltaHours) ? img._deltaHours : Math.abs(img._t-selectedTime.getTime())/3600000;
+  const label=escapeHtml(img.label || img.instrument || img.kind || title);
+  const kind=escapeHtml(img.kind || title);
+  const src=escapeHtml(img.path);
+
+  return `
+    <div class="cdawHero">
+      <div class="cdawHeroTitle">${escapeHtml(title)} <span class="pill info">hold</span></div>
+      <img src="${src}" alt="${label}" loading="lazy" onclick="openCDAWImage(${img._i})">
+      <div class="cdawHeroMeta">
+        <b>${label}</b><br>
+        ${kind}<br>
+        フレーム時刻: <b>${formatDateTime(selectedTime)}</b><br>
+        表示画像時刻: <b>${formatDateTime(img._t)}</b><br>
+        差分: <b>${dt.toFixed(2)} h</b>
+      </div>
+    </div>
+  `;
+}
+
+function selectCMEImageFrameBySlider(){
+  const slider=document.getElementById("cmeImageFrameSlider");
+  if(!slider || !STATE.selectedCMEImage) return;
+  STATE.cmeImageFrameIndex=clamp(Number(slider.value)||0,0,8);
+  const t=cmeImageFrameTime();
+  STATE.selectedTime=t;
+  setMainTimelineToDate(t);
+  drawSun(STATE.cmes,t);
+  drawFlow(STATE.cmes,t);
+  drawWindSeries(t);
+  renderHazard(t);
+  renderCMEImageWindow(t);
+}
+
+function stepCMEImageFrame(dir){
+  if(!STATE.selectedCMEImage) return;
+  STATE.cmeImageFrameIndex=clamp((STATE.cmeImageFrameIndex||0)+dir,0,8);
+  const slider=document.getElementById("cmeImageFrameSlider");
+  if(slider) slider.value=STATE.cmeImageFrameIndex;
+  selectCMEImageFrameBySlider();
+}
+
+function playCMEImageFrames(){
+  stopCMEImageFrames();
+  if(!STATE.selectedCMEImage) return;
+  STATE.cmeImageFrameTimer=setInterval(()=>{
+    STATE.cmeImageFrameIndex=(STATE.cmeImageFrameIndex||0)+1;
+    if(STATE.cmeImageFrameIndex>8) STATE.cmeImageFrameIndex=0;
+    const slider=document.getElementById("cmeImageFrameSlider");
+    if(slider) slider.value=STATE.cmeImageFrameIndex;
+    selectCMEImageFrameBySlider();
+  },550);
+}
+
+function stopCMEImageFrames(){
+  if(STATE.cmeImageFrameTimer) clearInterval(STATE.cmeImageFrameTimer);
+  STATE.cmeImageFrameTimer=null;
+}
+
 /* =========================================================
    HAZARD
 ========================================================= */
@@ -3146,7 +3318,7 @@ function renderStatus(){
       <div>GOES ≥10MeV</div><div><b>${formatNum(STATE.env.p10,2)}</b> pfu / ${STATE.env.radiationScale}</div>
       <div>DBM gamma</div><div><b>${DBM.gamma}</b> km⁻¹</div>
       <div>DBM start distance</div><div><b>21.5 R☉</b></div>
-      <div>Timeline</div><div><b>now-7d → now+4d</b></div>
+      <div>Timeline</div><div><b>now-3d → now+5d</b></div>
       <div>Earth-directed</div><div><b class="goodText">${earth.length}</b></div>
       <div>MISS / Reference</div><div><b class="badText">${miss.length}</b></div>
     </div>`+
@@ -3168,6 +3340,7 @@ function renderTable(cmes){
     <div class="tablewrap">
     <table>
       <tr>
+        <th>Image</th>
         <th>ID</th>
         <th>Source</th>
         <th>Impact</th>
@@ -3179,8 +3352,14 @@ function renderTable(cmes){
         <th>Arrival</th>
         <th>Reason</th>
       </tr>
-      ${rows.map(c=>`
+      ${rows.map(c=>{
+        const idx=STATE.cmes.indexOf(c);
+        return `
         <tr>
+          <td>
+            <button class="primary" onclick="selectCMEImageWindow(${idx})">画像を見る</button><br>
+            <span class="small">t0 ${formatDateTime(c.t0)}</span>
+          </td>
           <td>${escapeHtml(c.id)}</td>
           <td>${c.sources.map(escapeHtml).join("+")}<br><span class="small">${escapeHtml(c.type)}</span></td>
           <td>${impactBadge(c)}<br><span class="small">Conf ${(c.earthConfidence*100).toFixed(0)}%</span></td>
@@ -3205,8 +3384,8 @@ function renderTable(cmes){
             ${c.arrival.transitHours ? formatNum(c.arrival.transitHours,1)+" h" : ""}
           </td>
           <td class="small">${escapeHtml(c.earthReason)}</td>
-        </tr>
-      `).join("")}
+        </tr>`;
+      }).join("")}
     </table>
     </div>
   `;
