@@ -1,13 +1,14 @@
 {
-  "updated_at": "2026-06-12T05:12:43.531405+00:00",
-  "source": "Helioviewer API takeScreenshot",
-  "description": "Images only around DONKI CME event times: t0 ± 1 hour, 15-minute cadence, SDO/AIA 193 and SOHO/LASCO C2 only.",
-  "mode": "cme_windows",
-  "past_days": 3,
+  "updated_at": "2026-06-12T05:27:24.589746+00:00",
+  "source": "NASA DONKI + Helioviewer API takeScreenshot",
+  "description": "CME-linked solar image windows. Backfill with workflow_dispatch days=14. Scheduled runs scan latest 1 day only. Retention is 14 days by default.",
+  "mode": "cme_windows_rolling_retention",
+  "scan_days_this_run": 14,
+  "retention_days": 14,
+  "retention_since": "2026-05-29T05:27:24.589746+00:00",
   "window_minutes": 60,
   "step_minutes": 15,
-  "max_events": 40,
-  "since": "2026-06-09T05:12:43.531405+00:00",
+  "max_events_per_run": 80,
   "channels": [
     {
       "kind": "AIA193",
@@ -22,12 +23,31 @@
       "layer": "[SOHO,LASCO,C2,white-light,1,100]"
     }
   ],
+  "donki": {
+    "scan_start": "2026-05-29T05:27:24.589746+00:00",
+    "scan_end": "2026-06-12T05:27:24.589746+00:00",
+    "cmeAnalysis_count": 0,
+    "cme_count": 0,
+    "errors": [
+      {
+        "endpoint": "CMEAnalysis",
+        "error": "HTTP Error 503: Service Unavailable"
+      },
+      {
+        "endpoint": "CME",
+        "error": "HTTP Error 503: Service Unavailable"
+      }
+    ]
+  },
   "event_count": 0,
+  "events_found_this_run": 0,
   "image_count": 0,
+  "images_added_or_checked_this_run": 0,
   "by_kind": {},
-  "events": [],
+  "deleted_old_images": [],
   "items": [],
   "images": [],
+  "events": [],
   "errors_count": 0,
   "errors_sample": []
 }
