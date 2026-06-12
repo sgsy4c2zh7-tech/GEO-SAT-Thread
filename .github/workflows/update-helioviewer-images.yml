@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       days:
-        description: "Past days to scan local event data. Use 14 for first backfill."
+        description: "Past days to scan local DONKI data. Use 7 for first backfill."
         required: false
-        default: "14"
+        default: "7"
       retention_days:
         description: "How many days of Helioviewer event-window images to keep."
         required: false
-        default: "14"
+        default: "7"
   schedule:
-    # 毎日1回。自動実行時は直近1日分のlocal event dataだけ確認
+    # 毎日1回。自動実行時は直近1日分のlocal DONKI dataだけ確認
     - cron: "29 3 * * *"
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch AIA193 and LASCO C2 images around local DONKI/CACTus event times
+      - name: Fetch AIA193 and LASCO C2 images around local DONKI event times only
         env:
           INPUT_DAYS: ${{ github.event.inputs.days }}
           INPUT_RETENTION_DAYS: ${{ github.event.inputs.retention_days }}
@@ -43,8 +43,6 @@ jobs:
           from datetime import datetime, timedelta, timezone
 
           DONKI_DIR = Path("docs/data/donki")
-          CACTUS_DIR = Path("docs/data/cactus")
-
           OUT_DIR = Path("docs/data/helioviewer")
           IMG_DIR = OUT_DIR / "images"
 
@@ -53,7 +51,7 @@ jobs:
 
           now = datetime.now(timezone.utc)
 
-          def safe_int(value, default, min_value=1, max_value=60):
+          def safe_int(value, default, min_value=1, max_value=30):
               try:
                   n = int(str(value or "").strip())
                   return max(min_value, min(max_value, n))
@@ -62,19 +60,19 @@ jobs:
 
           event_name = os.environ.get("EVENT_NAME", "")
 
-          # 手動実行はデフォルト14日
-          # schedule実行は直近1日だけ
           if event_name == "schedule":
               scan_days = 1
           else:
-              scan_days = safe_int(os.environ.get("INPUT_DAYS"), 14, 1, 30)
+              scan_days = safe_int(os.environ.get("INPUT_DAYS"), 7, 1, 14)
 
-          retention_days = safe_int(os.environ.get("INPUT_RETENTION_DAYS"), 14, 1, 30)
+          retention_days = safe_int(os.environ.get("INPUT_RETENTION_DAYS"), 7, 1, 14)
 
-          # イベント前後1時間、15分刻み
-          window_minutes = 60
+          # 画像爆増対策:
+          # CACTus分は画像取得しない
+          # DONKIイベントだけ、前後30分、15分刻み
+          window_minutes = 30
           step_minutes = 15
-          max_events_per_run = 160
+          max_events_per_run = 80
 
           scan_since = now - timedelta(days=scan_days)
           retention_since = now - timedelta(days=retention_days)
@@ -107,23 +105,16 @@ jobs:
           def parse_dt(value):
               if not value:
                   return None
-
               s = str(value).strip()
-
               if not s:
                   return None
-
               if s.endswith("Z"):
                   s = s[:-1] + "+00:00"
-
               try:
                   dt = datetime.fromisoformat(s)
-
                   if dt.tzinfo is None:
                       dt = dt.replace(tzinfo=timezone.utc)
-
                   return dt.astimezone(timezone.utc)
-
               except Exception:
                   return None
 
@@ -144,15 +135,12 @@ jobs:
                   seconds=dt.second,
                   microseconds=dt.microsecond,
               )
-
               return dt - discard
 
           def round_to_step(dt, minutes):
               base = floor_to_step(dt, minutes)
-
               if (dt - base) >= timedelta(minutes=minutes / 2):
                   base += timedelta(minutes=minutes)
-
               return base
 
           def read_json(path):
@@ -161,7 +149,6 @@ jobs:
           def load_json_if_exists(path):
               if not path.exists():
                   return None
-
               try:
                   return read_json(path)
               except Exception as e:
@@ -171,7 +158,6 @@ jobs:
           def add_event(events, seen, event_id, t0, source, meta=None):
               if not t0:
                   return
-
               if t0 < scan_since or t0 > now + timedelta(hours=2):
                   return
 
@@ -181,7 +167,6 @@ jobs:
 
               if key in seen:
                   return
-
               seen.add(key)
 
               events.append({
@@ -205,27 +190,21 @@ jobs:
               paths = []
 
               if index:
-                  # latest.jsonには過去14日分が入っている想定
                   if index.get("latest"):
                       paths.append(DONKI_DIR / index["latest"])
 
                   for f in index.get("files", []):
                       if f.get("valid") is False:
                           continue
-
                       name = f.get("file")
-
                       if not name:
                           continue
-
                       p = DONKI_DIR / name
-
                       if p not in paths:
                           paths.append(p)
 
               if not paths:
                   p = DONKI_DIR / "latest.json"
-
                   if p.exists():
                       paths.append(p)
 
@@ -234,12 +213,10 @@ jobs:
                       continue
 
                   item = load_json_if_exists(path)
-
                   if not item:
                       continue
 
                   loaded_files.append(path.name)
-
                   sources = item.get("sources") or {}
 
                   for a in sources.get("cmeAnalysis", {}).get("data", []) or []:
@@ -248,7 +225,6 @@ jobs:
                           or a.get("activityStartTime")
                           or a.get("noteTime")
                       )
-
                       add_event(
                           events,
                           seen,
@@ -265,11 +241,7 @@ jobs:
                       )
 
                   for c in sources.get("cme", {}).get("data", []) or []:
-                      t0 = parse_dt(
-                          c.get("startTime")
-                          or c.get("activityStartTime")
-                      )
-
+                      t0 = parse_dt(c.get("startTime") or c.get("activityStartTime"))
                       add_event(
                           events,
                           seen,
@@ -288,7 +260,6 @@ jobs:
                               or a.get("activityStartTime")
                               or c.get("startTime")
                           )
-
                           add_event(
                               events,
                               seen,
@@ -305,72 +276,10 @@ jobs:
                           )
 
               events.sort(key=lambda x: x["t0"], reverse=True)
-
-              return events, loaded_files
-
-          def extract_cactus_events():
-              events = []
-              seen = set()
-              loaded_files = []
-
-              index = load_json_if_exists(CACTUS_DIR / "index.json")
-              payload_events = []
-
-              if index:
-                  loaded_files.append("index.json")
-                  payload_events.extend(index.get("events") or [])
-
-                  for f in index.get("files", []):
-                      name = f.get("file")
-
-                      if not name:
-                          continue
-
-                      p = CACTUS_DIR / name
-
-                      if not p.exists():
-                          continue
-
-                      item = load_json_if_exists(p)
-
-                      if not item:
-                          continue
-
-                      loaded_files.append(name)
-                      payload_events.extend(item.get("events") or [])
-
-              elif (CACTUS_DIR / "latest.json").exists():
-                  item = load_json_if_exists(CACTUS_DIR / "latest.json")
-
-                  if item:
-                      loaded_files.append("latest.json")
-                      payload_events.extend(item.get("events") or [])
-
-              for ev in payload_events:
-                  t0 = parse_dt(ev.get("t0") or ev.get("time"))
-
-                  add_event(
-                      events,
-                      seen,
-                      ev.get("id"),
-                      t0,
-                      "CACTus",
-                      {
-                          "pa": ev.get("pa"),
-                          "da": ev.get("da"),
-                          "speed": ev.get("speed"),
-                          "halo": ev.get("halo"),
-                          "data_source": "docs/data/cactus"
-                      }
-                  )
-
-              events.sort(key=lambda x: x["t0"], reverse=True)
-
               return events, loaded_files
 
           def fetch_bytes(url, tries=3, timeout=120, accept="*/*"):
               last_error = None
-
               for i in range(tries):
                   try:
                       req = urllib.request.Request(
@@ -380,16 +289,13 @@ jobs:
                               "Accept": accept,
                           },
                       )
-
                       with urllib.request.urlopen(req, timeout=timeout) as r:
                           return r.read(), r.headers.get("Content-Type", "")
-
                   except Exception as e:
                       last_error = str(e)
                       wait = 10 * (i + 1)
                       print(f"retry {i+1}/{tries} failed: {e}; wait {wait}s")
                       time.sleep(wait)
-
               raise RuntimeError(last_error)
 
           def screenshot_url(dt, ch):
@@ -404,7 +310,6 @@ jobs:
                   "display": "true",
                   "watermark": "false",
               }
-
               return "https://api.helioviewer.org/v2/takeScreenshot/?" + urllib.parse.urlencode(params)
 
           def save_image(event, dt, ch):
@@ -428,41 +333,22 @@ jobs:
                   }
 
               url = screenshot_url(dt, ch)
+              print("GET Helioviewer", event["source"], event["id"], ch["label"], iso_min(dt))
 
-              print(
-                  "GET Helioviewer",
-                  event["source"],
-                  event["id"],
-                  ch["label"],
-                  iso_min(dt)
-              )
+              data, ctype = fetch_bytes(url, accept="image/png,image/jpeg,application/json,*/*")
 
-              data, ctype = fetch_bytes(
-                  url,
-                  accept="image/png,image/jpeg,application/json,*/*"
-              )
-
-              # HelioviewerがJSONで画像URLを返す場合に備える
               if b"{" in data[:30] and "json" in ctype.lower():
                   obj = json.loads(data.decode("utf-8", errors="replace"))
                   img_url = obj.get("url") or obj.get("uri") or obj.get("path")
-
                   if img_url:
                       if img_url.startswith("/"):
                           img_url = "https://api.helioviewer.org" + img_url
-
-                      data, ctype = fetch_bytes(
-                          img_url,
-                          accept="image/png,image/jpeg,*/*"
-                      )
+                      data, ctype = fetch_bytes(img_url, accept="image/png,image/jpeg,*/*")
 
               if len(data) < 1000:
                   raise RuntimeError(f"image too small: {len(data)} bytes")
 
-              if not (
-                  data.startswith(b"\x89PNG")
-                  or data.startswith(b"\xff\xd8")
-              ):
+              if not (data.startswith(b"\x89PNG") or data.startswith(b"\xff\xd8")):
                   raise RuntimeError(f"not PNG/JPEG content-type={ctype}")
 
               out_path.write_bytes(data)
@@ -483,7 +369,6 @@ jobs:
 
           def parse_image_time_from_name(path):
               name = path.name
-
               try:
                   if name.startswith("aia193_"):
                       prefix = "aia193_"
@@ -502,46 +387,37 @@ jobs:
                   ).replace(tzinfo=timezone.utc)
 
                   return dt, kind, label
-
               except Exception:
                   return None
 
           def load_existing_index():
               p = OUT_DIR / "index.json"
-
               if not p.exists():
                   return {}
-
               try:
                   return json.loads(p.read_text(encoding="utf-8"))
               except Exception:
                   return {}
 
-          # 古い画像だけ削除。今回対象外でも14日以内なら残す
+          # 古い画像だけ削除。今回対象外でも7日以内なら残す。
           deleted = []
-
           for f in IMG_DIR.glob("*.png"):
               parsed = parse_image_time_from_name(f)
-
               if not parsed:
                   continue
-
               dt, kind, label = parsed
-
               if dt < retention_since:
                   print("delete old image:", f)
                   f.unlink()
                   deleted.append(f.name)
 
           donki_events, donki_files = extract_donki_events()
-          cactus_events, cactus_files = extract_cactus_events()
 
-          events = donki_events + cactus_events
+          # DONKIだけ。CACTusは画像取得しない。
+          events = donki_events
           events.sort(key=lambda x: x["t0"], reverse=True)
 
-          # 重複整理
           dedup = {}
-
           for ev in events:
               key = f"{ev['source']}_{safe_id(ev['id'])}_{stamp(ev['rounded_t0'])}"
               dedup[key] = ev
@@ -553,7 +429,7 @@ jobs:
           print("scan_days:", scan_days)
           print("retention_days:", retention_days)
           print("donki_events:", len(donki_events), "donki_files:", donki_files[:8])
-          print("cactus_events:", len(cactus_events), "cactus_files:", cactus_files[:8])
+          print("cactus_events: 0 skipped intentionally")
           print("merged_events_this_run:", len(events))
 
           run_items = []
@@ -569,7 +445,6 @@ jobs:
                           item = save_image(ev, t, ch)
                           run_items.append(item)
                           ev_items.append(item)
-
                       except Exception as e:
                           err = {
                               "event_id": ev["id"],
@@ -580,7 +455,6 @@ jobs:
                               "label": ch["label"],
                               "error": str(e),
                           }
-
                           print("ERROR", err)
                           errors.append(err)
 
@@ -592,17 +466,13 @@ jobs:
               ev["aia193_count"] = len([x for x in ev_items if x.get("kind") == "AIA193"])
               ev["lasco_c2_count"] = len([x for x in ev_items if x.get("kind") == "LASCO_C2"])
 
-          # 実ファイルから画像一覧を再構築
           all_items = []
-
           for f in sorted(IMG_DIR.glob("*.png")):
               parsed = parse_image_time_from_name(f)
-
               if not parsed:
                   continue
 
               dt, kind, label = parsed
-
               if dt < retention_since:
                   continue
 
@@ -618,19 +488,19 @@ jobs:
           all_items.sort(key=lambda x: (x["time"], x["kind"]))
 
           by_kind = {}
-
           for item in all_items:
               by_kind[item["kind"]] = by_kind.get(item["kind"], 0) + 1
 
-          # indexのイベントは既存分と今回分をマージし、保持期間外を削除
           existing_index = load_existing_index()
           existing_events = existing_index.get("events", []) if isinstance(existing_index, dict) else []
 
           merged_events = {}
-
           for ev in existing_events:
-              t0 = parse_dt(ev.get("t0") or ev.get("raw_time"))
+              # CACTus旧イベントは画像対象から外すのでindexからも落とす
+              if str(ev.get("source", "")).lower().startswith("cactus"):
+                  continue
 
+              t0 = parse_dt(ev.get("t0") or ev.get("raw_time"))
               if not t0 or t0 < retention_since:
                   continue
 
@@ -662,9 +532,9 @@ jobs:
 
           index = {
               "updated_at": now.isoformat(),
-              "source": "Local docs/data/donki + docs/data/cactus + Helioviewer API takeScreenshot",
-              "description": "Event-linked solar image windows. Image workflow reads local cached DONKI/CACTus data only, then fetches AIA193 and LASCO C2 images around each event time.",
-              "mode": "event_windows_from_local_data",
+              "source": "Local docs/data/donki + Helioviewer API takeScreenshot",
+              "description": "DONKI-linked solar image windows only. CACTus data is cached separately for UI, but CACTus images are not fetched. Window is t0 ± 30 minutes, 15-minute cadence. Retention is 7 days.",
+              "mode": "donki_event_windows_only",
               "scan_days_this_run": scan_days,
               "retention_days": retention_days,
               "retention_since": retention_since.isoformat(),
@@ -682,11 +552,10 @@ jobs:
               ],
               "inputs": {
                   "donki_dir": "docs/data/donki",
-                  "cactus_dir": "docs/data/cactus",
+                  "cactus_images": "disabled",
                   "donki_files_loaded": donki_files,
-                  "cactus_files_loaded": cactus_files,
                   "donki_events_this_run": len(donki_events),
-                  "cactus_events_this_run": len(cactus_events),
+                  "cactus_events_this_run": 0,
               },
               "event_count": len(event_list),
               "events_found_this_run": len(events),
@@ -702,17 +571,14 @@ jobs:
           }
 
           index_file = OUT_DIR / "index.json"
-          index_file.write_text(
-              json.dumps(index, ensure_ascii=False, indent=2),
-              encoding="utf-8",
-          )
+          index_file.write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
 
           print("saved", index_file)
           print(json.dumps({
               "scan_days_this_run": index["scan_days_this_run"],
               "retention_days": index["retention_days"],
               "donki_events_this_run": len(donki_events),
-              "cactus_events_this_run": len(cactus_events),
+              "cactus_events_this_run": 0,
               "events_found_this_run": index["events_found_this_run"],
               "event_count": index["event_count"],
               "image_count": index["image_count"],
@@ -726,8 +592,6 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-
           git add docs/data/helioviewer
-
-          git commit -m "Update Helioviewer event window images" || echo "No changes"
+          git commit -m "Update DONKI Helioviewer event window images" || echo "No changes"
           git push
