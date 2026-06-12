@@ -2,9 +2,18 @@ name: Update Helioviewer CME Window Images
 
 on:
   workflow_dispatch:
+    inputs:
+      days:
+        description: "Past days to scan DONKI CME events. Use 14 for first backfill, 1 for daily update."
+        required: false
+        default: "14"
+      retention_days:
+        description: "How many days of Helioviewer CME-window images to keep."
+        required: false
+        default: "14"
   schedule:
-    # DONKI更新の少し後を想定。CME発生時刻ごとに t0±1h の画像だけ補完
-    - cron: "17 */3 * * *"
+    # Daily update. Scheduled runs automatically scan only the latest 1 day.
+    - cron: "23 3 * * *"
 
 permissions:
   contents: write
@@ -18,9 +27,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Fetch AIA193 and LASCO C2 images around DONKI CME times
+        env:
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+          INPUT_DAYS: ${{ github.event.inputs.days }}
+          INPUT_RETENTION_DAYS: ${{ github.event.inputs.retention_days }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           python3 <<'PY'
           import json
+          import os
           import re
           import time
           import urllib.request
@@ -28,7 +43,6 @@ jobs:
           from pathlib import Path
           from datetime import datetime, timedelta, timezone
 
-          DONKI_DIR = Path("docs/data/donki")
           OUT_DIR = Path("docs/data/helioviewer")
           IMG_DIR = OUT_DIR / "images"
           OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -36,13 +50,33 @@ jobs:
 
           now = datetime.now(timezone.utc)
 
-          # CME事象表示は過去3日から。画像はDONKI CME時刻 t0±1h だけ作る。
-          past_days = 3
+          # Manual run: default 14 days for initial backfill.
+          # Scheduled run: fixed 1 day, so only latest events are added.
+          event_name = os.environ.get("EVENT_NAME", "")
+
+          def safe_int(value, default, min_value=1, max_value=60):
+              try:
+                  n = int(str(value or "").strip())
+                  return max(min_value, min(max_value, n))
+              except Exception:
+                  return default
+
+          if event_name == "schedule":
+              scan_days = 1
+          else:
+              scan_days = safe_int(os.environ.get("INPUT_DAYS"), 14, 1, 30)
+
+          retention_days = safe_int(os.environ.get("INPUT_RETENTION_DAYS"), 14, 1, 30)
+
+          # CME t0 ± 1 hour / 15 min cadence
           window_minutes = 60
           step_minutes = 15
-          max_events = 40
+          max_events = 80
 
-          since = now - timedelta(days=past_days)
+          scan_since = now - timedelta(days=scan_days)
+          retention_since = now - timedelta(days=retention_days)
+
+          api_key = os.environ.get("NASA_API_KEY", "").strip() or "DEMO_KEY"
 
           CHANNELS = [
               {
@@ -54,7 +88,7 @@ jobs:
                   "width": 1024,
                   "height": 1024,
                   "x0": 0,
-                  "y0": 0
+                  "y0": 0,
               },
               {
                   "key": "lasco_c2",
@@ -65,8 +99,8 @@ jobs:
                   "width": 1024,
                   "height": 1024,
                   "x0": 0,
-                  "y0": 0
-              }
+                  "y0": 0,
+              },
           ]
 
           def parse_dt(value):
@@ -85,10 +119,8 @@ jobs:
               except Exception:
                   return None
 
-          def safe_id(value):
-              s = str(value or "CME")
-              s = re.sub(r"[^A-Za-z0-9_.-]+", "_", s)
-              return s[-80:]
+          def iso_date(dt):
+              return dt.strftime("%Y-%m-%d")
 
           def iso_min(dt):
               return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -96,11 +128,16 @@ jobs:
           def stamp(dt):
               return dt.strftime("%Y%m%d_%H%M")
 
+          def safe_id(value):
+              s = str(value or "CME")
+              s = re.sub(r"[^A-Za-z0-9_.-]+", "_", s)
+              return s[-90:]
+
           def floor_to_step(dt, minutes):
               discard = timedelta(
                   minutes=dt.minute % minutes,
                   seconds=dt.second,
-                  microseconds=dt.microsecond
+                  microseconds=dt.microsecond,
               )
               return dt - discard
 
@@ -110,109 +147,7 @@ jobs:
                   base += timedelta(minutes=minutes)
               return base
 
-          def read_json(path):
-              return json.loads(path.read_text(encoding="utf-8"))
-
-          def load_donki_payloads():
-              index_path = DONKI_DIR / "index.json"
-              if not index_path.exists():
-                  print("DONKI index not found:", index_path)
-                  return [], {"error": "DONKI index.json not found"}
-
-              index = read_json(index_path)
-              files = []
-
-              for f in index.get("files", []):
-                  if f.get("valid") is False:
-                      continue
-                  name = f.get("file") or ""
-                  if not name:
-                      continue
-                  files.append(DONKI_DIR / name)
-
-              # fallback
-              if not files and index.get("latest"):
-                  files = [DONKI_DIR / index["latest"]]
-
-              payloads = []
-              for path in files[:80]:
-                  if not path.exists():
-                      continue
-                  try:
-                      payloads.append({
-                          "file": path.name,
-                          "payload": read_json(path)
-                      })
-                  except Exception as e:
-                      print("skip DONKI file", path, e)
-
-              return payloads, index
-
-          def extract_cme_events(payloads):
-              events = []
-              seen = set()
-
-              def add_event(event_id, t0, source, raw=None):
-                  if not t0:
-                      return
-                  if t0 < since or t0 > now + timedelta(hours=2):
-                      return
-
-                  rounded = round_to_step(t0, step_minutes)
-                  key = (safe_id(event_id), rounded.strftime("%Y%m%d_%H%M"))
-                  if key in seen:
-                      return
-                  seen.add(key)
-
-                  events.append({
-                      "id": str(event_id or f"CME_{stamp(rounded)}"),
-                      "safe_id": safe_id(event_id or f"CME_{stamp(rounded)}"),
-                      "source": source,
-                      "t0": t0,
-                      "rounded_t0": rounded,
-                      "raw_time": t0.isoformat(),
-                      "window_start": rounded - timedelta(minutes=window_minutes),
-                      "window_end": rounded + timedelta(minutes=window_minutes),
-                  })
-
-              for item in payloads:
-                  p = item.get("payload") or {}
-                  sources = p.get("sources") or {}
-
-                  for a in sources.get("cmeAnalysis", {}).get("data", []) or []:
-                      t0 = parse_dt(
-                          a.get("time21_5")
-                          or a.get("activityStartTime")
-                          or a.get("noteTime")
-                      )
-                      add_event(
-                          a.get("activityID") or a.get("associatedCMEID"),
-                          t0,
-                          "DONKI_CMEAnalysis",
-                          a
-                      )
-
-                  for c in sources.get("cme", {}).get("data", []) or []:
-                      t0 = parse_dt(c.get("startTime") or c.get("activityStartTime"))
-                      add_event(c.get("activityID"), t0, "DONKI_CME", c)
-
-                      for a in c.get("cmeAnalyses", []) or []:
-                          at0 = parse_dt(
-                              a.get("time21_5")
-                              or a.get("activityStartTime")
-                              or c.get("startTime")
-                          )
-                          add_event(
-                              a.get("activityID") or c.get("activityID"),
-                              at0,
-                              "DONKI_CME.cmeAnalyses",
-                              a
-                          )
-
-              events.sort(key=lambda x: x["t0"], reverse=True)
-              return events[:max_events]
-
-          def fetch_bytes(url, tries=3, timeout=120):
+          def fetch_bytes(url, tries=3, timeout=120, accept="*/*"):
               last_error = None
               for i in range(tries):
                   try:
@@ -220,8 +155,8 @@ jobs:
                           url,
                           headers={
                               "User-Agent": "github-actions-helioviewer-cme-window-cache",
-                              "Accept": "image/png,image/jpeg,application/json,*/*"
-                          }
+                              "Accept": accept,
+                          },
                       )
                       with urllib.request.urlopen(req, timeout=timeout) as r:
                           return r.read(), r.headers.get("Content-Type", "")
@@ -231,6 +166,83 @@ jobs:
                       print(f"retry {i+1}/{tries} failed: {e}; wait {wait}s")
                       time.sleep(wait)
               raise RuntimeError(last_error)
+
+          def fetch_json(url, tries=3, timeout=120):
+              data, ctype = fetch_bytes(url, tries=tries, timeout=timeout, accept="application/json,*/*")
+              text = data.decode("utf-8", errors="replace")
+              if not text.strip():
+                  return []
+              return json.loads(text)
+
+          def donki_url(endpoint, start_dt, end_dt):
+              params = {
+                  "startDate": iso_date(start_dt),
+                  "endDate": iso_date(end_dt),
+                  "api_key": api_key,
+              }
+              return "https://api.nasa.gov/DONKI/" + endpoint + "?" + urllib.parse.urlencode(params)
+
+          def fetch_donki_events():
+              errors = []
+              cme_analysis = []
+              cme = []
+
+              for endpoint, holder in [("CMEAnalysis", cme_analysis), ("CME", cme)]:
+                  url = donki_url(endpoint, scan_since, now)
+                  safe_url = url.replace(api_key, "NASA_API_KEY")
+                  try:
+                      print("GET DONKI", safe_url)
+                      data = fetch_json(url, tries=4, timeout=120)
+                      if isinstance(data, list):
+                          holder.extend(data)
+                          print(endpoint, "count", len(data))
+                      else:
+                          errors.append({"endpoint": endpoint, "error": "response is not list"})
+                  except Exception as e:
+                      print("DONKI ERROR", endpoint, e)
+                      errors.append({"endpoint": endpoint, "error": str(e)})
+
+              events = []
+              seen = set()
+
+              def add_event(event_id, t0, source, raw=None):
+                  if not t0:
+                      return
+                  if t0 < scan_since or t0 > now + timedelta(hours=2):
+                      return
+
+                  rounded = round_to_step(t0, step_minutes)
+                  sid = safe_id(event_id or f"CME_{stamp(rounded)}")
+                  key = (sid, rounded.strftime("%Y%m%d_%H%M"))
+                  if key in seen:
+                      return
+                  seen.add(key)
+
+                  events.append({
+                      "id": str(event_id or f"CME_{stamp(rounded)}"),
+                      "safe_id": sid,
+                      "source": source,
+                      "t0": t0,
+                      "rounded_t0": rounded,
+                      "raw_time": t0.isoformat(),
+                      "window_start": rounded - timedelta(minutes=window_minutes),
+                      "window_end": rounded + timedelta(minutes=window_minutes),
+                  })
+
+              for a in cme_analysis:
+                  t0 = parse_dt(a.get("time21_5") or a.get("activityStartTime") or a.get("noteTime"))
+                  add_event(a.get("activityID") or a.get("associatedCMEID"), t0, "DONKI_CMEAnalysis", a)
+
+              for c in cme:
+                  t0 = parse_dt(c.get("startTime") or c.get("activityStartTime"))
+                  add_event(c.get("activityID"), t0, "DONKI_CME", c)
+
+                  for a in c.get("cmeAnalyses", []) or []:
+                      at0 = parse_dt(a.get("time21_5") or a.get("activityStartTime") or c.get("startTime"))
+                      add_event(a.get("activityID") or c.get("activityID"), at0, "DONKI_CME.cmeAnalyses", a)
+
+              events.sort(key=lambda x: x["t0"], reverse=True)
+              return events[:max_events], errors, {"cmeAnalysis_count": len(cme_analysis), "cme_count": len(cme)}
 
           def screenshot_url(dt, ch):
               params = {
@@ -242,7 +254,7 @@ jobs:
                   "x0": ch["x0"],
                   "y0": ch["y0"],
                   "display": "true",
-                  "watermark": "false"
+                  "watermark": "false",
               }
               return "https://api.helioviewer.org/v2/takeScreenshot/?" + urllib.parse.urlencode(params)
 
@@ -262,21 +274,21 @@ jobs:
                       "path": rel_path,
                       "cached": True,
                       "ok": True,
-                      "size_bytes": out_path.stat().st_size
+                      "size_bytes": out_path.stat().st_size,
                   }
 
               url = screenshot_url(dt, ch)
-              print("GET", event["id"], ch["label"], iso_min(dt))
+              print("GET Helioviewer", event["id"], ch["label"], iso_min(dt))
+              data, ctype = fetch_bytes(url, accept="image/png,image/jpeg,application/json,*/*")
 
-              data, ctype = fetch_bytes(url)
-
-              if b"{" in data[:20] and "json" in ctype.lower():
+              # Some Helioviewer deployments return JSON containing the image URL.
+              if b"{" in data[:30] and "json" in ctype.lower():
                   obj = json.loads(data.decode("utf-8", errors="replace"))
                   img_url = obj.get("url") or obj.get("uri") or obj.get("path")
                   if img_url:
                       if img_url.startswith("/"):
                           img_url = "https://api.helioviewer.org" + img_url
-                      data, ctype = fetch_bytes(img_url)
+                      data, ctype = fetch_bytes(img_url, accept="image/png,image/jpeg,*/*")
 
               if len(data) < 1000:
                   raise RuntimeError(f"image too small: {len(data)} bytes")
@@ -296,18 +308,61 @@ jobs:
                   "path": rel_path,
                   "cached": False,
                   "ok": True,
-                  "size_bytes": len(data)
+                  "size_bytes": len(data),
               }
 
-          payloads, donki_index = load_donki_payloads()
-          events = extract_cme_events(payloads)
+          def load_existing_index():
+              p = OUT_DIR / "index.json"
+              if not p.exists():
+                  return {}
+              try:
+                  return json.loads(p.read_text(encoding="utf-8"))
+              except Exception:
+                  return {}
 
-          print("DONKI payloads:", len(payloads))
+          def parse_image_time_from_name(path):
+              name = path.name
+              try:
+                  if name.startswith("aia193_"):
+                      prefix = "aia193_"
+                      kind = "AIA193"
+                      label = "SDO/AIA 193"
+                  elif name.startswith("lasco_c2_"):
+                      prefix = "lasco_c2_"
+                      kind = "LASCO_C2"
+                      label = "SOHO/LASCO C2"
+                  else:
+                      return None
+
+                  dt = datetime.strptime(path.stem.replace(prefix, ""), "%Y%m%d_%H%M").replace(tzinfo=timezone.utc)
+                  return dt, kind, label
+              except Exception:
+                  return None
+
+          # Delete only files older than retention period.
+          deleted = []
+          for f in IMG_DIR.glob("*.png"):
+              parsed = parse_image_time_from_name(f)
+              if not parsed:
+                  continue
+              dt, kind, label = parsed
+              if dt < retention_since:
+                  print("delete old image:", f)
+                  f.unlink()
+                  deleted.append(f.name)
+
+          existing_index = load_existing_index()
+          existing_events = existing_index.get("events", []) if isinstance(existing_index, dict) else []
+
+          events, donki_errors, donki_meta = fetch_donki_events()
+
+          print("scan_days:", scan_days)
+          print("retention_days:", retention_days)
+          print("DONKI meta:", donki_meta)
           print("CME events:", len(events))
 
-          items = []
+          run_items = []
           errors = []
-          referenced_files = set()
 
           for ev in events:
               t = ev["window_start"]
@@ -317,20 +372,21 @@ jobs:
                   for ch in CHANNELS:
                       try:
                           item = save_image(ev, t, ch)
-                          items.append(item)
+                          run_items.append(item)
                           ev_items.append(item)
-                          referenced_files.add(item["file"])
                       except Exception as e:
                           err = {
                               "event_id": ev["id"],
+                              "event_t0": ev["rounded_t0"].isoformat(),
                               "time": t.isoformat(),
                               "kind": ch["kind"],
                               "label": ch["label"],
-                              "error": str(e)
+                              "error": str(e),
                           }
                           print("ERROR", err)
                           errors.append(err)
 
+                      # API load reduction
                       time.sleep(0.25)
 
                   t += timedelta(minutes=step_minutes)
@@ -338,46 +394,25 @@ jobs:
               ev["image_count"] = len([x for x in ev_items if x.get("ok")])
               ev["aia193_count"] = len([x for x in ev_items if x.get("kind") == "AIA193"])
               ev["lasco_c2_count"] = len([x for x in ev_items if x.get("kind") == "LASCO_C2"])
-              ev["images"] = ev_items
 
-          # 今回のDONKI CME窓で使わない画像は削除する。
-          for f in IMG_DIR.glob("*.png"):
-              if f.name not in referenced_files:
-                  print("delete unused image:", f)
-                  f.unlink()
-
-          # 実ファイルベースでindex再構築。items/imagesはHTML互換用。
+          # Build actual image list from files after retention cleanup.
           all_items = []
-
           for f in sorted(IMG_DIR.glob("*.png")):
-              try:
-                  if f.name.startswith("aia193_"):
-                      kind = "AIA193"
-                      label = "SDO/AIA 193"
-                      prefix = "aia193_"
-                  elif f.name.startswith("lasco_c2_"):
-                      kind = "LASCO_C2"
-                      label = "SOHO/LASCO C2"
-                      prefix = "lasco_c2_"
-                  else:
-                      continue
+              parsed = parse_image_time_from_name(f)
+              if not parsed:
+                  continue
+              dt, kind, label = parsed
+              if dt < retention_since:
+                  continue
 
-                  dt = datetime.strptime(
-                      f.stem.replace(prefix, ""),
-                      "%Y%m%d_%H%M"
-                  ).replace(tzinfo=timezone.utc)
-
-                  all_items.append({
-                      "time": dt.isoformat(),
-                      "kind": kind,
-                      "label": label,
-                      "file": f.name,
-                      "path": f"./data/helioviewer/images/{f.name}",
-                      "size_bytes": f.stat().st_size
-                  })
-
-              except Exception as e:
-                  print("index skip", f, e)
+              all_items.append({
+                  "time": dt.isoformat(),
+                  "kind": kind,
+                  "label": label,
+                  "file": f.name,
+                  "path": f"./data/helioviewer/images/{f.name}",
+                  "size_bytes": f.stat().st_size,
+              })
 
           all_items.sort(key=lambda x: (x["time"], x["kind"]))
 
@@ -385,59 +420,92 @@ jobs:
           for item in all_items:
               by_kind[item["kind"]] = by_kind.get(item["kind"], 0) + 1
 
+          # Merge events from old index and this run, then prune by retention.
+          merged_events = {}
+
+          for ev in existing_events:
+              try:
+                  t0 = parse_dt(ev.get("t0") or ev.get("raw_time"))
+                  if not t0 or t0 < retention_since:
+                      continue
+                  key = safe_id(ev.get("id")) + "_" + stamp(round_to_step(t0, step_minutes))
+                  merged_events[key] = ev
+              except Exception:
+                  continue
+
+          for ev in events:
+              if ev["rounded_t0"] < retention_since:
+                  continue
+              key = safe_id(ev["id"]) + "_" + stamp(ev["rounded_t0"])
+              merged_events[key] = {
+                  "id": ev["id"],
+                  "source": ev["source"],
+                  "t0": ev["rounded_t0"].isoformat(),
+                  "raw_time": ev["raw_time"],
+                  "window_start": ev["window_start"].isoformat(),
+                  "window_end": ev["window_end"].isoformat(),
+                  "image_count": ev.get("image_count", 0),
+                  "aia193_count": ev.get("aia193_count", 0),
+                  "lasco_c2_count": ev.get("lasco_c2_count", 0),
+                  "last_seen_at": now.isoformat(),
+              }
+
+          event_list = list(merged_events.values())
+          event_list.sort(key=lambda x: x.get("t0", ""), reverse=True)
+
           index = {
               "updated_at": now.isoformat(),
-              "source": "Helioviewer API takeScreenshot",
-              "description": "Images only around DONKI CME event times: t0 ± 1 hour, 15-minute cadence, SDO/AIA 193 and SOHO/LASCO C2 only.",
-              "mode": "cme_windows",
-              "past_days": past_days,
+              "source": "NASA DONKI + Helioviewer API takeScreenshot",
+              "description": "CME-linked solar image windows. Backfill with workflow_dispatch days=14. Scheduled runs scan latest 1 day only. Retention is 14 days by default.",
+              "mode": "cme_windows_rolling_retention",
+              "scan_days_this_run": scan_days,
+              "retention_days": retention_days,
+              "retention_since": retention_since.isoformat(),
               "window_minutes": window_minutes,
               "step_minutes": step_minutes,
-              "max_events": max_events,
-              "since": since.isoformat(),
+              "max_events_per_run": max_events,
               "channels": [
                   {
                       "kind": ch["kind"],
                       "key": ch["key"],
                       "label": ch["label"],
-                      "layer": ch["layer"]
+                      "layer": ch["layer"],
                   }
                   for ch in CHANNELS
               ],
-              "event_count": len(events),
+              "donki": {
+                  "scan_start": scan_since.isoformat(),
+                  "scan_end": now.isoformat(),
+                  **donki_meta,
+                  "errors": donki_errors,
+              },
+              "event_count": len(event_list),
+              "events_found_this_run": len(events),
               "image_count": len(all_items),
+              "images_added_or_checked_this_run": len(run_items),
               "by_kind": by_kind,
-              "events": [
-                  {
-                      "id": ev["id"],
-                      "source": ev["source"],
-                      "t0": ev["rounded_t0"].isoformat(),
-                      "raw_time": ev["raw_time"],
-                      "window_start": ev["window_start"].isoformat(),
-                      "window_end": ev["window_end"].isoformat(),
-                      "image_count": ev.get("image_count", 0),
-                      "aia193_count": ev.get("aia193_count", 0),
-                      "lasco_c2_count": ev.get("lasco_c2_count", 0),
-                  }
-                  for ev in events
-              ],
+              "deleted_old_images": deleted,
               "items": all_items,
               "images": all_items,
+              "events": event_list,
               "errors_count": len(errors),
-              "errors_sample": errors[:30]
+              "errors_sample": errors[:40],
           }
 
           (OUT_DIR / "index.json").write_text(
               json.dumps(index, ensure_ascii=False, indent=2),
-              encoding="utf-8"
+              encoding="utf-8",
           )
 
           print("saved", OUT_DIR / "index.json")
           print(json.dumps({
+              "scan_days_this_run": index["scan_days_this_run"],
+              "retention_days": index["retention_days"],
+              "events_found_this_run": index["events_found_this_run"],
               "event_count": index["event_count"],
               "image_count": index["image_count"],
               "by_kind": index["by_kind"],
-              "errors_count": index["errors_count"]
+              "errors_count": index["errors_count"],
           }, ensure_ascii=False, indent=2))
 
           PY
