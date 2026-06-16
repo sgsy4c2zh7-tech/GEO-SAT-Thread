@@ -197,6 +197,190 @@ pre{
 .warnText{color:#ffcc80}
 .goodText{color:#9ccc65}
 .badText{color:#ff8a80}
+
+.cdawGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:12px;
+  margin-top:12px;
+}
+.cdawCard{
+  background:#05070d;
+  border:1px solid #263044;
+  border-radius:14px;
+  overflow:hidden;
+}
+.cdawCard img{
+  width:100%;
+  display:block;
+  background:#000;
+  aspect-ratio:1/1;
+  object-fit:contain;
+}
+.cdawMeta{
+  padding:8px;
+  font-size:12px;
+  color:var(--muted);
+}
+.cdawMeta b{color:#fff}
+.cdawTimelineGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:12px;
+  margin-top:12px;
+}
+.cdawHero{
+  background:#05070d;
+  border:1px solid #263044;
+  border-radius:14px;
+  overflow:hidden;
+}
+.cdawHeroTitle{
+  padding:8px 10px;
+  border-bottom:1px solid #263044;
+  font-weight:900;
+  color:#fff;
+  background:#0b1220;
+}
+.cdawHero img{
+  width:100%;
+  display:block;
+  background:#000;
+  aspect-ratio:1/1;
+  object-fit:contain;
+  cursor:pointer;
+}
+.cdawHeroEmpty{
+  aspect-ratio:1/1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#000;
+  color:#78909c;
+  font-size:13px;
+  text-align:center;
+  padding:12px;
+}
+.cdawHeroMeta{
+  padding:8px 10px;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.45;
+}
+.cdawHeroMeta b{color:#fff}
+.cdawPlayerControls{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  margin-top:10px;
+  padding:8px 10px;
+  background:#0b1220;
+  border:1px solid #263044;
+  border-radius:12px;
+}
+.cdawPlayerControls select{
+  background:#05070d;
+  color:#fff;
+  border:1px solid #34496e;
+  border-radius:8px;
+  padding:7px 10px;
+  font-weight:800;
+}
+
+.cdawPlayerControls input[type=datetime-local]{
+  background:#05070d;
+  color:#fff;
+  border:1px solid #34496e;
+  border-radius:8px;
+  padding:7px 10px;
+  font-weight:800;
+}
+.cdawPlayerControls .miniNote{
+  color:var(--muted);
+  font-size:12px;
+}
+.cdawMainStage{
+  margin-top:12px;
+  background:#03060c;
+  border:1px solid #34496e;
+  border-radius:16px;
+  overflow:hidden;
+}
+.cdawMainStage img{
+  width:100%;
+  max-height:72vh;
+  object-fit:contain;
+  display:block;
+  background:#000;
+  cursor:pointer;
+}
+.cdawMainMeta{
+  padding:10px 12px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.55;
+  border-top:1px solid #263044;
+}
+.cdawMainMeta b{color:#fff}
+.cdawBigEmpty{
+  min-height:420px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#000;
+  color:#78909c;
+  text-align:center;
+  padding:20px;
+}
+
+.cdawHint{
+  margin-top:8px;
+  padding:8px 10px;
+  border-radius:10px;
+  background:#0b1220;
+  border:1px solid #263044;
+  color:#b9c7dd;
+  font-size:12px;
+}
+.cdawSectionTitle{
+  margin-top:14px;
+  font-weight:900;
+  color:#fff;
+}
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.88);
+  z-index:999;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.modal.show{display:flex}
+.modalInner{
+  max-width:min(1000px,96vw);
+  max-height:96vh;
+  background:#05070d;
+  border:1px solid #34496e;
+  border-radius:16px;
+  padding:12px;
+}
+.modalInner img{
+  max-width:100%;
+  max-height:78vh;
+  display:block;
+  margin:auto;
+  background:#000;
+}
+.modalCaption{
+  color:#dbeafe;
+  font-size:13px;
+  margin-top:8px;
+  line-height:1.5;
+}
+
 </style>
 </head>
 
@@ -207,7 +391,8 @@ pre{
   <div>
     <button class="primary" onclick="loadDONKICache()">DONKI Cache読込</button>
     <button onclick="loadWSA()">WSA背景風読込</button>
-    <button onclick="loadCACTus()">CACTus取得</button>
+    <button onclick="loadCDAWImages()">AIA193/C2画像読込</button>
+    <button onclick="loadCACTusCache()">CACTus Cache読込</button>
     <button onclick="loadNOAAAll()">NOAA環境取得</button>
     <button onclick="loadAll()">全部取得</button>
     <button onclick="rebuildAll()">再計算</button>
@@ -218,7 +403,9 @@ pre{
     DONKI: <code>./data/donki/index.json</code> を読込。  
     WSA: <code>./data/wsa/index.json</code> を読込し、DBM-liteの背景太陽風 <b>w(t)</b> に使用。  
     地球到達判定は <b>DONKI longitude / latitude / halfAngle</b> → <b>sep / halfAngle</b> → <b>CORE/BODY/FLANK/MISS</b>。  
-    MISSは地球伝播・衛星影響から排除。
+    MISSは地球伝播・衛星影響から排除。<br>
+    CACTus: <code>./data/cactus/index.json</code> を読込して、蓄積済みCACTus CMEを表示。<br>
+    Helioviewer画像: <code>./data/helioviewer/index.json</code> を読込して、CME発生時刻 <b>t0±1時間</b> の <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> を表示。
   </div>
 </header>
 
@@ -231,7 +418,7 @@ pre{
     <label><input id="showMissTable" type="checkbox" onchange="renderTable(STATE.cmes)"> TableにMISSも表示</label>
     <label><input id="useCactusHazard" type="checkbox" onchange="rebuildAll()"> CACTus広幅/haloを参考到達候補に含める</label>
     <label><input id="strictDonkiOnly" type="checkbox" checked onchange="rebuildAll()"> HazardはDONKI優先</label>
-    <label><input id="mergeSevenDays" type="checkbox" checked onchange="loadDONKICache()"> DONKI保存7日分を統合</label>
+    <label><input id="mergeSevenDays" type="checkbox" checked onchange="loadDONKICache()"> DONKI保存14日分を統合</label>
   </div>
   <div class="sourceGrid" id="sourcePanel" style="margin-top:10px"></div>
 </section>
@@ -251,7 +438,7 @@ pre{
 
 <section class="card" style="margin-top:16px">
   <h3>③ CME Propagation / Earth-directed only</h3>
-  <input id="timeSlider" type="range" min="0" max="264" value="168" step="1" oninput="updateTimeline()">
+  <input id="timeSlider" type="range" min="0" max="192" value="72" step="1" oninput="updateTimeline()">
   <div id="timeLabel" class="small"></div>
   <div class="widebox"><canvas id="flowCanvas"></canvas></div>
 </section>
@@ -268,9 +455,45 @@ pre{
 </section>
 
 <section class="card" style="margin-top:16px">
-  <h3>⑥ CME Event Table</h3>
+  <h3>⑥ CME Event Table / latest 3 days only</h3>
+  <div class="small">発生日時ベースで過去3日分のみ表示。上から新しい順。画像取得は地球到達候補のみ。</div>
   <div id="table"></div>
 </section>
+
+<section class="card" style="margin-top:16px">
+  <h3>⑥-B CACTus Event Cache / local data</h3>
+  <div id="cactusSummary" class="small">未取得</div>
+  <div id="cactusTable" style="margin-top:10px"></div>
+</section>
+
+<section id="cmeImageSection" class="card" style="margin-top:16px">
+  <h3>⑦ CME-linked Solar Image Movie / t0 ± 1 hour</h3>
+  <div id="cdawSummary" class="small">未取得</div>
+  <div class="cdawHint">
+    使う画像は <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> の2種類だけ。CME Event Tableの <b>画像を見る</b> を押すと、そのCME発生時刻 <b>t0の前後30分</b> にジャンプして、15分刻みの画像動画を表示します。画像が欠ける時刻は直前画像を保持表示します。
+  </div>
+
+  <div class="cdawPlayerControls">
+    <span id="cmeImageWindowLabel" class="miniNote">CME未選択。下のCME Event Tableから「画像を見る」を押してください。</span>
+    <button onclick="stepCMEImageFrame(-1)">◀ 15分</button>
+    <button onclick="playCMEImageFrames()">▶ CME画像再生</button>
+    <button class="danger" onclick="stopCMEImageFrames()">画像停止</button>
+    <button onclick="stepCMEImageFrame(1)">15分 ▶</button>
+  </div>
+  <input id="cmeImageFrameSlider" type="range" min="0" max="4" value="2" step="1" oninput="selectCMEImageFrameBySlider()">
+
+  <div class="cdawSectionTitle">CME t0 ± 1h / AIA193 + LASCO C2</div>
+  <div id="cdawTimeline" class="cdawTimelineGrid"></div>
+  <div id="cdawGallery" style="display:none"></div>
+</section>
+
+<div id="cdawModal" class="modal" onclick="closeCDAWModal()">
+  <div class="modalInner" onclick="event.stopPropagation()">
+    <button class="danger" onclick="closeCDAWModal()">閉じる</button>
+    <img id="cdawModalImg" src="" alt="CDAW image">
+    <div id="cdawModalCaption" class="modalCaption"></div>
+  </div>
+</div>
 
 <section class="card" style="margin-top:16px">
   <h3>Debug JSON</h3>
@@ -286,6 +509,8 @@ pre{
 
 const DONKI_CACHE_INDEX = "./data/donki/index.json";
 const WSA_CACHE_INDEX = "./data/wsa/index.json";
+const CDAW_IMAGE_INDEX = "./data/helioviewer/index.json";
+const CACTUS_CACHE_INDEX = "./data/cactus/index.json";
 const DONKI_LON_POSITIVE_WEST = true;
 
 const CACTUS_URL = "https://www.sidc.be/cactus/out/latestCMEs.html";
@@ -320,6 +545,7 @@ const STATE = {
     donkiSEP:src("DONKI SEP","未取得"),
     donkiFLR:src("DONKI FLR","未取得"),
     wsa:src("WSA Wind Model","未取得"),
+    cdawImages:src("AIA193/C2 Images","未取得"),
     cactus:src("CACTus CME","未取得"),
     noaaWind:src("NOAA Wind","未取得"),
     noaaMag:src("NOAA IMF","未取得"),
@@ -330,11 +556,20 @@ const STATE = {
   donkiPayloads:[],
   wsaIndex:null,
   wsaModel:null,
+  cactusIndex:null,
+  cactusEvents:[],
+  cdawIndex:null,
+  cdawImages:[],
+  cdawFrameTimer:null,
+  cdawFrameIndex:0,
+  selectedCMEImage:null,
+  cmeImageFrameTimer:null,
+  cmeImageFrameIndex:4,
   env:defaultEnv(),
   cmes:[],
   timelineCenter:new Date(),
-  timelineStart:new Date(Date.now()-168*3600*1000),
-  timelineEnd:new Date(Date.now()+96*3600*1000),
+  timelineStart:new Date(Date.now()-72*3600*1000),
+  timelineEnd:new Date(Date.now()+120*3600*1000),
   selectedTime:new Date(),
   timer:null
 };
@@ -391,17 +626,17 @@ function raw(x){
 function initTimelineWindow(){
   STATE.timelineCenter = new Date();
 
-  // 表示期間は「現在-7日」から「現在+4日」
-  // スライダーは 0〜264h、現在は 168h の位置
-  STATE.timelineStart = new Date(STATE.timelineCenter.getTime() - 168*3600*1000);
-  STATE.timelineEnd = new Date(STATE.timelineCenter.getTime() + 96*3600*1000);
+  // 表示期間は「現在-3日」から「現在+5日」
+  // スライダーは 0〜192h、現在は 72h の位置
+  STATE.timelineStart = new Date(STATE.timelineCenter.getTime() - 72*3600*1000);
+  STATE.timelineEnd = new Date(STATE.timelineCenter.getTime() + 120*3600*1000);
   STATE.selectedTime = new Date(STATE.timelineCenter);
 
   const slider=document.getElementById("timeSlider");
   if(slider){
     slider.min=0;
-    slider.max=264;
-    slider.value=168;
+    slider.max=192;
+    slider.value=72;
   }
 }
 
@@ -466,7 +701,7 @@ async function loadDONKICache(){
     if(mergeSeven){
       files=(index.files || [])
         .filter(f=>f.valid !== false && f.path)
-        .slice(0,56);
+        .slice(0,24);
     }else{
       if(index.latest){
         files=[{path:"./data/donki/"+index.latest,valid:true}];
@@ -569,15 +804,94 @@ async function loadWSA(){
   }
 }
 
-async function loadCACTus(){
+
+async function loadCDAWImages(){
+  setSource("cdawImages","LOADING...");
+  try{
+    const index=await fetchJson(CDAW_IMAGE_INDEX);
+    const images = Array.isArray(index.images) ? index.images :
+                   Array.isArray(index.items) ? index.items :
+                   Array.isArray(index.files) ? index.files : [];
+
+    const normalized=images.map((img,i)=>({
+      ...img,
+      _i:i,
+      _t:new Date(img.time || img.observation_time || img.downloaded_at || index.updated_at || Date.now()).getTime(),
+      path:img.path || (img.file ? `./data/helioviewer/images/${img.file}` : "") || img.url || "",
+      label:img.label || img.kind || "image",
+      kind:img.kind || classifyCDAWKind(img)
+    }))
+    .filter(x=>x.path)
+    .sort((a,b)=>b._t-a._t);
+
+    STATE.cdawIndex=index;
+    STATE.cdawImages=normalized;
+
+    setSource("cdawImages",`OK: ${normalized.length} images`,{index,images:normalized});
+    renderCDAWGallery();
+    renderCMEImageWindow(STATE.selectedTime || new Date());
+
+  }catch(e){
+    STATE.cdawIndex=null;
+    STATE.cdawImages=[];
+    setSource("cdawImages","FAILED",null,e.message);
+    renderCDAWGallery();
+    renderCMEImageWindow(STATE.selectedTime || new Date());
+  }
+}
+
+function classifyCDAWKind(img){
+  const s=String([img.kind,img.label,img.file,img.path,img.source_url].join(" ")).toLowerCase();
+  if(s.includes("c2")) return "LASCO C2";
+  if(s.includes("c3")) return "LASCO C3";
+  if(s.includes("aia")) return "SDO/AIA";
+  if(s.includes("eit")) return "SOHO/EIT";
+  if(s.includes("hmi")) return "SDO/HMI";
+  return "Solar";
+}
+
+async function loadCACTusCache(){
   setSource("cactus","LOADING...");
   try{
-    const text=await fetchCactusText();
-    setSource("cactus","OK",text);
+    const index=await fetchJson(CACTUS_CACHE_INDEX);
+    const events=Array.isArray(index.events) ? index.events : [];
+
+    const normalized=events.map((ev,i)=>{
+      const t=new Date(ev.t0 || ev.time || ev.startTime || ev.generated_at || Date.now());
+      return {
+        ...ev,
+        _i:i,
+        _t:t.getTime(),
+        t0:ev.t0 || ev.time,
+        time:ev.time || ev.t0,
+        id:ev.id || `CACTus-${i+1}`,
+        source:ev.source || "CACTus",
+        pa:Number(ev.pa),
+        da:Number(ev.da),
+        speed:Number(ev.speed),
+        halo:ev.halo || ""
+      };
+    })
+    .filter(ev=>Number.isFinite(ev._t))
+    .sort((a,b)=>b._t-a._t);
+
+    STATE.cactusIndex=index;
+    STATE.cactusEvents=normalized;
+
+    setSource("cactus",`OK local: ${normalized.length} events`,{index,events:normalized});
+    renderCactusCacheTable();
     rebuildAll();
   }catch(e){
+    STATE.cactusIndex=null;
+    STATE.cactusEvents=[];
     setSource("cactus","FAILED",null,e.message);
+    renderCactusCacheTable();
   }
+}
+
+// 後方互換：古いボタン名が残っていてもlocal cacheを読む
+async function loadCACTus(){
+  return loadCACTusCache();
 }
 
 async function loadNOAAWind(){
@@ -638,7 +952,8 @@ async function loadAll(){
   await Promise.allSettled([
     loadDONKICache(),
     loadWSA(),
-    loadCACTus(),
+    loadCDAWImages(),
+    loadCACTusCache(),
     loadNOAAWind(),
     loadNOAAMag(),
     loadNOAAKp(),
@@ -655,7 +970,8 @@ function renderSourcePanel(){
   const rows=[
     ["donkiCache","DONKI Cache",loadDONKICache],
     ["wsa","WSA Wind Model",loadWSA],
-    ["cactus","CACTus CME",loadCACTus],
+    ["cdawImages","AIA193/C2 Images",loadCDAWImages],
+    ["cactus","CACTus Cache",loadCACTusCache],
     ["noaaWind","NOAA Wind",loadNOAAWind],
     ["noaaMag","NOAA IMF",loadNOAAMag],
     ["noaaKp","NOAA Kp",loadNOAAKp],
@@ -1336,6 +1652,79 @@ function parseCACTus(html,env){
   return out;
 }
 
+
+function parseCACTusCacheEvents(events,env){
+  const out=[];
+
+  for(const ev of events || []){
+    const t0=new Date(ev.t0 || ev.time || ev.startTime || Date.now());
+    if(!Number.isFinite(t0.getTime())) continue;
+
+    const pa=Number(ev.pa);
+    const da=Number(ev.da);
+    const speed=Number(ev.speed || 0);
+    const halo=ev.halo || "";
+    const half=Math.max(15,Math.min(90,(Number.isFinite(da) ? da : 60)/2));
+
+    const earth=evaluateCactusEarthImpact(
+      Number.isFinite(pa) ? pa : 0,
+      Number.isFinite(da) ? da : 0,
+      halo
+    );
+
+    const effectiveSpeed=earth.earthCandidate ? Math.max(250,(Number.isFinite(speed) && speed>0 ? speed : 500)*earth.speedFactor) : 0;
+    const arrival=earth.earthCandidate
+      ? computeArrivalDBMLite(t0,effectiveSpeed,env)
+      : {
+          source:"CACTUS-REFERENCE",
+          date:t0,
+          utc:t0.toISOString(),
+          transitHours:null,
+          arrivalSpeed:0,
+          backgroundWind:0,
+          backgroundWindMin:null,
+          backgroundWindMax:null,
+          usedWSA:false
+        };
+
+    const score=earth.earthCandidate
+      ? scoreCACTus(Number.isFinite(pa) ? pa : 0,Number.isFinite(da) ? da : 0,Number.isFinite(speed) ? speed : 0,halo,earth)
+      : 0;
+
+    out.push(buildCME({
+      id:ev.id || `CACTus-${t0.toISOString()}`,
+      type:"CACTus",
+      coordType:"pa",
+      rawLon:null,
+      lon:null,
+      lat:null,
+      pa:Number.isFinite(pa) ? pa : null,
+      da:Number.isFinite(da) ? da : null,
+      halo,
+      speed:Number.isFinite(speed) ? speed : 0,
+      effectiveSpeed,
+      halfAngle:half,
+      t0,
+      arrival,
+      arrivalScore:score,
+      earthCandidate:earth.earthCandidate,
+      earthConfidence:earth.earthConfidence,
+      earthReason:earth.earthReason,
+      angularSeparation:null,
+      edgeRatio:null,
+      impactClass:earth.impactClass,
+      speedFactor:earth.speedFactor,
+      densityFactor:earth.densityFactor,
+      shockFactor:earth.shockFactor,
+      geometryMultiplier:earth.geometryMultiplier,
+      sources:["CACTus"],
+      confidence:earth.earthConfidence
+    }));
+  }
+
+  return out;
+}
+
 function parseCactusTime(s){
   const m=s.match(/(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/);
   if(!m) return new Date();
@@ -1519,7 +1908,11 @@ function rebuildAll(){
   }
 
   const cactus=STATE.sources.cactus.data;
-  if(typeof cactus==="string" && cactus.length){
+  if(cactus && Array.isArray(cactus.events)){
+    events.push(...parseCACTusCacheEvents(cactus.events,STATE.env));
+  }else if(Array.isArray(STATE.cactusEvents) && STATE.cactusEvents.length){
+    events.push(...parseCACTusCacheEvents(STATE.cactusEvents,STATE.env));
+  }else if(typeof cactus==="string" && cactus.length){
     events.push(...parseCACTus(cactus,STATE.env));
   }
 
@@ -1552,6 +1945,7 @@ function rebuildAll(){
 
   renderStatus();
   renderTable(STATE.cmes);
+  renderCactusCacheTable();
   updateTimeline();
 
   raw(JSON.stringify({
@@ -1560,6 +1954,10 @@ function rebuildAll(){
     wsaIndex:STATE.wsaIndex,
     wsaLoaded:Boolean(STATE.wsaModel),
     wsaRecords:STATE.wsaModel?.records?.length || 0,
+    cactusIndex:STATE.cactusIndex,
+    cactusEvents:STATE.cactusEvents?.length || 0,
+    cdawIndex:STATE.cdawIndex,
+    cdawImages:STATE.cdawImages?.length || 0,
     env:STATE.env,
     counts:{
       total:STATE.cmes.length,
@@ -1619,12 +2017,12 @@ function setupWide(id){
 
 function updateTimeline(){
   const slider=document.getElementById("timeSlider");
-  const h=Number(slider?.value ?? 168);
+  const h=Number(slider?.value ?? 48);
 
   const t=new Date(STATE.timelineStart.getTime()+h*3600*1000);
   STATE.selectedTime=t;
 
-  const offset=h-168;
+  const offset=h-72;
   const sign=offset>=0 ? "+" : "";
   const wind=getBackgroundWindSpeedFromWSA(t);
   const windTxt=wind!==null ? `${Math.round(wind)} km/s` : "N/A";
@@ -1636,6 +2034,7 @@ function updateTimeline(){
   drawSun(STATE.cmes,t);
   drawFlow(STATE.cmes,t);
   drawWindSeries(t);
+  renderCMEImageWindow(t);
   renderHazard(t);
 }
 
@@ -1960,7 +2359,7 @@ function drawFlow(cmes,time){
   ctx.font="12px system-ui";
   ctx.fillText("Sun",sx-10,y+45);
   ctx.fillText("Earth/GEO",ex-42,y+38);
-  ctx.fillText("Timeline: now-7d to now+4d / CME shock appears at launch and disappears after Earth passage",12,24);
+  ctx.fillText("Timeline: now-2d to now+5d / CME shock appears at launch and disappears after Earth passage",12,24);
 
   // now line
   const nowFrac=(STATE.timelineCenter-STATE.timelineStart)/(STATE.timelineEnd-STATE.timelineStart);
@@ -2257,9 +2656,9 @@ function drawWindSeries(selectedTime){
   // labels
   ctx.fillStyle="rgba(255,255,255,.75)";
   ctx.font="11px system-ui";
-  ctx.fillText("now-7d",x0,y0+hh+18);
+  ctx.fillText("now-3d",x0,y0+hh+18);
   ctx.fillText("now",nowX-10,y0+hh+18);
-  ctx.fillText("now+4d",x0+ww-48,y0+hh+18);
+  ctx.fillText("now+5d",x0+ww-48,y0+hh+18);
 
   // legend
   ctx.fillStyle="#4fc3f7";
@@ -2278,6 +2677,647 @@ function drawWindSeries(selectedTime){
     `（過去/解析 ${histCount}・予報 ${fCount}）<br>`+
     `範囲: <b>${first} UTC</b> → <b>${last} UTC</b><br>`+
     `選択時刻の背景風: <b>${wNow!==null ? Math.round(wNow)+" km/s" : "N/A"}</b> / <b>${mode}</b>`;
+}
+
+
+/* =========================================================
+   HELIOVIEWER AIA193 / LASCO C2 IMAGE GALLERY
+========================================================= */
+
+function cdawKindText(img){
+  return String([img.kind,img.label,img.instrument,img.source_name,img.path,img.source_url].join(" ")).toLowerCase();
+}
+
+function isCDAWSolar(img){
+  const s=cdawKindText(img);
+  // 今回は SDO/AIA 193 だけを太陽面画像として扱う
+  return s.includes("aia193") || (s.includes("aia") && s.includes("193")) || s.includes("sdo/aia 193") || s.includes("solar");
+}
+
+function isCDAWC2(img){
+  // 今回は SOHO/LASCO C2 だけをCME画像として扱う
+  return cdawKindText(img).includes("c2") || cdawKindText(img).includes("lasco_c2");
+}
+
+function isCDAWC3(img){
+  // C3は使わない
+  return false;
+}
+
+function heldCDAWImage(predicate,time){
+  const imgs=(STATE.cdawImages || [])
+    .filter(predicate)
+    .filter(x=>Number.isFinite(x._t))
+    .sort((a,b)=>a._t-b._t);
+  if(!imgs.length) return null;
+
+  const target=(time instanceof Date ? time : new Date(time)).getTime();
+  let held=imgs[0];
+
+  for(const img of imgs){
+    if(img._t<=target){
+      held=img;
+    }else{
+      break;
+    }
+  }
+
+  held._deltaHours=Math.abs(held._t-target)/3600000;
+  held._held=true;
+  return held;
+}
+
+
+
+function toDateTimeLocalValue(date){
+  const d=date instanceof Date ? date : new Date(date);
+  if(!Number.isFinite(d.getTime())) return "";
+  const pad=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function setCDAWPickerBounds(){
+  const picker=document.getElementById("cdawStartTime");
+  const note=document.getElementById("cdawPickerNote");
+  if(!picker) return;
+
+  const frames=getCDAWFramesForChannel();
+  if(!frames.length){
+    picker.removeAttribute("min");
+    picker.removeAttribute("max");
+    picker.value="";
+    if(note) note.textContent="画像未読込";
+    return;
+  }
+
+  const first=new Date(frames[0]._t);
+  const last=new Date(frames[frames.length-1]._t);
+  picker.min=toDateTimeLocalValue(first);
+  picker.max=toDateTimeLocalValue(last);
+
+  const current=STATE.selectedTime instanceof Date ? STATE.selectedTime : new Date();
+  const clamped=new Date(clamp(current.getTime(), first.getTime(), last.getTime()));
+  picker.value=toDateTimeLocalValue(clamped);
+
+  if(note){
+    note.textContent=`画像範囲 ${formatDateTime(first)} 〜 ${formatDateTime(last)}`;
+  }
+}
+
+function applyCDAWStartPicker(){
+  const picker=document.getElementById("cdawStartTime");
+  if(!picker || !picker.value){
+    syncCDAWFrameToTime(STATE.selectedTime || new Date(), true);
+    return;
+  }
+
+  // datetime-local はブラウザのローカル時刻として解釈する
+  const d=new Date(picker.value);
+  if(!Number.isFinite(d.getTime())) return;
+  jumpCDAWToDate(d,true);
+}
+
+function setCDAWStartToFirst(){
+  const frames=getCDAWFramesForChannel();
+  if(!frames.length) return;
+  const d=new Date(frames[0]._t);
+  const picker=document.getElementById("cdawStartTime");
+  if(picker) picker.value=toDateTimeLocalValue(d);
+  jumpCDAWToDate(d,true);
+}
+
+function setCDAWStartToNow(){
+  const frames=getCDAWFramesForChannel();
+  const d=new Date();
+  const picker=document.getElementById("cdawStartTime");
+  if(picker){
+    if(frames.length){
+      const first=frames[0]._t;
+      const last=frames[frames.length-1]._t;
+      picker.value=toDateTimeLocalValue(new Date(clamp(d.getTime(),first,last)));
+    }else{
+      picker.value=toDateTimeLocalValue(d);
+    }
+  }
+  jumpCDAWToDate(d,true);
+}
+
+function jumpCDAWToDate(date,force=false){
+  STATE.selectedTime=date;
+  setMainTimelineToDate(date);
+  renderCDAWTimeline(date);
+  syncCDAWFrameToTime(date,force);
+  drawSun(STATE.cmes,date);
+  drawFlow(STATE.cmes,date);
+  drawWindSeries(date);
+  renderHazard(date);
+}
+
+function getCDAWChannel(){
+  return document.getElementById("cdawChannel")?.value || "solar";
+}
+
+function cdawPredicateForChannel(channel){
+  if(channel==="c2") return isCDAWC2;
+  return isCDAWSolar;
+}
+
+function getCDAWFramesForChannel(channel=getCDAWChannel()){
+  const pred=cdawPredicateForChannel(channel);
+  return (STATE.cdawImages || [])
+    .filter(pred)
+    .filter(x=>Number.isFinite(x._t))
+    .sort((a,b)=>a._t-b._t);
+}
+
+function syncCDAWFrameToTime(time, force=false){
+  const stage=document.getElementById("cdawMainStage");
+  const slider=document.getElementById("cdawFrameSlider");
+  if(!stage || !slider) return;
+
+  const frames=getCDAWFramesForChannel();
+  if(!frames.length){
+    slider.min=0;
+    slider.max=0;
+    slider.value=0;
+    renderCDAWMain(null,time,frames);
+    return;
+  }
+
+  const target=(time instanceof Date ? time : new Date(time)).getTime();
+  let heldIndex=0;
+
+  // 選択時刻ちょうどの画像がない場合は、その直前の画像を保持表示する。
+  // これで再生中に画像なし→表示ありを繰り返してチカチカしない。
+  frames.forEach((img,i)=>{
+    if(img._t<=target) heldIndex=i;
+  });
+
+  STATE.cdawFrameIndex=heldIndex;
+  slider.min=0;
+  slider.max=Math.max(0,frames.length-1);
+  slider.value=heldIndex;
+
+  const img=frames[heldIndex];
+  img._deltaHours=Math.abs(img._t-target)/3600000;
+
+  const picker=document.getElementById("cdawStartTime");
+  if(picker && force){
+    picker.value=toDateTimeLocalValue(new Date(img._t));
+  }
+}
+
+function selectCDAWFrameBySlider(){
+  const frames=getCDAWFramesForChannel();
+  const slider=document.getElementById("cdawFrameSlider");
+  if(!frames.length || !slider) return;
+
+  const i=clamp(Number(slider.value)||0,0,frames.length-1);
+  STATE.cdawFrameIndex=i;
+  const img=frames[i];
+  const t=new Date(img._t);
+  const picker=document.getElementById("cdawStartTime");
+  if(picker) picker.value=toDateTimeLocalValue(t);
+  STATE.selectedTime=t;
+  setMainTimelineToDate(t);
+  renderCDAWTimeline(t);
+  drawSun(STATE.cmes,t);
+  drawFlow(STATE.cmes,t);
+  drawWindSeries(t);
+  renderHazard(t);
+}
+
+function setMainTimelineToDate(date){
+  const slider=document.getElementById("timeSlider");
+  if(!slider) return;
+  const h=Math.round((date.getTime()-STATE.timelineStart.getTime())/3600000);
+  if(h>=Number(slider.min) && h<=Number(slider.max)){
+    slider.value=h;
+  }
+}
+
+function stepCDAWFrame(dir){
+  const frames=getCDAWFramesForChannel();
+  if(!frames.length) return;
+  STATE.cdawFrameIndex=clamp((STATE.cdawFrameIndex||0)+dir,0,frames.length-1);
+  const slider=document.getElementById("cdawFrameSlider");
+  if(slider) slider.value=STATE.cdawFrameIndex;
+  selectCDAWFrameBySlider();
+}
+
+function playCDAWFrames(){
+  stopCDAWFrames();
+  const frames=getCDAWFramesForChannel();
+  if(!frames.length) return;
+  STATE.cdawFrameTimer=setInterval(()=>{
+    STATE.cdawFrameIndex=(STATE.cdawFrameIndex||0)+1;
+    if(STATE.cdawFrameIndex>=frames.length) STATE.cdawFrameIndex=0;
+    const slider=document.getElementById("cdawFrameSlider");
+    if(slider) slider.value=STATE.cdawFrameIndex;
+    selectCDAWFrameBySlider();
+  },420);
+}
+
+function stopCDAWFrames(){
+  if(STATE.cdawFrameTimer) clearInterval(STATE.cdawFrameTimer);
+  STATE.cdawFrameTimer=null;
+}
+
+function renderCDAWMain(img,selectedTime,frames=[]){
+  const stage=document.getElementById("cdawMainStage");
+  if(!stage) return;
+
+  const t=selectedTime instanceof Date ? selectedTime : new Date(selectedTime);
+  const channel=getCDAWChannel();
+  const channelLabel=channel==="c2" ? "SOHO/LASCO C2" : "SDO/AIA 193";
+
+  if(!img){
+    stage.innerHTML=`
+      <div class="cdawBigEmpty">
+        <div>
+          <b>${escapeHtml(channelLabel)}</b><br>
+          選択時刻の近傍画像なし<br>
+          <span class="small">選択時刻: ${formatDateTime(t)} / 保存画像は過去2日分のみ</span>
+        </div>
+      </div>
+      <div class="cdawMainMeta">
+        ${escapeHtml(channelLabel)} frames: <b>${frames.length}</b><br>
+        未来側、または保存範囲外では画像は表示されません。
+      </div>
+    `;
+    return;
+  }
+
+  const idx=frames.findIndex(x=>x._i===img._i);
+  const dt=Number.isFinite(img._deltaHours) ? img._deltaHours : Math.abs(img._t-t.getTime())/3600000;
+  const label=escapeHtml(img.label || img.instrument || img.kind || channelLabel);
+  const src=escapeHtml(img.path);
+
+  stage.innerHTML=`
+    <img src="${src}" alt="${label}" onclick="openCDAWImage(${img._i})">
+    <div class="cdawMainMeta">
+      <b>${label}</b> <span class="pill info">${escapeHtml(channelLabel)}</span><br>
+      画像時刻: <b>${formatDateTime(img._t)}</b> / 選択時刻: <b>${formatDateTime(t)}</b><br>
+      差分: <b>${dt.toFixed(1)} h</b> / Frame: <b>${idx>=0 ? idx+1 : "-"}</b> / ${frames.length}<br>
+      ${img.source_url ? `<a href="${escapeHtml(img.source_url)}" target="_blank" style="color:#4fc3f7">source</a>` : ""}
+    </div>
+  `;
+}
+
+function renderCDAWTimeline(selectedTime){
+  const box=document.getElementById("cdawTimeline");
+  const summary=document.getElementById("cdawSummary");
+  if(!box || !summary) return;
+
+  const imgs=STATE.cdawImages || [];
+  if(!imgs.length){
+    summary.innerHTML='AIA193/C2画像未読込。<button onclick="loadCDAWImages()">画像読込</button>';
+    box.innerHTML=`
+      <div class="cdawHero"><div class="cdawHeroTitle">SDO/AIA 193</div><div class="cdawHeroEmpty">画像未読込</div></div>
+      <div class="cdawHero"><div class="cdawHeroTitle">SOHO/LASCO C2</div><div class="cdawHeroEmpty">画像未読込</div></div>
+    `;
+    return;
+  }
+
+  const ordered=[...imgs].sort((a,b)=>a._t-b._t);
+  const first=ordered[0];
+  const last=ordered[ordered.length-1];
+  const t=selectedTime instanceof Date ? selectedTime : new Date(selectedTime);
+
+  const solar=heldCDAWImage(isCDAWSolar,t);
+  const c2=heldCDAWImage(isCDAWC2,t);
+
+  const availableKinds={};
+  imgs.forEach(x=>{
+    const k=x.kind || x.label || "Image";
+    availableKinds[k]=(availableKinds[k]||0)+1;
+  });
+
+  const kindText=Object.entries(availableKinds)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([k,v])=>`${escapeHtml(k)} ${v}`)
+    .join(" / ");
+
+  const outside=t.getTime()<first._t || t.getTime()>last._t;
+  summary.innerHTML =
+    `保存画像: <b>${imgs.length}</b>枚 / ${kindText}<br>`+
+    `画像範囲: <b>${formatDateTime(first._t)}</b> → <b>${formatDateTime(last._t)}</b><br>`+
+    `選択時刻: <b>${formatDateTime(t)}</b>${outside ? ` <span class="warnText">※過去2日分の画像範囲外</span>` : ""}<br>`+
+    `表示: 選択時刻以前の最新 SDO/AIA 193 / SOHO/LASCO C2 画像を保持表示`;
+
+  box.innerHTML =
+    renderCDAWTimelineSlot("SDO/AIA 193",solar,t,"solar disk / EUV") +
+    renderCDAWTimelineSlot("SOHO/LASCO C2",c2,t,"inner corona CME");
+}
+
+function renderCDAWTimelineSlot(title,img,selectedTime,sub){
+  if(!img){
+    return `
+      <div class="cdawHero">
+        <div class="cdawHeroTitle">${escapeHtml(title)}</div>
+        <div class="cdawHeroEmpty">画像未読込<br>${escapeHtml(sub)}</div>
+        <div class="cdawHeroMeta">選択時刻: <b>${formatDateTime(selectedTime)}</b></div>
+      </div>
+    `;
+  }
+
+  const dt=Number.isFinite(img._deltaHours) ? img._deltaHours : Math.abs(img._t-selectedTime.getTime())/3600000;
+  const label=escapeHtml(img.label || img.instrument || img.kind || title);
+  const kind=escapeHtml(img.kind || title);
+  const src=escapeHtml(img.path);
+
+  return `
+    <div class="cdawHero">
+      <div class="cdawHeroTitle">${escapeHtml(title)} <span class="pill info">hold</span></div>
+      <img src="${src}" alt="${label}" loading="lazy" onclick="openCDAWImage(${img._i})">
+      <div class="cdawHeroMeta">
+        <b>${label}</b><br>
+        ${kind}<br>
+        画像時刻: <b>${formatDateTime(img._t)}</b><br>
+        保持画像との差: <b>${dt.toFixed(1)} h</b><br>
+        ${img.source_url ? `<a href="${escapeHtml(img.source_url)}" target="_blank" style="color:#4fc3f7">source</a>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function renderCDAWGallery(){
+  const summary=document.getElementById("cdawSummary");
+  const gallery=document.getElementById("cdawGallery");
+  if(!summary || !gallery) return;
+
+  const imgs=STATE.cdawImages || [];
+  if(!imgs.length){
+    summary.innerHTML='AIA193/C2画像未読込。<button onclick="loadCDAWImages()">画像読込</button>';
+    gallery.innerHTML="";
+    return;
+  }
+
+  const byKind={};
+  imgs.forEach(x=>{
+    const k=x.kind || x.label || "Image";
+    byKind[k]=(byKind[k]||0)+1;
+  });
+
+  const kinds=Object.entries(byKind)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([k,v])=>`${escapeHtml(k)} ${v}`)
+    .join(" / ");
+
+  const latest=imgs[0];
+  const oldest=imgs[imgs.length-1];
+
+  summary.innerHTML =
+    `保存画像: <b>${imgs.length}</b>枚 / ${kinds}<br>`+
+    `範囲: <b>${formatDateTime(oldest._t)}</b> → <b>${formatDateTime(latest._t)}</b><br>`+
+    `更新: <b>${escapeHtml(STATE.cdawIndex?.updated_at || "-")}</b> / `+
+    `保存先: <code>./data/helioviewer/images/</code>`;
+
+  const top=imgs.slice(0,72);
+
+  gallery.innerHTML=top.map((img,i)=>{
+    const src=img.path;
+    const time=formatDateTime(img._t);
+    const kind=escapeHtml(img.kind || img.label || "Image");
+    const label=escapeHtml(img.label || img.instrument || img.kind || "AIA193/C2");
+    const source=escapeHtml(img.source_name || img.source || "AIA193/C2");
+    const badge = kind.toLowerCase().includes("c2") ? "pill mid" :
+                  kind.toLowerCase().includes("c3") ? "pill info" :
+                  kind.toLowerCase().includes("aia") || kind.toLowerCase().includes("eit") ? "pill good" :
+                  "pill info";
+
+    return `
+      <div class="cdawCard">
+        <img src="${escapeHtml(src)}" alt="${label}" loading="lazy" onclick="openCDAWImage(${img._i})">
+        <div class="cdawMeta">
+          <span class="${badge}">${kind}</span><br>
+          <b>${label}</b><br>
+          ${time}<br>
+          <span>${source}</span><br>
+          ${img.source_url ? `<a href="${escapeHtml(img.source_url)}" target="_blank" style="color:#4fc3f7">source</a>` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function openCDAWImage(index){
+  const img=(STATE.cdawImages || []).find(x=>x._i===index);
+  if(!img) return;
+
+  const modal=document.getElementById("cdawModal");
+  const image=document.getElementById("cdawModalImg");
+  const cap=document.getElementById("cdawModalCaption");
+
+  image.src=img.path;
+  cap.innerHTML =
+    `<b>${escapeHtml(img.label || img.kind || "AIA193/C2 image")}</b><br>`+
+    `${formatDateTime(img._t)} / ${escapeHtml(img.kind || "-")}<br>`+
+    `file: <code>${escapeHtml(img.path || "")}</code><br>`+
+    `${img.source_url ? `source: <a href="${escapeHtml(img.source_url)}" target="_blank" style="color:#4fc3f7">${escapeHtml(img.source_url)}</a>` : ""}`;
+
+  modal.classList.add("show");
+}
+
+function closeCDAWModal(){
+  const modal=document.getElementById("cdawModal");
+  const image=document.getElementById("cdawModalImg");
+  if(modal) modal.classList.remove("show");
+  if(image) image.src="";
+}
+
+function formatDateTime(value){
+  const d=value instanceof Date ? value : new Date(value);
+  if(!Number.isFinite(d.getTime())) return "-";
+  return d.toISOString().slice(0,16).replace("T"," ")+" UTC";
+}
+
+
+function selectCMEImageWindow(index){
+  const c=STATE.cmes[index];
+  if(!c) return;
+
+  const t0=c.t0 instanceof Date ? c.t0 : new Date(c.t0);
+  const start=new Date(t0.getTime()-30*60000);
+  const end=new Date(t0.getTime()+30*60000);
+
+  STATE.selectedCMEImage={index,cme:c,t0,start,end};
+  STATE.cmeImageFrameIndex=2;
+
+  const slider=document.getElementById("cmeImageFrameSlider");
+  if(slider){
+    slider.min=0;
+    slider.max=4;
+    slider.value=2;
+  }
+
+  STATE.selectedTime=t0;
+  setMainTimelineToDate(t0);
+  drawSun(STATE.cmes,t0);
+  drawFlow(STATE.cmes,t0);
+  drawWindSeries(t0);
+  renderHazard(t0);
+  renderCMEImageWindow(t0);
+
+  document.getElementById("cmeImageSection")?.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function cmeImageFrameTime(){
+  const sel=STATE.selectedCMEImage;
+  if(!sel) return STATE.selectedTime || new Date();
+  const i=clamp(Number(STATE.cmeImageFrameIndex)||0,0,4);
+  return new Date(sel.start.getTime()+i*15*60000);
+}
+
+function heldCMEWindowImage(predicate,time){
+  const sel=STATE.selectedCMEImage;
+  const t=time instanceof Date ? time : new Date(time);
+
+  let imgs=(STATE.cdawImages || [])
+    .filter(predicate)
+    .filter(x=>Number.isFinite(x._t));
+
+  if(sel){
+    const pad=20*60000;
+    imgs=imgs.filter(x=>x._t>=sel.start.getTime()-pad && x._t<=sel.end.getTime()+pad);
+  }
+
+  imgs.sort((a,b)=>a._t-b._t);
+  if(!imgs.length) return null;
+
+  let held=null;
+  for(const img of imgs){
+    if(img._t<=t.getTime()) held=img;
+    else break;
+  }
+  if(!held){
+    // 開始直後に前画像がない場合だけ、最初の画像を使う
+    held=imgs[0];
+  }
+
+  held._deltaHours=Math.abs(held._t-t.getTime())/3600000;
+  return held;
+}
+
+function renderCMEImageWindow(selectedTime){
+  const box=document.getElementById("cdawTimeline");
+  const summary=document.getElementById("cdawSummary");
+  const label=document.getElementById("cmeImageWindowLabel");
+  if(!box || !summary) return;
+
+  const imgs=STATE.cdawImages || [];
+  if(!imgs.length){
+    summary.innerHTML='AIA193/C2画像未読込。<button onclick="loadCDAWImages()">画像読込</button>';
+    box.innerHTML=`
+      <div class="cdawHero"><div class="cdawHeroTitle">SDO/AIA 193</div><div class="cdawHeroEmpty">画像未読込</div></div>
+      <div class="cdawHero"><div class="cdawHeroTitle">SOHO/LASCO C2</div><div class="cdawHeroEmpty">画像未読込</div></div>
+    `;
+    return;
+  }
+
+  const sel=STATE.selectedCMEImage;
+  if(!sel){
+    const ordered=[...imgs].sort((a,b)=>a._t-b._t);
+    const first=ordered[0];
+    const last=ordered[ordered.length-1];
+    summary.innerHTML=`保存画像: <b>${imgs.length}</b>枚 / 範囲: <b>${formatDateTime(first._t)}</b> → <b>${formatDateTime(last._t)}</b><br>CME Event Tableから「画像を見る」を押してください。`;
+    box.innerHTML=`
+      <div class="cdawHero"><div class="cdawHeroTitle">SDO/AIA 193</div><div class="cdawHeroEmpty">CME未選択</div></div>
+      <div class="cdawHero"><div class="cdawHeroTitle">SOHO/LASCO C2</div><div class="cdawHeroEmpty">CME未選択</div></div>
+    `;
+    if(label) label.textContent="CME未選択。下のCME Event Tableから「画像を見る」を押してください。";
+    return;
+  }
+
+  const t=selectedTime instanceof Date ? selectedTime : cmeImageFrameTime();
+  const solar=heldCMEWindowImage(isCDAWSolar,t);
+  const c2=heldCMEWindowImage(isCDAWC2,t);
+  const windowImgs=imgs.filter(x=>x._t>=sel.start.getTime()-20*60000 && x._t<=sel.end.getTime()+20*60000);
+  const aiaCount=windowImgs.filter(isCDAWSolar).length;
+  const c2Count=windowImgs.filter(isCDAWC2).length;
+
+  summary.innerHTML=
+    `選択CME: <b>${escapeHtml(shortId(sel.cme.id))}</b> / t0: <b>${formatDateTime(sel.t0)}</b><br>`+
+    `表示範囲: <b>${formatDateTime(sel.start)}</b> → <b>${formatDateTime(sel.end)}</b> / 現在フレーム: <b>${formatDateTime(t)}</b><br>`+
+    `このCME窓の画像: AIA193 <b>${aiaCount}</b>枚 / LASCO C2 <b>${c2Count}</b>枚`;
+
+  if(label){
+    label.innerHTML=`CME <b>${escapeHtml(shortId(sel.cme.id))}</b> / t0±30min / frame <b>${(STATE.cmeImageFrameIndex||0)+1}</b>/5`;
+  }
+
+  box.innerHTML=
+    renderCMEImageSlot("SDO/AIA 193",solar,t,"solar disk / EUV")+
+    renderCMEImageSlot("SOHO/LASCO C2",c2,t,"inner corona CME");
+}
+
+function renderCMEImageSlot(title,img,selectedTime,sub){
+  if(!img){
+    return `
+      <div class="cdawHero">
+        <div class="cdawHeroTitle">${escapeHtml(title)}</div>
+        <div class="cdawHeroEmpty">このCME窓の画像なし<br>${escapeHtml(sub)}</div>
+        <div class="cdawHeroMeta">フレーム時刻: <b>${formatDateTime(selectedTime)}</b></div>
+      </div>
+    `;
+  }
+
+  const dt=Number.isFinite(img._deltaHours) ? img._deltaHours : Math.abs(img._t-selectedTime.getTime())/3600000;
+  const label=escapeHtml(img.label || img.instrument || img.kind || title);
+  const kind=escapeHtml(img.kind || title);
+  const src=escapeHtml(img.path);
+
+  return `
+    <div class="cdawHero">
+      <div class="cdawHeroTitle">${escapeHtml(title)} <span class="pill info">hold</span></div>
+      <img src="${src}" alt="${label}" loading="lazy" onclick="openCDAWImage(${img._i})">
+      <div class="cdawHeroMeta">
+        <b>${label}</b><br>
+        ${kind}<br>
+        フレーム時刻: <b>${formatDateTime(selectedTime)}</b><br>
+        表示画像時刻: <b>${formatDateTime(img._t)}</b><br>
+        差分: <b>${dt.toFixed(2)} h</b>
+      </div>
+    </div>
+  `;
+}
+
+function selectCMEImageFrameBySlider(){
+  const slider=document.getElementById("cmeImageFrameSlider");
+  if(!slider || !STATE.selectedCMEImage) return;
+  STATE.cmeImageFrameIndex=clamp(Number(slider.value)||0,0,4);
+  const t=cmeImageFrameTime();
+  STATE.selectedTime=t;
+  setMainTimelineToDate(t);
+  drawSun(STATE.cmes,t);
+  drawFlow(STATE.cmes,t);
+  drawWindSeries(t);
+  renderHazard(t);
+  renderCMEImageWindow(t);
+}
+
+function stepCMEImageFrame(dir){
+  if(!STATE.selectedCMEImage) return;
+  STATE.cmeImageFrameIndex=clamp((STATE.cmeImageFrameIndex||0)+dir,0,8);
+  const slider=document.getElementById("cmeImageFrameSlider");
+  if(slider) slider.value=STATE.cmeImageFrameIndex;
+  selectCMEImageFrameBySlider();
+}
+
+function playCMEImageFrames(){
+  stopCMEImageFrames();
+  if(!STATE.selectedCMEImage) return;
+  STATE.cmeImageFrameTimer=setInterval(()=>{
+    STATE.cmeImageFrameIndex=(STATE.cmeImageFrameIndex||0)+1;
+    if(STATE.cmeImageFrameIndex>8) STATE.cmeImageFrameIndex=0;
+    const slider=document.getElementById("cmeImageFrameSlider");
+    if(slider) slider.value=STATE.cmeImageFrameIndex;
+    selectCMEImageFrameBySlider();
+  },550);
+}
+
+function stopCMEImageFrames(){
+  if(STATE.cmeImageFrameTimer) clearInterval(STATE.cmeImageFrameTimer);
+  STATE.cmeImageFrameTimer=null;
 }
 
 /* =========================================================
@@ -2401,7 +3441,7 @@ function renderStatus(){
       <div>GOES ≥10MeV</div><div><b>${formatNum(STATE.env.p10,2)}</b> pfu / ${STATE.env.radiationScale}</div>
       <div>DBM gamma</div><div><b>${DBM.gamma}</b> km⁻¹</div>
       <div>DBM start distance</div><div><b>21.5 R☉</b></div>
-      <div>Timeline</div><div><b>now-7d → now+4d</b></div>
+      <div>Timeline</div><div><b>now-3d → now+5d</b></div>
       <div>Earth-directed</div><div><b class="goodText">${earth.length}</b></div>
       <div>MISS / Reference</div><div><b class="badText">${miss.length}</b></div>
     </div>`+
@@ -2409,13 +3449,116 @@ function renderStatus(){
     wsaInfo;
 }
 
+
+function renderCactusCacheTable(){
+  const summary=document.getElementById("cactusSummary");
+  const box=document.getElementById("cactusTable");
+  if(!summary || !box) return;
+
+  const events=STATE.cactusEvents || [];
+  const index=STATE.cactusIndex || {};
+
+  if(!events.length){
+    summary.innerHTML='CACTus Cache未読込。<button onclick="loadCACTusCache()">CACTus Cache読込</button>';
+    box.innerHTML='<div class="small">CACTusイベントなし。先に <code>update-cactus.yml</code> を実行して <code>docs/data/cactus/index.json</code> を作ってください。</div>';
+    return;
+  }
+
+  const first=events[events.length-1];
+  const last=events[0];
+  summary.innerHTML=
+    `CACTus cached events: <b>${events.length}</b> / updated: <b>${formatDateTime(index.updated_at)}</b><br>`+
+    `range: <b>${formatDateTime(first._t)}</b> → <b>${formatDateTime(last._t)}</b> / retention: <b>${index.retention_days || 14} days</b>`;
+
+  box.innerHTML=`
+    <div class="tablewrap" style="max-height:420px">
+    <table>
+      <tr>
+        <th>Image</th>
+        <th>ID</th>
+        <th>Time</th>
+        <th>PA</th>
+        <th>DA</th>
+        <th>Speed</th>
+        <th>Halo</th>
+        <th>Raw</th>
+      </tr>
+      ${events.slice(0,200).map(ev=>{
+        const idx=findCMEIndexForCactusEvent(ev);
+        const onclick=idx>=0 ? `selectCMEImageWindow(${idx})` : `selectCactusImageWindow('${escapeJs(ev.id)}','${new Date(ev._t).toISOString()}')`;
+        return `
+          <tr>
+            <td><button class="primary" onclick="${onclick}">画像を見る</button></td>
+            <td>${escapeHtml(ev.id)}</td>
+            <td>${formatDateTime(ev._t)}</td>
+            <td>${Number.isFinite(Number(ev.pa)) ? Math.round(Number(ev.pa)) : '-'}</td>
+            <td>${Number.isFinite(Number(ev.da)) ? Math.round(Number(ev.da)) : '-'}</td>
+            <td><b>${Number.isFinite(Number(ev.speed)) ? Math.round(Number(ev.speed)) : '-'}</b></td>
+            <td>${escapeHtml(ev.halo || '-')}</td>
+            <td><span class="small">${escapeHtml(ev.raw_line || '').slice(0,120)}</span></td>
+          </tr>
+        `;
+      }).join('')}
+    </table>
+    </div>
+  `;
+}
+
+function escapeJs(s){
+  return String(s ?? "").replace(/[\\'"\n\r]/g,m=>({"\\":"\\\\","'":"\\'",'"':'\\"',"\n":" ","\r":" "})[m]);
+}
+
+function findCMEIndexForCactusEvent(ev){
+  const t=Number(ev._t);
+  if(!Number.isFinite(t)) return -1;
+  let best=-1;
+  let bestDt=Infinity;
+  STATE.cmes.forEach((c,i)=>{
+    if(c.type!=="CACTus") return;
+    const dt=Math.abs(c.t0.getTime()-t);
+    if(dt<bestDt){bestDt=dt;best=i;}
+  });
+  return bestDt <= 20*60*1000 ? best : -1;
+}
+
+function selectCactusImageWindow(id,isoTime){
+  const t=new Date(isoTime);
+  if(!Number.isFinite(t.getTime())) return;
+
+  const pseudo={
+    id:id || "CACTus",
+    type:"CACTus",
+    sources:["CACTus"],
+    t0:t,
+    earthCandidate:false,
+    impactClass:"CACTUS-REFERENCE",
+    arrivalScore:0
+  };
+
+  STATE.cmes.push(pseudo);
+  const idx=STATE.cmes.length-1;
+  selectCMEImageWindow(idx);
+}
+
 function renderTable(cmes){
   const showMiss=document.getElementById("showMissTable")?.checked ?? false;
-  const rows=showMiss ? cmes : cmes.filter(c=>c.earthCandidate);
+  const cutoff=Date.now()-72*3600*1000;
+
+  // CMEリストは発生日時ベースで過去3日分のみ。上から新しい順。
+  const rows=(showMiss ? cmes : cmes.filter(c=>c.earthCandidate))
+    .filter(c=>{
+      const t=c.t0 instanceof Date ? c.t0.getTime() : new Date(c.t0).getTime();
+      return Number.isFinite(t) && t>=cutoff;
+    })
+    .sort((a,b)=>{
+      const ta=a.t0 instanceof Date ? a.t0.getTime() : new Date(a.t0).getTime();
+      const tb=b.t0 instanceof Date ? b.t0.getTime() : new Date(b.t0).getTime();
+      return tb-ta;
+    });
 
   if(!rows.length){
     document.getElementById("table").innerHTML=
-      `<div class="small">Earth-directed CMEなし。MISS表示をONにすると除外イベントも確認できます。</div>`;
+      `<div class="small">過去3日分のEarth-directed CMEなし。MISS表示をONにすると除外イベントも確認できます。</div>`;
     return;
   }
 
@@ -2423,6 +3566,7 @@ function renderTable(cmes){
     <div class="tablewrap">
     <table>
       <tr>
+        <th>Image</th>
         <th>ID</th>
         <th>Source</th>
         <th>Impact</th>
@@ -2434,8 +3578,14 @@ function renderTable(cmes){
         <th>Arrival</th>
         <th>Reason</th>
       </tr>
-      ${rows.map(c=>`
+      ${rows.map(c=>{
+        const idx=STATE.cmes.indexOf(c);
+        return `
         <tr>
+          <td>
+            <button class="primary" onclick="selectCMEImageWindow(${idx})">画像を見る</button><br>
+            <span class="small">t0 ${formatDateTime(c.t0)}</span>
+          </td>
           <td>${escapeHtml(c.id)}</td>
           <td>${c.sources.map(escapeHtml).join("+")}<br><span class="small">${escapeHtml(c.type)}</span></td>
           <td>${impactBadge(c)}<br><span class="small">Conf ${(c.earthConfidence*100).toFixed(0)}%</span></td>
@@ -2460,8 +3610,8 @@ function renderTable(cmes){
             ${c.arrival.transitHours ? formatNum(c.arrival.transitHours,1)+" h" : ""}
           </td>
           <td class="small">${escapeHtml(c.earthReason)}</td>
-        </tr>
-      `).join("")}
+        </tr>`;
+      }).join("")}
     </table>
     </div>
   `;
@@ -2558,7 +3708,7 @@ function playTimeline(){
   stopTimeline();
   STATE.timer=setInterval(()=>{
     const s=document.getElementById("timeSlider");
-    const max=Number(s.max || 264);
+    const max=Number(s.max || 168);
     let v=Number(s.value)+1;
     if(v>max) v=0;
     s.value=v;
@@ -2579,6 +3729,9 @@ window.addEventListener("resize",()=>updateTimeline());
 
 renderSourcePanel();
 initTimelineWindow();
+renderCDAWGallery();
+setCDAWPickerBounds();
+renderCDAWTimeline(STATE.selectedTime || new Date());
 rebuildAll();
 </script>
 
