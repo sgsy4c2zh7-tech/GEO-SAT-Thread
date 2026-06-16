@@ -456,7 +456,7 @@ pre{
 
 <section class="card" style="margin-top:16px">
   <h3>⑥ CME Event Table / latest 3 days only</h3>
-  <div class="small">発生日時ベースで過去3日分のみ表示。上から新しい順。画像取得は地球到達候補のみ。</div>
+  <div class="small">発生日時ベースで過去3日分のみ表示。time21_5ではなくactivityStartTime/ID時刻を優先。上から新しい順。画像取得は地球到達候補のみ。</div>
   <div id="table"></div>
 </section>
 
@@ -1425,6 +1425,32 @@ function computeInitialDONKIArrival(c,env,t0,speed){
    CME PARSERS
 ========================================================= */
 
+function parseDONKIActivityIDTime(c){
+  const ids=[c.activityID,c.associatedCMEID,c.id].filter(Boolean);
+  for(const id of ids){
+    const m=String(id).match(/(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})/);
+    if(m){
+      const d=new Date(`${m[1]}T${m[2]}Z`);
+      if(Number.isFinite(d.getTime())) return d;
+    }
+  }
+  return null;
+}
+
+function getDONKIEventStartTime(c){
+  // 表示・画像ジャンプ用は「発生日時」。time21_5は21.5Rs通過時刻なので、古いCME IDが残って見える原因になる。
+  const byActivity=c.activityStartTime ? new Date(c.activityStartTime) : null;
+  if(byActivity && Number.isFinite(byActivity.getTime())) return byActivity;
+
+  const byId=parseDONKIActivityIDTime(c);
+  if(byId && Number.isFinite(byId.getTime())) return byId;
+
+  const byTime215=c.time21_5 ? new Date(c.time21_5) : null;
+  if(byTime215 && Number.isFinite(byTime215.getTime())) return byTime215;
+
+  return new Date();
+}
+
 function parseDONKIAnalysis(c,env){
   const rawLon=finiteOr(c.longitude,0);
   const lon=DONKI_LON_POSITIVE_WEST ? rawLon : -rawLon;
@@ -1432,9 +1458,7 @@ function parseDONKIAnalysis(c,env){
   const speed=finiteOr(c.speed,500);
   const half=finiteOr(c.halfAngle,30);
 
-  const t0=c.time21_5
-    ? new Date(c.time21_5)
-    : new Date(c.activityStartTime || Date.now());
+  const t0=getDONKIEventStartTime(c);
 
   const preliminary=computeInitialDONKIArrival(c,env,t0,speed);
   const earth=evaluateDonkiEarthImpactAdvanced(lon,lat,half,speed,preliminary.source);
