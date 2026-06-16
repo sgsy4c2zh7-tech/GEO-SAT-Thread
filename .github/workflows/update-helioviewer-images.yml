@@ -1,1 +1,713 @@
-git.keep
+name: Update Helioviewer Event Window Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Past days to scan local DONKI data. Use 7 for first backfill."
+        required: false
+        default: "7"
+      retention_days:
+        description: "How many days of Helioviewer event-window images to keep."
+        required: false
+        default: "7"
+  schedule:
+    # 毎日1回。自動実行時は直近1日分のlocal DONKI dataだけ確認
+    - cron: "29 3 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-helioviewer-event-windows:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch AIA193 and LASCO C2 images around local DONKI event times only
+        env:
+          INPUT_DAYS: ${{ github.event.inputs.days }}
+          INPUT_RETENTION_DAYS: ${{ github.event.inputs.retention_days }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import re
+          import math
+          import time
+          import urllib.request
+          import urllib.parse
+          from pathlib import Path
+          from datetime import datetime, timedelta, timezone
+
+          DONKI_DIR = Path("docs/data/donki")
+          OUT_DIR = Path("docs/data/helioviewer")
+          IMG_DIR = OUT_DIR / "images"
+
+          OUT_DIR.mkdir(parents=True, exist_ok=True)
+          IMG_DIR.mkdir(parents=True, exist_ok=True)
+
+          now = datetime.now(timezone.utc)
+
+          def safe_int(value, default, min_value=1, max_value=30):
+              try:
+                  n = int(str(value or "").strip())
+                  return max(min_value, min(max_value, n))
+              except Exception:
+                  return default
+
+          event_name = os.environ.get("EVENT_NAME", "")
+
+          if event_name == "schedule":
+              scan_days = 1
+          else:
+              scan_days = safe_int(os.environ.get("INPUT_DAYS"), 7, 1, 14)
+
+          retention_days = safe_int(os.environ.get("INPUT_RETENTION_DAYS"), 7, 1, 14)
+
+          # 画像爆増対策:
+          # CACTus分は画像取得しない
+          # DONKIイベントだけ、前後30分、15分刻み
+          window_minutes = 30
+          step_minutes = 15
+          max_events_per_run = 80
+
+          scan_since = now - timedelta(days=scan_days)
+          retention_since = now - timedelta(days=retention_days)
+
+          CHANNELS = [
+              {
+                  "key": "aia193",
+                  "label": "SDO/AIA 193",
+                  "kind": "AIA193",
+                  "layer": "[SDO,AIA,AIA,193,1,100]",
+                  "imageScale": 2.4204409,
+                  "width": 1024,
+                  "height": 1024,
+                  "x0": 0,
+                  "y0": 0,
+              },
+              {
+                  "key": "lasco_c2",
+                  "label": "SOHO/LASCO C2",
+                  "kind": "LASCO_C2",
+                  "layer": "[SOHO,LASCO,C2,white-light,1,100]",
+                  "imageScale": 11.42,
+                  "width": 1024,
+                  "height": 1024,
+                  "x0": 0,
+                  "y0": 0,
+              },
+          ]
+
+          def parse_dt(value):
+              if not value:
+                  return None
+              s = str(value).strip()
+              if not s:
+                  return None
+              if s.endswith("Z"):
+                  s = s[:-1] + "+00:00"
+              try:
+                  dt = datetime.fromisoformat(s)
+                  if dt.tzinfo is None:
+                      dt = dt.replace(tzinfo=timezone.utc)
+                  return dt.astimezone(timezone.utc)
+              except Exception:
+                  return None
+
+          def stamp(dt):
+              return dt.strftime("%Y%m%d_%H%M")
+
+          def iso_min(dt):
+              return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+          def safe_id(value):
+              s = str(value or "EVENT")
+              s = re.sub(r"[^A-Za-z0-9_.-]+", "_", s)
+              return s[-90:]
+
+          def floor_to_step(dt, minutes):
+              discard = timedelta(
+                  minutes=dt.minute % minutes,
+                  seconds=dt.second,
+                  microseconds=dt.microsecond,
+              )
+              return dt - discard
+
+          def round_to_step(dt, minutes):
+              base = floor_to_step(dt, minutes)
+              if (dt - base) >= timedelta(minutes=minutes / 2):
+                  base += timedelta(minutes=minutes)
+              return base
+
+          def to_float(value):
+              try:
+                  if value is None:
+                      return None
+                  s = str(value).strip()
+                  if not s or s.lower() in ("nan", "none", "null"):
+                      return None
+                  return float(s)
+              except Exception:
+                  return None
+
+          def angular_separation_from_earth(lon_deg, lat_deg):
+              lon = math.radians(lon_deg)
+              lat = math.radians(lat_deg)
+              cos_d = math.cos(lat) * math.cos(lon)
+              cos_d = max(-1.0, min(1.0, cos_d))
+              return math.degrees(math.acos(cos_d))
+
+          def evaluate_earth_candidate_from_donki_analysis(a):
+              raw_lon = to_float(a.get("longitude"))
+              lat = to_float(a.get("latitude"))
+              half = to_float(a.get("halfAngle"))
+
+              if raw_lon is None or lat is None or half is None or half <= 0:
+                  return {
+                      "earth_candidate": False,
+                      "impactClass": "NO-GEOMETRY",
+                      "reason": "missing longitude/latitude/halfAngle",
+                  }
+
+              # HTML側と合わせる: DONKI longitudeの正を西向きとして扱う
+              lon = raw_lon
+              sep = angular_separation_from_earth(lon, lat)
+              ratio = sep / half if half > 0 else 999
+
+              if ratio <= 0.50:
+                  impact = "CORE-HIT"
+              elif ratio <= 0.85:
+                  impact = "BODY-HIT"
+              elif ratio <= 1.00:
+                  impact = "FLANK-HIT"
+              else:
+                  impact = "MISS"
+
+              return {
+                  "earth_candidate": ratio <= 1.00,
+                  "impactClass": impact,
+                  "longitude": raw_lon,
+                  "latitude": lat,
+                  "halfAngle": half,
+                  "angularSeparation": round(sep, 3),
+                  "edgeRatio": round(ratio, 3),
+                  "reason": f"sep={sep:.1f} half={half:.1f} ratio={ratio:.2f} impact={impact}",
+              }
+
+          def read_json(path):
+              return json.loads(path.read_text(encoding="utf-8"))
+
+          def load_json_if_exists(path):
+              if not path.exists():
+                  return None
+              try:
+                  return read_json(path)
+              except Exception as e:
+                  print("JSON read failed:", path, e)
+                  return None
+
+          def add_event(events, seen, event_id, t0, source, meta=None):
+              if not t0:
+                  return
+              if t0 < scan_since or t0 > now + timedelta(hours=2):
+                  return
+
+              rounded = round_to_step(t0, step_minutes)
+              sid = safe_id(event_id or f"{source}_{stamp(rounded)}")
+              key = (source, sid, rounded.strftime("%Y%m%d_%H%M"))
+
+              if key in seen:
+                  return
+              seen.add(key)
+
+              events.append({
+                  "id": str(event_id or f"{source}_{stamp(rounded)}"),
+                  "safe_id": sid,
+                  "source": source,
+                  "t0": t0,
+                  "rounded_t0": rounded,
+                  "raw_time": t0.isoformat(),
+                  "window_start": rounded - timedelta(minutes=window_minutes),
+                  "window_end": rounded + timedelta(minutes=window_minutes),
+                  "meta": meta or {}
+              })
+
+          def extract_donki_events():
+              events = []
+              seen = set()
+              loaded_files = []
+
+              index = load_json_if_exists(DONKI_DIR / "index.json")
+              paths = []
+
+              if index:
+                  if index.get("latest"):
+                      paths.append(DONKI_DIR / index["latest"])
+
+                  for f in index.get("files", []):
+                      if f.get("valid") is False:
+                          continue
+                      name = f.get("file")
+                      if not name:
+                          continue
+                      p = DONKI_DIR / name
+                      if p not in paths:
+                          paths.append(p)
+
+              if not paths:
+                  p = DONKI_DIR / "latest.json"
+                  if p.exists():
+                      paths.append(p)
+
+              for path in paths[:130]:
+                  if not path.exists():
+                      continue
+
+                  item = load_json_if_exists(path)
+                  if not item:
+                      continue
+
+                  loaded_files.append(path.name)
+                  sources = item.get("sources") or {}
+
+                  for a in sources.get("cmeAnalysis", {}).get("data", []) or []:
+                      earth = evaluate_earth_candidate_from_donki_analysis(a)
+
+                      # 地球到達候補だけ画像取得。MISS / NO-GEOMETRY はスキップ。
+                      if not earth.get("earth_candidate"):
+                          continue
+
+                      t0 = parse_dt(
+                          a.get("time21_5")
+                          or a.get("activityStartTime")
+                          or a.get("noteTime")
+                      )
+                      add_event(
+                          events,
+                          seen,
+                          a.get("activityID") or a.get("associatedCMEID"),
+                          t0,
+                          "DONKI_CMEAnalysis",
+                          {
+                              "speed": a.get("speed"),
+                              "latitude": a.get("latitude"),
+                              "longitude": a.get("longitude"),
+                              "halfAngle": a.get("halfAngle"),
+                              "earth": earth,
+                              "impactClass": earth.get("impactClass"),
+                              "data_file": path.name
+                          }
+                      )
+
+                  for c in sources.get("cme", {}).get("data", []) or []:
+                      # DONKI_CME単体はlongitude/latitude/halfAngleが無いことが多いので、
+                      # 太陽画像取得対象にはしない。cmeAnalysesがある場合だけ下で判定する。
+
+                      for a in c.get("cmeAnalyses", []) or []:
+                          earth = evaluate_earth_candidate_from_donki_analysis(a)
+
+                          # 地球到達候補だけ画像取得。MISS / NO-GEOMETRY はスキップ。
+                          if not earth.get("earth_candidate"):
+                              continue
+
+                          at0 = parse_dt(
+                              a.get("time21_5")
+                              or a.get("activityStartTime")
+                              or c.get("startTime")
+                          )
+                          add_event(
+                              events,
+                              seen,
+                              a.get("activityID") or c.get("activityID"),
+                              at0,
+                              "DONKI_CME.cmeAnalyses",
+                              {
+                                  "speed": a.get("speed"),
+                                  "latitude": a.get("latitude"),
+                                  "longitude": a.get("longitude"),
+                                  "halfAngle": a.get("halfAngle"),
+                                  "earth": earth,
+                                  "impactClass": earth.get("impactClass"),
+                                  "data_file": path.name
+                              }
+                          )
+
+              events.sort(key=lambda x: x["t0"], reverse=True)
+              return events, loaded_files
+
+          def fetch_bytes(url, tries=3, timeout=120, accept="*/*"):
+              last_error = None
+              for i in range(tries):
+                  try:
+                      req = urllib.request.Request(
+                          url,
+                          headers={
+                              "User-Agent": "github-actions-helioviewer-event-window-cache",
+                              "Accept": accept,
+                          },
+                      )
+                      with urllib.request.urlopen(req, timeout=timeout) as r:
+                          return r.read(), r.headers.get("Content-Type", "")
+                  except Exception as e:
+                      last_error = str(e)
+                      wait = 10 * (i + 1)
+                      print(f"retry {i+1}/{tries} failed: {e}; wait {wait}s")
+                      time.sleep(wait)
+              raise RuntimeError(last_error)
+
+          def screenshot_url(dt, ch):
+              params = {
+                  "date": iso_min(dt),
+                  "layers": ch["layer"],
+                  "imageScale": ch["imageScale"],
+                  "width": ch["width"],
+                  "height": ch["height"],
+                  "x0": ch["x0"],
+                  "y0": ch["y0"],
+                  "display": "true",
+                  "watermark": "false",
+              }
+              return "https://api.helioviewer.org/v2/takeScreenshot/?" + urllib.parse.urlencode(params)
+
+          def save_image(event, dt, ch):
+              filename = f"{ch['key']}_{stamp(dt)}.png"
+              out_path = IMG_DIR / filename
+              rel_path = f"./data/helioviewer/images/{filename}"
+
+              if out_path.exists() and out_path.stat().st_size > 1000:
+                  return {
+                      "event_id": event["id"],
+                      "event_source": event["source"],
+                      "event_t0": event["rounded_t0"].isoformat(),
+                      "time": dt.isoformat(),
+                      "kind": ch["kind"],
+                      "label": ch["label"],
+                      "file": filename,
+                      "path": rel_path,
+                      "cached": True,
+                      "ok": True,
+                      "size_bytes": out_path.stat().st_size,
+                  }
+
+              url = screenshot_url(dt, ch)
+              print("GET Helioviewer", event["source"], event["id"], ch["label"], iso_min(dt))
+
+              data, ctype = fetch_bytes(url, accept="image/png,image/jpeg,application/json,*/*")
+
+              if b"{" in data[:30] and "json" in ctype.lower():
+                  obj = json.loads(data.decode("utf-8", errors="replace"))
+                  img_url = obj.get("url") or obj.get("uri") or obj.get("path")
+                  if img_url:
+                      if img_url.startswith("/"):
+                          img_url = "https://api.helioviewer.org" + img_url
+                      data, ctype = fetch_bytes(img_url, accept="image/png,image/jpeg,*/*")
+
+              if len(data) < 1000:
+                  raise RuntimeError(f"image too small: {len(data)} bytes")
+
+              if not (data.startswith(b"\x89PNG") or data.startswith(b"\xff\xd8")):
+                  raise RuntimeError(f"not PNG/JPEG content-type={ctype}")
+
+              out_path.write_bytes(data)
+
+              return {
+                  "event_id": event["id"],
+                  "event_source": event["source"],
+                  "event_t0": event["rounded_t0"].isoformat(),
+                  "time": dt.isoformat(),
+                  "kind": ch["kind"],
+                  "label": ch["label"],
+                  "file": filename,
+                  "path": rel_path,
+                  "cached": False,
+                  "ok": True,
+                  "size_bytes": len(data),
+              }
+
+          def parse_image_time_from_name(path):
+              name = path.name
+              try:
+                  if name.startswith("aia193_"):
+                      prefix = "aia193_"
+                      kind = "AIA193"
+                      label = "SDO/AIA 193"
+                  elif name.startswith("lasco_c2_"):
+                      prefix = "lasco_c2_"
+                      kind = "LASCO_C2"
+                      label = "SOHO/LASCO C2"
+                  else:
+                      return None
+
+                  dt = datetime.strptime(
+                      path.stem.replace(prefix, ""),
+                      "%Y%m%d_%H%M"
+                  ).replace(tzinfo=timezone.utc)
+
+                  return dt, kind, label
+              except Exception:
+                  return None
+
+          def load_existing_index():
+              p = OUT_DIR / "index.json"
+              if not p.exists():
+                  return {}
+              try:
+                  return json.loads(p.read_text(encoding="utf-8"))
+              except Exception:
+                  return {}
+
+          # 古い画像だけ削除。今回対象外でも7日以内なら残す。
+          deleted = []
+          for f in IMG_DIR.glob("*.png"):
+              parsed = parse_image_time_from_name(f)
+              if not parsed:
+                  continue
+              dt, kind, label = parsed
+              if dt < retention_since:
+                  print("delete old image:", f)
+                  f.unlink()
+                  deleted.append(f.name)
+
+          donki_events, donki_files = extract_donki_events()
+
+          # DONKIだけ。CACTusは画像取得しない。
+          events = donki_events
+          events.sort(key=lambda x: x["t0"], reverse=True)
+
+          dedup = {}
+          for ev in events:
+              key = f"{ev['source']}_{safe_id(ev['id'])}_{stamp(ev['rounded_t0'])}"
+              dedup[key] = ev
+
+          events = list(dedup.values())
+          events.sort(key=lambda x: x["t0"], reverse=True)
+          events = events[:max_events_per_run]
+
+          print("scan_days:", scan_days)
+          print("retention_days:", retention_days)
+          print("donki_events:", len(donki_events), "donki_files:", donki_files[:8])
+          print("cactus_events: 0 skipped intentionally")
+          print("merged_events_this_run:", len(events))
+
+          run_items = []
+          errors = []
+
+          for ev in events:
+              t = ev["window_start"]
+              ev_items = []
+
+              while t <= ev["window_end"]:
+                  for ch in CHANNELS:
+                      try:
+                          item = save_image(ev, t, ch)
+                          run_items.append(item)
+                          ev_items.append(item)
+                      except Exception as e:
+                          err = {
+                              "event_id": ev["id"],
+                              "event_source": ev["source"],
+                              "event_t0": ev["rounded_t0"].isoformat(),
+                              "time": t.isoformat(),
+                              "kind": ch["kind"],
+                              "label": ch["label"],
+                              "error": str(e),
+                          }
+                          print("ERROR", err)
+                          errors.append(err)
+
+                      time.sleep(0.25)
+
+                  t += timedelta(minutes=step_minutes)
+
+              ev["image_count"] = len([x for x in ev_items if x.get("ok")])
+              ev["aia193_count"] = len([x for x in ev_items if x.get("kind") == "AIA193"])
+              ev["lasco_c2_count"] = len([x for x in ev_items if x.get("kind") == "LASCO_C2"])
+
+          all_items = []
+          for f in sorted(IMG_DIR.glob("*.png")):
+              parsed = parse_image_time_from_name(f)
+              if not parsed:
+                  continue
+
+              dt, kind, label = parsed
+              if dt < retention_since:
+                  continue
+
+              all_items.append({
+                  "time": dt.isoformat(),
+                  "kind": kind,
+                  "label": label,
+                  "file": f.name,
+                  "path": f"./data/helioviewer/images/{f.name}",
+                  "size_bytes": f.stat().st_size,
+              })
+
+          all_items.sort(key=lambda x: (x["time"], x["kind"]))
+
+          by_kind = {}
+          for item in all_items:
+              by_kind[item["kind"]] = by_kind.get(item["kind"], 0) + 1
+
+          existing_index = load_existing_index()
+          existing_events = existing_index.get("events", []) if isinstance(existing_index, dict) else []
+
+          merged_events = {}
+          for ev in existing_events:
+              # CACTus旧イベントは画像対象から外すのでindexからも落とす
+              if str(ev.get("source", "")).lower().startswith("cactus"):
+                  continue
+
+              t0 = parse_dt(ev.get("t0") or ev.get("raw_time"))
+              if not t0 or t0 < retention_since:
+                  continue
+
+              key = f"{ev.get('source','EVENT')}_{safe_id(ev.get('id'))}_{stamp(round_to_step(t0, step_minutes))}"
+              merged_events[key] = ev
+
+          for ev in events:
+              if ev["rounded_t0"] < retention_since:
+                  continue
+
+              key = f"{ev['source']}_{safe_id(ev['id'])}_{stamp(ev['rounded_t0'])}"
+
+              merged_events[key] = {
+                  "id": ev["id"],
+                  "source": ev["source"],
+                  "t0": ev["rounded_t0"].isoformat(),
+                  "raw_time": ev["raw_time"],
+                  "window_start": ev["window_start"].isoformat(),
+                  "window_end": ev["window_end"].isoformat(),
+                  "image_count": ev.get("image_count", 0),
+                  "aia193_count": ev.get("aia193_count", 0),
+                  "lasco_c2_count": ev.get("lasco_c2_count", 0),
+                  "meta": ev.get("meta") or {},
+                  "last_seen_at": now.isoformat(),
+              }
+
+          event_list = list(merged_events.values())
+          event_list.sort(key=lambda x: x.get("t0", ""), reverse=True)
+
+          # 画像爆増対策: indexに残る地球到達候補イベントの窓に入らない画像は削除する。
+          # これにより、過去に取得したMISS/CACTus/古い広い窓の画像も掃除される。
+          allowed_times = set()
+          for ev in event_list:
+              ws = parse_dt(ev.get("window_start"))
+              we = parse_dt(ev.get("window_end"))
+              if not ws or not we:
+                  continue
+              t = round_to_step(ws, step_minutes)
+              while t <= we:
+                  allowed_times.add(stamp(t))
+                  t += timedelta(minutes=step_minutes)
+
+          cleaned_unused = []
+          for f in list(IMG_DIR.glob("*.png")):
+              parsed = parse_image_time_from_name(f)
+              if not parsed:
+                  continue
+              dt, kind, label = parsed
+              if dt < retention_since:
+                  continue
+              if stamp(dt) not in allowed_times:
+                  print("delete non-earth-candidate/unused image:", f)
+                  f.unlink()
+                  cleaned_unused.append(f.name)
+
+          if cleaned_unused:
+              deleted.extend(cleaned_unused)
+
+          # cleanup後に実ファイルから画像一覧を再構築
+          all_items = []
+          for f in sorted(IMG_DIR.glob("*.png")):
+              parsed = parse_image_time_from_name(f)
+              if not parsed:
+                  continue
+              dt, kind, label = parsed
+              if dt < retention_since:
+                  continue
+              all_items.append({
+                  "time": dt.isoformat(),
+                  "kind": kind,
+                  "label": label,
+                  "file": f.name,
+                  "path": f"./data/helioviewer/images/{f.name}",
+                  "size_bytes": f.stat().st_size,
+              })
+
+          all_items.sort(key=lambda x: (x["time"], x["kind"]))
+          by_kind = {}
+          for item in all_items:
+              by_kind[item["kind"]] = by_kind.get(item["kind"], 0) + 1
+
+          index = {
+              "updated_at": now.isoformat(),
+              "source": "Local docs/data/donki + Helioviewer API takeScreenshot",
+              "description": "Earth-directed DONKI-linked solar image windows only. CACTus data is cached separately for UI, but CACTus images are not fetched. Only CORE/BODY/FLANK candidates are fetched. Window is t0 ± 30 minutes, 15-minute cadence. Retention is 7 days.",
+              "mode": "earth_directed_donki_event_windows_only",
+              "scan_days_this_run": scan_days,
+              "retention_days": retention_days,
+              "retention_since": retention_since.isoformat(),
+              "window_minutes": window_minutes,
+              "step_minutes": step_minutes,
+              "max_events_per_run": max_events_per_run,
+              "channels": [
+                  {
+                      "kind": ch["kind"],
+                      "key": ch["key"],
+                      "label": ch["label"],
+                      "layer": ch["layer"],
+                  }
+                  for ch in CHANNELS
+              ],
+              "inputs": {
+                  "donki_dir": "docs/data/donki",
+                  "cactus_images": "disabled",
+                  "donki_filter": "earth-directed only: sep/halfAngle <= 1.0",
+                  "donki_files_loaded": donki_files,
+                  "donki_events_this_run": len(donki_events),
+                  "cactus_events_this_run": 0,
+              },
+              "event_count": len(event_list),
+              "events_found_this_run": len(events),
+              "image_count": len(all_items),
+              "images_added_or_checked_this_run": len(run_items),
+              "by_kind": by_kind,
+              "deleted_old_images": deleted,
+              "items": all_items,
+              "images": all_items,
+              "events": event_list,
+              "errors_count": len(errors),
+              "errors_sample": errors[:50],
+          }
+
+          index_file = OUT_DIR / "index.json"
+          index_file.write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
+
+          print("saved", index_file)
+          print(json.dumps({
+              "scan_days_this_run": index["scan_days_this_run"],
+              "retention_days": index["retention_days"],
+              "donki_events_this_run": len(donki_events),
+              "cactus_events_this_run": 0,
+              "events_found_this_run": index["events_found_this_run"],
+              "event_count": index["event_count"],
+              "image_count": index["image_count"],
+              "by_kind": index["by_kind"],
+              "errors_count": index["errors_count"],
+          }, ensure_ascii=False, indent=2))
+
+          PY
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add docs/data/helioviewer
+          git commit -m "Update DONKI Helioviewer event window images" || echo "No changes"
+          git push
+
