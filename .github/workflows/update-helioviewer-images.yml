@@ -26,7 +26,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch AIA193 and LASCO C2 images around local DONKI event times only
+      - name: Fetch AIA193 and LASCO C2 images around Earth-directed DONKI event times only
         env:
           INPUT_DAYS: ${{ github.event.inputs.days }}
           INPUT_RETENTION_DAYS: ${{ github.event.inputs.retention_days }}
@@ -36,8 +36,8 @@ jobs:
           import json
           import os
           import re
-          import math
           import time
+          import math
           import urllib.request
           import urllib.parse
           from pathlib import Path
@@ -68,15 +68,15 @@ jobs:
 
           retention_days = safe_int(os.environ.get("INPUT_RETENTION_DAYS"), 7, 1, 14)
 
-          # 画像爆増対策:
-          # CACTus分は画像取得しない
-          # DONKIイベントだけ、前後30分、15分刻み
-          window_minutes = 30
+          # 地球到達候補だけ、前後2時間、15分刻み
+          window_minutes = 120
           step_minutes = 15
           max_events_per_run = 80
 
           scan_since = now - timedelta(days=scan_days)
           retention_since = now - timedelta(days=retention_days)
+
+          DONKI_LON_POSITIVE_WEST = True
 
           CHANNELS = [
               {
@@ -119,6 +119,41 @@ jobs:
               except Exception:
                   return None
 
+          def parse_dt_from_activity_id(activity_id):
+              s = str(activity_id or "")
+              m = re.search(
+                  r"(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})",
+                  s
+              )
+              if not m:
+                  return None
+              try:
+                  return datetime(
+                      int(m.group(1)),
+                      int(m.group(2)),
+                      int(m.group(3)),
+                      int(m.group(4)),
+                      int(m.group(5)),
+                      int(m.group(6)),
+                      tzinfo=timezone.utc
+                  )
+              except Exception:
+                  return None
+
+          def get_event_start_time(*values):
+              # 発生日時は activityStartTime / startTime / activityID内日時 を優先
+              for v in values:
+                  dt = parse_dt(v)
+                  if dt:
+                      return dt
+
+              for v in values:
+                  dt = parse_dt_from_activity_id(v)
+                  if dt:
+                      return dt
+
+              return None
+
           def stamp(dt):
               return dt.strftime("%Y%m%d_%H%M")
 
@@ -144,16 +179,16 @@ jobs:
                   base += timedelta(minutes=minutes)
               return base
 
-          def to_float(value):
+          def to_float(value, default=None):
               try:
                   if value is None:
-                      return None
+                      return default
                   s = str(value).strip()
-                  if not s or s.lower() in ("nan", "none", "null"):
-                      return None
+                  if not s:
+                      return default
                   return float(s)
               except Exception:
-                  return None
+                  return default
 
           def angular_separation_from_earth(lon_deg, lat_deg):
               lon = math.radians(lon_deg)
@@ -162,41 +197,47 @@ jobs:
               cos_d = max(-1.0, min(1.0, cos_d))
               return math.degrees(math.acos(cos_d))
 
-          def evaluate_earth_candidate_from_donki_analysis(a):
-              raw_lon = to_float(a.get("longitude"))
-              lat = to_float(a.get("latitude"))
-              half = to_float(a.get("halfAngle"))
-
-              if raw_lon is None or lat is None or half is None or half <= 0:
+          def classify_earth_directed(lon_deg, lat_deg, half_angle):
+              if lon_deg is None or lat_deg is None or half_angle is None:
                   return {
                       "earth_candidate": False,
-                      "impactClass": "NO-GEOMETRY",
-                      "reason": "missing longitude/latitude/halfAngle",
+                      "impact": "NO-GEOMETRY",
+                      "sep": None,
+                      "ratio": None,
+                      "reason": "No DONKI geometry"
                   }
 
-              # HTML側と合わせる: DONKI longitudeの正を西向きとして扱う
-              lon = raw_lon
-              sep = angular_separation_from_earth(lon, lat)
-              ratio = sep / half if half > 0 else 999
+              if half_angle <= 0:
+                  return {
+                      "earth_candidate": False,
+                      "impact": "NO-GEOMETRY",
+                      "sep": None,
+                      "ratio": None,
+                      "reason": "Invalid halfAngle"
+                  }
+
+              sep = angular_separation_from_earth(lon_deg, lat_deg)
+              ratio = sep / half_angle
 
               if ratio <= 0.50:
                   impact = "CORE-HIT"
+                  earth_candidate = True
               elif ratio <= 0.85:
                   impact = "BODY-HIT"
+                  earth_candidate = True
               elif ratio <= 1.00:
                   impact = "FLANK-HIT"
+                  earth_candidate = True
               else:
                   impact = "MISS"
+                  earth_candidate = False
 
               return {
-                  "earth_candidate": ratio <= 1.00,
-                  "impactClass": impact,
-                  "longitude": raw_lon,
-                  "latitude": lat,
-                  "halfAngle": half,
-                  "angularSeparation": round(sep, 3),
-                  "edgeRatio": round(ratio, 3),
-                  "reason": f"sep={sep:.1f} half={half:.1f} ratio={ratio:.2f} impact={impact}",
+                  "earth_candidate": earth_candidate,
+                  "impact": impact,
+                  "sep": round(sep, 3),
+                  "ratio": round(ratio, 3),
+                  "reason": f"{impact}: sep={sep:.1f}, half={half_angle:.1f}, ratio={ratio:.2f}"
               }
 
           def read_json(path):
@@ -223,6 +264,7 @@ jobs:
 
               if key in seen:
                   return
+
               seen.add(key)
 
               events.append({
@@ -241,6 +283,12 @@ jobs:
               events = []
               seen = set()
               loaded_files = []
+              skipped = {
+                  "miss": 0,
+                  "no_geometry": 0,
+                  "old": 0,
+                  "other": 0
+              }
 
               index = load_json_if_exists(DONKI_DIR / "index.json")
               paths = []
@@ -275,70 +323,121 @@ jobs:
                   loaded_files.append(path.name)
                   sources = item.get("sources") or {}
 
+                  # CMEAnalysis は geometry があるので主対象
                   for a in sources.get("cmeAnalysis", {}).get("data", []) or []:
-                      earth = evaluate_earth_candidate_from_donki_analysis(a)
+                      event_id = a.get("activityID") or a.get("associatedCMEID")
 
-                      # 地球到達候補だけ画像取得。MISS / NO-GEOMETRY はスキップ。
-                      if not earth.get("earth_candidate"):
+                      t0 = get_event_start_time(
+                          a.get("activityStartTime"),
+                          event_id,
+                          a.get("associatedCMEID"),
+                          a.get("time21_5")
+                      )
+
+                      if not t0:
+                          skipped["other"] += 1
                           continue
 
-                      t0 = parse_dt(
-                          a.get("time21_5")
-                          or a.get("activityStartTime")
-                          or a.get("noteTime")
-                      )
+                      raw_lon = to_float(a.get("longitude"), None)
+                      lat = to_float(a.get("latitude"), None)
+                      half = to_float(a.get("halfAngle"), None)
+                      speed = to_float(a.get("speed"), None)
+
+                      lon = raw_lon
+                      if lon is not None and not DONKI_LON_POSITIVE_WEST:
+                          lon = -lon
+
+                      result = classify_earth_directed(lon, lat, half)
+
+                      if not result["earth_candidate"]:
+                          if result["impact"] == "MISS":
+                              skipped["miss"] += 1
+                          else:
+                              skipped["no_geometry"] += 1
+                          continue
+
                       add_event(
                           events,
                           seen,
-                          a.get("activityID") or a.get("associatedCMEID"),
+                          event_id,
                           t0,
                           "DONKI_CMEAnalysis",
                           {
-                              "speed": a.get("speed"),
-                              "latitude": a.get("latitude"),
-                              "longitude": a.get("longitude"),
-                              "halfAngle": a.get("halfAngle"),
-                              "earth": earth,
-                              "impactClass": earth.get("impactClass"),
+                              "speed": speed,
+                              "latitude": lat,
+                              "longitude": lon,
+                              "raw_longitude": raw_lon,
+                              "halfAngle": half,
+                              "impact": result["impact"],
+                              "earth_candidate": True,
+                              "sep": result["sep"],
+                              "ratio": result["ratio"],
+                              "reason": result["reason"],
                               "data_file": path.name
                           }
                       )
 
+                  # CME内のcmeAnalysesも見る
                   for c in sources.get("cme", {}).get("data", []) or []:
-                      # DONKI_CME単体はlongitude/latitude/halfAngleが無いことが多いので、
-                      # 太陽画像取得対象にはしない。cmeAnalysesがある場合だけ下で判定する。
+                      c_id = c.get("activityID")
+                      c_start = c.get("startTime") or c.get("activityStartTime")
 
                       for a in c.get("cmeAnalyses", []) or []:
-                          earth = evaluate_earth_candidate_from_donki_analysis(a)
+                          event_id = a.get("activityID") or c_id
 
-                          # 地球到達候補だけ画像取得。MISS / NO-GEOMETRY はスキップ。
-                          if not earth.get("earth_candidate"):
+                          t0 = get_event_start_time(
+                              a.get("activityStartTime"),
+                              c_start,
+                              event_id,
+                              c_id,
+                              a.get("time21_5")
+                          )
+
+                          if not t0:
+                              skipped["other"] += 1
                               continue
 
-                          at0 = parse_dt(
-                              a.get("time21_5")
-                              or a.get("activityStartTime")
-                              or c.get("startTime")
-                          )
+                          raw_lon = to_float(a.get("longitude"), None)
+                          lat = to_float(a.get("latitude"), None)
+                          half = to_float(a.get("halfAngle"), None)
+                          speed = to_float(a.get("speed"), None)
+
+                          lon = raw_lon
+                          if lon is not None and not DONKI_LON_POSITIVE_WEST:
+                              lon = -lon
+
+                          result = classify_earth_directed(lon, lat, half)
+
+                          if not result["earth_candidate"]:
+                              if result["impact"] == "MISS":
+                                  skipped["miss"] += 1
+                              else:
+                                  skipped["no_geometry"] += 1
+                              continue
+
                           add_event(
                               events,
                               seen,
-                              a.get("activityID") or c.get("activityID"),
-                              at0,
+                              event_id,
+                              t0,
                               "DONKI_CME.cmeAnalyses",
                               {
-                                  "speed": a.get("speed"),
-                                  "latitude": a.get("latitude"),
-                                  "longitude": a.get("longitude"),
-                                  "halfAngle": a.get("halfAngle"),
-                                  "earth": earth,
-                                  "impactClass": earth.get("impactClass"),
+                                  "speed": speed,
+                                  "latitude": lat,
+                                  "longitude": lon,
+                                  "raw_longitude": raw_lon,
+                                  "halfAngle": half,
+                                  "impact": result["impact"],
+                                  "earth_candidate": True,
+                                  "sep": result["sep"],
+                                  "ratio": result["ratio"],
+                                  "reason": result["reason"],
                                   "data_file": path.name
                               }
                           )
 
               events.sort(key=lambda x: x["t0"], reverse=True)
-              return events, loaded_files
+              return events, loaded_files, skipped
 
           def fetch_bytes(url, tries=3, timeout=120, accept="*/*"):
               last_error = None
@@ -347,7 +446,7 @@ jobs:
                       req = urllib.request.Request(
                           url,
                           headers={
-                              "User-Agent": "github-actions-helioviewer-event-window-cache",
+                              "User-Agent": "github-actions-helioviewer-earth-directed-cache",
                               "Accept": accept,
                           },
                       )
@@ -461,7 +560,7 @@ jobs:
               except Exception:
                   return {}
 
-          # 古い画像だけ削除。今回対象外でも7日以内なら残す。
+          # 古い画像は削除
           deleted = []
           for f in IMG_DIR.glob("*.png"):
               parsed = parse_image_time_from_name(f)
@@ -473,9 +572,9 @@ jobs:
                   f.unlink()
                   deleted.append(f.name)
 
-          donki_events, donki_files = extract_donki_events()
+          donki_events, donki_files, skipped = extract_donki_events()
 
-          # DONKIだけ。CACTusは画像取得しない。
+          # 地球到達候補だけ
           events = donki_events
           events.sort(key=lambda x: x["t0"], reverse=True)
 
@@ -490,12 +589,14 @@ jobs:
 
           print("scan_days:", scan_days)
           print("retention_days:", retention_days)
-          print("donki_events:", len(donki_events), "donki_files:", donki_files[:8])
-          print("cactus_events: 0 skipped intentionally")
+          print("earth_directed_donki_events:", len(donki_events))
+          print("donki_files:", donki_files[:8])
+          print("skipped:", skipped)
           print("merged_events_this_run:", len(events))
 
           run_items = []
           errors = []
+          required_files = set()
 
           for ev in events:
               t = ev["window_start"]
@@ -503,6 +604,9 @@ jobs:
 
               while t <= ev["window_end"]:
                   for ch in CHANNELS:
+                      filename = f"{ch['key']}_{stamp(t)}.png"
+                      required_files.add(filename)
+
                       try:
                           item = save_image(ev, t, ch)
                           run_items.append(item)
@@ -527,6 +631,40 @@ jobs:
               ev["image_count"] = len([x for x in ev_items if x.get("ok")])
               ev["aia193_count"] = len([x for x in ev_items if x.get("kind") == "AIA193"])
               ev["lasco_c2_count"] = len([x for x in ev_items if x.get("kind") == "LASCO_C2"])
+
+          # 保持期間内でも、地球到達候補イベント窓に不要な画像は削除してさらに軽量化
+          # ただし今回のscan外の直近イベント画像はexisting indexから守る
+          existing_index = load_existing_index()
+          existing_events = existing_index.get("events", []) if isinstance(existing_index, dict) else []
+
+          for ev in existing_events:
+              t0 = parse_dt(ev.get("t0") or ev.get("raw_time"))
+              if not t0 or t0 < retention_since:
+                  continue
+              source = str(ev.get("source", ""))
+              if source.lower().startswith("cactus"):
+                  continue
+
+              start = round_to_step(t0, step_minutes) - timedelta(minutes=window_minutes)
+              end = round_to_step(t0, step_minutes) + timedelta(minutes=window_minutes)
+
+              t = start
+              while t <= end:
+                  for ch in CHANNELS:
+                      required_files.add(f"{ch['key']}_{stamp(t)}.png")
+                  t += timedelta(minutes=step_minutes)
+
+          for f in IMG_DIR.glob("*.png"):
+              parsed = parse_image_time_from_name(f)
+              if not parsed:
+                  continue
+              dt, kind, label = parsed
+              if dt < retention_since:
+                  continue
+              if f.name not in required_files:
+                  print("delete not-required image:", f)
+                  f.unlink()
+                  deleted.append(f.name)
 
           all_items = []
           for f in sorted(IMG_DIR.glob("*.png")):
@@ -553,12 +691,10 @@ jobs:
           for item in all_items:
               by_kind[item["kind"]] = by_kind.get(item["kind"], 0) + 1
 
-          existing_index = load_existing_index()
-          existing_events = existing_index.get("events", []) if isinstance(existing_index, dict) else []
-
+          # indexのイベントは既存分と今回分をマージ
           merged_events = {}
           for ev in existing_events:
-              # CACTus旧イベントは画像対象から外すのでindexからも落とす
+              # CACTus旧イベントは画像対象から外す
               if str(ev.get("source", "")).lower().startswith("cactus"):
                   continue
 
@@ -592,62 +728,10 @@ jobs:
           event_list = list(merged_events.values())
           event_list.sort(key=lambda x: x.get("t0", ""), reverse=True)
 
-          # 画像爆増対策: indexに残る地球到達候補イベントの窓に入らない画像は削除する。
-          # これにより、過去に取得したMISS/CACTus/古い広い窓の画像も掃除される。
-          allowed_times = set()
-          for ev in event_list:
-              ws = parse_dt(ev.get("window_start"))
-              we = parse_dt(ev.get("window_end"))
-              if not ws or not we:
-                  continue
-              t = round_to_step(ws, step_minutes)
-              while t <= we:
-                  allowed_times.add(stamp(t))
-                  t += timedelta(minutes=step_minutes)
-
-          cleaned_unused = []
-          for f in list(IMG_DIR.glob("*.png")):
-              parsed = parse_image_time_from_name(f)
-              if not parsed:
-                  continue
-              dt, kind, label = parsed
-              if dt < retention_since:
-                  continue
-              if stamp(dt) not in allowed_times:
-                  print("delete non-earth-candidate/unused image:", f)
-                  f.unlink()
-                  cleaned_unused.append(f.name)
-
-          if cleaned_unused:
-              deleted.extend(cleaned_unused)
-
-          # cleanup後に実ファイルから画像一覧を再構築
-          all_items = []
-          for f in sorted(IMG_DIR.glob("*.png")):
-              parsed = parse_image_time_from_name(f)
-              if not parsed:
-                  continue
-              dt, kind, label = parsed
-              if dt < retention_since:
-                  continue
-              all_items.append({
-                  "time": dt.isoformat(),
-                  "kind": kind,
-                  "label": label,
-                  "file": f.name,
-                  "path": f"./data/helioviewer/images/{f.name}",
-                  "size_bytes": f.stat().st_size,
-              })
-
-          all_items.sort(key=lambda x: (x["time"], x["kind"]))
-          by_kind = {}
-          for item in all_items:
-              by_kind[item["kind"]] = by_kind.get(item["kind"], 0) + 1
-
           index = {
               "updated_at": now.isoformat(),
               "source": "Local docs/data/donki + Helioviewer API takeScreenshot",
-              "description": "Earth-directed DONKI-linked solar image windows only. CACTus data is cached separately for UI, but CACTus images are not fetched. Only CORE/BODY/FLANK candidates are fetched. Window is t0 ± 30 minutes, 15-minute cadence. Retention is 7 days.",
+              "description": "Earth-directed DONKI-linked solar image windows only. CACTus images are disabled. Window is t0 ± 2 hours, 15-minute cadence. Retention is 7 days.",
               "mode": "earth_directed_donki_event_windows_only",
               "scan_days_this_run": scan_days,
               "retention_days": retention_days,
@@ -655,6 +739,12 @@ jobs:
               "window_minutes": window_minutes,
               "step_minutes": step_minutes,
               "max_events_per_run": max_events_per_run,
+              "filter": {
+                  "earth_directed_only": True,
+                  "accepted_impacts": ["CORE-HIT", "BODY-HIT", "FLANK-HIT"],
+                  "rejected_impacts": ["MISS", "NO-GEOMETRY"],
+                  "cactus_images": "disabled"
+              },
               "channels": [
                   {
                       "kind": ch["kind"],
@@ -666,10 +756,9 @@ jobs:
               ],
               "inputs": {
                   "donki_dir": "docs/data/donki",
-                  "cactus_images": "disabled",
-                  "donki_filter": "earth-directed only: sep/halfAngle <= 1.0",
                   "donki_files_loaded": donki_files,
-                  "donki_events_this_run": len(donki_events),
+                  "earth_directed_donki_events_this_run": len(donki_events),
+                  "skipped": skipped,
                   "cactus_events_this_run": 0,
               },
               "event_count": len(event_list),
@@ -677,7 +766,7 @@ jobs:
               "image_count": len(all_items),
               "images_added_or_checked_this_run": len(run_items),
               "by_kind": by_kind,
-              "deleted_old_images": deleted,
+              "deleted_images": deleted,
               "items": all_items,
               "images": all_items,
               "events": event_list,
@@ -692,13 +781,14 @@ jobs:
           print(json.dumps({
               "scan_days_this_run": index["scan_days_this_run"],
               "retention_days": index["retention_days"],
-              "donki_events_this_run": len(donki_events),
-              "cactus_events_this_run": 0,
+              "window_minutes": index["window_minutes"],
+              "earth_directed_donki_events_this_run": len(donki_events),
               "events_found_this_run": index["events_found_this_run"],
               "event_count": index["event_count"],
               "image_count": index["image_count"],
               "by_kind": index["by_kind"],
               "errors_count": index["errors_count"],
+              "skipped": skipped
           }, ensure_ascii=False, indent=2))
 
           PY
@@ -708,6 +798,5 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add docs/data/helioviewer
-          git commit -m "Update DONKI Helioviewer event window images" || echo "No changes"
+          git commit -m "Update Earth-directed DONKI Helioviewer images" || echo "No changes"
           git push
-
