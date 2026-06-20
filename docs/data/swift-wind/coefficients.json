@@ -1,0 +1,26 @@
+{
+  "updated_at": "2026-06-20T09:42:27.949853+00:00",
+  "model": "SWIFT Wind AI v0.1",
+  "learning_rate": 0.03,
+  "weights": {
+    "persistence": 0.5,
+    "rotation27": 0.3,
+    "wsa": 0.2,
+    "cme": 1.0
+  },
+  "bias": {
+    "speed": 0.409
+  },
+  "notes": [
+    "Phase 1: coefficient-learning model.",
+    "Background = persistence + 27-day recurrence + WSA blend.",
+    "Enhanced = background + Earth-directed DONKI CME pulse.",
+    "NOAA RTSW observed solar wind is used for verification and coefficient tuning."
+  ],
+  "last_training": {
+    "time": "2026-06-20T09:42:27.949853+00:00",
+    "enhanced_bias_24h": 13.635,
+    "delta_bias": 0.409,
+    "points": 25
+  }
+}
