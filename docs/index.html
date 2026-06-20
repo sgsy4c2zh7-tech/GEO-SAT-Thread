@@ -391,6 +391,7 @@ pre{
   <div>
     <button class="primary" onclick="loadDONKICache()">DONKI Cache読込</button>
     <button onclick="loadWSA()">WSA背景風読込</button>
+    <button onclick="loadSwiftWindAI()">SWIFT Wind AI読込</button>
     <button onclick="loadCDAWImages()">AIA193/C2画像読込</button>
     <button onclick="loadCACTusCache()">CACTus Cache読込</button>
     <button onclick="loadNOAAAll()">NOAA環境取得</button>
@@ -402,10 +403,11 @@ pre{
   <div class="small">
     DONKI: <code>./data/donki/index.json</code> を読込。  
     WSA: <code>./data/wsa/index.json</code> を読込し、DBM-liteの背景太陽風 <b>w(t)</b> に使用。  
+    SWIFT Wind AI: <code>./data/swift-wind/index.json</code> を読込し、NOAA実測 / WSA / SWIFT背景 / SWIFT+CME を比較表示。  
     地球到達判定は <b>DONKI longitude / latitude / halfAngle</b> → <b>sep / halfAngle</b> → <b>CORE/BODY/FLANK/MISS</b>。  
     MISSは地球伝播・衛星影響から排除。<br>
     CACTus: <code>./data/cactus/index.json</code> を読込して、蓄積済みCACTus CMEを表示。<br>
-    Helioviewer画像: <code>./data/helioviewer/index.json</code> を読込して、CME発生時刻 <b>t0±1時間</b> の <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> を表示。
+    Helioviewer画像: <code>./data/helioviewer/index.json</code> を読込して、CME発生時刻 <b>t0±2時間</b> の <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> を表示。
   </div>
 </header>
 
@@ -444,7 +446,7 @@ pre{
 </section>
 
 <section class="card" style="margin-top:16px">
-  <h3>④ Background Solar Wind / WSA time series</h3>
+  <h3>④ SWIFT Wind AI / Solar Wind Forecast</h3>
   <div id="windSummary" class="small">WSA未読込</div>
   <div class="widebox" style="height:240px"><canvas id="windCanvas"></canvas></div>
 </section>
@@ -470,7 +472,7 @@ pre{
   <h3>⑦ CME-linked Solar Image Movie / t0 ± 1 hour</h3>
   <div id="cdawSummary" class="small">未取得</div>
   <div class="cdawHint">
-    使う画像は <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> の2種類だけ。CME Event Tableの <b>画像を見る</b> を押すと、そのCME発生時刻 <b>t0の前後30分</b> にジャンプして、15分刻みの画像動画を表示します。画像が欠ける時刻は直前画像を保持表示します。
+    使う画像は <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> の2種類だけ。CME Event Tableの <b>画像を見る</b> を押すと、そのCME発生時刻 <b>t0の前後2時間</b> にジャンプして、15分刻みの画像動画を表示します。画像が欠ける時刻は直前画像を保持表示します。
   </div>
 
   <div class="cdawPlayerControls">
@@ -480,7 +482,7 @@ pre{
     <button class="danger" onclick="stopCMEImageFrames()">画像停止</button>
     <button onclick="stepCMEImageFrame(1)">15分 ▶</button>
   </div>
-  <input id="cmeImageFrameSlider" type="range" min="0" max="4" value="2" step="1" oninput="selectCMEImageFrameBySlider()">
+  <input id="cmeImageFrameSlider" type="range" min="0" max="16" value="8" step="1" oninput="selectCMEImageFrameBySlider()">
 
   <div class="cdawSectionTitle">CME t0 ± 1h / AIA193 + LASCO C2</div>
   <div id="cdawTimeline" class="cdawTimelineGrid"></div>
@@ -509,6 +511,7 @@ pre{
 
 const DONKI_CACHE_INDEX = "./data/donki/index.json";
 const WSA_CACHE_INDEX = "./data/wsa/index.json";
+const SWIFT_WIND_INDEX = "./data/swift-wind/index.json";
 const CDAW_IMAGE_INDEX = "./data/helioviewer/index.json";
 const CACTUS_CACHE_INDEX = "./data/cactus/index.json";
 const DONKI_LON_POSITIVE_WEST = true;
@@ -545,6 +548,7 @@ const STATE = {
     donkiSEP:src("DONKI SEP","未取得"),
     donkiFLR:src("DONKI FLR","未取得"),
     wsa:src("WSA Wind Model","未取得"),
+    swiftWind:src("SWIFT Wind AI","未取得"),
     cdawImages:src("AIA193/C2 Images","未取得"),
     cactus:src("CACTus CME","未取得"),
     noaaWind:src("NOAA Wind","未取得"),
@@ -556,6 +560,8 @@ const STATE = {
   donkiPayloads:[],
   wsaIndex:null,
   wsaModel:null,
+  swiftWindIndex:null,
+  swiftWindModel:null,
   cactusIndex:null,
   cactusEvents:[],
   cdawIndex:null,
@@ -805,6 +811,53 @@ async function loadWSA(){
 }
 
 
+async function loadSwiftWindAI(){
+  setSource("swiftWind","LOADING...");
+  try{
+    const index=await fetchJson(SWIFT_WIND_INDEX);
+    STATE.swiftWindIndex=index;
+
+    const latestName=index.latest || "latest.json";
+    const latestPath="./data/swift-wind/" + latestName;
+    const model=await fetchJson(latestPath);
+
+    if(!Array.isArray(model.records) || !model.records.length){
+      throw new Error("SWIFT Wind AI model has no records");
+    }
+
+    const records=model.records
+      .map(r=>({
+        ...r,
+        _t:new Date(r.time).getTime(),
+        observed_speed:r.observed_speed!==null && r.observed_speed!==undefined ? Number(r.observed_speed) : null,
+        wsa_speed:r.wsa_speed!==null && r.wsa_speed!==undefined ? Number(r.wsa_speed) : null,
+        persistence_speed:r.persistence_speed!==null && r.persistence_speed!==undefined ? Number(r.persistence_speed) : null,
+        rotation27_speed:r.rotation27_speed!==null && r.rotation27_speed!==undefined ? Number(r.rotation27_speed) : null,
+        swift_background_speed:r.swift_background_speed!==null && r.swift_background_speed!==undefined ? Number(r.swift_background_speed) : null,
+        swift_cme_enhanced_speed:r.swift_cme_enhanced_speed!==null && r.swift_cme_enhanced_speed!==undefined ? Number(r.swift_cme_enhanced_speed) : null,
+        cme_effect_weighted:r.cme_effect_weighted!==null && r.cme_effect_weighted!==undefined ? Number(r.cme_effect_weighted) : null
+      }))
+      .filter(r=>Number.isFinite(r._t))
+      .sort((a,b)=>a._t-b._t);
+
+    if(!records.length){
+      throw new Error("SWIFT Wind AI records could not be normalized");
+    }
+
+    STATE.swiftWindModel={...model,records};
+
+    const v24=model.verification?.last_24h?.enhanced;
+    const mae=v24?.mae!==undefined && v24?.mae!==null ? ` / MAE24h ${Math.round(v24.mae)} km/s` : "";
+    setSource("swiftWind",`OK: ${records.length} records${mae}`,STATE.swiftWindModel);
+    rebuildAll();
+  }catch(e){
+    STATE.swiftWindIndex=null;
+    STATE.swiftWindModel=null;
+    setSource("swiftWind","FAILED",null,e.message);
+  }
+}
+
+
 async function loadCDAWImages(){
   setSource("cdawImages","LOADING...");
   try{
@@ -952,6 +1005,7 @@ async function loadAll(){
   await Promise.allSettled([
     loadDONKICache(),
     loadWSA(),
+    loadSwiftWindAI(),
     loadCDAWImages(),
     loadCACTusCache(),
     loadNOAAWind(),
@@ -970,6 +1024,7 @@ function renderSourcePanel(){
   const rows=[
     ["donkiCache","DONKI Cache",loadDONKICache],
     ["wsa","WSA Wind Model",loadWSA],
+    ["swiftWind","SWIFT Wind AI",loadSwiftWindAI],
     ["cdawImages","AIA193/C2 Images",loadCDAWImages],
     ["cactus","CACTus Cache",loadCACTusCache],
     ["noaaWind","NOAA Wind",loadNOAAWind],
@@ -1978,6 +2033,10 @@ function rebuildAll(){
     wsaIndex:STATE.wsaIndex,
     wsaLoaded:Boolean(STATE.wsaModel),
     wsaRecords:STATE.wsaModel?.records?.length || 0,
+    swiftWindIndex:STATE.swiftWindIndex,
+    swiftWindLoaded:Boolean(STATE.swiftWindModel),
+    swiftWindRecords:STATE.swiftWindModel?.records?.length || 0,
+    swiftWindVerification:STATE.swiftWindModel?.verification || null,
     cactusIndex:STATE.cactusIndex,
     cactusEvents:STATE.cactusEvents?.length || 0,
     cdawIndex:STATE.cdawIndex,
@@ -2524,20 +2583,50 @@ function drawWindSeries(selectedTime){
 
   ctx.fillStyle="#fff";
   ctx.font="12px system-ui";
-  ctx.fillText("WSA background solar wind speed / history + forecast",12,20);
+  ctx.fillText("Solar wind speed: NOAA observed / WSA / SWIFT background / SWIFT+CME",12,20);
 
-  const model=STATE.wsaModel;
-  if(!model || !Array.isArray(model.records) || !model.records.length){
-    ctx.fillStyle="#aaa";
-    ctx.fillText("WSA data not loaded.",12,44);
-    summary.innerHTML="WSA未読込";
+  const swift=STATE.swiftWindModel;
+  const wsa=STATE.wsaModel;
+
+  // SWIFT Wind AIがなければ、旧WSAグラフ相当の簡易表示
+  if(!swift || !Array.isArray(swift.records) || !swift.records.length){
+    const model=wsa;
+    if(!model || !Array.isArray(model.records) || !model.records.length){
+      ctx.fillStyle="#aaa";
+      ctx.fillText("SWIFT Wind AI / WSA data not loaded.",12,44);
+      summary.innerHTML='SWIFT Wind AI未読込。<button onclick="loadSwiftWindAI()">SWIFT Wind AI読込</button>';
+      return;
+    }
+
+    const padL=55, padR=20, padT=30, padB=35;
+    const x0=padL, y0=padT, ww=w-padL-padR, hh=h-padT-padB;
+    const tMin=STATE.timelineStart.getTime();
+    const tMax=STATE.timelineEnd.getTime();
+    const nowT=STATE.timelineCenter.getTime();
+    const arr=model.records.filter(r=>Number.isFinite(r._t) && Number.isFinite(Number(r.speed))).filter(r=>r._t>=tMin && r._t<=tMax);
+    if(!arr.length){
+      ctx.fillStyle="#aaa";
+      ctx.fillText("No WSA records inside displayed range.",12,44);
+      summary.innerHTML="表示範囲内にWSAデータなし";
+      return;
+    }
+    const speeds=arr.map(r=>Number(r.speed)).filter(v=>Number.isFinite(v));
+    const yMin=Math.floor((Math.min(...speeds,300)-20)/50)*50;
+    const yMax=Math.ceil((Math.max(...speeds,800)+20)/50)*50;
+    const xOf=t=>x0+(t-tMin)/(tMax-tMin)*ww;
+    const yOf=v=>y0+(yMax-v)/(yMax-yMin)*hh;
+    drawWindGrid(ctx,x0,y0,ww,hh,yMin,yMax,tMin,tMax,nowT);
+    drawLineSeries(ctx,arr,"speed",xOf,yOf,"#ffee58",[7,5]);
+    const selX=xOf(selectedTime.getTime());
+    ctx.beginPath(); ctx.moveTo(selX,y0); ctx.lineTo(selX,y0+hh); ctx.strokeStyle="rgba(255,255,255,.9)"; ctx.lineWidth=2; ctx.stroke();
+    summary.innerHTML=`SWIFT Wind AI未読込 / WSA records: <b>${arr.length}</b>。<button onclick="loadSwiftWindAI()">SWIFT Wind AI読込</button>`;
     return;
   }
 
   const padL=55;
   const padR=20;
-  const padT=30;
-  const padB=35;
+  const padT=32;
+  const padB=38;
   const x0=padL;
   const y0=padT;
   const ww=w-padL-padR;
@@ -2546,101 +2635,54 @@ function drawWindSeries(selectedTime){
   const tMin=STATE.timelineStart.getTime();
   const tMax=STATE.timelineEnd.getTime();
   const nowT=STATE.timelineCenter.getTime();
+  const selT=selectedTime.getTime();
 
-  const arr=model.records
-    .filter(r=>Number.isFinite(r._t) && Number.isFinite(Number(r.speed)))
-    .filter(r=>r._t>=tMin && r._t<=tMax);
+  const arr=swift.records.filter(r=>r._t>=tMin && r._t<=tMax);
 
   if(!arr.length){
     ctx.fillStyle="#aaa";
-    ctx.fillText("No WSA records inside displayed range.",12,44);
-    summary.innerHTML="表示範囲内にWSAデータなし";
+    ctx.fillText("No SWIFT Wind AI records inside displayed range.",12,44);
+    summary.innerHTML="表示範囲内にSWIFT Wind AIデータなし";
     return;
   }
 
-  const speeds=arr.map(r=>Number(r.speed)).filter(v=>Number.isFinite(v));
-  const minV=Math.min(...speeds,300);
-  const maxV=Math.max(...speeds,800);
-  const yMin=Math.floor((minV-20)/50)*50;
-  const yMax=Math.ceil((maxV+20)/50)*50;
+  const keys=["observed_speed","wsa_speed","swift_background_speed","swift_cme_enhanced_speed"];
+  const values=[];
+  arr.forEach(r=>{
+    keys.forEach(k=>{
+      const v=Number(r[k]);
+      if(Number.isFinite(v)) values.push(v);
+    });
+  });
+
+  const yMin=Math.floor((Math.min(...values,300)-20)/50)*50;
+  const yMax=Math.ceil((Math.max(...values,800)+20)/50)*50;
 
   const xOf=t=>x0+(t-tMin)/(tMax-tMin)*ww;
   const yOf=v=>y0+(yMax-v)/(yMax-yMin)*hh;
 
-  // forecast area
-  const nowX=xOf(nowT);
-  ctx.fillStyle="rgba(255,235,59,.06)";
-  ctx.fillRect(nowX,y0,Math.max(0,x0+ww-nowX),hh);
+  drawWindGrid(ctx,x0,y0,ww,hh,yMin,yMax,tMin,tMax,nowT);
 
-  // grid
-  ctx.strokeStyle="rgba(255,255,255,.18)";
-  ctx.lineWidth=1;
+  drawLineSeries(ctx,arr,"observed_speed",xOf,yOf,"#ffffff",[]);
+  drawLineSeries(ctx,arr,"wsa_speed",xOf,yOf,"#ffee58",[7,5]);
+  drawLineSeries(ctx,arr,"swift_background_speed",xOf,yOf,"#8bc34a",[]);
+  drawLineSeries(ctx,arr,"swift_cme_enhanced_speed",xOf,yOf,"#ff5252",[]);
 
-  for(let i=0;i<=4;i++){
-    const y=y0+hh*i/4;
-    ctx.beginPath();
-    ctx.moveTo(x0,y);
-    ctx.lineTo(x0+ww,y);
-    ctx.stroke();
-
-    const v=Math.round(yMax-(yMax-yMin)*i/4);
-    ctx.fillStyle="rgba(255,255,255,.72)";
-    ctx.font="11px system-ui";
-    ctx.fillText(`${v}`,8,y+4);
-  }
-
-  const totalHours=(tMax-tMin)/3600000;
-  const vLines=11;
-  ctx.strokeStyle="rgba(255,255,255,.16)";
-  for(let i=0;i<=vLines;i++){
-    const x=x0+ww*i/vLines;
-    ctx.beginPath();
-    ctx.moveTo(x,y0);
-    ctx.lineTo(x,y0+hh);
-    ctx.stroke();
-  }
-
-  function drawSegment(points,color,dash=[]){
-    if(points.length<2) return;
-    ctx.save();
-    ctx.beginPath();
-    let started=false;
-    points.forEach(r=>{
-      const x=xOf(r._t);
-      const y=yOf(Number(r.speed));
-      if(!started){ctx.moveTo(x,y);started=true;}
-      else ctx.lineTo(x,y);
-    });
-    ctx.strokeStyle=color;
-    ctx.lineWidth=2.4;
-    ctx.setLineDash(dash);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  const history=arr.filter(r=>r._t<=nowT);
-  const forecast=arr.filter(r=>r._t>=nowT);
-
-  // connect one point across now if available
-  if(history.length && forecast.length && history[history.length-1]._t !== forecast[0]._t){
-    forecast.unshift(history[history.length-1]);
-  }
-
-  drawSegment(history,"#4fc3f7",[]);
-  drawSegment(forecast,"#ffee58",[7,5]);
-
-  // points
-  arr.forEach(r=>{
+  // CME効果がある時間帯を薄く塗る
+  arr.forEach((r,i)=>{
+    const eff=Number(r.cme_effect_weighted || 0);
+    if(!Number.isFinite(eff) || eff<=10) return;
     const x=xOf(r._t);
-    const y=yOf(Number(r.speed));
-    const isFuture=r._t>nowT || r.is_forecast===true;
-    ctx.beginPath();
-    ctx.arc(x,y,isFuture?3.1:2.4,0,Math.PI*2);
-    ctx.fillStyle=isFuture ? "#ffee58" : "#4fc3f7";
-    ctx.fill();
+    const next=arr[i+1] ? xOf(arr[i+1]._t) : x+Math.max(3,ww/arr.length);
+    ctx.fillStyle=`rgba(255,82,82,${clamp(eff/500,0.04,0.20)})`;
+    ctx.fillRect(x,y0,Math.max(2,next-x),hh);
   });
 
-  // now line
+  // redraw enhanced over shading
+  drawLineSeries(ctx,arr,"swift_cme_enhanced_speed",xOf,yOf,"#ff5252",[]);
+
+  // NOW line
+  const nowX=xOf(nowT);
   ctx.strokeStyle="rgba(79,195,247,.65)";
   ctx.lineWidth=1.7;
   ctx.beginPath();
@@ -2649,10 +2691,9 @@ function drawWindSeries(selectedTime){
   ctx.stroke();
   ctx.fillStyle="#4fc3f7";
   ctx.font="11px system-ui";
-  ctx.fillText("NOW",nowX-14,y0-6);
+  ctx.fillText("NOW",nowX-14,y0-7);
 
-  // selected time line
-  const selT=selectedTime.getTime();
+  // selected time
   const selX=xOf(selT);
   ctx.beginPath();
   ctx.moveTo(selX,y0);
@@ -2661,46 +2702,159 @@ function drawWindSeries(selectedTime){
   ctx.lineWidth=2;
   ctx.stroke();
 
-  const wNow=getBackgroundWindSpeedFromWSA(selectedTime);
-  if(wNow!==null){
-    const wy=yOf(wNow);
-    ctx.beginPath();
-    ctx.arc(selX,wy,5.5,0,Math.PI*2);
-    ctx.fillStyle=selT>nowT ? "#ffee58" : "#ffffff";
-    ctx.fill();
-    ctx.strokeStyle="#fff";
-    ctx.lineWidth=1.5;
-    ctx.stroke();
-
-    ctx.fillStyle=selT>nowT ? "#ffee58" : "#fff";
-    ctx.font="12px system-ui";
-    ctx.fillText(`${Math.round(wNow)} km/s`,selX+8,wy-8);
+  const nearest=nearestSwiftRecord(selectedTime);
+  if(nearest){
+    const v=Number(nearest.swift_cme_enhanced_speed);
+    if(Number.isFinite(v)){
+      const yy=yOf(v);
+      ctx.beginPath();
+      ctx.arc(selX,yy,5.5,0,Math.PI*2);
+      ctx.fillStyle="#ff5252";
+      ctx.fill();
+      ctx.strokeStyle="#fff";
+      ctx.lineWidth=1.5;
+      ctx.stroke();
+      ctx.fillStyle="#fff";
+      ctx.font="12px system-ui";
+      ctx.fillText(`SWIFT+CME ${Math.round(v)} km/s`,selX+8,yy-8);
+    }
   }
 
-  // labels
+  // x labels
   ctx.fillStyle="rgba(255,255,255,.75)";
   ctx.font="11px system-ui";
-  ctx.fillText("now-3d",x0,y0+hh+18);
-  ctx.fillText("now",nowX-10,y0+hh+18);
-  ctx.fillText("now+5d",x0+ww-48,y0+hh+18);
+  ctx.fillText("now-3d",x0,y0+hh+20);
+  ctx.fillText("now",nowX-10,y0+hh+20);
+  ctx.fillText("now+5d",x0+ww-48,y0+hh+20);
 
   // legend
-  ctx.fillStyle="#4fc3f7";
-  ctx.fillText("solid: past/model history",x0+95,20);
-  ctx.fillStyle="#ffee58";
-  ctx.fillText("dashed: forecast",x0+250,20);
+  let lx=x0+95;
+  const ly=20;
+  function legend(color,text,dash=[]){
+    ctx.save();
+    ctx.strokeStyle=color;
+    ctx.lineWidth=2.5;
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    ctx.moveTo(lx,ly-4);
+    ctx.lineTo(lx+22,ly-4);
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle=color;
+    ctx.font="11px system-ui";
+    ctx.fillText(text,lx+27,ly);
+    lx += 27 + ctx.measureText(text).width + 18;
+  }
+  legend("#ffffff","NOAA");
+  legend("#ffee58","WSA",[7,5]);
+  legend("#8bc34a","SWIFT bg");
+  legend("#ff5252","SWIFT+CME");
 
+  const v24=swift.verification?.last_24h?.enhanced;
+  const v72=swift.verification?.last_72h?.enhanced;
+  const coeff=swift.coefficients;
+  const weights=coeff?.weights || {};
+  const bias=coeff?.bias?.speed;
   const first=new Date(arr[0]._t).toISOString().slice(0,16).replace("T"," ");
   const last=new Date(arr[arr.length-1]._t).toISOString().slice(0,16).replace("T"," ");
-  const histCount=arr.filter(r=>r._t<=nowT).length;
-  const fCount=arr.filter(r=>r._t>nowT || r.is_forecast===true).length;
-  const mode=selT>nowT ? "予報" : "過去/解析";
+
+  const selectedText = nearest ?
+    `選択: <b>${new Date(nearest._t).toISOString().slice(0,16).replace("T"," ")} UTC</b> / `+
+    `NOAA ${fmtSpeed(nearest.observed_speed)} / WSA ${fmtSpeed(nearest.wsa_speed)} / `+
+    `SWIFT背景 ${fmtSpeed(nearest.swift_background_speed)} / `+
+    `SWIFT+CME <b>${fmtSpeed(nearest.swift_cme_enhanced_speed)}</b>`
+    : "選択時刻のSWIFTデータなし";
 
   summary.innerHTML =
-    `WSA records in view: <b>${arr.length}</b> `+
-    `（過去/解析 ${histCount}・予報 ${fCount}）<br>`+
+    `SWIFT Wind AI records in view: <b>${arr.length}</b><br>`+
     `範囲: <b>${first} UTC</b> → <b>${last} UTC</b><br>`+
-    `選択時刻の背景風: <b>${wNow!==null ? Math.round(wNow)+" km/s" : "N/A"}</b> / <b>${mode}</b>`;
+    `${selectedText}<br>`+
+    `検証: 24h MAE <b>${v24?.mae ?? "N/A"}</b> km/s / Bias <b>${v24?.bias ?? "N/A"}</b> km/s, `+
+    `72h MAE <b>${v72?.mae ?? "N/A"}</b> km/s<br>`+
+    `係数: persistence ${num3(weights.persistence)} / 27day ${num3(weights.rotation27)} / WSA ${num3(weights.wsa)} / CME ${num3(weights.cme)} / bias ${bias ?? "N/A"} km/s`;
+}
+
+function drawWindGrid(ctx,x0,y0,ww,hh,yMin,yMax,tMin,tMax,nowT){
+  const nowX=x0+(nowT-tMin)/(tMax-tMin)*ww;
+  ctx.fillStyle="rgba(255,235,59,.05)";
+  ctx.fillRect(nowX,y0,Math.max(0,x0+ww-nowX),hh);
+
+  ctx.strokeStyle="rgba(255,255,255,.18)";
+  ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=y0+hh*i/4;
+    ctx.beginPath();
+    ctx.moveTo(x0,y);
+    ctx.lineTo(x0+ww,y);
+    ctx.stroke();
+    const v=Math.round(yMax-(yMax-yMin)*i/4);
+    ctx.fillStyle="rgba(255,255,255,.72)";
+    ctx.font="11px system-ui";
+    ctx.fillText(`${v}`,8,y+4);
+  }
+
+  ctx.strokeStyle="rgba(255,255,255,.16)";
+  const vLines=11;
+  for(let i=0;i<=vLines;i++){
+    const x=x0+ww*i/vLines;
+    ctx.beginPath();
+    ctx.moveTo(x,y0);
+    ctx.lineTo(x,y0+hh);
+    ctx.stroke();
+  }
+}
+
+function drawLineSeries(ctx,records,key,xOf,yOf,color,dash=[]){
+  ctx.save();
+  ctx.strokeStyle=color;
+  ctx.lineWidth=2.4;
+  ctx.setLineDash(dash);
+  ctx.beginPath();
+  let started=false;
+  records.forEach(r=>{
+    const v=Number(r[key]);
+    if(!Number.isFinite(v)){
+      started=false;
+      return;
+    }
+    const x=xOf(r._t);
+    const y=yOf(v);
+    if(!started){
+      ctx.moveTo(x,y);
+      started=true;
+    }else{
+      ctx.lineTo(x,y);
+    }
+  });
+  ctx.stroke();
+  ctx.restore();
+}
+
+function nearestSwiftRecord(time){
+  const records=STATE.swiftWindModel?.records || [];
+  if(!records.length) return null;
+  const t=time.getTime();
+  let best=null;
+  let bestD=Infinity;
+  records.forEach(r=>{
+    const d=Math.abs(r._t-t);
+    if(d<bestD){
+      best=r;
+      bestD=d;
+    }
+  });
+  if(bestD>2*3600*1000) return null;
+  return best;
+}
+
+function fmtSpeed(v){
+  const n=Number(v);
+  return Number.isFinite(n) ? `${Math.round(n)} km/s` : "N/A";
+}
+
+function num3(v){
+  const n=Number(v);
+  return Number.isFinite(n) ? n.toFixed(3) : "N/A";
 }
 
 
@@ -3162,17 +3316,17 @@ function selectCMEImageWindow(index){
   if(!c) return;
 
   const t0=c.t0 instanceof Date ? c.t0 : new Date(c.t0);
-  const start=new Date(t0.getTime()-30*60000);
-  const end=new Date(t0.getTime()+30*60000);
+  const start=new Date(t0.getTime()-120*60000);
+  const end=new Date(t0.getTime()+120*60000);
 
   STATE.selectedCMEImage={index,cme:c,t0,start,end};
-  STATE.cmeImageFrameIndex=2;
+  STATE.cmeImageFrameIndex=8;
 
   const slider=document.getElementById("cmeImageFrameSlider");
   if(slider){
     slider.min=0;
-    slider.max=4;
-    slider.value=2;
+    slider.max=16;
+    slider.value=8;
   }
 
   STATE.selectedTime=t0;
@@ -3266,7 +3420,7 @@ function renderCMEImageWindow(selectedTime){
     `このCME窓の画像: AIA193 <b>${aiaCount}</b>枚 / LASCO C2 <b>${c2Count}</b>枚`;
 
   if(label){
-    label.innerHTML=`CME <b>${escapeHtml(shortId(sel.cme.id))}</b> / t0±30min / frame <b>${(STATE.cmeImageFrameIndex||0)+1}</b>/5`;
+    label.innerHTML=`CME <b>${escapeHtml(shortId(sel.cme.id))}</b> / t0±2h / frame <b>${(STATE.cmeImageFrameIndex||0)+1}</b>/17`;
   }
 
   box.innerHTML=
