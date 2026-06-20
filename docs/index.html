@@ -525,7 +525,11 @@ pre{
 const DONKI_CACHE_INDEX = "./data/donki/index.json";
 const WSA_CACHE_INDEX = "./data/wsa/index.json";
 const SWIFT_WIND_INDEX = "./data/swift-wind/index.json";
-const SWIFT_WIND_ACCURACY = "./data/swift-wind/accuracy-history.json";
+const SWIFT_WIND_ACCURACY_URLS = [
+  "./data/swift-wind/accuracy-history.json",
+  "./data/swift-wind/history.json",
+  "./data/swift-wind/accuracy.json"
+];
 const SWIFT_KP_INDEX = "./data/swift-kp/index.json";
 const CDAW_IMAGE_INDEX = "./data/helioviewer/index.json";
 const CACTUS_CACHE_INDEX = "./data/cactus/index.json";
@@ -880,35 +884,111 @@ async function loadSwiftWindAI(){
 }
 
 
+function buildSwiftAccuracyFallback(){
+  const v24=STATE.swiftWindModel?.verification?.last_24h || {};
+  const v72=STATE.swiftWindModel?.verification?.last_72h || {};
+  const enhanced24=v24.enhanced || {};
+  const background24=v24.background || {};
+  const enhanced72=v72.enhanced || {};
+  const background72=v72.background || {};
+
+  const mae=Number(enhanced24.mae);
+  const bgMae=Number(background24.mae);
+  const score=Number.isFinite(mae) ? Math.max(0,Math.min(100,100*(1-mae/150))) : null;
+  const bgScore=Number.isFinite(bgMae) ? Math.max(0,Math.min(100,100*(1-bgMae/150))) : null;
+
+  if(!Number.isFinite(mae) && !Number.isFinite(bgMae)) return null;
+
+  const t=STATE.swiftWindModel?.updated_at || new Date().toISOString();
+  const row={
+    time:t,
+    updated_at:t,
+    _t:new Date(t).getTime(),
+    enhanced_accuracy_score:score,
+    enhanced_hit_rate_100:null,
+    enhanced_mae:Number.isFinite(mae) ? mae : null,
+    enhanced_bias:enhanced24.bias ?? null,
+    enhanced_rmse:enhanced24.rmse ?? null,
+    background_accuracy_score:bgScore,
+    background_hit_rate_100:null,
+    background_mae:Number.isFinite(bgMae) ? bgMae : null,
+    background_bias:background24.bias ?? null,
+    background_rmse:background24.rmse ?? null,
+    fallback:true
+  };
+
+  return {
+    updated_at:t,
+    fallback:true,
+    note:"accuracy-history.json not found; using latest SWIFT Wind AI verification as temporary accuracy summary.",
+    latest:row,
+    history:[row],
+    last_24h:{enhanced:enhanced24,background:background24},
+    last_72h:{enhanced:enhanced72,background:background72}
+  };
+}
+
+function normalizeSwiftAccuracyHistory(hist){
+  const sourceRows = Array.isArray(hist.history) ? hist.history
+    : Array.isArray(hist.items) ? hist.items
+    : Array.isArray(hist.records) ? hist.records
+    : [];
+
+  const rows=sourceRows.map(r=>({
+      ...r,
+      _t:new Date(r.time || r.updated_at).getTime(),
+      enhanced_accuracy_score:r.enhanced_accuracy_score!==undefined ? Number(r.enhanced_accuracy_score) : null,
+      enhanced_hit_rate_100:r.enhanced_hit_rate_100!==undefined ? Number(r.enhanced_hit_rate_100) : null,
+      enhanced_mae:r.enhanced_mae!==undefined ? Number(r.enhanced_mae) : null,
+      enhanced_bias:r.enhanced_bias!==undefined ? Number(r.enhanced_bias) : null,
+      enhanced_rmse:r.enhanced_rmse!==undefined ? Number(r.enhanced_rmse) : null,
+      background_accuracy_score:r.background_accuracy_score!==undefined ? Number(r.background_accuracy_score) : null,
+      background_hit_rate_100:r.background_hit_rate_100!==undefined ? Number(r.background_hit_rate_100) : null,
+      background_mae:r.background_mae!==undefined ? Number(r.background_mae) : null
+    }))
+    .filter(r=>Number.isFinite(r._t))
+    .sort((a,b)=>a._t-b._t);
+
+  return {...hist,history:rows};
+}
+
 async function loadSwiftWindAccuracy(rebuild=true){
   setSource("swiftAccuracy","LOADING...");
-  try{
-    const hist=await fetchJson(SWIFT_WIND_ACCURACY);
-    const rows=(Array.isArray(hist.history) ? hist.history : [])
-      .map(r=>({
-        ...r,
-        _t:new Date(r.time || r.updated_at).getTime(),
-        enhanced_accuracy_score:r.enhanced_accuracy_score!==undefined ? Number(r.enhanced_accuracy_score) : null,
-        enhanced_hit_rate_100:r.enhanced_hit_rate_100!==undefined ? Number(r.enhanced_hit_rate_100) : null,
-        enhanced_mae:r.enhanced_mae!==undefined ? Number(r.enhanced_mae) : null,
-        background_accuracy_score:r.background_accuracy_score!==undefined ? Number(r.background_accuracy_score) : null,
-        background_hit_rate_100:r.background_hit_rate_100!==undefined ? Number(r.background_hit_rate_100) : null
-      }))
-      .filter(r=>Number.isFinite(r._t))
-      .sort((a,b)=>a._t-b._t);
+  let lastError="";
 
-    STATE.swiftWindAccuracy={...hist,history:rows};
-    const latest=hist.latest || rows[rows.length-1] || null;
-    const score=latest?.enhanced_accuracy_score;
-    setSource("swiftAccuracy",`OK: ${rows.length} points${Number.isFinite(Number(score)) ? ` / ${Math.round(Number(score))}%` : ""}`,STATE.swiftWindAccuracy);
-    drawSwiftAccuracyHistory();
-  drawSwiftKpAI();
-    if(rebuild) renderSourcePanel();
-  }catch(e){
-    STATE.swiftWindAccuracy=null;
-    setSource("swiftAccuracy","FAILED",null,e.message);
-    drawSwiftAccuracyHistory();
+  for(const url of SWIFT_WIND_ACCURACY_URLS){
+    try{
+      const hist=await fetchJson(url);
+      STATE.swiftWindAccuracy=normalizeSwiftAccuracyHistory(hist);
+      const rows=STATE.swiftWindAccuracy.history || [];
+      const latest=STATE.swiftWindAccuracy.latest || rows[rows.length-1] || null;
+      const score=latest?.enhanced_accuracy_score;
+      const scoreText=Number.isFinite(Number(score)) ? ` / ${Math.round(Number(score))}%` : "";
+      setSource("swiftAccuracy",`OK: ${rows.length} points${scoreText}`,STATE.swiftWindAccuracy);
+      drawSwiftAccuracyHistory();
+      drawSwiftKpAI();
+      if(rebuild) renderSourcePanel();
+      return;
+    }catch(e){
+      lastError=e.message;
+    }
   }
+
+  const fallback=buildSwiftAccuracyFallback();
+  if(fallback){
+    STATE.swiftWindAccuracy=fallback;
+    const score=fallback.latest?.enhanced_accuracy_score;
+    const scoreText=Number.isFinite(Number(score)) ? ` / ${Math.round(Number(score))}%` : "";
+    setSource("swiftAccuracy",`OK: fallback${scoreText}`,STATE.swiftWindAccuracy,`history file missing: ${lastError}`);
+    drawSwiftAccuracyHistory();
+    drawSwiftKpAI();
+    if(rebuild) renderSourcePanel();
+    return;
+  }
+
+  STATE.swiftWindAccuracy=null;
+  setSource("swiftAccuracy","未作成",null,lastError || "accuracy history not found");
+  drawSwiftAccuracyHistory();
 }
 
 
@@ -2716,7 +2796,8 @@ function drawWindSeries(selectedTime){
     if(!model || !Array.isArray(model.records) || !model.records.length){
       ctx.fillStyle="#aaa";
       ctx.fillText("SWIFT Wind AI / WSA data not loaded.",12,44);
-      summary.innerHTML='SWIFT Wind AI未読込。<button onclick="loadSwiftWindAI()">SWIFT Wind AI読込</button>';
+      summary.innerHTML='SWIFT Wind AI未読込。<button onclick="loadSwiftWindAI()">SWIFT Wind AI読込</button>
+    <button onclick="loadSwiftKpAI()">SWIFT Kp AI読込</button>';
       return;
     }
 
@@ -2741,7 +2822,8 @@ function drawWindSeries(selectedTime){
     drawLineSeries(ctx,arr,"speed",xOf,yOf,"#ffee58",[7,5]);
     const selX=xOf(selectedTime.getTime());
     ctx.beginPath(); ctx.moveTo(selX,y0); ctx.lineTo(selX,y0+hh); ctx.strokeStyle="rgba(255,255,255,.9)"; ctx.lineWidth=2; ctx.stroke();
-    summary.innerHTML=`SWIFT Wind AI未読込 / WSA records: <b>${arr.length}</b>。<button onclick="loadSwiftWindAI()">SWIFT Wind AI読込</button>`;
+    summary.innerHTML=`SWIFT Wind AI未読込 / WSA records: <b>${arr.length}</b>。<button onclick="loadSwiftWindAI()">SWIFT Wind AI読込</button>
+    <button onclick="loadSwiftKpAI()">SWIFT Kp AI読込</button>`;
     return;
   }
 
@@ -2919,13 +3001,13 @@ function drawSwiftAccuracyHistory(){
 
   if(!rows.length){
     ctx.fillStyle="#aaa";
-    ctx.fillText("accuracy-history.json not loaded yet.",12,44);
+    ctx.fillText("accuracy history is not available yet. Showing fallback if possible.",12,44);
 
     const v24=STATE.swiftWindModel?.verification?.last_24h?.enhanced;
     if(v24 && v24.mae!==null && v24.mae!==undefined){
       const score=Math.max(0,Math.min(100,100*(1-Number(v24.mae)/150)));
       box.innerHTML=`履歴ファイル未取得。現在の暫定的中スコア: <b>${Math.round(score)}%</b> / MAE ${v24.mae} km/s<br>`+
-        `定義: <b>的中スコア = max(0, 100×(1−MAE/150km/s))</b>。履歴は <code>accuracy-history.json</code> 作成後に表示。`;
+        `定義: <b>的中スコア = max(0, 100×(1−MAE/150km/s))</b>。履歴workflow実行後に時系列表示。`;
     }else{
       box.innerHTML=`的中率履歴未読込。<button onclick="loadSwiftWindAccuracy()">的中率履歴読込</button>`;
     }
