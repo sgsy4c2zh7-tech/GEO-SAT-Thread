@@ -1,0 +1,874 @@
+name: Update SWIFT Kp AI
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 3時間ごと。NOAA実測Kpで答え合わせしながら、3日間Kp予報を更新
+    - cron: "52 */3 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-swift-kp-ai:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build SWIFT Kp AI forecast and verification
+        run: |
+          python3 <<'PY'
+          import json
+          import math
+          import re
+          import statistics
+          import time
+          import urllib.request
+          from pathlib import Path
+          from datetime import datetime, timedelta, timezone
+
+          OUT_DIR = Path("docs/data/swift-kp")
+          OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+          WIND_DIR = Path("docs/data/swift-wind")
+          DONKI_DIR = Path("docs/data/donki")
+
+          now = datetime.now(timezone.utc)
+
+          # Kpは3時間値。3日間 = 24コマ
+          forecast_days = 3
+          bin_hours = 3
+          forecast_bins = forecast_days * 8
+
+          # 履歴・検証
+          history_days = 30
+          history_keep_days = 90
+
+          # 学習
+          learning_rate_default = 0.025
+
+          NOAA_KP_URLS = [
+              "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json",
+              "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json"
+          ]
+
+          DEFAULT_COEFFICIENTS = {
+              "updated_at": now.isoformat(),
+              "model": "SWIFT Kp AI v0.1",
+              "learning_rate": learning_rate_default,
+              "weights": {
+                  "base": 1.20,
+                  "wind_speed": 0.0060,
+                  "cme_effect": 0.0040,
+                  "dvdt": 0.0030,
+                  "persistence_kp": 0.35
+              },
+              "bonus": {
+                  "CORE-HIT": 1.20,
+                  "BODY-HIT": 0.80,
+                  "FLANK-HIT": 0.40,
+                  "MISS": 0.00,
+                  "NO-GEOMETRY": 0.00
+              },
+              "bias": {
+                  "kp": 0.0
+              },
+              "notes": [
+                  "Phase 1: coefficient-learning Kp model.",
+                  "Input is SWIFT Wind AI, DONKI Earth-directed CME metadata, and NOAA observed planetary Kp.",
+                  "Output is NOAA-like 3-day Kp forecast for SwiftTEC integration.",
+                  "Kp coefficients are slowly updated from observed Kp verification."
+              ]
+          }
+
+          def parse_dt(value):
+              if not value:
+                  return None
+              s = str(value).strip()
+              if not s:
+                  return None
+              if s.endswith("Z"):
+                  s = s[:-1] + "+00:00"
+              try:
+                  dt = datetime.fromisoformat(s)
+                  if dt.tzinfo is None:
+                      dt = dt.replace(tzinfo=timezone.utc)
+                  return dt.astimezone(timezone.utc)
+              except Exception:
+                  return None
+
+          def to_float(value, default=None):
+              try:
+                  if value is None:
+                      return default
+                  s = str(value).strip()
+                  if s == "" or s.lower() in ("nan", "none", "null"):
+                      return default
+                  return float(s)
+              except Exception:
+                  return default
+
+          def clamp(v, lo, hi):
+              return max(lo, min(hi, v))
+
+          def mean(vals, default=None):
+              xs = []
+              for v in vals:
+                  try:
+                      if v is None:
+                          continue
+                      fv = float(v)
+                      if math.isfinite(fv):
+                          xs.append(fv)
+                  except Exception:
+                      pass
+              if not xs:
+                  return default
+              return sum(xs) / len(xs)
+
+          def median(vals, default=None):
+              xs = []
+              for v in vals:
+                  try:
+                      if v is None:
+                          continue
+                      fv = float(v)
+                      if math.isfinite(fv):
+                          xs.append(fv)
+                  except Exception:
+                      pass
+              if not xs:
+                  return default
+              return statistics.median(xs)
+
+          def fetch_json(url, tries=3, timeout=90):
+              last_error = None
+              for i in range(tries):
+                  try:
+                      print("GET", url)
+                      req = urllib.request.Request(
+                          url,
+                          headers={
+                              "User-Agent": "github-actions-swift-kp-ai",
+                              "Accept": "application/json,*/*"
+                          }
+                      )
+                      with urllib.request.urlopen(req, timeout=timeout) as r:
+                          text = r.read().decode("utf-8", errors="replace")
+                          return json.loads(text)
+                  except Exception as e:
+                      last_error = str(e)
+                      wait = 10 * (i + 1)
+                      print(f"retry {i+1}/{tries} failed: {e}; wait {wait}s")
+                      time.sleep(wait)
+              raise RuntimeError(last_error)
+
+          def read_json(path):
+              return json.loads(path.read_text(encoding="utf-8"))
+
+          def load_json_if_exists(path):
+              if not path.exists():
+                  return None
+              try:
+                  return read_json(path)
+              except Exception as e:
+                  print("JSON read failed:", path, e)
+                  return None
+
+          def save_json(path, obj):
+              path.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+              print("saved", path)
+
+          def floor_to_3h(dt):
+              h = (dt.hour // 3) * 3
+              return dt.replace(hour=h, minute=0, second=0, microsecond=0)
+
+          def ceil_to_3h(dt):
+              f = floor_to_3h(dt)
+              if f == dt.replace(minute=0, second=0, microsecond=0):
+                  return f
+              return f + timedelta(hours=3)
+
+          def kp_to_third(kp):
+              # Kpは1/3刻みに寄せる
+              if kp is None:
+                  return None
+              return round(clamp(round(float(kp) * 3) / 3, 0.0, 9.0), 2)
+
+          def kp_rounded_int(kp):
+              if kp is None:
+                  return None
+              return int(clamp(round(float(kp)), 0, 9))
+
+          def g_scale(kp):
+              if kp is None:
+                  return "NA"
+              k = float(kp)
+              if k >= 9:
+                  return "G5"
+              if k >= 8:
+                  return "G4"
+              if k >= 7:
+                  return "G3"
+              if k >= 6:
+                  return "G2"
+              if k >= 5:
+                  return "G1"
+              return "G0"
+
+          def kp_display(kp):
+              if kp is None:
+                  return "NA"
+              # NOAAっぽく小数2桁に統一。SwiftTEC向けにはjsonのkpを使う
+              return f"{float(kp):.2f}"
+
+          def normalize_noaa_kp(data):
+              rows = []
+
+              if not isinstance(data, list) or not data:
+                  return rows
+
+              # NOAA products/noaa-planetary-k-index.json
+              # first row usually header
+              if isinstance(data[0], list):
+                  header = [str(x).lower() for x in data[0]]
+                  for row in data[1:]:
+                      if not isinstance(row, list) or len(row) < 2:
+                          continue
+
+                      dt = parse_dt(row[0])
+
+                      kp = None
+                      for i, h in enumerate(header):
+                          if i >= len(row):
+                              continue
+                          if "kp" in h or "k index" in h or "k-index" in h:
+                              kp = to_float(row[i], kp)
+
+                      # fallback: second or third item
+                      if kp is None and len(row) >= 2:
+                          kp = to_float(row[1], None)
+                      if kp is None and len(row) >= 3:
+                          kp = to_float(row[2], None)
+
+                      if not dt or kp is None:
+                          continue
+
+                      if kp < 0 or kp > 9:
+                          continue
+
+                      b = floor_to_3h(dt)
+                      rows.append({
+                          "time": b.isoformat(),
+                          "_t": b.timestamp(),
+                          "kp": kp_to_third(kp),
+                          "kp_raw": kp,
+                          "g_scale": g_scale(kp),
+                          "source": "NOAA_PLANETARY_K"
+                      })
+
+                  return dedup_kp_rows(rows)
+
+              # NOAA json/planetary_k_index_1m.json may be list of dicts
+              if isinstance(data[0], dict):
+                  for r in data:
+                      dt = parse_dt(
+                          r.get("time_tag")
+                          or r.get("time")
+                          or r.get("observation_time")
+                      )
+                      kp = to_float(
+                          r.get("kp")
+                          or r.get("estimated_kp")
+                          or r.get("planetary_k_index")
+                          or r.get("k_index")
+                      )
+
+                      if not dt or kp is None:
+                          continue
+
+                      if kp < 0 or kp > 9:
+                          continue
+
+                      b = floor_to_3h(dt)
+                      rows.append({
+                          "time": b.isoformat(),
+                          "_t": b.timestamp(),
+                          "kp": kp_to_third(kp),
+                          "kp_raw": kp,
+                          "g_scale": g_scale(kp),
+                          "source": "NOAA_KP_JSON"
+                      })
+
+              return dedup_kp_rows(rows)
+
+          def dedup_kp_rows(rows):
+              by_t = {}
+              for r in rows:
+                  by_t[r["time"]] = r
+              out = list(by_t.values())
+              out.sort(key=lambda x: x["_t"])
+              return out
+
+          def fetch_noaa_kp():
+              errors = []
+              for url in NOAA_KP_URLS:
+                  try:
+                      data = fetch_json(url)
+                      rows = normalize_noaa_kp(data)
+                      if rows:
+                          return rows, {"url": url, "count": len(rows), "errors": errors}
+                  except Exception as e:
+                      errors.append({"url": url, "error": str(e)})
+              return [], {"url": None, "count": 0, "errors": errors}
+
+          def load_swift_wind():
+              obj = load_json_if_exists(WIND_DIR / "latest.json")
+              if not obj:
+                  return [], [], None
+
+              records = obj.get("records") or []
+              wind = []
+              for r in records:
+                  dt = parse_dt(r.get("time"))
+                  if not dt:
+                      continue
+                  wind.append({
+                      "time": dt.isoformat(),
+                      "_t": dt.timestamp(),
+                      "observed_speed": to_float(r.get("observed_speed")),
+                      "wsa_speed": to_float(r.get("wsa_speed")),
+                      "swift_background_speed": to_float(r.get("swift_background_speed")),
+                      "swift_cme_enhanced_speed": to_float(r.get("swift_cme_enhanced_speed")),
+                      "cme_effect_weighted": to_float(r.get("cme_effect_weighted"), 0.0),
+                      "active_cmes": r.get("active_cmes") or [],
+                      "mode": r.get("mode") or "forecast"
+                  })
+
+              wind.sort(key=lambda x: x["_t"])
+              cmes = obj.get("earth_directed_cmes") or []
+              return wind, cmes, obj.get("updated_at")
+
+          def nearest_value(records, target_dt, key, max_hours=2):
+              if not records:
+                  return None
+              target = target_dt.timestamp()
+              best = None
+              best_abs = None
+              for r in records:
+                  v = r.get(key)
+                  if v is None:
+                      continue
+                  d = abs(r["_t"] - target)
+                  if best is None or d < best_abs:
+                      best = v
+                      best_abs = d
+              if best is None:
+                  return None
+              if best_abs > max_hours * 3600:
+                  return None
+              return float(best)
+
+          def window_values(records, start_dt, end_dt, key):
+              vals = []
+              for r in records:
+                  dt = parse_dt(r.get("time"))
+                  if not dt:
+                      continue
+                  if start_dt <= dt < end_dt:
+                      v = r.get(key)
+                      if v is not None:
+                          vals.append(float(v))
+              return vals
+
+          def active_impact_for_bin(wind_records, start_dt, end_dt):
+              impacts = []
+              for r in wind_records:
+                  dt = parse_dt(r.get("time"))
+                  if not dt:
+                      continue
+                  if not (start_dt <= dt < end_dt):
+                      continue
+                  for c in r.get("active_cmes") or []:
+                      imp = c.get("impact")
+                      if imp:
+                          impacts.append(imp)
+
+              # 強い順に代表値
+              order = ["CORE-HIT", "BODY-HIT", "FLANK-HIT", "MISS", "NO-GEOMETRY"]
+              for imp in order:
+                  if imp in impacts:
+                      return imp
+              return None
+
+          def load_coefficients():
+              p = OUT_DIR / "coefficients.json"
+              obj = load_json_if_exists(p)
+              if not obj:
+                  return DEFAULT_COEFFICIENTS
+
+              obj.setdefault("weights", {})
+              obj.setdefault("bonus", {})
+              obj.setdefault("bias", {})
+              obj.setdefault("learning_rate", learning_rate_default)
+
+              for k, v in DEFAULT_COEFFICIENTS["weights"].items():
+                  obj["weights"].setdefault(k, v)
+              for k, v in DEFAULT_COEFFICIENTS["bonus"].items():
+                  obj["bonus"].setdefault(k, v)
+              obj["bias"].setdefault("kp", 0.0)
+
+              return obj
+
+          def previous_kp_component(noaa_kp_rows, target_dt):
+              # 過去24hの実測Kp中央値。先の時間でも「地磁気活動がしばらく残る」成分として使う
+              vals = []
+              for r in noaa_kp_rows:
+                  dt = parse_dt(r.get("time"))
+                  if not dt:
+                      continue
+                  if target_dt - timedelta(hours=24) <= dt < target_dt:
+                      vals.append(r.get("kp"))
+              return median(vals, 2.0)
+
+          def predict_kp_for_bin(start_dt, end_dt, wind_records, noaa_kp_rows, coeff):
+              weights = coeff["weights"]
+              bonus = coeff["bonus"]
+              bias = float(coeff.get("bias", {}).get("kp", 0.0))
+
+              v_vals = window_values(wind_records, start_dt, end_dt, "swift_cme_enhanced_speed")
+              bg_vals = window_values(wind_records, start_dt, end_dt, "swift_background_speed")
+              cme_vals = window_values(wind_records, start_dt, end_dt, "cme_effect_weighted")
+
+              v = mean(v_vals, None)
+              bg = mean(bg_vals, None)
+              cme_effect = mean(cme_vals, 0.0)
+
+              if v is None:
+                  # Wind AIがまだない時のfallback
+                  v = 425.0
+              if bg is None:
+                  bg = 425.0
+              if cme_effect is None:
+                  cme_effect = max(0.0, v - bg)
+
+              # 速度急変
+              prev_v = nearest_value(wind_records, start_dt - timedelta(hours=3), "swift_cme_enhanced_speed", max_hours=4)
+              if prev_v is None:
+                  prev_v = v
+              dvdt = max(0.0, v - prev_v)
+
+              persistence_kp = previous_kp_component(noaa_kp_rows, start_dt)
+              impact = active_impact_for_bin(wind_records, start_dt, end_dt)
+              impact_bonus = float(bonus.get(impact or "MISS", 0.0))
+
+              kp = (
+                  float(weights.get("base", 1.2))
+                  + float(weights.get("wind_speed", 0.006)) * max(0.0, v - 350.0)
+                  + float(weights.get("cme_effect", 0.004)) * max(0.0, cme_effect)
+                  + float(weights.get("dvdt", 0.003)) * max(0.0, dvdt)
+                  + float(weights.get("persistence_kp", 0.35)) * max(0.0, persistence_kp - 2.0)
+                  + impact_bonus
+                  + bias
+              )
+
+              kp = kp_to_third(kp)
+
+              # 信頼度の簡易評価
+              confidence = 0.55
+              if len(v_vals) >= 2:
+                  confidence += 0.15
+              if cme_effect and cme_effect > 40:
+                  confidence -= 0.05
+              if abs(dvdt) > 100:
+                  confidence -= 0.05
+              if impact in ("CORE-HIT", "BODY-HIT"):
+                  confidence -= 0.05
+              confidence = clamp(confidence, 0.25, 0.85)
+
+              return {
+                  "start_time": start_dt.isoformat(),
+                  "end_time": end_dt.isoformat(),
+                  "kp": kp,
+                  "kp_rounded": kp_rounded_int(kp),
+                  "g_scale": g_scale(kp),
+                  "confidence": round(confidence, 2),
+                  "components": {
+                      "wind_speed": round(v, 2),
+                      "background_speed": round(bg, 2),
+                      "cme_effect": round(cme_effect, 2),
+                      "dvdt": round(dvdt, 2),
+                      "persistence_kp": round(persistence_kp, 2),
+                      "impact": impact,
+                      "impact_bonus": round(impact_bonus, 2),
+                      "bias": round(bias, 3)
+                  }
+              }
+
+          def observed_kp_for_bin(noaa_kp_rows, start_dt):
+              for r in noaa_kp_rows:
+                  dt = parse_dt(r.get("time"))
+                  if dt and dt == start_dt:
+                      return r
+              return None
+
+          def metrics(rows):
+              errors = []
+              hit_1 = 0
+              hit_067 = 0
+              g_hit = 0
+              n = 0
+
+              for r in rows:
+                  obs = r.get("observed_kp")
+                  pred = r.get("predicted_kp")
+                  if obs is None or pred is None:
+                      continue
+
+                  e = float(obs) - float(pred)
+                  errors.append(e)
+                  n += 1
+
+                  if abs(e) <= 1.0:
+                      hit_1 += 1
+                  if abs(e) <= 0.67:
+                      hit_067 += 1
+                  if r.get("observed_g_scale") == r.get("predicted_g_scale"):
+                      g_hit += 1
+
+              if not errors:
+                  return {
+                      "count": 0,
+                      "mae": None,
+                      "bias": None,
+                      "rmse": None,
+                      "hit_rate_within_1kp": None,
+                      "hit_rate_within_067kp": None,
+                      "g_scale_hit_rate": None
+                  }
+
+              mae = sum(abs(e) for e in errors) / len(errors)
+              bias = sum(errors) / len(errors)
+              rmse = math.sqrt(sum(e * e for e in errors) / len(errors))
+
+              return {
+                  "count": n,
+                  "mae": round(mae, 3),
+                  "bias": round(bias, 3),
+                  "rmse": round(rmse, 3),
+                  "hit_rate_within_1kp": round(100 * hit_1 / n, 2),
+                  "hit_rate_within_067kp": round(100 * hit_067 / n, 2),
+                  "g_scale_hit_rate": round(100 * g_hit / n, 2)
+              }
+
+          def update_coefficients(coeff, verification_rows):
+              recent = []
+              cutoff = now - timedelta(days=7)
+              for r in verification_rows:
+                  dt = parse_dt(r.get("time"))
+                  if dt and dt >= cutoff and r.get("observed_kp") is not None and r.get("predicted_kp") is not None:
+                      recent.append(r)
+
+              if len(recent) < 4:
+                  coeff["updated_at"] = now.isoformat()
+                  return coeff
+
+              lr = clamp(float(coeff.get("learning_rate", learning_rate_default)), 0.005, 0.08)
+
+              errs = [float(r["observed_kp"]) - float(r["predicted_kp"]) for r in recent]
+              bias = sum(errs) / len(errs)
+
+              # 全体biasを補正
+              delta_bias = clamp(bias * lr, -0.20, 0.20)
+              coeff["bias"]["kp"] = round(clamp(float(coeff["bias"].get("kp", 0.0)) + delta_bias, -2.0, 2.0), 4)
+
+              # 風速が高い時に外しているなら wind_speed 係数を調整
+              high_wind = [r for r in recent if float(r.get("wind_speed") or 0.0) >= 500.0]
+              if len(high_wind) >= 3:
+                  e = mean([float(r["observed_kp"]) - float(r["predicted_kp"]) for r in high_wind], 0.0)
+                  delta = clamp((e / 5.0) * lr * 0.002, -0.0005, 0.0005)
+                  coeff["weights"]["wind_speed"] = round(clamp(float(coeff["weights"]["wind_speed"]) + delta, 0.001, 0.020), 6)
+
+              # CME効果がある時に外しているなら cme_effect 係数を調整
+              cme_rows = [r for r in recent if float(r.get("cme_effect") or 0.0) >= 30.0]
+              if len(cme_rows) >= 2:
+                  e = mean([float(r["observed_kp"]) - float(r["predicted_kp"]) for r in cme_rows], 0.0)
+                  delta = clamp((e / 5.0) * lr * 0.002, -0.0007, 0.0007)
+                  coeff["weights"]["cme_effect"] = round(clamp(float(coeff["weights"]["cme_effect"]) + delta, 0.0005, 0.020), 6)
+
+              # 急変がある時の係数
+              dv_rows = [r for r in recent if float(r.get("dvdt") or 0.0) >= 60.0]
+              if len(dv_rows) >= 2:
+                  e = mean([float(r["observed_kp"]) - float(r["predicted_kp"]) for r in dv_rows], 0.0)
+                  delta = clamp((e / 5.0) * lr * 0.002, -0.0007, 0.0007)
+                  coeff["weights"]["dvdt"] = round(clamp(float(coeff["weights"]["dvdt"]) + delta, 0.0005, 0.020), 6)
+
+              # impact bonusの微調整
+              for impact in ["CORE-HIT", "BODY-HIT", "FLANK-HIT"]:
+                  rows = [r for r in recent if r.get("impact") == impact]
+                  if len(rows) >= 2:
+                      e = mean([float(r["observed_kp"]) - float(r["predicted_kp"]) for r in rows], 0.0)
+                      delta = clamp(e * lr, -0.15, 0.15)
+                      coeff["bonus"][impact] = round(clamp(float(coeff["bonus"].get(impact, 0.0)) + delta, 0.0, 3.0), 4)
+
+              coeff["last_training"] = {
+                  "time": now.isoformat(),
+                  "points": len(recent),
+                  "bias_7d": round(bias, 3),
+                  "delta_bias": round(delta_bias, 4)
+              }
+              coeff["updated_at"] = now.isoformat()
+              return coeff
+
+          def format_forecast_txt(forecast_rows):
+              issued = now.strftime("%Y %b %d %H%M UTC")
+              # 3日分のUTC日付
+              days = []
+              base = floor_to_3h(now)
+              # NOAA風に「今日・明日・明後日」の列
+              today = now.date()
+              for i in range(3):
+                  days.append(today + timedelta(days=i))
+
+              day_labels = [
+                  datetime(d.year, d.month, d.day, tzinfo=timezone.utc).strftime("%b %d")
+                  for d in days
+              ]
+
+              by_date_slot = {}
+              for r in forecast_rows:
+                  st = parse_dt(r["start_time"])
+                  if not st:
+                      continue
+                  slot = f"{st.hour:02d}-{(st.hour + 3) % 24:02d}UT"
+                  by_date_slot[(st.date(), slot)] = r["kp"]
+
+              slots = [
+                  "00-03UT", "03-06UT", "06-09UT", "09-12UT",
+                  "12-15UT", "15-18UT", "18-21UT", "21-00UT"
+              ]
+
+              lines = []
+              lines.append(":Product: 3-Day Forecast of SWIFT Planetary K Index")
+              lines.append(f":Issued: {issued}")
+              lines.append("#")
+              lines.append("# SWIFT Kp AI Forecast")
+              lines.append("# Format is NOAA-style 3-hour planetary Kp forecast.")
+              lines.append("# Values are decimal Kp rounded to thirds for SwiftTEC integration.")
+              lines.append("#")
+              lines.append(f"{'':10s}{day_labels[0]:>10s}{day_labels[1]:>10s}{day_labels[2]:>10s}")
+
+              for slot in slots:
+                  vals = []
+                  for d in days:
+                      vals.append(kp_display(by_date_slot.get((d, slot))))
+                  lines.append(f"{slot:<10s}{vals[0]:>10s}{vals[1]:>10s}{vals[2]:>10s}")
+
+              lines.append("#")
+              lines.append("# G-scale reference: G1=Kp5, G2=Kp6, G3=Kp7, G4=Kp8, G5=Kp9.")
+              lines.append("# Source: SWIFT Kp AI, generated from SWIFT Wind AI + NOAA observed Kp verification.")
+              return "\n".join(lines) + "\n"
+
+          observed_kp_rows, noaa_meta = fetch_noaa_kp()
+          wind_records, wind_cmes, wind_updated_at = load_swift_wind()
+          coeff = load_coefficients()
+
+          print("NOAA Kp rows:", len(observed_kp_rows), noaa_meta)
+          print("SWIFT Wind records:", len(wind_records), "updated:", wind_updated_at)
+          print("Wind CME count:", len(wind_cmes))
+          print("coefficients:", coeff)
+
+          # 3日間予報
+          start = floor_to_3h(now)
+          forecast_rows = []
+
+          t = start
+          for i in range(forecast_bins):
+              end = t + timedelta(hours=bin_hours)
+              r = predict_kp_for_bin(t, end, wind_records, observed_kp_rows, coeff)
+              r["slot_index"] = i
+              r["source"] = "SWIFT_KP_AI"
+              forecast_rows.append(r)
+              t = end
+
+          # 過去30日分の「現在の係数で再予測」検証
+          verification_rows = []
+          hist_start = floor_to_3h(now - timedelta(days=history_days))
+          hist_end = floor_to_3h(now)
+
+          t = hist_start
+          while t <= hist_end:
+              end = t + timedelta(hours=bin_hours)
+              pred = predict_kp_for_bin(t, end, wind_records, observed_kp_rows, coeff)
+              obs = observed_kp_for_bin(observed_kp_rows, t)
+
+              row = {
+                  "time": t.isoformat(),
+                  "predicted_kp": pred["kp"],
+                  "predicted_g_scale": pred["g_scale"],
+                  "observed_kp": obs["kp"] if obs else None,
+                  "observed_g_scale": obs["g_scale"] if obs else None,
+                  "error": round((obs["kp"] - pred["kp"]), 3) if obs else None,
+                  "hit_within_1kp": abs(obs["kp"] - pred["kp"]) <= 1.0 if obs else None,
+                  "hit_within_067kp": abs(obs["kp"] - pred["kp"]) <= 0.67 if obs else None,
+                  "g_scale_hit": (obs["g_scale"] == pred["g_scale"]) if obs else None,
+                  "wind_speed": pred["components"]["wind_speed"],
+                  "background_speed": pred["components"]["background_speed"],
+                  "cme_effect": pred["components"]["cme_effect"],
+                  "dvdt": pred["components"]["dvdt"],
+                  "persistence_kp": pred["components"]["persistence_kp"],
+                  "impact": pred["components"]["impact"],
+                  "confidence": pred["confidence"]
+              }
+              verification_rows.append(row)
+              t = end
+
+          verification_7d = [
+              r for r in verification_rows
+              if parse_dt(r["time"]) and parse_dt(r["time"]) >= now - timedelta(days=7)
+          ]
+          verification_30d = verification_rows
+
+          # 係数学習：検証後に更新し、次回予測に反映
+          coeff = update_coefficients(coeff, verification_rows)
+
+          verification = {
+              "updated_at": now.isoformat(),
+              "noaa": noaa_meta,
+              "wind_updated_at": wind_updated_at,
+              "last_7d": metrics(verification_7d),
+              "last_30d": metrics(verification_30d),
+              "latest_checks": verification_rows[-40:]
+          }
+
+          forecast_txt = format_forecast_txt(forecast_rows)
+
+          latest = {
+              "updated_at": now.isoformat(),
+              "model": "SWIFT Kp AI v0.1",
+              "source": "SWIFT Wind AI + NOAA observed Kp + DONKI CME metadata",
+              "description": "Self-tuning 3-day Kp forecast. Output is NOAA-style 3-hour Kp forecast for SwiftTEC integration.",
+              "range": {
+                  "forecast_days": forecast_days,
+                  "bin_hours": bin_hours,
+                  "forecast_bins": forecast_bins,
+                  "history_days": history_days
+              },
+              "inputs": {
+                  "noaa_kp": noaa_meta,
+                  "swift_wind_updated_at": wind_updated_at,
+                  "swift_wind_records": len(wind_records),
+                  "earth_directed_cme_count": len(wind_cmes)
+              },
+              "coefficients": coeff,
+              "verification": verification,
+              "forecast": forecast_rows,
+              "forecast_text_path": "./data/swift-kp/forecast.txt"
+          }
+
+          save_json(OUT_DIR / "latest.json", latest)
+          save_json(OUT_DIR / "coefficients.json", coeff)
+          save_json(OUT_DIR / "verification.json", verification)
+
+          (OUT_DIR / "forecast.txt").write_text(forecast_txt, encoding="utf-8")
+          print("saved", OUT_DIR / "forecast.txt")
+
+          # 日別snapshot
+          daily = OUT_DIR / f"{now.strftime('%Y-%m-%d')}.json"
+          save_json(daily, latest)
+
+          # 90日履歴ファイル
+          history_path = OUT_DIR / "history.json"
+          old_history = load_json_if_exists(history_path) or {"items": []}
+          items = old_history.get("items") or []
+
+          # 直近の検証点を追記。重複はtimeで上書き
+          by_time = {}
+          for r in items:
+              if r.get("time"):
+                  by_time[r["time"]] = r
+
+          for r in verification_rows:
+              if r.get("observed_kp") is None:
+                  continue
+              by_time[r["time"]] = {
+                  **r,
+                  "updated_at": now.isoformat()
+              }
+
+          keep_after = now - timedelta(days=history_keep_days)
+          new_items = []
+          for k, r in by_time.items():
+              dt = parse_dt(k)
+              if dt and dt >= keep_after:
+                  new_items.append(r)
+
+          new_items.sort(key=lambda x: x["time"])
+
+          history = {
+              "updated_at": now.isoformat(),
+              "keep_days": history_keep_days,
+              "count": len(new_items),
+              "metrics_all": metrics(new_items),
+              "items": new_items
+          }
+          save_json(history_path, history)
+
+          # 古い日別snapshot削除
+          cutoff = now - timedelta(days=history_keep_days)
+          for f in OUT_DIR.glob("*.json"):
+              if f.name in ("latest.json", "coefficients.json", "verification.json", "history.json", "index.json"):
+                  continue
+              try:
+                  dt = datetime.strptime(f.stem, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                  if dt < cutoff:
+                      print("delete old swift-kp snapshot:", f)
+                      f.unlink()
+              except Exception:
+                  pass
+
+          files = []
+          for f in sorted(OUT_DIR.glob("*"), reverse=True):
+              if f.name == "index.json":
+                  continue
+              if not f.is_file():
+                  continue
+              files.append({
+                  "file": f.name,
+                  "path": f"./data/swift-kp/{f.name}",
+                  "size_bytes": f.stat().st_size
+              })
+
+          index = {
+              "updated_at": now.isoformat(),
+              "latest": "latest.json",
+              "forecast_txt": "forecast.txt",
+              "coefficients": "coefficients.json",
+              "verification": "verification.json",
+              "history": "history.json",
+              "files": files
+          }
+          save_json(OUT_DIR / "index.json", index)
+
+          print("forecast.txt:")
+          print(forecast_txt)
+          print(json.dumps({
+              "forecast_bins": len(forecast_rows),
+              "verification_7d": verification["last_7d"],
+              "verification_30d": verification["last_30d"],
+              "coefficients": coeff
+          }, ensure_ascii=False, indent=2))
+
+          PY
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add docs/data/swift-kp
+
+          git commit -m "Update SWIFT Kp AI forecast" || echo "No changes"
+          git push
