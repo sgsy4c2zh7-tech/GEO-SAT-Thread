@@ -1,1 +1,339 @@
+name: Update SWIFT Wind Accuracy
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 3時間ごと。SWIFT Wind AIの予測とNOAA実測を比較して履歴化
+    - cron: "58 */3 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-swift-wind-accuracy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build SWIFT Wind accuracy history
+        run: |
+          python3 <<'PY'
+          import json
+          import math
+          import statistics
+          from pathlib import Path
+          from datetime import datetime, timedelta, timezone
+
+          WIND_DIR = Path("docs/data/swift-wind")
+          WIND_DIR.mkdir(parents=True, exist_ok=True)
+
+          now = datetime.now(timezone.utc)
+          KEEP_DAYS = 90
+
+          LATEST_PATH = WIND_DIR / "latest.json"
+
+          # UI互換のため、両方作る
+          ACCURACY_PATH = WIND_DIR / "accuracy.json"
+          ACCURACY_HISTORY_PATH = WIND_DIR / "accuracy-history.json"
+
+          def parse_dt(value):
+              if not value:
+                  return None
+              s = str(value).strip()
+              if not s:
+                  return None
+              if s.endswith("Z"):
+                  s = s[:-1] + "+00:00"
+              try:
+                  dt = datetime.fromisoformat(s)
+                  if dt.tzinfo is None:
+                      dt = dt.replace(tzinfo=timezone.utc)
+                  return dt.astimezone(timezone.utc)
+              except Exception:
+                  return None
+
+          def load_json_if_exists(path):
+              if not path.exists():
+                  return None
+              try:
+                  return json.loads(path.read_text(encoding="utf-8"))
+              except Exception as e:
+                  print("JSON read failed:", path, e)
+                  return None
+
+          def save_json(path, obj):
+              path.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+              print("saved", path)
+
+          def to_float(value, default=None):
+              try:
+                  if value is None:
+                      return default
+                  s = str(value).strip()
+                  if not s or s.lower() in ("nan", "none", "null"):
+                      return default
+                  v = float(s)
+                  if not math.isfinite(v):
+                      return default
+                  return v
+              except Exception:
+                  return default
+
+          def metrics(items, pred_key="swift_cme_enhanced_speed"):
+              errors = []
+              hit_50 = 0
+              hit_75 = 0
+              hit_100 = 0
+              n = 0
+
+              for r in items:
+                  obs = to_float(r.get("observed_speed"))
+                  pred = to_float(r.get(pred_key))
+
+                  if obs is None or pred is None:
+                      continue
+
+                  e = obs - pred
+                  errors.append(e)
+                  n += 1
+
+                  if abs(e) <= 50:
+                      hit_50 += 1
+                  if abs(e) <= 75:
+                      hit_75 += 1
+                  if abs(e) <= 100:
+                      hit_100 += 1
+
+              if not errors:
+                  return {
+                      "count": 0,
+                      "mae": None,
+                      "bias": None,
+                      "rmse": None,
+                      "accuracy_score": None,
+                      "hit_rate_50kms": None,
+                      "hit_rate_75kms": None,
+                      "hit_rate_100kms": None
+                  }
+
+              mae = sum(abs(e) for e in errors) / len(errors)
+              bias = sum(errors) / len(errors)
+              rmse = math.sqrt(sum(e * e for e in errors) / len(errors))
+
+              # 直感的な0〜100スコア。MAE 0 = 100%, MAE 150以上 = 0%
+              accuracy_score = max(0.0, 100.0 * (1.0 - mae / 150.0))
+
+              return {
+                  "count": n,
+                  "mae": round(mae, 3),
+                  "bias": round(bias, 3),
+                  "rmse": round(rmse, 3),
+                  "accuracy_score": round(accuracy_score, 2),
+                  "hit_rate_50kms": round(100 * hit_50 / n, 2),
+                  "hit_rate_75kms": round(100 * hit_75 / n, 2),
+                  "hit_rate_100kms": round(100 * hit_100 / n, 2)
+              }
+
+          def daily_metrics(items):
+              by_day = {}
+
+              for r in items:
+                  dt = parse_dt(r.get("time"))
+                  if not dt:
+                      continue
+                  day = dt.strftime("%Y-%m-%d")
+                  by_day.setdefault(day, []).append(r)
+
+              out = []
+              for day in sorted(by_day.keys()):
+                  day_items = by_day[day]
+                  m_enhanced = metrics(day_items, "swift_cme_enhanced_speed")
+                  m_background = metrics(day_items, "swift_background_speed")
+
+                  out.append({
+                      "date": day,
+                      "count": m_enhanced["count"],
+                      "enhanced": m_enhanced,
+                      "background": m_background,
+                      "accuracy_score": m_enhanced["accuracy_score"],
+                      "hit_rate_100kms": m_enhanced["hit_rate_100kms"],
+                      "mae": m_enhanced["mae"],
+                      "bias": m_enhanced["bias"],
+                      "rmse": m_enhanced["rmse"],
+                      "background_accuracy_score": m_background["accuracy_score"],
+                      "background_mae": m_background["mae"]
+                  })
+
+              return out
+
+          latest = load_json_if_exists(LATEST_PATH)
+
+          if not latest:
+              # latestがまだ無い場合でも、空ファイルを作ってUIを404にしない
+              empty = {
+                  "updated_at": now.isoformat(),
+                  "status": "no_swift_wind_latest",
+                  "message": "docs/data/swift-wind/latest.json is missing. Run Update SWIFT Wind AI first.",
+                  "summary": {
+                      "last_24h": metrics([]),
+                      "last_72h": metrics([]),
+                      "last_7d": metrics([]),
+                      "last_30d": metrics([]),
+                      "all": metrics([])
+                  },
+                  "daily": [],
+                  "items": []
+              }
+              save_json(ACCURACY_PATH, empty)
+              save_json(ACCURACY_HISTORY_PATH, empty)
+              raise SystemExit(0)
+
+          records = latest.get("records") or []
+
+          # 今回latestに入っている観測ありレコードだけ取り出す
+          new_items = []
+
+          for r in records:
+              dt = parse_dt(r.get("time"))
+              if not dt:
+                  continue
+
+              obs = to_float(r.get("observed_speed"))
+              bg = to_float(r.get("swift_background_speed"))
+              enhanced = to_float(r.get("swift_cme_enhanced_speed"))
+
+              if obs is None:
+                  continue
+
+              item = {
+                  "time": dt.isoformat(),
+                  "observed_speed": obs,
+                  "wsa_speed": to_float(r.get("wsa_speed")),
+                  "swift_background_speed": bg,
+                  "swift_cme_enhanced_speed": enhanced,
+                  "cme_effect_weighted": to_float(r.get("cme_effect_weighted"), 0.0),
+                  "mode": r.get("mode") or "analysis",
+                  "error_background": round(obs - bg, 3) if bg is not None else None,
+                  "error_enhanced": round(obs - enhanced, 3) if enhanced is not None else None,
+                  "hit_50kms": abs(obs - enhanced) <= 50 if enhanced is not None else None,
+                  "hit_75kms": abs(obs - enhanced) <= 75 if enhanced is not None else None,
+                  "hit_100kms": abs(obs - enhanced) <= 100 if enhanced is not None else None,
+                  "updated_at": now.isoformat()
+              }
+
+              new_items.append(item)
+
+          # 既存履歴を読み込んでマージ
+          old = (
+              load_json_if_exists(ACCURACY_HISTORY_PATH)
+              or load_json_if_exists(ACCURACY_PATH)
+              or {"items": []}
+          )
+
+          by_time = {}
+
+          for r in old.get("items", []) or []:
+              t = r.get("time")
+              if t:
+                  by_time[t] = r
+
+          for r in new_items:
+              by_time[r["time"]] = r
+
+          keep_after = now - timedelta(days=KEEP_DAYS)
+
+          items = []
+          for t, r in by_time.items():
+              dt = parse_dt(t)
+              if dt and dt >= keep_after:
+                  items.append(r)
+
+          items.sort(key=lambda x: x["time"])
+
+          def filter_since(hours=None, days=None):
+              if hours is not None:
+                  cutoff = now - timedelta(hours=hours)
+              elif days is not None:
+                  cutoff = now - timedelta(days=days)
+              else:
+                  cutoff = datetime.min.replace(tzinfo=timezone.utc)
+
+              out = []
+              for r in items:
+                  dt = parse_dt(r.get("time"))
+                  if dt and dt >= cutoff:
+                      out.append(r)
+              return out
+
+          summary = {
+              "last_24h": metrics(filter_since(hours=24)),
+              "last_72h": metrics(filter_since(hours=72)),
+              "last_7d": metrics(filter_since(days=7)),
+              "last_30d": metrics(filter_since(days=30)),
+              "all": metrics(items)
+          }
+
+          daily = daily_metrics(items)
+
+          result = {
+              "updated_at": now.isoformat(),
+              "status": "ok",
+              "source": "docs/data/swift-wind/latest.json",
+              "description": "Accuracy history for SWIFT Wind AI. Enhanced forecast is compared with NOAA observed solar wind speed.",
+              "keep_days": KEEP_DAYS,
+              "definition": {
+                  "accuracy_score": "max(0, 100 * (1 - MAE / 150 km/s))",
+                  "hit_rate_50kms": "percentage of points where |observed - predicted| <= 50 km/s",
+                  "hit_rate_75kms": "percentage of points where |observed - predicted| <= 75 km/s",
+                  "hit_rate_100kms": "percentage of points where |observed - predicted| <= 100 km/s"
+              },
+              "summary": summary,
+              "daily": daily,
+              "item_count": len(items),
+              "new_items_this_run": len(new_items),
+              "items": items
+          }
+
+          # UI互換のため2ファイル保存
+          save_json(ACCURACY_PATH, result)
+          save_json(ACCURACY_HISTORY_PATH, result)
+
+          # index.jsonにも登録
+          index_path = WIND_DIR / "index.json"
+          index = load_json_if_exists(index_path) or {}
+          index["updated_at"] = now.isoformat()
+          index["latest"] = index.get("latest") or "latest.json"
+          index["accuracy"] = "accuracy.json"
+          index["accuracy_history"] = "accuracy-history.json"
+
+          files = []
+          for f in sorted(WIND_DIR.glob("*.json"), reverse=True):
+              files.append({
+                  "file": f.name,
+                  "path": f"./data/swift-wind/{f.name}",
+                  "size_bytes": f.stat().st_size
+              })
+          index["files"] = files
+
+          save_json(index_path, index)
+
+          print(json.dumps({
+              "new_items_this_run": len(new_items),
+              "item_count": len(items),
+              "summary": summary
+          }, ensure_ascii=False, indent=2))
+
+          PY
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add docs/data/swift-wind
+
+          git commit -m "Update SWIFT Wind accuracy history" || echo "No changes"
+          git push
 
