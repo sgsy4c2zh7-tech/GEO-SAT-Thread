@@ -669,9 +669,7 @@ jobs:
               lines.append("#")
               lines.append("# G-scale reference: G1=Kp5, G2=Kp6, G3=Kp7, G4=Kp8, G5=Kp9.")
               lines.append("# Source: SWIFT Kp AI, generated from SWIFT Wind AI + NOAA observed Kp verification.")
-              return "
-".join(lines) + "
-"
+              return "\n".join(lines) + "\n"
 
           def archive_and_score_forecasts(forecast_rows, observed_kp_rows):
               archive_path = OUT_DIR / "forecast-archive.json"
