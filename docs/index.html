@@ -3099,7 +3099,7 @@ function drawSwiftAccuracyHistory(){
 
   ctx.fillStyle="#fff";
   ctx.font="12px system-ui";
-  ctx.fillText("SWIFT Wind AI accuracy history",12,20);
+  /* removed overlap legend: ctx.fillText("SWIFT Wind AI accuracy history",12,20); */
 
   if(!rows.length){
     ctx.fillStyle="#aaa";
@@ -4929,17 +4929,21 @@ function renderKp5DayForecastTable(){
 }
 
 function patchAccuracyLegendOverlap(){
-  // Canvas描画側で凡例が重なる場合に備えて、説明文をグラフ外にも出す
+  // Canvas内の凡例は重なりやすいので、凡例は必ずグラフ外に表示する
   const accSection=[...document.querySelectorAll("section.card")].find(s=>s.textContent.includes("SWIFT Wind AI 的中率"));
   if(!accSection) return;
   if(accSection.querySelector(".legendExplain")) return;
+
   const div=document.createElement("div");
   div.className="legendExplain small";
-  div.style.margin="6px 0 8px";
-  div.innerHTML='<b>凡例:</b> <span style="color:#ff5a5a">SWIFT+CME score</span> / <span style="color:#e5e7eb">±100 km/s hit</span> / <span style="color:#9be950">BG score</span>';
+  div.style.margin="8px 0 10px";
+  div.innerHTML='<b>SWIFT Wind AI accuracy history</b><br><span style="color:#ff5a5a">━ SWIFT+CME score</span>　<span style="color:#e5e7eb">━━ ±100 km/s hit</span>　<span style="color:#9be950">⋯ BG score</span>';
+
   const canvas=accSection.querySelector("canvas");
   if(canvas && canvas.parentElement){
     canvas.parentElement.parentElement.insertBefore(div, canvas.parentElement);
+  }else{
+    accSection.appendChild(div);
   }
 }
 
