@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>CME Earth-Directed Satellite Hazard Console / Strongest WSA Forecast</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
 :root{
@@ -460,6 +461,7 @@ pre{
   <div style="margin-top:14px"></div>
   <h3 style="font-size:15px;margin:0 0 8px">④-C SWIFT Kp AI / 3-Day Kp Forecast</h3>
   <div id="kpAiSummary" class="small">SWIFT Kp AI未読込</div>
+  <div style="margin-top:8px"><button onclick="exportSwiftKpExcel()">Kp予報Excel出力</button></div>
   <div id="kpForecastTable" class="small" style="margin-top:8px"></div>
   <div class="widebox" style="height:220px;margin-top:10px"><canvas id="kpAiCanvas"></canvas></div>
 </section>
@@ -920,7 +922,7 @@ function buildSwiftAccuracyFallback(){
   return {
     updated_at:t,
     fallback:true,
-    note:"accuracy-history.json not found; using latest SWIFT Wind AI verification as temporary accuracy summary.",
+    note:"Accuracy history file is not created yet; using latest SWIFT Wind AI verification as temporary accuracy summary.",
     latest:row,
     history:[row],
     last_24h:{enhanced:enhanced24,background:background24},
@@ -979,7 +981,7 @@ async function loadSwiftWindAccuracy(rebuild=true){
     STATE.swiftWindAccuracy=fallback;
     const score=fallback.latest?.enhanced_accuracy_score;
     const scoreText=Number.isFinite(Number(score)) ? ` / ${Math.round(Number(score))}%` : "";
-    setSource("swiftAccuracy",`OK: fallback${scoreText}`,STATE.swiftWindAccuracy,`history file missing: ${lastError}`);
+    setSource("swiftAccuracy",`OK: fallback${scoreText}`,STATE.swiftWindAccuracy,`履歴ファイル未作成のため、latest.jsonの検証値で暫定表示中`);
     drawSwiftAccuracyHistory();
     drawSwiftKpAI();
     if(rebuild) renderSourcePanel();
@@ -3090,6 +3092,16 @@ function kpAiPct(v){
   return Number.isFinite(n) ? `${Math.round(n)}%` : "N/A";
 }
 
+function kpAiMetricPct(metric,key){
+  if(!metric || !Number(metric.count)) return "学習中";
+  return kpAiPct(metric[key]);
+}
+
+function kpAiMetricNum(metric,key,d=2){
+  if(!metric || !Number(metric.count)) return "学習中";
+  return kpAiNum(metric[key],d);
+}
+
 function kpAiNum(v,d=2){
   const n=Number(v);
   return Number.isFinite(n) ? n.toFixed(d) : "N/A";
@@ -3185,7 +3197,7 @@ function drawSwiftKpAI(selectedTime=STATE.selectedTime || STATE.timelineCenter |
   `;
 
   // ===== グラフ =====
-  const padL=44, padR=18, padT=42, padB=34;
+  const padL=44, padR=18, padT=62, padB=34;
   const x0=padL, y0=padT, ww=w-padL-padR, hh=h-padT-padB;
 
   const histRows=history.filter(r=>Number.isFinite(r._t) && r.observed_kp!==null && r.predicted_kp!==null);
@@ -3246,7 +3258,7 @@ function drawSwiftKpAI(selectedTime=STATE.selectedTime || STATE.timelineCenter |
   }
 
   // legend under title, no overlap
-  let lx=x0+110, ly=18;
+  let lx=x0, ly=40;
   function legend(color,text,dash=[]){
     ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=2.4; ctx.setLineDash(dash);
     ctx.beginPath(); ctx.moveTo(lx,ly-4); ctx.lineTo(lx+22,ly-4); ctx.stroke(); ctx.restore();
@@ -3270,10 +3282,100 @@ function drawSwiftKpAI(selectedTime=STATE.selectedTime || STATE.timelineCenter |
 
   box.innerHTML=
     `現在予報: Kp <b class="${Number(latestKp?.kp)>=5 ? 'warnText' : 'goodText'}">${kpAiNum(latestKp?.kp,2)}</b> / ${latestKp?.g_scale || kpAiG(latestKp?.kp)} / 信頼度 ${kpAiPct((latestKp?.confidence || 0)*100)}<br>`+
-    `的中率: 7日 ±1Kp <b>${kpAiPct(m7.hit_rate_within_1kp)}</b> / ±0.67Kp <b>${kpAiPct(m7.hit_rate_within_067kp)}</b> / Gスケール <b>${kpAiPct(m7.g_scale_hit_rate)}</b><br>`+
-    `検証: 7日 MAE <b>${kpAiNum(m7.mae,2)}</b> / Bias <b>${kpAiNum(m7.bias,2)}</b> / RMSE <b>${kpAiNum(m7.rmse,2)}</b>　`+
-    `30日 MAE <b>${kpAiNum(m30.mae,2)}</b> / ±1Kp <b>${kpAiPct(m30.hit_rate_within_1kp)}</b><br>`+
+    `的中率: 7日 ±1Kp <b>${kpAiMetricPct(m7,"hit_rate_within_1kp")}</b> / ±0.67Kp <b>${kpAiMetricPct(m7,"hit_rate_within_067kp")}</b> / Gスケール <b>${kpAiMetricPct(m7,"g_scale_hit_rate")}</b><br>`+
+    `検証: 7日 MAE <b>${kpAiMetricNum(m7,"mae",2)}</b> / Bias <b>${kpAiMetricNum(m7,"bias",2)}</b> / RMSE <b>${kpAiMetricNum(m7,"rmse",2)}</b>　`+
+    `30日 MAE <b>${kpAiMetricNum(m30,"mae",2)}</b> / ±1Kp <b>${kpAiMetricPct(m30,"hit_rate_within_1kp")}</b><br>`+
     `係数: wind ${kpAiNum(weights.wind_speed,4)} / CME ${kpAiNum(weights.cme_effect,4)} / dVdt ${kpAiNum(weights.dvdt,4)} / persistenceKp ${kpAiNum(weights.persistence_kp,2)} / bias ${kpAiNum(bias,3)}`;
+}
+
+
+function swiftKpRowsForExcel(){
+  const model=STATE.swiftKpModel;
+  const hist=STATE.swiftKpHistory;
+  const forecast=(model?.forecast || []).map(r=>({
+    Type:"Forecast",
+    StartUTC:new Date(r._t || r.start_time).toISOString(),
+    EndUTC:r.end_time || "",
+    Slot:kpAiSlotLabel(new Date(r._t || r.start_time)),
+    Kp:Number.isFinite(Number(r.kp)) ? Number(r.kp) : null,
+    KpRounded:Number.isFinite(Number(r.kp_rounded)) ? Number(r.kp_rounded) : null,
+    GScale:r.g_scale || kpAiG(r.kp),
+    Confidence:Number.isFinite(Number(r.confidence)) ? Number(r.confidence) : null,
+    WindSpeed:r.components?.wind_speed ?? null,
+    BackgroundSpeed:r.components?.background_speed ?? null,
+    CMEEffect:r.components?.cme_effect ?? null,
+    dVdt:r.components?.dvdt ?? null,
+    PersistenceKp:r.components?.persistence_kp ?? null,
+    Impact:r.components?.impact || "",
+    Source:"SWIFT_KP_AI"
+  }));
+  const history=(hist?.items || []).map(r=>({
+    Type:"Verification",
+    StartUTC:new Date(r._t || r.time).toISOString(),
+    PredictedKp:Number.isFinite(Number(r.predicted_kp)) ? Number(r.predicted_kp) : null,
+    ObservedKp:Number.isFinite(Number(r.observed_kp)) ? Number(r.observed_kp) : null,
+    Error:Number.isFinite(Number(r.error)) ? Number(r.error) : null,
+    HitWithin1Kp:r.hit_within_1kp === true ? 1 : r.hit_within_1kp === false ? 0 : null,
+    HitWithin067Kp:r.hit_within_067kp === true ? 1 : r.hit_within_067kp === false ? 0 : null,
+    PredictedGScale:r.predicted_g_scale || "",
+    ObservedGScale:r.observed_g_scale || "",
+    GScaleHit:r.g_scale_hit === true ? 1 : r.g_scale_hit === false ? 0 : null,
+    WindSpeed:r.wind_speed ?? null,
+    CMEEffect:r.cme_effect ?? null,
+    Impact:r.impact || ""
+  }));
+  const coeff=model?.coefficients || {};
+  const weights=coeff.weights || {};
+  const bonus=coeff.bonus || {};
+  const summary=[
+    {Item:"Updated at",Value:model?.updated_at || ""},
+    {Item:"Model",Value:model?.model || "SWIFT Kp AI"},
+    {Item:"7d count",Value:model?.verification?.last_7d?.count ?? ""},
+    {Item:"7d MAE",Value:model?.verification?.last_7d?.mae ?? ""},
+    {Item:"7d Bias",Value:model?.verification?.last_7d?.bias ?? ""},
+    {Item:"7d ±1Kp hit rate (%)",Value:model?.verification?.last_7d?.hit_rate_within_1kp ?? ""},
+    {Item:"30d MAE",Value:model?.verification?.last_30d?.mae ?? ""},
+    {Item:"wind_speed coefficient",Value:weights.wind_speed ?? ""},
+    {Item:"cme_effect coefficient",Value:weights.cme_effect ?? ""},
+    {Item:"dvdt coefficient",Value:weights.dvdt ?? ""},
+    {Item:"persistence_kp coefficient",Value:weights.persistence_kp ?? ""},
+    {Item:"bias",Value:coeff.bias?.kp ?? ""},
+    {Item:"CORE-HIT bonus",Value:bonus["CORE-HIT"] ?? ""},
+    {Item:"BODY-HIT bonus",Value:bonus["BODY-HIT"] ?? ""},
+    {Item:"FLANK-HIT bonus",Value:bonus["FLANK-HIT"] ?? ""}
+  ];
+  return {summary,forecast,history};
+}
+
+function exportSwiftKpExcel(){
+  if(!STATE.swiftKpModel || !Array.isArray(STATE.swiftKpModel.forecast) || !STATE.swiftKpModel.forecast.length){
+    alert("SWIFT Kp AIを先に読み込んでください。");
+    return;
+  }
+  const {summary,forecast,history}=swiftKpRowsForExcel();
+  const stamp=new Date().toISOString().replace(/[-:]/g,"").slice(0,13);
+
+  if(window.XLSX){
+    const wb=XLSX.utils.book_new();
+    const ws1=XLSX.utils.json_to_sheet(summary);
+    const ws2=XLSX.utils.json_to_sheet(forecast);
+    const ws3=XLSX.utils.json_to_sheet(history);
+    XLSX.utils.book_append_sheet(wb,ws1,"Summary");
+    XLSX.utils.book_append_sheet(wb,ws2,"Kp Forecast");
+    XLSX.utils.book_append_sheet(wb,ws3,"Verification History");
+    XLSX.writeFile(wb,`swift_kp_forecast_${stamp}.xlsx`);
+    return;
+  }
+
+  // fallback: Excelで開けるCSV
+  const headers=Object.keys(forecast[0] || {StartUTC:"",Kp:""});
+  const lines=[headers.join(",")].concat(forecast.map(r=>headers.map(h=>JSON.stringify(r[h] ?? "")).join(",")));
+  const blob=new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=`swift_kp_forecast_${stamp}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function drawWindGrid(ctx,x0,y0,ww,hh,yMin,yMax,tMin,tMax,nowT){
