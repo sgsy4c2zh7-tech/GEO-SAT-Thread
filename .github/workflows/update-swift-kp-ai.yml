@@ -3,7 +3,7 @@ name: Update SWIFT Kp AI
 on:
   workflow_dispatch:
   schedule:
-    # 3時間ごと。NOAA実測Kpで答え合わせしながら、3日間Kp予報を更新
+    # 3時間ごと。NOAA実測Kpで答え合わせしながら、5日間Kp予報を更新
     - cron: "52 */3 * * *"
 
 permissions:
@@ -38,7 +38,7 @@ jobs:
           now = datetime.now(timezone.utc)
 
           # Kpは3時間値。3日間 = 24コマ
-          forecast_days = 3
+          forecast_days = 5
           bin_hours = 3
           forecast_bins = forecast_days * 8
 
@@ -78,7 +78,7 @@ jobs:
               "notes": [
                   "Phase 1: coefficient-learning Kp model.",
                   "Input is SWIFT Wind AI, DONKI Earth-directed CME metadata, and NOAA observed planetary Kp.",
-                  "Output is NOAA-like 3-day Kp forecast for SwiftTEC integration.",
+                  "Output is NOAA-like 5-day Kp forecast for SwiftTEC integration.",
                   "Kp coefficients are slowly updated from observed Kp verification."
               ]
           }
@@ -624,12 +624,10 @@ jobs:
 
           def format_forecast_txt(forecast_rows):
               issued = now.strftime("%Y %b %d %H%M UTC")
-              # 3日分のUTC日付
+
               days = []
-              base = floor_to_3h(now)
-              # NOAA風に「今日・明日・明後日」の列
               today = now.date()
-              for i in range(3):
+              for i in range(forecast_days):
                   days.append(today + timedelta(days=i))
 
               day_labels = [
@@ -651,25 +649,169 @@ jobs:
               ]
 
               lines = []
-              lines.append(":Product: 3-Day Forecast of SWIFT Planetary K Index")
+              lines.append(f":Product: {forecast_days}-Day Forecast of SWIFT Planetary K Index")
               lines.append(f":Issued: {issued}")
               lines.append("#")
               lines.append("# SWIFT Kp AI Forecast")
               lines.append("# Format is NOAA-style 3-hour planetary Kp forecast.")
               lines.append("# Values are decimal Kp rounded to thirds for SwiftTEC integration.")
               lines.append("#")
-              lines.append(f"{'':10s}{day_labels[0]:>10s}{day_labels[1]:>10s}{day_labels[2]:>10s}")
+
+              header = f"{'':10s}" + "".join([f"{d:>10s}" for d in day_labels])
+              lines.append(header)
 
               for slot in slots:
                   vals = []
                   for d in days:
                       vals.append(kp_display(by_date_slot.get((d, slot))))
-                  lines.append(f"{slot:<10s}{vals[0]:>10s}{vals[1]:>10s}{vals[2]:>10s}")
+                  lines.append(f"{slot:<10s}" + "".join([f"{v:>10s}" for v in vals]))
 
               lines.append("#")
               lines.append("# G-scale reference: G1=Kp5, G2=Kp6, G3=Kp7, G4=Kp8, G5=Kp9.")
               lines.append("# Source: SWIFT Kp AI, generated from SWIFT Wind AI + NOAA observed Kp verification.")
-              return "\n".join(lines) + "\n"
+              return "
+".join(lines) + "
+"
+
+          def archive_and_score_forecasts(forecast_rows, observed_kp_rows):
+              archive_path = OUT_DIR / "forecast-archive.json"
+              lead_path = OUT_DIR / "leadtime-skill.json"
+
+              old_archive = load_json_if_exists(archive_path) or {"items": []}
+              old_items = old_archive.get("items") or []
+
+              issued_at = floor_to_3h(now)
+              issued_iso = issued_at.isoformat()
+
+              by_key = {}
+
+              for item in old_items:
+                  key = f"{item.get('issued_at')}|{item.get('target_time')}"
+                  if item.get("issued_at") and item.get("target_time"):
+                      by_key[key] = item
+
+              for r in forecast_rows:
+                  st = parse_dt(r.get("start_time"))
+                  if not st:
+                      continue
+
+                  lead_hours = int(round((st - issued_at).total_seconds() / 3600))
+                  if lead_hours < 0:
+                      continue
+
+                  lead_day = int(lead_hours // 24) + 1
+                  lead_day = max(1, min(forecast_days, lead_day))
+
+                  item = {
+                      "issued_at": issued_iso,
+                      "target_time": st.isoformat(),
+                      "lead_hours": lead_hours,
+                      "lead_day": lead_day,
+                      "predicted_kp": r.get("kp"),
+                      "predicted_g_scale": r.get("g_scale"),
+                      "confidence": r.get("confidence"),
+                      "components": r.get("components") or {}
+                  }
+
+                  key = f"{item['issued_at']}|{item['target_time']}"
+                  by_key[key] = item
+
+              # 実測Kpが入ったものを答え合わせ
+              for key, item in list(by_key.items()):
+                  target = parse_dt(item.get("target_time"))
+                  if not target:
+                      continue
+
+                  if target <= now:
+                      obs = observed_kp_for_bin(observed_kp_rows, target)
+                      if obs:
+                          item["observed_kp"] = obs["kp"]
+                          item["observed_g_scale"] = obs["g_scale"]
+                          item["error"] = round(float(obs["kp"]) - float(item["predicted_kp"]), 3)
+                          item["abs_error"] = round(abs(float(obs["kp"]) - float(item["predicted_kp"])), 3)
+                          item["hit_within_1kp"] = abs(float(obs["kp"]) - float(item["predicted_kp"])) <= 1.0
+                          item["hit_within_067kp"] = abs(float(obs["kp"]) - float(item["predicted_kp"])) <= 0.67
+                          item["g_scale_hit"] = obs["g_scale"] == item.get("predicted_g_scale")
+                          item["verified_at"] = now.isoformat()
+
+              keep_after = now - timedelta(days=history_keep_days)
+              items = []
+
+              for item in by_key.values():
+                  issued = parse_dt(item.get("issued_at"))
+                  target = parse_dt(item.get("target_time"))
+                  if issued and issued >= keep_after:
+                      items.append(item)
+                  elif target and target >= keep_after:
+                      items.append(item)
+
+              items.sort(key=lambda x: (x.get("issued_at") or "", x.get("target_time") or ""))
+
+              def skill_metrics(rows):
+                  checked = [r for r in rows if r.get("observed_kp") is not None and r.get("predicted_kp") is not None]
+                  if not checked:
+                      return {
+                          "count": 0,
+                          "mae": None,
+                          "bias": None,
+                          "rmse": None,
+                          "hit_rate_within_1kp": None,
+                          "hit_rate_within_067kp": None,
+                          "g_scale_hit_rate": None
+                      }
+
+                  errors = [float(r["observed_kp"]) - float(r["predicted_kp"]) for r in checked]
+                  mae = sum(abs(e) for e in errors) / len(errors)
+                  bias = sum(errors) / len(errors)
+                  rmse = math.sqrt(sum(e * e for e in errors) / len(errors))
+                  hit1 = sum(1 for r in checked if r.get("hit_within_1kp"))
+                  hit067 = sum(1 for r in checked if r.get("hit_within_067kp"))
+                  ghit = sum(1 for r in checked if r.get("g_scale_hit"))
+
+                  return {
+                      "count": len(checked),
+                      "mae": round(mae, 3),
+                      "bias": round(bias, 3),
+                      "rmse": round(rmse, 3),
+                      "hit_rate_within_1kp": round(100 * hit1 / len(checked), 2),
+                      "hit_rate_within_067kp": round(100 * hit067 / len(checked), 2),
+                      "g_scale_hit_rate": round(100 * ghit / len(checked), 2)
+                  }
+
+              by_lead_day = []
+              for d in range(1, forecast_days + 1):
+                  rows = [r for r in items if int(r.get("lead_day") or 0) == d]
+                  by_lead_day.append({
+                      "lead_day": d,
+                      "lead_hours_min": (d - 1) * 24,
+                      "lead_hours_max": d * 24,
+                      **skill_metrics(rows)
+                  })
+
+              skill = {
+                  "updated_at": now.isoformat(),
+                  "forecast_days": forecast_days,
+                  "definition": {
+                      "lead_day": "1=0-24h, 2=24-48h, ...",
+                      "hit_rate_within_1kp": "percentage of archived forecasts whose absolute Kp error is <= 1.0",
+                      "hit_rate_within_067kp": "percentage of archived forecasts whose absolute Kp error is <= 0.67"
+                  },
+                  "overall": skill_metrics(items),
+                  "by_lead_day": by_lead_day
+              }
+
+              archive = {
+                  "updated_at": now.isoformat(),
+                  "keep_days": history_keep_days,
+                  "count": len(items),
+                  "verified_count": sum(1 for r in items if r.get("observed_kp") is not None),
+                  "items": items
+              }
+
+              save_json(archive_path, archive)
+              save_json(lead_path, skill)
+
+              return archive, skill
 
           observed_kp_rows, noaa_meta = fetch_noaa_kp()
           wind_records, wind_cmes, wind_updated_at = load_swift_wind()
@@ -680,7 +822,7 @@ jobs:
           print("Wind CME count:", len(wind_cmes))
           print("coefficients:", coeff)
 
-          # 3日間予報
+          # 5日間予報
           start = floor_to_3h(now)
           forecast_rows = []
 
@@ -745,11 +887,29 @@ jobs:
 
           forecast_txt = format_forecast_txt(forecast_rows)
 
+
+          forecast_archive, leadtime_skill = archive_and_score_forecasts(forecast_rows, observed_kp_rows)
+
+          learned_formula = {
+              "wind_formula": "Vsw(t) = wp*V_recent + wr*V_27day + ww*V_WSA + wc*CME_pulse + bias_v",
+              "kp_formula": "Kp(t) = base + a*max(0,Vsw-350) + b*CME_effect + c*dVdt + d*max(0,Kp_recent-2) + impact_bonus + bias_kp",
+              "wind_terms": latest_wind_formula if False else None,
+              "kp_terms": {
+                  "base": coeff.get("weights", {}).get("base"),
+                  "wind_speed": coeff.get("weights", {}).get("wind_speed"),
+                  "cme_effect": coeff.get("weights", {}).get("cme_effect"),
+                  "dvdt": coeff.get("weights", {}).get("dvdt"),
+                  "persistence_kp": coeff.get("weights", {}).get("persistence_kp"),
+                  "bias": coeff.get("bias", {}).get("kp"),
+                  "bonus": coeff.get("bonus", {})
+              }
+          }
+
           latest = {
               "updated_at": now.isoformat(),
               "model": "SWIFT Kp AI v0.1",
               "source": "SWIFT Wind AI + NOAA observed Kp + DONKI CME metadata",
-              "description": "Self-tuning 3-day Kp forecast. Output is NOAA-style 3-hour Kp forecast for SwiftTEC integration.",
+              "description": "Self-tuning 5-day Kp forecast. Output is NOAA-style 3-hour Kp forecast for SwiftTEC integration.",
               "range": {
                   "forecast_days": forecast_days,
                   "bin_hours": bin_hours,
@@ -764,8 +924,12 @@ jobs:
               },
               "coefficients": coeff,
               "verification": verification,
+              "leadtime_skill": leadtime_skill,
+              "learned_formula": learned_formula,
               "forecast": forecast_rows,
-              "forecast_text_path": "./data/swift-kp/forecast.txt"
+              "forecast_text_path": "./data/swift-kp/forecast.txt",
+              "forecast_archive_path": "./data/swift-kp/forecast-archive.json",
+              "leadtime_skill_path": "./data/swift-kp/leadtime-skill.json"
           }
 
           save_json(OUT_DIR / "latest.json", latest)
@@ -848,6 +1012,8 @@ jobs:
               "coefficients": "coefficients.json",
               "verification": "verification.json",
               "history": "history.json",
+              "forecast_archive": "forecast-archive.json",
+              "leadtime_skill": "leadtime-skill.json",
               "files": files
           }
           save_json(OUT_DIR / "index.json", index)
@@ -856,6 +1022,7 @@ jobs:
           print(forecast_txt)
           print(json.dumps({
               "forecast_bins": len(forecast_rows),
+              "leadtime_skill": leadtime_skill.get("by_lead_day"),
               "verification_7d": verification["last_7d"],
               "verification_30d": verification["last_30d"],
               "coefficients": coeff
