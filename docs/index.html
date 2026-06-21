@@ -442,6 +442,19 @@ pre{
   .learningChange{grid-template-columns:1fr}
 }
 
+
+#swiftKpForecastTable table.mini td,#swiftKpForecastTable table.mini th{
+  text-align:center;
+  vertical-align:middle;
+  min-width:76px;
+}
+.legendExplain{
+  background:rgba(15,23,42,.75);
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:10px;
+  padding:6px 10px;
+}
+
 </style>
 </head>
 
@@ -2315,7 +2328,7 @@ function rebuildAll(){
   renderCactusCacheTable();
   updateTimeline();
   drawSwiftAccuracyHistory();
-  try{ renderAIDashboard(); }catch(e){ console.warn('renderAIDashboard failed', e); }
+  try{ renderAIDashboard(); renderKp5DayAfterLoad(); }catch(e){ console.warn('render dashboard failed', e); }
 
   raw(JSON.stringify({
     note:"Advanced model with WSA wind: DONKI lon/lat/halfAngle -> Earth-directed filter -> effective speed -> DBM-lite using WSA w(t) if available.",
@@ -4849,6 +4862,92 @@ function applyStreamlinedLayout(){
 }
 
 
+
+/* =========================================================
+   5-DAY KP FORECAST TABLE + LEGEND FIX
+========================================================= */
+
+function slotLabelFromTime(t){
+  const d=new Date(t);
+  if(!Number.isFinite(d.getTime())) return "-";
+  const h=d.getUTCHours();
+  return `${String(h).padStart(2,"0")}-${String((h+3)%24).padStart(2,"0")}UT`;
+}
+
+function dayLabelFromDate(d){
+  return d.toISOString().slice(5,10).replace("-","/");
+}
+
+function renderKp5DayForecastTable(){
+  const holder=document.getElementById("swiftKpForecastTable") || document.getElementById("kpForecastTable") || document.getElementById("swiftKpTable");
+  if(!holder) return;
+
+  const rows=STATE.swiftKpModel?.forecast || [];
+  if(!rows.length){
+    holder.innerHTML='<div class="small">SWIFT Kp AI未読込。Update SWIFT Kp AIを実行後、「SWIFT Kp AI読込」または「全部取得」を押してください。</div>';
+    return;
+  }
+
+  const dayKeys=[];
+  const byDaySlot={};
+
+  rows.forEach(r=>{
+    const st=new Date(r.start_time);
+    if(!Number.isFinite(st.getTime())) return;
+    const day=st.toISOString().slice(0,10);
+    const slot=slotLabelFromTime(st);
+    if(!dayKeys.includes(day)) dayKeys.push(day);
+    byDaySlot[`${day}|${slot}`]=r;
+  });
+
+  dayKeys.sort();
+  const fiveDays=dayKeys.slice(0,5);
+  const slots=["00-03UT","03-06UT","06-09UT","09-12UT","12-15UT","15-18UT","18-21UT","21-00UT"];
+
+  let html='<table class="mini"><thead><tr><th>UT</th>';
+  fiveDays.forEach(d=>{ html+=`<th>${d.slice(5).replace("-","/")}</th>`; });
+  html+='</tr></thead><tbody>';
+
+  slots.forEach(slot=>{
+    html+=`<tr><td>${slot}</td>`;
+    fiveDays.forEach(day=>{
+      const r=byDaySlot[`${day}|${slot}`];
+      if(!r){
+        html+='<td>-</td>';
+      }else{
+        const kp=Number(r.kp);
+        const g=r.g_scale || "";
+        const cls=kp>=7 ? "bad" : kp>=5 ? "warn" : "good";
+        html+=`<td><b class="${cls}">${Number.isFinite(kp)?kp.toFixed(2):"-"}</b><br><span class="small">${g}</span></td>`;
+      }
+    });
+    html+='</tr>';
+  });
+
+  html+='</tbody></table>';
+  holder.innerHTML=html;
+}
+
+function patchAccuracyLegendOverlap(){
+  // Canvas描画側で凡例が重なる場合に備えて、説明文をグラフ外にも出す
+  const accSection=[...document.querySelectorAll("section.card")].find(s=>s.textContent.includes("SWIFT Wind AI 的中率"));
+  if(!accSection) return;
+  if(accSection.querySelector(".legendExplain")) return;
+  const div=document.createElement("div");
+  div.className="legendExplain small";
+  div.style.margin="6px 0 8px";
+  div.innerHTML='<b>凡例:</b> <span style="color:#ff5a5a">SWIFT+CME score</span> / <span style="color:#e5e7eb">±100 km/s hit</span> / <span style="color:#9be950">BG score</span>';
+  const canvas=accSection.querySelector("canvas");
+  if(canvas && canvas.parentElement){
+    canvas.parentElement.parentElement.insertBefore(div, canvas.parentElement);
+  }
+}
+
+function renderKp5DayAfterLoad(){
+  try{ renderKp5DayForecastTable(); }catch(e){ console.warn("renderKp5DayForecastTable failed",e); }
+  try{ patchAccuracyLegendOverlap(); }catch(e){ console.warn("patchAccuracyLegendOverlap failed",e); }
+}
+
 /* =========================================================
    INIT
 ========================================================= */
@@ -4863,6 +4962,7 @@ setCDAWPickerBounds();
 renderCDAWTimeline(STATE.selectedTime || new Date());
 rebuildAll();
 renderAIDashboard();
+renderKp5DayAfterLoad();
 </script>
 
 </body>
