@@ -520,8 +520,8 @@ pre{
   </section>
 </div>
 
-<section class="card legacyBlock" style="margin-top:16px">
-  <h3>③ CME Propagation / Earth-directed only</h3>
+<section class="card" style="margin-top:16px">
+  <h3>③ CME Arrival Simulation / Earth-directed CME</h3>
   <input id="timeSlider" type="range" min="0" max="192" value="72" step="1" oninput="updateTimeline()">
   <div id="timeLabel" class="small"></div>
   <div class="widebox"><canvas id="flowCanvas"></canvas></div>
@@ -550,8 +550,8 @@ pre{
   <div id="statusBox" class="small"></div>
 </section>
 
-<section class="card legacyBlock" style="margin-top:16px">
-  <h3>⑥ CME Event Table / latest 3 days only</h3>
+<section class="card" style="margin-top:16px">
+  <h3>⑥ DONKI Earth-directed CME Arrival Table Table / latest 3 days only</h3>
   <div class="small">発生日時ベースで過去3日分のみ表示。time21_5ではなくactivityStartTime/ID時刻を優先。上から新しい順。画像取得は地球到達候補のみ。</div>
   <div id="table"></div>
 </section>
@@ -2315,7 +2315,7 @@ function rebuildAll(){
   renderCactusCacheTable();
   updateTimeline();
   drawSwiftAccuracyHistory();
-  renderAIDashboard();
+  try{ renderAIDashboard(); }catch(e){ console.warn('renderAIDashboard failed', e); }
 
   raw(JSON.stringify({
     note:"Advanced model with WSA wind: DONKI lon/lat/halfAngle -> Earth-directed filter -> effective speed -> DBM-lite using WSA w(t) if available.",
@@ -4004,6 +4004,11 @@ function formatDateTime(value){
 }
 
 
+function utc(value){
+  return formatDateTime(value);
+}
+
+
 function selectCMEImageWindow(index){
   const c=STATE.cmes[index];
   if(!c) return;
@@ -4345,7 +4350,7 @@ function renderCactusCacheTable(){
     <div class="tablewrap" style="max-height:420px">
     <table>
       <tr>
-        <th>Image</th>
+        <th>Action</th>
         <th>ID</th>
         <th>Time</th>
         <th>PA</th>
@@ -4490,7 +4495,7 @@ function renderTable(cmes){
 
   if(!rows.length){
     document.getElementById("table").innerHTML=
-      `<div class="small">過去3日分のEarth-directed CMEなし。MISS表示をONにすると除外イベントも確認できます。</div>`;
+      `<div class="small">過去3日分のEarth-directed CMEなし。DONKI Cache読込後に表示されます。MISS表示をONにすると除外イベントも確認できます。</div>`;
     return;
   }
 
@@ -4498,7 +4503,7 @@ function renderTable(cmes){
     <div class="tablewrap">
     <table>
       <tr>
-        <th>Image</th>
+        <th>Action</th>
         <th>ID</th>
         <th>Source</th>
         <th>Impact</th>
@@ -4507,7 +4512,7 @@ function renderTable(cmes){
         <th>Speed</th>
         <th>DBM / WSA</th>
         <th>Risk</th>
-        <th>Arrival</th>
+        <th>Predicted Arrival</th>
         <th>Reason</th>
       </tr>
       ${rows.map(c=>{
@@ -4834,6 +4839,13 @@ function drawLeadTimeSkill(){
 
 function applyStreamlinedLayout(){
   document.querySelectorAll(".legacyBlock").forEach(el=>{ el.style.display="none"; });
+
+  // Main AI dashboardでは不要な詳細は隠すが、
+  // CME到達アニメーションとDONKI到達予測表は残す。
+  const flow = [...document.querySelectorAll("section.card")].find(s => s.textContent.includes("CME Arrival Simulation"));
+  if(flow) flow.style.display = "";
+  const table = [...document.querySelectorAll("section.card")].find(s => s.textContent.includes("DONKI Earth-directed CME Arrival Table"));
+  if(table) table.style.display = "";
 }
 
 
