@@ -2796,8 +2796,7 @@ function drawWindSeries(selectedTime){
     if(!model || !Array.isArray(model.records) || !model.records.length){
       ctx.fillStyle="#aaa";
       ctx.fillText("SWIFT Wind AI / WSA data not loaded.",12,44);
-      summary.innerHTML='SWIFT Wind AI未読込。<button onclick="loadSwiftWindAI()">SWIFT Wind AI読込</button>
-    <button onclick="loadSwiftKpAI()">SWIFT Kp AI読込</button>';
+      summary.innerHTML=`SWIFT Wind AI未読込。<button onclick="loadSwiftWindAI()">SWIFT Wind AI読込</button> <button onclick="loadSwiftKpAI()">SWIFT Kp AI読込</button>`;
       return;
     }
 
@@ -2822,8 +2821,7 @@ function drawWindSeries(selectedTime){
     drawLineSeries(ctx,arr,"speed",xOf,yOf,"#ffee58",[7,5]);
     const selX=xOf(selectedTime.getTime());
     ctx.beginPath(); ctx.moveTo(selX,y0); ctx.lineTo(selX,y0+hh); ctx.strokeStyle="rgba(255,255,255,.9)"; ctx.lineWidth=2; ctx.stroke();
-    summary.innerHTML=`SWIFT Wind AI未読込 / WSA records: <b>${arr.length}</b>。<button onclick="loadSwiftWindAI()">SWIFT Wind AI読込</button>
-    <button onclick="loadSwiftKpAI()">SWIFT Kp AI読込</button>`;
+    summary.innerHTML=`SWIFT Wind AI未読込 / WSA records: <b>${arr.length}</b>。<button onclick="loadSwiftWindAI()">SWIFT Wind AI読込</button> <button onclick="loadSwiftKpAI()">SWIFT Kp AI読込</button>`;
     return;
   }
 
