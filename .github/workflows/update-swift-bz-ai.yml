@@ -1,0 +1,511 @@
+name: Update SWIFT Bz AI
+
+on:
+  workflow_dispatch:
+  schedule:
+    # IMF履歴更新後に回す想定
+    - cron: "37 */3 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-swift-bz-ai:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build SWIFT Bz AI forecast
+        run: |
+          python3 <<'PY'
+          import json, math, statistics
+          from pathlib import Path
+          from datetime import datetime, timedelta, timezone
+
+          OUT_DIR = Path("docs/data/swift-bz")
+          OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+          IMF_HISTORY = Path("docs/data/noaa-imf/history.json")
+          WIND_HISTORY = Path("docs/data/noaa-wind/history.json")
+          SWIFT_WIND = Path("docs/data/swift-wind/latest.json")
+          DONKI = Path("docs/data/donki/latest.json")
+
+          FORECAST_PATH = OUT_DIR / "forecast.json"
+          LATEST_PATH = OUT_DIR / "latest.json"
+          COEF_PATH = OUT_DIR / "coefficients.json"
+          VERIF_PATH = OUT_DIR / "verification.json"
+          ARCHIVE_PATH = OUT_DIR / "forecast-archive.json"
+          INDEX_PATH = OUT_DIR / "index.json"
+
+          now = datetime.now(timezone.utc)
+          forecast_days = 5
+          step_hours = 3
+
+          def load_json(path, default=None):
+              if not path.exists():
+                  return default
+              try:
+                  return json.loads(path.read_text(encoding="utf-8"))
+              except Exception as e:
+                  print("load failed", path, e)
+                  return default
+
+          def save_json(path, obj):
+              path.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+              print("saved", path)
+
+          def parse_dt(v):
+              if not v:
+                  return None
+              s = str(v).strip()
+              if s.endswith("Z"):
+                  s = s[:-1] + "+00:00"
+              try:
+                  d = datetime.fromisoformat(s)
+                  if d.tzinfo is None:
+                      d = d.replace(tzinfo=timezone.utc)
+                  return d.astimezone(timezone.utc)
+              except Exception:
+                  return None
+
+          def fnum(v, default=None):
+              try:
+                  if v is None:
+                      return default
+                  x = float(v)
+                  return x if math.isfinite(x) else default
+              except Exception:
+                  return default
+
+          def clamp(x, lo, hi):
+              return max(lo, min(hi, x))
+
+          def median(vals, default=None):
+              vals = [fnum(v) for v in vals if fnum(v) is not None]
+              return statistics.median(vals) if vals else default
+
+          def percentile(vals, q, default=None):
+              vals = sorted([fnum(v) for v in vals if fnum(v) is not None])
+              if not vals:
+                  return default
+              if len(vals) == 1:
+                  return vals[0]
+              k = (len(vals)-1) * q
+              f = math.floor(k)
+              c = math.ceil(k)
+              if f == c:
+                  return vals[int(k)]
+              return vals[f] * (c-k) + vals[c] * (k-f)
+
+          def window_rows(items, center, hours):
+              lo = center - timedelta(hours=hours)
+              hi = center + timedelta(hours=hours)
+              out = []
+              for r in items:
+                  dt = r.get("_dt")
+                  if dt and lo <= dt <= hi:
+                      out.append(r)
+              return out
+
+          def nearest_rows_before(items, target, hours):
+              lo = target - timedelta(hours=hours)
+              return [r for r in items if r.get("_dt") and lo <= r["_dt"] <= target]
+
+          def risk_label(p):
+              if p >= 0.75:
+                  return "HIGH"
+              if p >= 0.55:
+                  return "MODERATE"
+              if p >= 0.35:
+                  return "LOW-MODERATE"
+              return "LOW"
+
+          imf = load_json(IMF_HISTORY, {"items":[]})
+          imf_items = []
+          for r in imf.get("items", []) or []:
+              dt = parse_dt(r.get("time"))
+              if not dt:
+                  continue
+              bz = fnum(r.get("bz_gsm"))
+              bt = fnum(r.get("bt"))
+              if bz is None and bt is None:
+                  continue
+              rr = dict(r)
+              rr["_dt"] = dt
+              rr["_t"] = dt.timestamp()
+              imf_items.append(rr)
+          imf_items.sort(key=lambda x:x["_t"])
+
+          wind_hist = load_json(WIND_HISTORY, {"items":[]})
+          wind_items = []
+          for r in wind_hist.get("items", []) or []:
+              dt = parse_dt(r.get("time"))
+              if not dt:
+                  continue
+              sp = fnum(r.get("speed") or r.get("v") or r.get("speed_kms") or r.get("proton_speed"))
+              if sp is None:
+                  continue
+              rr = dict(r)
+              rr["_dt"] = dt
+              rr["_speed"] = sp
+              wind_items.append(rr)
+          wind_items.sort(key=lambda x:x["_dt"])
+
+          swift_wind = load_json(SWIFT_WIND, {})
+          swift_wind_rows = swift_wind.get("forecast") or swift_wind.get("items") or []
+
+          def wind_forecast_at(t):
+              best = None
+              best_abs = 10**9
+              for r in swift_wind_rows:
+                  dt = parse_dt(r.get("time") or r.get("target_time") or r.get("start_time"))
+                  if not dt:
+                      continue
+                  d = abs((dt-t).total_seconds())
+                  if d < best_abs:
+                      best_abs = d
+                      best = r
+              if best and best_abs <= 6*3600:
+                  return fnum(best.get("speed") or best.get("v") or best.get("vsw") or best.get("speed_forecast"))
+              # fallback: recent observed median
+              recent = nearest_rows_before(wind_items, now, 6)
+              return median([r["_speed"] for r in recent], 400)
+
+          def rotation_wind_at(t):
+              center = t - timedelta(days=27.27)
+              rows = window_rows(wind_items, center, 24)
+              return median([r["_speed"] for r in rows], None)
+
+          def rotation_imf_features(t):
+              center = t - timedelta(days=27.27)
+              rows = window_rows(imf_items, center, 24)
+              bz_vals = [fnum(r.get("bz_gsm")) for r in rows if fnum(r.get("bz_gsm")) is not None]
+              bt_vals = [fnum(r.get("bt")) for r in rows if fnum(r.get("bt")) is not None]
+              if not bz_vals:
+                  return {
+                      "available": False,
+                      "bz_min_27d": None,
+                      "bz_p10_27d": None,
+                      "bt_median_27d": None,
+                      "southward_fraction_27d": None,
+                      "southward_strong_fraction_27d": None,
+                      "samples": 0
+                  }
+              south = sum(1 for x in bz_vals if x < 0) / len(bz_vals)
+              strong = sum(1 for x in bz_vals if x <= -5) / len(bz_vals)
+              return {
+                  "available": True,
+                  "bz_min_27d": round(min(bz_vals), 2),
+                  "bz_p10_27d": round(percentile(bz_vals, 0.10), 2),
+                  "bt_median_27d": round(median(bt_vals, 5), 2),
+                  "southward_fraction_27d": round(south, 3),
+                  "southward_strong_fraction_27d": round(strong, 3),
+                  "samples": len(bz_vals)
+              }
+
+          def persistence_imf_features(t):
+              # 0〜6h先だけ強めに使う。以降は減衰。
+              rows = nearest_rows_before(imf_items, now, 3)
+              bz_vals = [fnum(r.get("bz_gsm")) for r in rows if fnum(r.get("bz_gsm")) is not None]
+              bt_vals = [fnum(r.get("bt")) for r in rows if fnum(r.get("bt")) is not None]
+              if not bz_vals:
+                  return {"available": False, "bz_recent": None, "bt_recent": None, "south_recent": None}
+              return {
+                  "available": True,
+                  "bz_recent": round(median(bz_vals), 2),
+                  "bz_recent_min": round(min(bz_vals), 2),
+                  "bt_recent": round(median(bt_vals, 5), 2),
+                  "south_recent": round(sum(1 for x in bz_vals if x < 0) / len(bz_vals), 3),
+              }
+
+          def load_donki_events():
+              data = load_json(DONKI, {})
+              candidates = []
+              def walk(x):
+                  if isinstance(x, dict):
+                      # CME event with arrival/predicted fields or nested analysis
+                      if any(k in x for k in ("arrival_time","predicted_arrival","estimated_arrival","impact_time","startTime","start_time","time21_5")):
+                          candidates.append(x)
+                      for v in x.values():
+                          walk(v)
+                  elif isinstance(x, list):
+                      for v in x:
+                          walk(v)
+              walk(data)
+              events = []
+              for e in candidates:
+                  arr = parse_dt(e.get("arrival_time") or e.get("predicted_arrival") or e.get("estimated_arrival") or e.get("impact_time") or e.get("time21_5"))
+                  start = parse_dt(e.get("startTime") or e.get("start_time") or e.get("time") or e.get("activityID"))
+                  speed = fnum(e.get("speed") or e.get("arrival_speed") or e.get("cme_speed") or e.get("speed_kms"))
+                  half = fnum(e.get("halfAngle") or e.get("half_angle") or e.get("halfAngleDeg"))
+                  cls = str(e.get("impact_class") or e.get("impactClass") or e.get("hit_class") or e.get("classification") or "").upper()
+                  if arr or start:
+                      events.append({
+                          "arrival": arr,
+                          "start": start,
+                          "speed": speed,
+                          "half_angle": half,
+                          "impact_class": cls,
+                          "raw": e
+                      })
+              return events
+
+          cme_events = load_donki_events()
+
+          def cme_features(t):
+              total = 0.0
+              best = None
+              for e in cme_events:
+                  arr = e.get("arrival")
+                  if not arr:
+                      continue
+                  dh = abs((t-arr).total_seconds())/3600
+                  if dh > 18:
+                      continue
+                  speed = e.get("speed") or 600
+                  half = e.get("half_angle") or 45
+                  cls = e.get("impact_class") or ""
+                  cls_bonus = 0.20 if "CORE" in cls else 0.12 if "BODY" in cls else 0.06 if "FLANK" in cls else 0.08
+                  speed_bonus = clamp((speed-500)/1000, 0, 0.25)
+                  width_bonus = clamp((half-35)/100, 0, 0.12)
+                  shape = math.exp(-(dh/8)**2)
+                  effect = (cls_bonus + speed_bonus + width_bonus) * shape
+                  total += effect
+                  if best is None or effect > best["effect"]:
+                      best = {"arrival": arr.isoformat(), "speed": speed, "impact_class": cls, "effect": round(effect, 3)}
+              return {"cme_bz_risk": round(clamp(total,0,0.35),3), "nearest_cme": best}
+
+          coef = load_json(COEF_PATH, None) or {
+              "version": "SWIFT-Bz-AI-v0.1",
+              "updated_at": now.isoformat(),
+              "weights": {
+                  "persistence": 0.28,
+                  "rotation27": 0.42,
+                  "hss_speed": 0.18,
+                  "cme_probability": 0.12
+              },
+              "bias": {
+                  "southward_probability": 0.0,
+                  "bz_min_nt": 0.0,
+                  "bt_nt": 0.0
+              },
+              "notes": "CME内部Bzの向きは断定せず確率扱い。27日前IMFは主にHSS/CIRリスクに使用。"
+          }
+
+          def predict_at(t):
+              rf = rotation_imf_features(t)
+              pf = persistence_imf_features(t)
+              cf = cme_features(t)
+              vsw = wind_forecast_at(t)
+              v27 = rotation_wind_at(t)
+
+              lead_h = (t-now).total_seconds()/3600
+              persist_decay = clamp(1 - lead_h/18, 0, 1)
+
+              # base probability
+              p = 0.32
+
+              # 27日前の南向き時間率・強い南向き率
+              if rf["available"]:
+                  p += 0.32 * (rf["southward_fraction_27d"] - 0.45)
+                  p += 0.70 * rf["southward_strong_fraction_27d"]
+                  if rf["bz_min_27d"] is not None and rf["bz_min_27d"] <= -5:
+                      p += clamp((-rf["bz_min_27d"] - 5) / 25, 0, 0.18)
+
+              # HSS/CIR: 速度上昇や高速風はBz変動リスクを上げる
+              if vsw is not None:
+                  p += clamp((vsw-450)/700, 0, 0.16)
+              if v27 is not None and vsw is not None:
+                  p += clamp((v27-450)/800, 0, 0.08)
+
+              # 直近Bz persistenceは短時間のみ
+              if pf["available"]:
+                  p += persist_decay * (0.22 * (pf["south_recent"] - 0.45))
+                  if pf.get("bz_recent_min") is not None and pf["bz_recent_min"] < -5:
+                      p += persist_decay * clamp((-pf["bz_recent_min"]-5)/20, 0, 0.18)
+
+              # CMEは地球到達・速度・幅で南向きリスクを少し上げるが断定しない
+              p += cf["cme_bz_risk"]
+              p += fnum(coef.get("bias",{}).get("southward_probability"), 0)
+
+              p = clamp(p, 0.05, 0.92)
+
+              # Bz_minはリスクの期待値。断定値ではない。
+              bz_min = -1.5 - 10.0*p
+              if rf["available"] and rf["bz_p10_27d"] is not None:
+                  bz_min = 0.55*bz_min + 0.45*rf["bz_p10_27d"]
+              if cf["cme_bz_risk"] > 0:
+                  bz_min -= 4.0 * cf["cme_bz_risk"]
+              bz_min += fnum(coef.get("bias",{}).get("bz_min_nt"), 0)
+              bz_min = clamp(bz_min, -30, 5)
+
+              bt = 5.5
+              if rf["available"] and rf["bt_median_27d"] is not None:
+                  bt = 0.65*rf["bt_median_27d"] + 0.35*bt
+              if pf["available"] and pf.get("bt_recent") is not None:
+                  bt = persist_decay*pf["bt_recent"] + (1-persist_decay)*bt
+              if vsw is not None:
+                  bt += clamp((vsw-450)/350, 0, 4)
+              if cf["cme_bz_risk"] > 0:
+                  bt += 8*cf["cme_bz_risk"]
+              bt += fnum(coef.get("bias",{}).get("bt_nt"), 0)
+              bt = clamp(bt, 2, 40)
+
+              confidence = 0.25
+              if rf["available"]:
+                  confidence += 0.22
+              if pf["available"] and lead_h <= 12:
+                  confidence += 0.16 * persist_decay
+              if vsw is not None:
+                  confidence += 0.12
+              if cf["nearest_cme"]:
+                  confidence += 0.08
+              confidence = clamp(confidence, 0.15, 0.78)
+
+              return {
+                  "time": t.isoformat(),
+                  "lead_hours": round(max(0, lead_h), 1),
+                  "southward_bz_probability": round(p*100, 1),
+                  "bz_min_forecast": round(bz_min, 2),
+                  "bt_forecast": round(bt, 2),
+                  "bz_risk": risk_label(p),
+                  "confidence": round(confidence, 2),
+                  "driver": "CME/ICME probability" if cf["cme_bz_risk"] >= 0.12 else "HSS/CIR rotation27" if rf["available"] else "persistence/fallback",
+                  "features": {
+                      "rotation27": rf,
+                      "persistence": pf,
+                      "cme": cf,
+                      "vsw_forecast": round(vsw, 1) if vsw is not None else None,
+                      "vsw_rotation27": round(v27, 1) if v27 is not None else None
+                  }
+              }
+
+          # Forecast slots: next aligned 3h boundary
+          start = now.replace(minute=0, second=0, microsecond=0)
+          start = start.replace(hour=(start.hour//3)*3)
+          if start < now:
+              start += timedelta(hours=3)
+
+          forecast = []
+          for i in range(forecast_days * 8):
+              forecast.append(predict_at(start + timedelta(hours=3*i)))
+
+          # Verification: archive past forecasts and compare probability with observed Bz southward window
+          old_archive = load_json(ARCHIVE_PATH, {"items":[]}).get("items", [])
+          issued = now.isoformat()
+          archive_items = old_archive[-5000:]
+          for r in forecast:
+              archive_items.append({
+                  "issued_at": issued,
+                  "target_time": r["time"],
+                  "lead_hours": r["lead_hours"],
+                  "southward_bz_probability": r["southward_bz_probability"],
+                  "bz_min_forecast": r["bz_min_forecast"],
+                  "bt_forecast": r["bt_forecast"],
+                  "scored": False
+              })
+
+          scored = []
+          for a in archive_items:
+              if a.get("scored"):
+                  scored.append(a)
+                  continue
+              tt = parse_dt(a.get("target_time"))
+              if not tt or tt > now - timedelta(minutes=30):
+                  scored.append(a)
+                  continue
+              obs = window_rows(imf_items, tt, 1.5)
+              bz_vals = [fnum(r.get("bz_gsm")) for r in obs if fnum(r.get("bz_gsm")) is not None]
+              if not bz_vals:
+                  scored.append(a)
+                  continue
+              actual_south = any(x < 0 for x in bz_vals)
+              actual_strong = min(bz_vals) <= -5
+              prob = fnum(a.get("southward_bz_probability"), 50) / 100
+              brier = (prob - (1 if actual_south else 0))**2
+              aa = dict(a)
+              aa.update({
+                  "scored": True,
+                  "observed_bz_min": round(min(bz_vals),2),
+                  "observed_southward": actual_south,
+                  "observed_strong_southward": actual_strong,
+                  "brier": round(brier,4),
+                  "error_bz_min": round(fnum(a.get("bz_min_forecast"),0) - min(bz_vals), 2)
+              })
+              scored.append(aa)
+
+          recent_scored = [x for x in scored if x.get("scored") and parse_dt(x.get("target_time")) and parse_dt(x["target_time"]) >= now - timedelta(days=30)]
+          def verification(rows):
+              if not rows:
+                  return {"count":0, "status":"learning"}
+              brier = sum(fnum(x.get("brier"),0) for x in rows)/len(rows)
+              hit60 = sum(1 for x in rows if (fnum(x.get("southward_bz_probability"),50) >= 60) == bool(x.get("observed_southward"))) / len(rows) * 100
+              mae_min = sum(abs(fnum(x.get("error_bz_min"),0)) for x in rows)/len(rows)
+              return {
+                  "count": len(rows),
+                  "brier_score": round(brier,4),
+                  "direction_hit_rate_threshold60": round(hit60,1),
+                  "bz_min_mae": round(mae_min,2)
+              }
+
+          verif = {
+              "updated_at": now.isoformat(),
+              "last_7d": verification([x for x in recent_scored if parse_dt(x["target_time"]) >= now - timedelta(days=7)]),
+              "last_30d": verification(recent_scored)
+          }
+
+          latest = {
+              "updated_at": now.isoformat(),
+              "model": "SWIFT-Bz-AI-v0.1",
+              "description": "Bz southward probability forecast. HSS/CIR uses 27.27-day IMF recurrence; CME/ICME Bz direction is treated probabilistically.",
+              "forecast_days": forecast_days,
+              "step_hours": step_hours,
+              "current": forecast[0] if forecast else None,
+              "max_risk": max(forecast, key=lambda x:x["southward_bz_probability"]) if forecast else None,
+              "forecast": forecast,
+              "verification": verif,
+              "coefficients": coef
+          }
+
+          archive = {
+              "updated_at": now.isoformat(),
+              "items": scored[-8000:]
+          }
+
+          index = {
+              "updated_at": now.isoformat(),
+              "latest": "latest.json",
+              "forecast": "forecast.json",
+              "coefficients": "coefficients.json",
+              "verification": "verification.json",
+              "archive": "forecast-archive.json",
+              "files": []
+          }
+
+          save_json(FORECAST_PATH, {"updated_at": now.isoformat(), "items": forecast})
+          save_json(LATEST_PATH, latest)
+          save_json(COEF_PATH, coef)
+          save_json(VERIF_PATH, verif)
+          save_json(ARCHIVE_PATH, archive)
+
+          for f in sorted(OUT_DIR.glob("*.json")):
+              index["files"].append({"file":f.name, "path":f"./data/swift-bz/{f.name}", "size_bytes":f.stat().st_size})
+          save_json(INDEX_PATH, index)
+
+          print(json.dumps({
+              "forecast_count": len(forecast),
+              "current": latest["current"],
+              "max_risk": latest["max_risk"],
+              "verification": verif
+          }, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add docs/data/swift-bz
+          git commit -m "Update SWIFT Bz AI" || echo "No changes"
+          git push
