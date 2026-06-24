@@ -1,288 +1,5 @@
 {
-  "updated_at": "2026-06-24T10:17:00.048915+00:00",
-  "status": "ok",
-  "source": "docs/data/swift-wind/latest.json",
-  "description": "Accuracy history for SWIFT Wind AI. Enhanced forecast is compared with NOAA observed solar wind speed.",
-  "keep_days": 90,
-  "definition": {
-    "accuracy_score": "max(0, 100 * (1 - MAE / 150 km/s))",
-    "hit_rate_50kms": "percentage of points where |observed - predicted| <= 50 km/s",
-    "hit_rate_75kms": "percentage of points where |observed - predicted| <= 75 km/s",
-    "hit_rate_100kms": "percentage of points where |observed - predicted| <= 100 km/s"
-  },
-  "summary": {
-    "last_24h": {
-      "count": 24,
-      "mae": 30.024,
-      "bias": -0.551,
-      "rmse": 36.221,
-      "accuracy_score": 79.98,
-      "hit_rate_50kms": 83.33,
-      "hit_rate_75kms": 95.83,
-      "hit_rate_100kms": 100.0
-    },
-    "last_72h": {
-      "count": 72,
-      "mae": 35.554,
-      "bias": -25.73,
-      "rmse": 39.474,
-      "accuracy_score": 76.3,
-      "hit_rate_50kms": 79.17,
-      "hit_rate_75kms": 98.61,
-      "hit_rate_100kms": 100.0
-    },
-    "last_7d": {
-      "count": 145,
-      "mae": 29.371,
-      "bias": -4.817,
-      "rmse": 35.365,
-      "accuracy_score": 80.42,
-      "hit_rate_50kms": 81.38,
-      "hit_rate_75kms": 99.31,
-      "hit_rate_100kms": 100.0
-    },
-    "last_30d": {
-      "count": 145,
-      "mae": 29.371,
-      "bias": -4.817,
-      "rmse": 35.365,
-      "accuracy_score": 80.42,
-      "hit_rate_50kms": 81.38,
-      "hit_rate_75kms": 99.31,
-      "hit_rate_100kms": 100.0
-    },
-    "all": {
-      "count": 145,
-      "mae": 29.371,
-      "bias": -4.817,
-      "rmse": 35.365,
-      "accuracy_score": 80.42,
-      "hit_rate_50kms": 81.38,
-      "hit_rate_75kms": 99.31,
-      "hit_rate_100kms": 100.0
-    }
-  },
-  "daily": [
-    {
-      "date": "2026-06-18",
-      "count": 14,
-      "enhanced": {
-        "count": 14,
-        "mae": 12.024,
-        "bias": -3.914,
-        "rmse": 14.292,
-        "accuracy_score": 91.98,
-        "hit_rate_50kms": 100.0,
-        "hit_rate_75kms": 100.0,
-        "hit_rate_100kms": 100.0
-      },
-      "background": {
-        "count": 14,
-        "mae": 12.024,
-        "bias": -3.914,
-        "rmse": 14.292,
-        "accuracy_score": 91.98,
-        "hit_rate_50kms": 100.0,
-        "hit_rate_75kms": 100.0,
-        "hit_rate_100kms": 100.0
-      },
-      "accuracy_score": 91.98,
-      "hit_rate_100kms": 100.0,
-      "mae": 12.024,
-      "bias": -3.914,
-      "rmse": 14.292,
-      "background_accuracy_score": 91.98,
-      "background_mae": 12.024
-    },
-    {
-      "date": "2026-06-19",
-      "count": 24,
-      "enhanced": {
-        "count": 24,
-        "mae": 33.131,
-        "bias": 26.818,
-        "rmse": 40.557,
-        "accuracy_score": 77.91,
-        "hit_rate_50kms": 62.5,
-        "hit_rate_75kms": 100.0,
-        "hit_rate_100kms": 100.0
-      },
-      "background": {
-        "count": 24,
-        "mae": 33.131,
-        "bias": 26.818,
-        "rmse": 40.557,
-        "accuracy_score": 77.91,
-        "hit_rate_50kms": 62.5,
-        "hit_rate_75kms": 100.0,
-        "hit_rate_100kms": 100.0
-      },
-      "accuracy_score": 77.91,
-      "hit_rate_100kms": 100.0,
-      "mae": 33.131,
-      "bias": 26.818,
-      "rmse": 40.557,
-      "background_accuracy_score": 77.91,
-      "background_mae": 33.131
-    },
-    {
-      "date": "2026-06-20",
-      "count": 24,
-      "enhanced": {
-        "count": 24,
-        "mae": 26.653,
-        "bias": 24.726,
-        "rmse": 32.5,
-        "accuracy_score": 82.23,
-        "hit_rate_50kms": 87.5,
-        "hit_rate_75kms": 100.0,
-        "hit_rate_100kms": 100.0
-      },
-      "background": {
-        "count": 24,
-        "mae": 26.653,
-        "bias": 24.726,
-        "rmse": 32.5,
-        "accuracy_score": 82.23,
-        "hit_rate_50kms": 87.5,
-        "hit_rate_75kms": 100.0,
-        "hit_rate_100kms": 100.0
-      },
-      "accuracy_score": 82.23,
-      "hit_rate_100kms": 100.0,
-      "mae": 26.653,
-      "bias": 24.726,
-      "rmse": 32.5,
-      "background_accuracy_score": 82.23,
-      "background_mae": 26.653
-    },
-    {
-      "date": "2026-06-21",
-      "count": 24,
-      "enhanced": {
-        "count": 24,
-        "mae": 16.603,
-        "bias": -13.787,
-        "rmse": 19.718,
-        "accuracy_score": 88.93,
-        "hit_rate_50kms": 100.0,
-        "hit_rate_75kms": 100.0,
-        "hit_rate_100kms": 100.0
-      },
-      "background": {
-        "count": 24,
-        "mae": 16.603,
-        "bias": -13.787,
-        "rmse": 19.718,
-        "accuracy_score": 88.93,
-        "hit_rate_50kms": 100.0,
-        "hit_rate_75kms": 100.0,
-        "hit_rate_100kms": 100.0
-      },
-      "accuracy_score": 88.93,
-      "hit_rate_100kms": 100.0,
-      "mae": 16.603,
-      "bias": -13.787,
-      "rmse": 19.718,
-      "background_accuracy_score": 88.93,
-      "background_mae": 16.603
-    },
-    {
-      "date": "2026-06-22",
-      "count": 24,
-      "enhanced": {
-        "count": 24,
-        "mae": 42.433,
-        "bias": -42.433,
-        "rmse": 43.708,
-        "accuracy_score": 71.71,
-        "hit_rate_50kms": 75.0,
-        "hit_rate_75kms": 100.0,
-        "hit_rate_100kms": 100.0
-      },
-      "background": {
-        "count": 24,
-        "mae": 42.433,
-        "bias": -42.433,
-        "rmse": 43.708,
-        "accuracy_score": 71.71,
-        "hit_rate_50kms": 75.0,
-        "hit_rate_75kms": 100.0,
-        "hit_rate_100kms": 100.0
-      },
-      "accuracy_score": 71.71,
-      "hit_rate_100kms": 100.0,
-      "mae": 42.433,
-      "bias": -42.433,
-      "rmse": 43.708,
-      "background_accuracy_score": 71.71,
-      "background_mae": 42.433
-    },
-    {
-      "date": "2026-06-23",
-      "count": 24,
-      "enhanced": {
-        "count": 24,
-        "mae": 32.321,
-        "bias": -31.83,
-        "rmse": 37.872,
-        "accuracy_score": 78.45,
-        "hit_rate_50kms": 79.17,
-        "hit_rate_75kms": 100.0,
-        "hit_rate_100kms": 100.0
-      },
-      "background": {
-        "count": 24,
-        "mae": 32.321,
-        "bias": -31.83,
-        "rmse": 37.872,
-        "accuracy_score": 78.45,
-        "hit_rate_50kms": 79.17,
-        "hit_rate_75kms": 100.0,
-        "hit_rate_100kms": 100.0
-      },
-      "accuracy_score": 78.45,
-      "hit_rate_100kms": 100.0,
-      "mae": 32.321,
-      "bias": -31.83,
-      "rmse": 37.872,
-      "background_accuracy_score": 78.45,
-      "background_mae": 32.321
-    },
-    {
-      "date": "2026-06-24",
-      "count": 11,
-      "enhanced": {
-        "count": 11,
-        "mae": 42.098,
-        "bias": 21.135,
-        "rmse": 46.764,
-        "accuracy_score": 71.93,
-        "hit_rate_50kms": 63.64,
-        "hit_rate_75kms": 90.91,
-        "hit_rate_100kms": 100.0
-      },
-      "background": {
-        "count": 11,
-        "mae": 42.098,
-        "bias": 21.135,
-        "rmse": 46.764,
-        "accuracy_score": 71.93,
-        "hit_rate_50kms": 63.64,
-        "hit_rate_75kms": 90.91,
-        "hit_rate_100kms": 100.0
-      },
-      "accuracy_score": 71.93,
-      "hit_rate_100kms": 100.0,
-      "mae": 42.098,
-      "bias": 21.135,
-      "rmse": 46.764,
-      "background_accuracy_score": 71.93,
-      "background_mae": 42.098
-    }
-  ],
-  "item_count": 145,
-  "new_items_this_run": 73,
+  "updated_at": "2026-06-24T11:02:53.730194+00:00",
   "items": [
     {
       "time": "2026-06-18T10:00:00+00:00",
@@ -2458,6 +2175,42 @@
       "hit_75kms": false,
       "hit_100kms": true,
       "updated_at": "2026-06-24T10:17:00.048915+00:00"
+    },
+    {
+      "time": "2026-06-24T11:02:53.730194+00:00",
+      "last_24h": {
+        "count": 0,
+        "status": "learning",
+        "accuracy_score": null,
+        "mae": null,
+        "bias": null,
+        "rmse": null,
+        "hit_rate_50kms": null,
+        "hit_rate_75kms": null,
+        "hit_rate_100kms": null
+      },
+      "last_72h": {
+        "count": 0,
+        "status": "learning",
+        "accuracy_score": null,
+        "mae": null,
+        "bias": null,
+        "rmse": null,
+        "hit_rate_50kms": null,
+        "hit_rate_75kms": null,
+        "hit_rate_100kms": null
+      },
+      "last_7d": {
+        "count": 0,
+        "status": "learning",
+        "accuracy_score": null,
+        "mae": null,
+        "bias": null,
+        "rmse": null,
+        "hit_rate_50kms": null,
+        "hit_rate_75kms": null,
+        "hit_rate_100kms": null
+      }
     }
   ]
 }
