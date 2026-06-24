@@ -3099,7 +3099,7 @@ function drawSwiftAccuracyHistory(){
 
   ctx.fillStyle="#fff";
   ctx.font="12px system-ui";
-  /* removed overlap legend: ctx.fillText("SWIFT Wind AI accuracy history",12,20); */
+  /* removed overlap legend: /* removed overlap: ctx.fillText("SWIFT Wind AI accuracy history",12,20); */ */
 
   if(!rows.length){
     ctx.fillStyle="#aaa";
@@ -4682,6 +4682,11 @@ function pctClean(v){
   return `${Math.round(Number(v))}%`;
 }
 
+function pctOrLearning(v,count){
+  if(!count || count<=0) return "学習中";
+  return pctClean(v);
+}
+
 function aiMetric(label,value,sub){
   return `<div class="metricCard">
     <div class="metricLabel">${label}</div>
@@ -4691,8 +4696,26 @@ function aiMetric(label,value,sub){
 }
 
 function latestWindAccuracy(){
-  const latest=STATE.swiftWindAccuracy?.latest;
-  if(latest) return latest;
+  // accuracy.json / accuracy-history.json の新旧スキーマ両対応
+  const acc=STATE.swiftWindAccuracy || null;
+
+  const direct=acc?.latest || acc?.summary?.last_24h || acc?.summary?.last_72h || null;
+  if(direct){
+    const mae=Number(direct.mae);
+    const score = Number.isFinite(Number(direct.accuracy_score))
+      ? Number(direct.accuracy_score)
+      : (Number.isFinite(mae) ? Math.max(0,100*(1-mae/150)) : null);
+
+    return {
+      enhanced_accuracy_score:score,
+      enhanced_mae:direct.mae,
+      enhanced_bias:direct.bias,
+      enhanced_rmse:direct.rmse,
+      hit_rate_100kms:direct.hit_rate_100kms,
+      points:direct.count
+    };
+  }
+
   const v=STATE.swiftWindModel?.verification?.last_24h?.enhanced;
   if(!v) return null;
   const mae=Number(v.mae);
@@ -4710,8 +4733,13 @@ function latestKpSkill(){
   const model=STATE.swiftKpModel;
   const hist=STATE.swiftKpHistory;
   const skill=STATE.swiftKpLeadSkill || model?.leadtime_skill;
-  const v=model?.verification?.last_7d || hist?.metrics_all || skill?.overall || null;
-  return v;
+
+  if(skill?.overall?.count > 0) return skill.overall;
+  if(model?.verification?.last_7d?.count > 0) return model.verification.last_7d;
+  if(model?.verification?.last_30d?.count > 0) return model.verification.last_30d;
+  if(hist?.metrics_all?.count > 0) return hist.metrics_all;
+  if(skill?.overall) return skill.overall;
+  return model?.verification?.last_7d || null;
 }
 
 function maxForecastKp(){
@@ -4735,8 +4763,8 @@ function renderAIDashboard(){
   const maxKp=maxForecastKp();
   const lead=STATE.swiftKpLeadSkill || STATE.swiftKpModel?.leadtime_skill;
 
-  const windScore=pctClean(windAcc?.enhanced_accuracy_score);
-  const kpHit=pctClean(kpSkill?.hit_rate_within_1kp);
+  const windScore=pctOrLearning(windAcc?.enhanced_accuracy_score, windAcc?.points);
+  const kpHit=pctOrLearning(kpSkill?.hit_rate_within_1kp, kpSkill?.count);
   const maxKpTxt=maxKp ? `${Number(maxKp.kp).toFixed(2)}` : "未読込";
   const maxKpSub=maxKp ? `${utc(maxKp.start_time)} / ${maxKp.g_scale || ""}` : "SWIFT Kp AIを読み込んでください";
   const rotMeta=STATE.swiftWindModel?.inputs?.noaa_history || STATE.swiftWindModel?.verification?.noaa_history;
@@ -4832,22 +4860,24 @@ function drawLeadTimeSkill(){
   const barW=pw/Math.max(rows.length,1)*0.55;
   rows.forEach((r,i)=>{
     const x=L+(i+.5)*pw/rows.length;
-    const val=Number(r.hit_rate_within_1kp);
-    const y=Number.isFinite(val) ? T+ph-(val/100)*ph : T+ph;
+    const count=Number(r.count || 0);
+    const raw=r.hit_rate_within_1kp;
+    const val=(count>0 && raw!==null && raw!==undefined && Number.isFinite(Number(raw))) ? Number(raw) : null;
+    const y=val!==null ? T+ph-(val/100)*ph : T+ph;
     const bh=T+ph-y;
-    ctx.fillStyle=Number.isFinite(val) ? "#38bdf8" : "rgba(148,163,184,.28)";
-    ctx.fillRect(x-barW/2,y,barW,bh);
+    ctx.fillStyle=val!==null ? "#38bdf8" : "rgba(148,163,184,.28)";
+    ctx.fillRect(x-barW/2,y,barW,Math.max(2,bh));
     ctx.fillStyle="#dceafe";
     ctx.font="12px system-ui";
     ctx.textAlign="center";
     ctx.fillText(`${r.lead_day}日`,x,T+ph+18);
-    ctx.fillText(Number.isFinite(val)?`${Math.round(val)}%`:"-",x,Math.max(T+12,y-6));
+    ctx.fillText(val!==null?`${Math.round(val)}%`:"学習中",x,Math.max(T+12,y-6));
   });
   ctx.textAlign="left";
 
   const first=rows[0];
   const last=rows[rows.length-1];
-  box.innerHTML = `1日先 <b>${pctClean(first?.hit_rate_within_1kp)}</b> / ${rows.length}日先 <b>${pctClean(last?.hit_rate_within_1kp)}</b> / 評価点 ${skill?.overall?.count ?? 0}`;
+  box.innerHTML = `1日先 <b>${pctOrLearning(first?.hit_rate_within_1kp, first?.count)}</b> / ${rows.length}日先 <b>${pctOrLearning(last?.hit_rate_within_1kp, last?.count)}</b> / 評価点 ${skill?.overall?.count ?? 0}<br><span class="small">lead-time別評価は「その時刻を過ぎてNOAA実測Kpが入った予報」だけで計算します。初回は1日先でも約24時間後から増えます。</span>`;
 }
 
 function applyStreamlinedLayout(){
@@ -4947,9 +4977,22 @@ function patchAccuracyLegendOverlap(){
   }
 }
 
+
+function patchVisibleAccuracyText(){
+  const accSection=[...document.querySelectorAll("section.card")].find(s=>s.textContent.includes("SWIFT Wind AI 的中率"));
+  if(!accSection) return;
+  const windAcc=latestWindAccuracy();
+  if(!windAcc || !windAcc.points || windAcc.points<=0){
+    accSection.innerHTML=accSection.innerHTML
+      .replace(/現在の的中スコア:\s*<b[^>]*>0%<\/b>/g, '現在の的中スコア: <b>学習中</b>')
+      .replace(/現在の的中スコア:\s*0%/g, '現在の的中スコア: 学習中');
+  }
+}
+
 function renderKp5DayAfterLoad(){
   try{ renderKp5DayForecastTable(); }catch(e){ console.warn("renderKp5DayForecastTable failed",e); }
   try{ patchAccuracyLegendOverlap(); }catch(e){ console.warn("patchAccuracyLegendOverlap failed",e); }
+  try{ patchVisibleAccuracyText(); }catch(e){ console.warn("patchVisibleAccuracyText failed",e); }
 }
 
 /* =========================================================
