@@ -455,6 +455,16 @@ pre{
   padding:6px 10px;
 }
 
+
+/* SWIFT Bz AI / Wind target50 add-on */
+.swiftAddonGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:10px 0}
+@media(max-width:900px){.swiftAddonGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.swiftAddonGrid{grid-template-columns:1fr}}
+.swiftAddonCard{border:1px solid rgba(148,163,184,.22);border-radius:14px;padding:10px;background:rgba(15,23,42,.55)}
+.swiftAddonCard .label{font-size:12px;color:#9fb2d1}
+.swiftAddonCard .value{font-size:22px;font-weight:800;margin-top:3px}
+#swiftBzAiTable td,#swiftBzAiTable th{text-align:center;vertical-align:middle;min-width:72px}
+
 </style>
 </head>
 
@@ -557,6 +567,23 @@ pre{
   <div id="kpForecastTable" class="small" style="margin-top:8px"></div>
   <div class="widebox" style="height:220px;margin-top:10px"><canvas id="kpAiCanvas"></canvas></div>
 </section>
+
+<section class="card" id="swiftBzAiSection" style="margin-top:16px">
+  <h3>④-D SWIFT Bz AI / Southward IMF Risk</h3>
+  <p class="small">
+    Bz南向き確率を5日先まで予測します。HSS/CIRは27.27日前IMF、CMEはDONKI到達時刻・速度・幅から確率補正します。
+    CME内部磁場の向きは断定せず、リスクとして扱います。
+  </p>
+  <div class="row" style="gap:8px;flex-wrap:wrap">
+    <button class="btn" onclick="loadSwiftBzAi()">SWIFT Bz AI読込</button>
+  </div>
+  <div id="swiftBzAiCards" class="swiftAddonGrid"></div>
+  <div style="height:240px;margin-top:8px">
+    <canvas id="swiftBzAiCanvas"></canvas>
+  </div>
+  <div id="swiftBzAiTable" class="small" style="margin-top:10px">SWIFT Bz AI未読込</div>
+</section>
+
 
 <section class="card legacyBlock" style="margin-top:16px">
   <h3>⑤ Environment / Model Status</h3>
@@ -5009,6 +5036,155 @@ renderCDAWTimeline(STATE.selectedTime || new Date());
 rebuildAll();
 renderAIDashboard();
 renderKp5DayAfterLoad();
+</script>
+
+
+<script>
+/* =========================================================
+   SWIFT Bz AI add-on
+========================================================= */
+window.STATE = window.STATE || {};
+STATE.swiftBzAi = STATE.swiftBzAi || null;
+
+async function fetchJsonSafe(url){
+  const r = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now(), {cache:"no-store"});
+  if(!r.ok) throw new Error(`${r.status} ${url}`);
+  return await r.json();
+}
+
+async function loadSwiftBzAi(){
+  const box=document.getElementById("swiftBzAiTable");
+  if(box) box.innerHTML="SWIFT Bz AI読込中...";
+  try{
+    STATE.swiftBzAi = await fetchJsonSafe("./data/swift-bz/latest.json");
+    renderSwiftBzAi();
+  }catch(e){
+    console.error(e);
+    if(box) box.innerHTML=`<span class="bad">SWIFT Bz AI取得失敗:</span> ${e.message}<br><span class="small">先に Update NOAA IMF History → Update SWIFT Bz AI を実行してください。</span>`;
+  }
+}
+
+function bzRiskClass(label){
+  const s=String(label||"").toUpperCase();
+  if(s.includes("HIGH")) return "bad";
+  if(s.includes("MODERATE")) return "warn";
+  return "good";
+}
+
+function renderSwiftBzAi(){
+  const data=STATE.swiftBzAi;
+  const cards=document.getElementById("swiftBzAiCards");
+  const table=document.getElementById("swiftBzAiTable");
+  if(!cards || !table) return;
+
+  const cur=data?.current || data?.forecast?.[0] || null;
+  const max=data?.max_risk || null;
+  const ver=data?.verification?.last_7d || null;
+
+  if(!cur){
+    cards.innerHTML='<div class="small">SWIFT Bz AIデータなし</div>';
+    table.innerHTML="SWIFT Bz AIデータなし";
+    return;
+  }
+
+  cards.innerHTML = `
+    <div class="swiftAddonCard"><div class="label">Current southward Bz probability</div><div class="value ${bzRiskClass(cur.bz_risk)}">${cur.southward_bz_probability ?? "-"}%</div><div class="small">${cur.bz_risk || "-"} / conf ${cur.confidence ?? "-"}</div></div>
+    <div class="swiftAddonCard"><div class="label">Bz min forecast</div><div class="value">${cur.bz_min_forecast ?? "-"} nT</div><div class="small">Bt ${cur.bt_forecast ?? "-"} nT</div></div>
+    <div class="swiftAddonCard"><div class="label">Max risk in 5 days</div><div class="value ${bzRiskClass(max?.bz_risk)}">${max?.southward_bz_probability ?? "-"}%</div><div class="small">${max?.time ? new Date(max.time).toISOString().slice(5,16).replace("T"," ")+" UTC" : "-"}</div></div>
+    <div class="swiftAddonCard"><div class="label">Bz AI verification</div><div class="value">${ver?.count ? (ver.direction_hit_rate_threshold60+"%") : "学習中"}</div><div class="small">score N=${ver?.count ?? 0} / Bz min MAE ${ver?.bz_min_mae ?? "-"}</div></div>
+  `;
+
+  const rows=(data.forecast || []).slice(0,40);
+  const byDay={};
+  rows.forEach(r=>{
+    const d=new Date(r.time);
+    if(!Number.isFinite(d.getTime())) return;
+    const day=d.toISOString().slice(0,10);
+    const slot=String(d.getUTCHours()).padStart(2,"0")+"-"+String((d.getUTCHours()+3)%24).padStart(2,"0")+"UT";
+    byDay[day]=byDay[day]||{};
+    byDay[day][slot]=r;
+  });
+  const days=Object.keys(byDay).sort().slice(0,5);
+  const slots=["00-03UT","03-06UT","06-09UT","09-12UT","12-15UT","15-18UT","18-21UT","21-00UT"];
+
+  let h='<table class="mini"><thead><tr><th>UT</th>';
+  days.forEach(d=>h+=`<th>${d.slice(5).replace("-","/")}</th>`);
+  h+='</tr></thead><tbody>';
+  slots.forEach(slot=>{
+    h+=`<tr><td>${slot}</td>`;
+    days.forEach(day=>{
+      const r=byDay[day]?.[slot];
+      if(!r){ h+='<td>-</td>'; return; }
+      h+=`<td><b class="${bzRiskClass(r.bz_risk)}">${r.southward_bz_probability}%</b><br><span class="small">${r.bz_min_forecast} nT</span></td>`;
+    });
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  table.innerHTML=h;
+
+  drawSwiftBzAi();
+}
+
+function drawSwiftBzAi(){
+  const canvas=document.getElementById("swiftBzAiCanvas");
+  if(!canvas || !STATE.swiftBzAi) return;
+  const parent=canvas.parentElement;
+  const dpr=window.devicePixelRatio||1;
+  const w=Math.max(600,parent.clientWidth||800), h=Math.max(220,parent.clientHeight||240);
+  canvas.width=w*dpr; canvas.height=h*dpr; canvas.style.width=w+"px"; canvas.style.height=h+"px";
+  const ctx=canvas.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+
+  const rows=(STATE.swiftBzAi.forecast||[]).slice(0,40);
+  if(!rows.length){ ctx.fillStyle="#9fb2d1"; ctx.fillText("No Bz forecast",12,24); return; }
+
+  const L=54,R=22,T=28,B=34,pw=w-L-R,ph=h-T-B;
+  ctx.strokeStyle="rgba(255,255,255,.18)";
+  ctx.beginPath();ctx.moveTo(L,T);ctx.lineTo(L,T+ph);ctx.lineTo(L+pw,T+ph);ctx.stroke();
+
+  [0,25,50,75,100].forEach(v=>{
+    const y=T+ph-(v/100)*ph;
+    ctx.strokeStyle="rgba(255,255,255,.07)";
+    ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+pw,y);ctx.stroke();
+    ctx.fillStyle="#8ea6c9";ctx.font="11px system-ui";ctx.fillText(v+"%",10,y+4);
+  });
+
+  ctx.beginPath();
+  rows.forEach((r,i)=>{
+    const x=L+(i/(rows.length-1))*pw;
+    const y=T+ph-(Number(r.southward_bz_probability||0)/100)*ph;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle="#38bdf8";ctx.lineWidth=2;ctx.stroke();
+
+  ctx.beginPath();
+  const bzVals=rows.map(r=>Number(r.bz_min_forecast||0));
+  const min=-25,max=5;
+  rows.forEach((r,i)=>{
+    const x=L+(i/(rows.length-1))*pw;
+    const v=Number(r.bz_min_forecast||0);
+    const y=T+ph-((v-min)/(max-min))*ph;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle="#f97316";ctx.lineWidth=2;ctx.stroke();
+
+  ctx.fillStyle="#dceafe";ctx.font="12px system-ui";
+  ctx.fillText("Southward Bz probability",L+8,T+14);
+  ctx.fillStyle="#fed7aa";ctx.fillText("Bz min forecast",L+210,T+14);
+}
+
+(function(){
+  const oldRebuild = window.rebuildAll;
+  if(typeof oldRebuild === "function" && !oldRebuild.__bzPatched){
+    const patched = async function(){
+      const ret = oldRebuild.apply(this, arguments);
+      try{ await loadSwiftBzAi(); }catch(e){}
+      return ret;
+    };
+    patched.__bzPatched = true;
+    window.rebuildAll = patched;
+  }
+})();
 </script>
 
 </body>
