@@ -3099,7 +3099,7 @@ function drawSwiftAccuracyHistory(){
 
   ctx.fillStyle="#fff";
   ctx.font="12px system-ui";
-  /* removed overlap legend: /* removed overlap: ctx.fillText("SWIFT Wind AI accuracy history",12,20); */ */
+  
 
   if(!rows.length){
     ctx.fillStyle="#aaa";
@@ -4702,7 +4702,7 @@ function latestWindAccuracy(){
   const direct=acc?.latest || acc?.summary?.last_24h || acc?.summary?.last_72h || null;
   if(direct){
     const mae=Number(direct.mae);
-    const score = Number.isFinite(Number(direct.accuracy_score))
+    const score=Number.isFinite(Number(direct.accuracy_score))
       ? Number(direct.accuracy_score)
       : (Number.isFinite(mae) ? Math.max(0,100*(1-mae/150)) : null);
 
@@ -4976,7 +4976,6 @@ function patchAccuracyLegendOverlap(){
     accSection.appendChild(div);
   }
 }
-
 
 function patchVisibleAccuracyText(){
   const accSection=[...document.querySelectorAll("section.card")].find(s=>s.textContent.includes("SWIFT Wind AI 的中率"));
