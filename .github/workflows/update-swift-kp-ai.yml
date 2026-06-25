@@ -309,13 +309,13 @@ jobs:
               ]
 
           default_coef = {
-              "version": "SWIFT-Kp-AI-v0.4-nonlinear-fit",
+              "version": "SWIFT-Kp-AI-v0.5-conservative-fit",
               "updated_at": now.isoformat(),
               "feature_names": ["bias","v_excess","hss_gate","dv_pos","south_prob","south_bz","bt10","epsilon","coupling","cme"],
               "beta": [1.0, 0.55, 0.75, 0.25, 0.70, 0.18, 0.30, 0.90, 0.45, 0.40],
               "calibration": {"gain": 1.0, "offset": 0.0},
               "ridge_lambda": 0.35,
-              "notes": "Nonlinear Kp fitting using observed NOAA Kp, observed wind and IMF. Forecast uses SWIFT Wind AI + SWIFT Bz AI."
+              "notes": "Conservative nonlinear Kp fitting. Removes over-amplifying sigmoid; adds recent-Kp nowcast assimilation and storm gate cap."
           }
           coef = load_json(COEF, default_coef)
           if "beta" not in coef:
@@ -413,14 +413,57 @@ jobs:
               coef["last_fit"] = fit
               coef["updated_at"] = now.isoformat()
 
+
+          def recent_kp_level(hours=9):
+              vals = []
+              for r in kp_obs:
+                  if now - timedelta(hours=hours) <= r["time"] <= now:
+                      vals.append(r["kp"])
+              return median(vals, 2.0)
+
           def raw_kp(t, use_forecast=True):
               x = feature_vector(t, use_forecast=use_forecast)
               beta = coef.get("beta", default_coef["beta"])
-              y = sum(beta[i]*x[i] for i in range(min(len(beta),len(x))))
+
+              # betaの線形和は「Kp相当値」として扱う。
+              # 旧版の 9*sigmoid((y-3)/1.8) は中程度Kpを6〜7へ押し上げすぎるため廃止。
+              linear = sum(beta[i]*x[i] for i in range(min(len(beta),len(x))))
               cal = coef.get("calibration", {})
-              y = fnum(cal.get("gain"), 1.0) * y + fnum(cal.get("offset"), 0.0)
-              # 非線形飽和。強嵐は出るが、異常に飛びすぎないよう抑制
-              y = 9.0 * sigmoid((y - 3.0) / 1.8)
+              y = fnum(cal.get("gain"), 1.0) * linear + fnum(cal.get("offset"), 0.0)
+
+              # 現況Kpへの緩い同化。0〜12hは実測Kpを強く、遠方は弱く使う。
+              recent_kp = recent_kp_level(9)
+              lead_h = max(0, (t-now).total_seconds()/3600)
+              nowcast_w = clamp(1.0 - lead_h/18.0, 0.0, 0.65)
+              y = (1-nowcast_w)*y + nowcast_w*recent_kp
+
+              # Storm gate:
+              # 強い南向きBz・高速風・CMEが無いのにKpだけ7へ飛ぶのを抑える。
+              # x = [bias, v_excess, hss_gate, dv_pos, south_prob, south_bz, bt10, epsilon, coupling, cme]
+              south_prob = x[4]
+              south_bz = x[5]
+              bt10 = x[6]
+              coupling = x[8]
+              cme = x[9]
+
+              storm_potential = (
+                  0.35*sigmoid((south_prob-0.55)/0.12) +
+                  0.25*sigmoid((south_bz-5.0)/2.0) +
+                  0.18*sigmoid((bt10-1.0)/0.35) +
+                  0.12*sigmoid((coupling-1.8)/0.7) +
+                  0.10*sigmoid((cme-0.8)/0.35)
+              )
+
+              if storm_potential < 0.35:
+                  max_allowed = max(4.8, recent_kp + 1.2)
+              elif storm_potential < 0.55:
+                  max_allowed = max(5.7, recent_kp + 1.8)
+              elif storm_potential < 0.72:
+                  max_allowed = max(6.6, recent_kp + 2.5)
+              else:
+                  max_allowed = 9.0
+
+              y = clamp(y, 0, max_allowed)
               return clamp(y, 0, 9), x
 
           def fit_calibration():
@@ -612,7 +655,7 @@ jobs:
 
           latest = {
               "updated_at": now.isoformat(),
-              "model": "SWIFT-Kp-AI-v0.4-nonlinear-fit",
+              "model": "SWIFT-Kp-AI-v0.5-conservative-fit",
               "forecast_days": forecast_days,
               "step_hours": step_hours,
               "forecast": forecast,
@@ -621,7 +664,7 @@ jobs:
               "verification": verification,
               "leadtime_skill": lead_skill,
               "coefficients": coef,
-              "formula": "Kp = fitted sigmoid/ridge nonlinear features(Vsw, dVdt, Bz south probability, Bz_min, Bt, CME)"
+              "formula": "Kp = conservative fitted nonlinear features(Vsw, dVdt, Bz south probability, Bz_min, Bt, CME) + nowcast/storm gate"
           }
 
           hist = load_json(HISTORY, {"items":[]})
