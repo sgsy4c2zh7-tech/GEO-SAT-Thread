@@ -1,28 +1,60 @@
 {
-  "updated_at": "2026-06-25T00:37:37.938224+00:00",
-  "model": "SWIFT Kp AI v0.1",
-  "learning_rate": 0.025,
-  "weights": {
-    "base": 1.2,
-    "wind_speed": 0.006,
-    "cme_effect": 0.004,
-    "dvdt": 0.003,
-    "persistence_kp": 0.35
+  "version": "SWIFT-Kp-AI-v0.4-nonlinear-fit",
+  "updated_at": "2026-06-25T01:14:21.099565+00:00",
+  "feature_names": [
+    "bias",
+    "v_excess",
+    "hss_gate",
+    "dv_pos",
+    "south_prob",
+    "south_bz",
+    "bt10",
+    "epsilon",
+    "coupling",
+    "cme"
+  ],
+  "beta": [
+    0.76723,
+    0.46188,
+    0.55255,
+    0.20059,
+    0.56906,
+    0.15919,
+    0.4348,
+    0.65504,
+    0.51394,
+    0.29535
+  ],
+  "calibration": {
+    "gain": 0.94,
+    "offset": -0.4
   },
-  "bonus": {
-    "CORE-HIT": 1.2,
-    "BODY-HIT": 0.8,
-    "FLANK-HIT": 0.4,
-    "MISS": 0.0,
-    "NO-GEOMETRY": 0.0
+  "ridge_lambda": 0.35,
+  "notes": "Nonlinear Kp fitting using observed NOAA Kp, observed wind and IMF. Forecast uses SWIFT Wind AI + SWIFT Bz AI.",
+  "last_fit": {
+    "beta": [
+      0.76723,
+      0.46188,
+      0.55255,
+      0.20059,
+      0.56906,
+      0.15919,
+      0.4348,
+      0.65504,
+      0.51394,
+      0.29535
+    ],
+    "fit_count": 64,
+    "fit_mae": 2.486,
+    "fit_bias": 2.486,
+    "sample_start": "2026-05-26T01:14:21.099565+00:00",
+    "sample_end": "2026-06-25T01:14:21.099565+00:00"
   },
-  "bias": {
-    "kp": 0.0
-  },
-  "notes": [
-    "Phase 1: coefficient-learning Kp model.",
-    "Input is SWIFT Wind AI, DONKI Earth-directed CME metadata, and NOAA observed planetary Kp.",
-    "Output is NOAA-like 3-day Kp forecast for SwiftTEC integration.",
-    "Kp coefficients are slowly updated from observed Kp verification."
-  ]
+  "last_calibration_fit": {
+    "gain": 0.94,
+    "offset": -0.4,
+    "fit_count": 64,
+    "fit_mae": 3.307,
+    "fit_bias": 3.307
+  }
 }
