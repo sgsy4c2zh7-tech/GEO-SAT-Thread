@@ -1,1039 +1,285 @@
-name: Update SWIFT Kp AI
+name: Update SWIFT Wind AI
 
 on:
   workflow_dispatch:
   schedule:
-    # 3時間ごと。NOAA実測Kpで答え合わせしながら、5日間Kp予報を更新
-    - cron: "52 */3 * * *"
+    - cron: "23 */3 * * *"
 
 permissions:
   contents: write
 
 jobs:
-  update-swift-kp-ai:
+  update-swift-wind-ai:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build SWIFT Kp AI forecast and verification
+      - name: Build nonlinear SWIFT wind forecast
         run: |
           python3 <<'PY'
-          import json
-          import math
-          import re
-          import statistics
-          import time
-          import urllib.request
+          import json, math, statistics
           from pathlib import Path
           from datetime import datetime, timedelta, timezone
 
-          OUT_DIR = Path("docs/data/swift-kp")
+          OUT_DIR = Path("docs/data/swift-wind")
           OUT_DIR.mkdir(parents=True, exist_ok=True)
-
-          WIND_DIR = Path("docs/data/swift-wind")
-          DONKI_DIR = Path("docs/data/donki")
+          NOAA_WIND = Path("docs/data/noaa-wind/history.json")
+          DONKI = Path("docs/data/donki/latest.json")
+          COEF_PATH = OUT_DIR / "coefficients.json"
+          LATEST_PATH = OUT_DIR / "latest.json"
+          VERIF_PATH = OUT_DIR / "verification.json"
+          ARCHIVE_PATH = OUT_DIR / "forecast-archive.json"
+          INDEX_PATH = OUT_DIR / "index.json"
 
           now = datetime.now(timezone.utc)
-
-          # Kpは3時間値。3日間 = 24コマ
           forecast_days = 5
-          bin_hours = 3
-          forecast_bins = forecast_days * 8
+          step_hours = 3
 
-          # 履歴・検証
-          history_days = 30
-          history_keep_days = 90
-
-          # 学習
-          learning_rate_default = 0.025
-
-          NOAA_KP_URLS = [
-              "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json",
-              "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json"
-          ]
-
-          DEFAULT_COEFFICIENTS = {
-              "updated_at": now.isoformat(),
-              "model": "SWIFT Kp AI v0.1",
-              "learning_rate": learning_rate_default,
-              "weights": {
-                  "base": 1.20,
-                  "wind_speed": 0.0060,
-                  "cme_effect": 0.0040,
-                  "dvdt": 0.0030,
-                  "persistence_kp": 0.35
-              },
-              "bonus": {
-                  "CORE-HIT": 1.20,
-                  "BODY-HIT": 0.80,
-                  "FLANK-HIT": 0.40,
-                  "MISS": 0.00,
-                  "NO-GEOMETRY": 0.00
-              },
-              "bias": {
-                  "kp": 0.0
-              },
-              "notes": [
-                  "Phase 1: coefficient-learning Kp model.",
-                  "Input is SWIFT Wind AI, DONKI Earth-directed CME metadata, and NOAA observed planetary Kp.",
-                  "Output is NOAA-like 5-day Kp forecast for SwiftTEC integration.",
-                  "Kp coefficients are slowly updated from observed Kp verification."
-              ]
-          }
-
-          def parse_dt(value):
-              if not value:
-                  return None
-              s = str(value).strip()
-              if not s:
-                  return None
-              if s.endswith("Z"):
-                  s = s[:-1] + "+00:00"
-              try:
-                  dt = datetime.fromisoformat(s)
-                  if dt.tzinfo is None:
-                      dt = dt.replace(tzinfo=timezone.utc)
-                  return dt.astimezone(timezone.utc)
-              except Exception:
-                  return None
-
-          def to_float(value, default=None):
-              try:
-                  if value is None:
-                      return default
-                  s = str(value).strip()
-                  if s == "" or s.lower() in ("nan", "none", "null"):
-                      return default
-                  return float(s)
-              except Exception:
-                  return default
-
-          def clamp(v, lo, hi):
-              return max(lo, min(hi, v))
-
-          def mean(vals, default=None):
-              xs = []
-              for v in vals:
-                  try:
-                      if v is None:
-                          continue
-                      fv = float(v)
-                      if math.isfinite(fv):
-                          xs.append(fv)
-                  except Exception:
-                      pass
-              if not xs:
-                  return default
-              return sum(xs) / len(xs)
-
-          def median(vals, default=None):
-              xs = []
-              for v in vals:
-                  try:
-                      if v is None:
-                          continue
-                      fv = float(v)
-                      if math.isfinite(fv):
-                          xs.append(fv)
-                  except Exception:
-                      pass
-              if not xs:
-                  return default
-              return statistics.median(xs)
-
-          def fetch_json(url, tries=3, timeout=90):
-              last_error = None
-              for i in range(tries):
-                  try:
-                      print("GET", url)
-                      req = urllib.request.Request(
-                          url,
-                          headers={
-                              "User-Agent": "github-actions-swift-kp-ai",
-                              "Accept": "application/json,*/*"
-                          }
-                      )
-                      with urllib.request.urlopen(req, timeout=timeout) as r:
-                          text = r.read().decode("utf-8", errors="replace")
-                          return json.loads(text)
-                  except Exception as e:
-                      last_error = str(e)
-                      wait = 10 * (i + 1)
-                      print(f"retry {i+1}/{tries} failed: {e}; wait {wait}s")
-                      time.sleep(wait)
-              raise RuntimeError(last_error)
-
-          def read_json(path):
-              return json.loads(path.read_text(encoding="utf-8"))
-
-          def load_json_if_exists(path):
+          def load_json(path, default=None):
               if not path.exists():
-                  return None
+                  return default
               try:
-                  return read_json(path)
+                  return json.loads(path.read_text(encoding="utf-8"))
               except Exception as e:
-                  print("JSON read failed:", path, e)
-                  return None
+                  print("load failed", path, e)
+                  return default
 
           def save_json(path, obj):
               path.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
               print("saved", path)
 
-          def floor_to_3h(dt):
-              h = (dt.hour // 3) * 3
-              return dt.replace(hour=h, minute=0, second=0, microsecond=0)
-
-          def ceil_to_3h(dt):
-              f = floor_to_3h(dt)
-              if f == dt.replace(minute=0, second=0, microsecond=0):
-                  return f
-              return f + timedelta(hours=3)
-
-          def kp_to_third(kp):
-              # Kpは1/3刻みに寄せる
-              if kp is None:
+          def parse_dt(v):
+              if not v:
                   return None
-              return round(clamp(round(float(kp) * 3) / 3, 0.0, 9.0), 2)
-
-          def kp_rounded_int(kp):
-              if kp is None:
+              s = str(v).strip()
+              if s.endswith("Z"):
+                  s = s[:-1] + "+00:00"
+              try:
+                  d = datetime.fromisoformat(s)
+                  if d.tzinfo is None:
+                      d = d.replace(tzinfo=timezone.utc)
+                  return d.astimezone(timezone.utc)
+              except Exception:
                   return None
-              return int(clamp(round(float(kp)), 0, 9))
 
-          def g_scale(kp):
-              if kp is None:
-                  return "NA"
-              k = float(kp)
-              if k >= 9:
-                  return "G5"
-              if k >= 8:
-                  return "G4"
-              if k >= 7:
-                  return "G3"
-              if k >= 6:
-                  return "G2"
-              if k >= 5:
-                  return "G1"
-              return "G0"
+          def fnum(v, default=None):
+              try:
+                  if v is None:
+                      return default
+                  x = float(v)
+                  return x if math.isfinite(x) else default
+              except Exception:
+                  return default
 
-          def kp_display(kp):
-              if kp is None:
-                  return "NA"
-              # NOAAっぽく小数2桁に統一。SwiftTEC向けにはjsonのkpを使う
-              return f"{float(kp):.2f}"
+          def clamp(x, lo, hi):
+              return max(lo, min(hi, x))
 
-          def normalize_noaa_kp(data):
-              rows = []
+          def median(vals, default=None):
+              vals = [fnum(x) for x in vals if fnum(x) is not None]
+              return statistics.median(vals) if vals else default
 
-              if not isinstance(data, list) or not data:
-                  return rows
+          def sigmoid(x):
+              if x > 60: return 1.0
+              if x < -60: return 0.0
+              return 1/(1+math.exp(-x))
 
-              # NOAA products/noaa-planetary-k-index.json
-              # first row usually header
-              if isinstance(data[0], list):
-                  header = [str(x).lower() for x in data[0]]
-                  for row in data[1:]:
-                      if not isinstance(row, list) or len(row) < 2:
-                          continue
+          def get_speed(r):
+              return fnum(r.get("speed") or r.get("speed_kms") or r.get("proton_speed") or r.get("v") or r.get("vsw") or r.get("bulk_speed") or r.get("speed_forecast"))
 
-                      dt = parse_dt(row[0])
+          hist = load_json(NOAA_WIND, {"items": []})
+          rows = []
+          for r in hist.get("items", []) or []:
+              dt = parse_dt(r.get("time"))
+              sp = get_speed(r)
+              if dt and sp is not None and 200 <= sp <= 1000:
+                  rows.append({"time": dt, "speed": sp})
+          rows.sort(key=lambda x: x["time"])
 
-                      kp = None
-                      for i, h in enumerate(header):
-                          if i >= len(row):
-                              continue
-                          if "kp" in h or "k index" in h or "k-index" in h:
-                              kp = to_float(row[i], kp)
+          def window(center, hours, source=rows):
+              lo = center - timedelta(hours=hours); hi = center + timedelta(hours=hours)
+              return [r for r in source if lo <= r["time"] <= hi]
 
-                      # fallback: second or third item
-                      if kp is None and len(row) >= 2:
-                          kp = to_float(row[1], None)
-                      if kp is None and len(row) >= 3:
-                          kp = to_float(row[2], None)
+          def before(t, hours, source=rows):
+              lo = t - timedelta(hours=hours)
+              return [r for r in source if lo <= r["time"] <= t]
 
-                      if not dt or kp is None:
-                          continue
+          def speed_median(center, hours, default=None):
+              return median([r["speed"] for r in window(center, hours)], default)
 
-                      if kp < 0 or kp > 9:
-                          continue
+          def recent_speed():
+              recent = before(now, 6)
+              return median([r["speed"] for r in recent], 400)
 
-                      b = floor_to_3h(dt)
-                      rows.append({
-                          "time": b.isoformat(),
-                          "_t": b.timestamp(),
-                          "kp": kp_to_third(kp),
-                          "kp_raw": kp,
-                          "g_scale": g_scale(kp),
-                          "source": "NOAA_PLANETARY_K"
-                      })
+          def recent_trend():
+              recent = before(now, 9)
+              if len(recent) < 2: return 0.0
+              return (median([r["speed"] for r in recent[-2:]], recent[-1]["speed"]) - median([r["speed"] for r in recent[:2]], recent[0]["speed"])) / max(1, (recent[-1]["time"]-recent[0]["time"]).total_seconds()/3600)
 
-                  return dedup_kp_rows(rows)
+          def best_rotation27(t):
+              base = t - timedelta(days=27.27)
+              candidates = []
+              for sh in range(-36, 37, 3):
+                  c = base + timedelta(hours=sh)
+                  vals = [r["speed"] for r in window(c, 3)]
+                  if vals:
+                      sp = median(vals)
+                      prev = speed_median(c-timedelta(hours=6), 3, sp)
+                      nxt = speed_median(c+timedelta(hours=6), 3, sp)
+                      grad = (nxt-prev)/12
+                      score = 0.8*sigmoid((sp-430)/55) + 0.2*sigmoid(abs(grad)/12) - abs(sh)/120
+                      candidates.append((score, sh, sp, grad, len(vals)))
+              if not candidates:
+                  return None, {"shift_hours": None, "samples": 0}
+              best = max(candidates, key=lambda x: x[0])
+              return best[2], {"shift_hours": best[1], "gradient_kms_per_h": round(best[3],2), "samples": best[4]}
 
-              # NOAA json/planetary_k_index_1m.json may be list of dicts
-              if isinstance(data[0], dict):
-                  for r in data:
-                      dt = parse_dt(
-                          r.get("time_tag")
-                          or r.get("time")
-                          or r.get("observation_time")
-                      )
-                      kp = to_float(
-                          r.get("kp")
-                          or r.get("estimated_kp")
-                          or r.get("planetary_k_index")
-                          or r.get("k_index")
-                      )
-
-                      if not dt or kp is None:
-                          continue
-
-                      if kp < 0 or kp > 9:
-                          continue
-
-                      b = floor_to_3h(dt)
-                      rows.append({
-                          "time": b.isoformat(),
-                          "_t": b.timestamp(),
-                          "kp": kp_to_third(kp),
-                          "kp_raw": kp,
-                          "g_scale": g_scale(kp),
-                          "source": "NOAA_KP_JSON"
-                      })
-
-              return dedup_kp_rows(rows)
-
-          def dedup_kp_rows(rows):
-              by_t = {}
-              for r in rows:
-                  by_t[r["time"]] = r
-              out = list(by_t.values())
-              out.sort(key=lambda x: x["_t"])
+          def load_donki_events():
+              data = load_json(DONKI, {})
+              events = []
+              def walk(x):
+                  if isinstance(x, dict):
+                      if any(k in x for k in ("arrival_time","predicted_arrival","estimated_arrival","impact_time","time21_5","startTime","start_time")):
+                          events.append(x)
+                      for v in x.values(): walk(v)
+                  elif isinstance(x, list):
+                      for v in x: walk(v)
+              walk(data)
+              out = []
+              for e in events:
+                  arr = parse_dt(e.get("arrival_time") or e.get("predicted_arrival") or e.get("estimated_arrival") or e.get("impact_time") or e.get("time21_5"))
+                  speed = fnum(e.get("speed") or e.get("arrival_speed") or e.get("cme_speed") or e.get("speed_kms"))
+                  half = fnum(e.get("halfAngle") or e.get("half_angle") or e.get("halfAngleDeg"))
+                  cls = str(e.get("impact_class") or e.get("impactClass") or e.get("hit_class") or e.get("classification") or "").upper()
+                  if arr:
+                      out.append({"arrival": arr, "speed": speed, "half_angle": half, "impact_class": cls})
               return out
 
-          def fetch_noaa_kp():
-              errors = []
-              for url in NOAA_KP_URLS:
-                  try:
-                      data = fetch_json(url)
-                      rows = normalize_noaa_kp(data)
-                      if rows:
-                          return rows, {"url": url, "count": len(rows), "errors": errors}
-                  except Exception as e:
-                      errors.append({"url": url, "error": str(e)})
-              return [], {"url": None, "count": 0, "errors": errors}
+          cme_events = load_donki_events()
 
-          def load_swift_wind():
-              obj = load_json_if_exists(WIND_DIR / "latest.json")
-              if not obj:
-                  return [], [], None
+          coef = load_json(COEF_PATH, None) or {
+              "version": "SWIFT-Wind-AI-v0.3-nonlinear",
+              "updated_at": now.isoformat(),
+              "weights": {"recent":0.30,"rotation27":0.45,"trend":0.10,"nonlinear_hss":0.12,"cme":0.03},
+              "limits": {"min_speed":280,"max_speed":850,"max_delta_per_3h":55,"ema_alpha":0.58},
+              "bias": 0.0,
+              "notes": "Nonlinear HSS/CIR model with rotation27 shift search, saturation, and slew-rate limiter for smoother ±50 km/s target."
+          }
 
-              records = obj.get("records") or []
-              wind = []
-              for r in records:
-                  dt = parse_dt(r.get("time"))
-                  if not dt:
-                      continue
-                  wind.append({
-                      "time": dt.isoformat(),
-                      "_t": dt.timestamp(),
-                      "observed_speed": to_float(r.get("observed_speed")),
-                      "wsa_speed": to_float(r.get("wsa_speed")),
-                      "swift_background_speed": to_float(r.get("swift_background_speed")),
-                      "swift_cme_enhanced_speed": to_float(r.get("swift_cme_enhanced_speed")),
-                      "cme_effect_weighted": to_float(r.get("cme_effect_weighted"), 0.0),
-                      "active_cmes": r.get("active_cmes") or [],
-                      "mode": r.get("mode") or "forecast"
-                  })
+          def cme_pulse(t):
+              val = 0.0; best = None
+              for e in cme_events:
+                  arr = e.get("arrival")
+                  dh = (t-arr).total_seconds()/3600
+                  if abs(dh) > 24: continue
+                  speed = e.get("speed") or 650; half = e.get("half_angle") or 45; cls = e.get("impact_class") or ""
+                  amp = clamp((speed-450)/3.0, 0, 180) + clamp((half-40)*1.2, 0, 70)
+                  if "CORE" in cls: amp *= 1.25
+                  elif "FLANK" in cls: amp *= 0.65
+                  add = amp*math.exp(-(dh/9)**2)
+                  val += add
+                  if best is None or add > best["pulse"]:
+                      best = {"arrival": arr.isoformat(), "speed": speed, "impact_class": cls, "pulse": round(add,1)}
+              return clamp(val, 0, 220), best
 
-              wind.sort(key=lambda x: x["_t"])
-              cmes = obj.get("earth_directed_cmes") or []
-              return wind, cmes, obj.get("updated_at")
+          def nonlinear_predict_raw(t):
+              rec = recent_speed(); trend = recent_trend()
+              lead_h = max(0, (t-now).total_seconds()/3600)
+              rec_decay = math.exp(-lead_h/18)
+              rec_part = rec + clamp(trend * min(lead_h, 12), -70, 70)
+              rot, rot_meta = best_rotation27(t)
+              if rot is None: rot = rec
+              hss_gate = sigmoid((rot-455)/45)
+              hss_boost = 120*hss_gate + 25*math.tanh((rot-500)/90)
+              quiet_pull = -35*sigmoid((390-rot)/35)
+              cme, cme_meta = cme_pulse(t)
+              w = coef["weights"]
+              pred = (w["recent"]*(rec_part*rec_decay + rec*(1-rec_decay)) + w["rotation27"]*rot + w["trend"]*clamp(trend*12, -80, 80) + w["nonlinear_hss"]*(430+hss_boost+quiet_pull) + w["cme"]*(rec+cme))
+              pred += fnum(coef.get("bias"), 0.0)
+              pred = clamp(pred, coef["limits"]["min_speed"], coef["limits"]["max_speed"])
+              return pred, {"recent":round(rec,1), "trend_kms_per_h":round(trend,2), "rotation27":round(rot,1), "rotation27_meta":rot_meta, "hss_gate":round(hss_gate,3), "cme_pulse":round(cme,1), "nearest_cme":cme_meta}
 
-          def nearest_value(records, target_dt, key, max_hours=2):
-              if not records:
-                  return None
-              target = target_dt.timestamp()
-              best = None
-              best_abs = None
-              for r in records:
-                  v = r.get(key)
-                  if v is None:
-                      continue
-                  d = abs(r["_t"] - target)
-                  if best is None or d < best_abs:
-                      best = v
-                      best_abs = d
-              if best is None:
-                  return None
-              if best_abs > max_hours * 3600:
-                  return None
-              return float(best)
+          def smooth_series(raw):
+              if not raw: return []
+              lim = coef["limits"]; alpha = fnum(lim.get("ema_alpha"),0.58); max_delta = fnum(lim.get("max_delta_per_3h"),55)
+              out=[]; prev=raw[0]["raw_speed"]
+              for i,r in enumerate(raw):
+                  x = r["raw_speed"]
+                  y = x if i==0 else prev + clamp((alpha*x+(1-alpha)*prev)-prev, -max_delta, max_delta)
+                  prev = y
+                  rr=dict(r); rr["speed"]=round(y,1); rr["speed_raw_nonlinear"]=round(x,1); rr["smoothing"]={"ema_alpha":alpha,"max_delta_per_3h":max_delta}
+                  out.append(rr)
+              return out
 
-          def window_values(records, start_dt, end_dt, key):
-              vals = []
-              for r in records:
-                  dt = parse_dt(r.get("time"))
-                  if not dt:
-                      continue
-                  if start_dt <= dt < end_dt:
-                      v = r.get(key)
-                      if v is not None:
-                          vals.append(float(v))
-              return vals
+          start = now.replace(minute=0, second=0, microsecond=0)
+          start = start.replace(hour=(start.hour//3)*3)
+          if start < now: start += timedelta(hours=3)
+          raw_forecast=[]
+          for i in range(forecast_days*8):
+              t = start + timedelta(hours=step_hours*i)
+              p, meta = nonlinear_predict_raw(t)
+              raw_forecast.append({"time":t.isoformat(),"lead_hours":round((t-now).total_seconds()/3600,1),"raw_speed":p,"features":meta})
+          forecast = smooth_series(raw_forecast)
 
-          def active_impact_for_bin(wind_records, start_dt, end_dt):
-              impacts = []
-              for r in wind_records:
-                  dt = parse_dt(r.get("time"))
-                  if not dt:
-                      continue
-                  if not (start_dt <= dt < end_dt):
-                      continue
-                  for c in r.get("active_cmes") or []:
-                      imp = c.get("impact")
-                      if imp:
-                          impacts.append(imp)
+          archive = load_json(ARCHIVE_PATH,{"items":[]}).get("items",[])
+          issued_at = now.isoformat()
+          for r in forecast:
+              archive.append({"issued_at":issued_at,"target_time":r["time"],"lead_hours":r["lead_hours"],"predicted_speed":r["speed"],"scored":False})
 
-              # 強い順に代表値
-              order = ["CORE-HIT", "BODY-HIT", "FLANK-HIT", "MISS", "NO-GEOMETRY"]
-              for imp in order:
-                  if imp in impacts:
-                      return imp
-              return None
-
-          def load_coefficients():
-              p = OUT_DIR / "coefficients.json"
-              obj = load_json_if_exists(p)
-              if not obj:
-                  return DEFAULT_COEFFICIENTS
-
-              obj.setdefault("weights", {})
-              obj.setdefault("bonus", {})
-              obj.setdefault("bias", {})
-              obj.setdefault("learning_rate", learning_rate_default)
-
-              for k, v in DEFAULT_COEFFICIENTS["weights"].items():
-                  obj["weights"].setdefault(k, v)
-              for k, v in DEFAULT_COEFFICIENTS["bonus"].items():
-                  obj["bonus"].setdefault(k, v)
-              obj["bias"].setdefault("kp", 0.0)
-
-              return obj
-
-          def previous_kp_component(noaa_kp_rows, target_dt):
-              # 過去24hの実測Kp中央値。先の時間でも「地磁気活動がしばらく残る」成分として使う
-              vals = []
-              for r in noaa_kp_rows:
-                  dt = parse_dt(r.get("time"))
-                  if not dt:
-                      continue
-                  if target_dt - timedelta(hours=24) <= dt < target_dt:
-                      vals.append(r.get("kp"))
-              return median(vals, 2.0)
-
-          def predict_kp_for_bin(start_dt, end_dt, wind_records, noaa_kp_rows, coeff):
-              weights = coeff["weights"]
-              bonus = coeff["bonus"]
-              bias = float(coeff.get("bias", {}).get("kp", 0.0))
-
-              v_vals = window_values(wind_records, start_dt, end_dt, "swift_cme_enhanced_speed")
-              bg_vals = window_values(wind_records, start_dt, end_dt, "swift_background_speed")
-              cme_vals = window_values(wind_records, start_dt, end_dt, "cme_effect_weighted")
-
-              v = mean(v_vals, None)
-              bg = mean(bg_vals, None)
-              cme_effect = mean(cme_vals, 0.0)
-
-              if v is None:
-                  # Wind AIがまだない時のfallback
-                  v = 425.0
-              if bg is None:
-                  bg = 425.0
-              if cme_effect is None:
-                  cme_effect = max(0.0, v - bg)
-
-              # 速度急変
-              prev_v = nearest_value(wind_records, start_dt - timedelta(hours=3), "swift_cme_enhanced_speed", max_hours=4)
-              if prev_v is None:
-                  prev_v = v
-              dvdt = max(0.0, v - prev_v)
-
-              persistence_kp = previous_kp_component(noaa_kp_rows, start_dt)
-              impact = active_impact_for_bin(wind_records, start_dt, end_dt)
-              impact_bonus = float(bonus.get(impact or "MISS", 0.0))
-
-              kp = (
-                  float(weights.get("base", 1.2))
-                  + float(weights.get("wind_speed", 0.006)) * max(0.0, v - 350.0)
-                  + float(weights.get("cme_effect", 0.004)) * max(0.0, cme_effect)
-                  + float(weights.get("dvdt", 0.003)) * max(0.0, dvdt)
-                  + float(weights.get("persistence_kp", 0.35)) * max(0.0, persistence_kp - 2.0)
-                  + impact_bonus
-                  + bias
-              )
-
-              kp = kp_to_third(kp)
-
-              # 信頼度の簡易評価
-              confidence = 0.55
-              if len(v_vals) >= 2:
-                  confidence += 0.15
-              if cme_effect and cme_effect > 40:
-                  confidence -= 0.05
-              if abs(dvdt) > 100:
-                  confidence -= 0.05
-              if impact in ("CORE-HIT", "BODY-HIT"):
-                  confidence -= 0.05
-              confidence = clamp(confidence, 0.25, 0.85)
-
-              return {
-                  "start_time": start_dt.isoformat(),
-                  "end_time": end_dt.isoformat(),
-                  "kp": kp,
-                  "kp_rounded": kp_rounded_int(kp),
-                  "g_scale": g_scale(kp),
-                  "confidence": round(confidence, 2),
-                  "components": {
-                      "wind_speed": round(v, 2),
-                      "background_speed": round(bg, 2),
-                      "cme_effect": round(cme_effect, 2),
-                      "dvdt": round(dvdt, 2),
-                      "persistence_kp": round(persistence_kp, 2),
-                      "impact": impact,
-                      "impact_bonus": round(impact_bonus, 2),
-                      "bias": round(bias, 3)
-                  }
-              }
-
-          def observed_kp_for_bin(noaa_kp_rows, start_dt):
-              for r in noaa_kp_rows:
-                  dt = parse_dt(r.get("time"))
-                  if dt and dt == start_dt:
-                      return r
-              return None
-
-          def metrics(rows):
-              errors = []
-              hit_1 = 0
-              hit_067 = 0
-              g_hit = 0
-              n = 0
-
+          def nearest_obs(t, max_minutes=75):
+              best=None; bd=10**18
               for r in rows:
-                  obs = r.get("observed_kp")
-                  pred = r.get("predicted_kp")
-                  if obs is None or pred is None:
-                      continue
-
-                  e = float(obs) - float(pred)
-                  errors.append(e)
-                  n += 1
-
-                  if abs(e) <= 1.0:
-                      hit_1 += 1
-                  if abs(e) <= 0.67:
-                      hit_067 += 1
-                  if r.get("observed_g_scale") == r.get("predicted_g_scale"):
-                      g_hit += 1
-
-              if not errors:
-                  return {
-                      "count": 0,
-                      "mae": None,
-                      "bias": None,
-                      "rmse": None,
-                      "hit_rate_within_1kp": None,
-                      "hit_rate_within_067kp": None,
-                      "g_scale_hit_rate": None
-                  }
-
-              mae = sum(abs(e) for e in errors) / len(errors)
-              bias = sum(errors) / len(errors)
-              rmse = math.sqrt(sum(e * e for e in errors) / len(errors))
-
-              return {
-                  "count": n,
-                  "mae": round(mae, 3),
-                  "bias": round(bias, 3),
-                  "rmse": round(rmse, 3),
-                  "hit_rate_within_1kp": round(100 * hit_1 / n, 2),
-                  "hit_rate_within_067kp": round(100 * hit_067 / n, 2),
-                  "g_scale_hit_rate": round(100 * g_hit / n, 2)
-              }
-
-          def update_coefficients(coeff, verification_rows):
-              recent = []
-              cutoff = now - timedelta(days=7)
-              for r in verification_rows:
-                  dt = parse_dt(r.get("time"))
-                  if dt and dt >= cutoff and r.get("observed_kp") is not None and r.get("predicted_kp") is not None:
-                      recent.append(r)
-
-              if len(recent) < 4:
-                  coeff["updated_at"] = now.isoformat()
-                  return coeff
-
-              lr = clamp(float(coeff.get("learning_rate", learning_rate_default)), 0.005, 0.08)
-
-              errs = [float(r["observed_kp"]) - float(r["predicted_kp"]) for r in recent]
-              bias = sum(errs) / len(errs)
-
-              # 全体biasを補正
-              delta_bias = clamp(bias * lr, -0.20, 0.20)
-              coeff["bias"]["kp"] = round(clamp(float(coeff["bias"].get("kp", 0.0)) + delta_bias, -2.0, 2.0), 4)
-
-              # 風速が高い時に外しているなら wind_speed 係数を調整
-              high_wind = [r for r in recent if float(r.get("wind_speed") or 0.0) >= 500.0]
-              if len(high_wind) >= 3:
-                  e = mean([float(r["observed_kp"]) - float(r["predicted_kp"]) for r in high_wind], 0.0)
-                  delta = clamp((e / 5.0) * lr * 0.002, -0.0005, 0.0005)
-                  coeff["weights"]["wind_speed"] = round(clamp(float(coeff["weights"]["wind_speed"]) + delta, 0.001, 0.020), 6)
-
-              # CME効果がある時に外しているなら cme_effect 係数を調整
-              cme_rows = [r for r in recent if float(r.get("cme_effect") or 0.0) >= 30.0]
-              if len(cme_rows) >= 2:
-                  e = mean([float(r["observed_kp"]) - float(r["predicted_kp"]) for r in cme_rows], 0.0)
-                  delta = clamp((e / 5.0) * lr * 0.002, -0.0007, 0.0007)
-                  coeff["weights"]["cme_effect"] = round(clamp(float(coeff["weights"]["cme_effect"]) + delta, 0.0005, 0.020), 6)
-
-              # 急変がある時の係数
-              dv_rows = [r for r in recent if float(r.get("dvdt") or 0.0) >= 60.0]
-              if len(dv_rows) >= 2:
-                  e = mean([float(r["observed_kp"]) - float(r["predicted_kp"]) for r in dv_rows], 0.0)
-                  delta = clamp((e / 5.0) * lr * 0.002, -0.0007, 0.0007)
-                  coeff["weights"]["dvdt"] = round(clamp(float(coeff["weights"]["dvdt"]) + delta, 0.0005, 0.020), 6)
-
-              # impact bonusの微調整
-              for impact in ["CORE-HIT", "BODY-HIT", "FLANK-HIT"]:
-                  rows = [r for r in recent if r.get("impact") == impact]
-                  if len(rows) >= 2:
-                      e = mean([float(r["observed_kp"]) - float(r["predicted_kp"]) for r in rows], 0.0)
-                      delta = clamp(e * lr, -0.15, 0.15)
-                      coeff["bonus"][impact] = round(clamp(float(coeff["bonus"].get(impact, 0.0)) + delta, 0.0, 3.0), 4)
-
-              coeff["last_training"] = {
-                  "time": now.isoformat(),
-                  "points": len(recent),
-                  "bias_7d": round(bias, 3),
-                  "delta_bias": round(delta_bias, 4)
-              }
-              coeff["updated_at"] = now.isoformat()
-              return coeff
-
-          def format_forecast_txt(forecast_rows):
-              issued = now.strftime("%Y %b %d %H%M UTC")
-
-              days = []
-              today = now.date()
-              for i in range(forecast_days):
-                  days.append(today + timedelta(days=i))
-
-              day_labels = [
-                  datetime(d.year, d.month, d.day, tzinfo=timezone.utc).strftime("%b %d")
-                  for d in days
-              ]
-
-              by_date_slot = {}
-              for r in forecast_rows:
-                  st = parse_dt(r["start_time"])
-                  if not st:
-                      continue
-                  slot = f"{st.hour:02d}-{(st.hour + 3) % 24:02d}UT"
-                  by_date_slot[(st.date(), slot)] = r["kp"]
-
-              slots = [
-                  "00-03UT", "03-06UT", "06-09UT", "09-12UT",
-                  "12-15UT", "15-18UT", "18-21UT", "21-00UT"
-              ]
-
-              lines = []
-              lines.append(f":Product: {forecast_days}-Day Forecast of SWIFT Planetary K Index")
-              lines.append(f":Issued: {issued}")
-              lines.append("#")
-              lines.append("# SWIFT Kp AI Forecast")
-              lines.append("# Format is NOAA-style 3-hour planetary Kp forecast.")
-              lines.append("# Values are decimal Kp rounded to thirds for SwiftTEC integration.")
-              lines.append("#")
-
-              header = f"{'':10s}" + "".join([f"{d:>10s}" for d in day_labels])
-              lines.append(header)
-
-              for slot in slots:
-                  vals = []
-                  for d in days:
-                      vals.append(kp_display(by_date_slot.get((d, slot))))
-                  lines.append(f"{slot:<10s}" + "".join([f"{v:>10s}" for v in vals]))
-
-              lines.append("#")
-              lines.append("# G-scale reference: G1=Kp5, G2=Kp6, G3=Kp7, G4=Kp8, G5=Kp9.")
-              lines.append("# Source: SWIFT Kp AI, generated from SWIFT Wind AI + NOAA observed Kp verification.")
-              return "\n".join(lines) + "\n"
-
-          def archive_and_score_forecasts(forecast_rows, observed_kp_rows):
-              archive_path = OUT_DIR / "forecast-archive.json"
-              lead_path = OUT_DIR / "leadtime-skill.json"
-
-              old_archive = load_json_if_exists(archive_path) or {"items": []}
-              old_items = old_archive.get("items") or []
-
-              issued_at = floor_to_3h(now)
-              issued_iso = issued_at.isoformat()
-
-              by_key = {}
-
-              for item in old_items:
-                  key = f"{item.get('issued_at')}|{item.get('target_time')}"
-                  if item.get("issued_at") and item.get("target_time"):
-                      by_key[key] = item
-
-              for r in forecast_rows:
-                  st = parse_dt(r.get("start_time"))
-                  if not st:
-                      continue
-
-                  lead_hours = int(round((st - issued_at).total_seconds() / 3600))
-                  if lead_hours < 0:
-                      continue
-
-                  lead_day = int(lead_hours // 24) + 1
-                  lead_day = max(1, min(forecast_days, lead_day))
-
-                  item = {
-                      "issued_at": issued_iso,
-                      "target_time": st.isoformat(),
-                      "lead_hours": lead_hours,
-                      "lead_day": lead_day,
-                      "predicted_kp": r.get("kp"),
-                      "predicted_g_scale": r.get("g_scale"),
-                      "confidence": r.get("confidence"),
-                      "components": r.get("components") or {}
-                  }
-
-                  key = f"{item['issued_at']}|{item['target_time']}"
-                  by_key[key] = item
-
-              # 実測Kpが入ったものを答え合わせ
-              for key, item in list(by_key.items()):
-                  target = parse_dt(item.get("target_time"))
-                  if not target:
-                      continue
-
-                  if target <= now:
-                      obs = observed_kp_for_bin(observed_kp_rows, target)
-                      if obs:
-                          item["observed_kp"] = obs["kp"]
-                          item["observed_g_scale"] = obs["g_scale"]
-                          item["error"] = round(float(obs["kp"]) - float(item["predicted_kp"]), 3)
-                          item["abs_error"] = round(abs(float(obs["kp"]) - float(item["predicted_kp"])), 3)
-                          item["hit_within_1kp"] = abs(float(obs["kp"]) - float(item["predicted_kp"])) <= 1.0
-                          item["hit_within_067kp"] = abs(float(obs["kp"]) - float(item["predicted_kp"])) <= 0.67
-                          item["g_scale_hit"] = obs["g_scale"] == item.get("predicted_g_scale")
-                          item["verified_at"] = now.isoformat()
-
-              keep_after = now - timedelta(days=history_keep_days)
-              items = []
-
-              for item in by_key.values():
-                  issued = parse_dt(item.get("issued_at"))
-                  target = parse_dt(item.get("target_time"))
-                  if issued and issued >= keep_after:
-                      items.append(item)
-                  elif target and target >= keep_after:
-                      items.append(item)
-
-              items.sort(key=lambda x: (x.get("issued_at") or "", x.get("target_time") or ""))
-
-              def skill_metrics(rows):
-                  checked = [r for r in rows if r.get("observed_kp") is not None and r.get("predicted_kp") is not None]
-                  if not checked:
-                      return {
-                          "count": 0,
-                          "mae": None,
-                          "bias": None,
-                          "rmse": None,
-                          "hit_rate_within_1kp": None,
-                          "hit_rate_within_067kp": None,
-                          "g_scale_hit_rate": None
-                      }
-
-                  errors = [float(r["observed_kp"]) - float(r["predicted_kp"]) for r in checked]
-                  mae = sum(abs(e) for e in errors) / len(errors)
-                  bias = sum(errors) / len(errors)
-                  rmse = math.sqrt(sum(e * e for e in errors) / len(errors))
-                  hit1 = sum(1 for r in checked if r.get("hit_within_1kp"))
-                  hit067 = sum(1 for r in checked if r.get("hit_within_067kp"))
-                  ghit = sum(1 for r in checked if r.get("g_scale_hit"))
-
-                  return {
-                      "count": len(checked),
-                      "mae": round(mae, 3),
-                      "bias": round(bias, 3),
-                      "rmse": round(rmse, 3),
-                      "hit_rate_within_1kp": round(100 * hit1 / len(checked), 2),
-                      "hit_rate_within_067kp": round(100 * hit067 / len(checked), 2),
-                      "g_scale_hit_rate": round(100 * ghit / len(checked), 2)
-                  }
-
-              by_lead_day = []
-              for d in range(1, forecast_days + 1):
-                  rows = [r for r in items if int(r.get("lead_day") or 0) == d]
-                  by_lead_day.append({
-                      "lead_day": d,
-                      "lead_hours_min": (d - 1) * 24,
-                      "lead_hours_max": d * 24,
-                      **skill_metrics(rows)
-                  })
-
-              skill = {
-                  "updated_at": now.isoformat(),
-                  "forecast_days": forecast_days,
-                  "definition": {
-                      "lead_day": "1=0-24h, 2=24-48h, ...",
-                      "hit_rate_within_1kp": "percentage of archived forecasts whose absolute Kp error is <= 1.0",
-                      "hit_rate_within_067kp": "percentage of archived forecasts whose absolute Kp error is <= 0.67"
-                  },
-                  "overall": skill_metrics(items),
-                  "by_lead_day": by_lead_day
-              }
-
-              archive = {
-                  "updated_at": now.isoformat(),
-                  "keep_days": history_keep_days,
-                  "count": len(items),
-                  "verified_count": sum(1 for r in items if r.get("observed_kp") is not None),
-                  "items": items
-              }
-
-              save_json(archive_path, archive)
-              save_json(lead_path, skill)
-
-              return archive, skill
-
-          observed_kp_rows, noaa_meta = fetch_noaa_kp()
-          wind_records, wind_cmes, wind_updated_at = load_swift_wind()
-          coeff = load_coefficients()
-
-          print("NOAA Kp rows:", len(observed_kp_rows), noaa_meta)
-          print("SWIFT Wind records:", len(wind_records), "updated:", wind_updated_at)
-          print("Wind CME count:", len(wind_cmes))
-          print("coefficients:", coeff)
-
-          # 5日間予報
-          start = floor_to_3h(now)
-          forecast_rows = []
-
-          t = start
-          for i in range(forecast_bins):
-              end = t + timedelta(hours=bin_hours)
-              r = predict_kp_for_bin(t, end, wind_records, observed_kp_rows, coeff)
-              r["slot_index"] = i
-              r["source"] = "SWIFT_KP_AI"
-              forecast_rows.append(r)
-              t = end
-
-          # 過去30日分の「現在の係数で再予測」検証
-          verification_rows = []
-          hist_start = floor_to_3h(now - timedelta(days=history_days))
-          hist_end = floor_to_3h(now)
-
-          t = hist_start
-          while t <= hist_end:
-              end = t + timedelta(hours=bin_hours)
-              pred = predict_kp_for_bin(t, end, wind_records, observed_kp_rows, coeff)
-              obs = observed_kp_for_bin(observed_kp_rows, t)
-
-              row = {
-                  "time": t.isoformat(),
-                  "predicted_kp": pred["kp"],
-                  "predicted_g_scale": pred["g_scale"],
-                  "observed_kp": obs["kp"] if obs else None,
-                  "observed_g_scale": obs["g_scale"] if obs else None,
-                  "error": round((obs["kp"] - pred["kp"]), 3) if obs else None,
-                  "hit_within_1kp": abs(obs["kp"] - pred["kp"]) <= 1.0 if obs else None,
-                  "hit_within_067kp": abs(obs["kp"] - pred["kp"]) <= 0.67 if obs else None,
-                  "g_scale_hit": (obs["g_scale"] == pred["g_scale"]) if obs else None,
-                  "wind_speed": pred["components"]["wind_speed"],
-                  "background_speed": pred["components"]["background_speed"],
-                  "cme_effect": pred["components"]["cme_effect"],
-                  "dvdt": pred["components"]["dvdt"],
-                  "persistence_kp": pred["components"]["persistence_kp"],
-                  "impact": pred["components"]["impact"],
-                  "confidence": pred["confidence"]
-              }
-              verification_rows.append(row)
-              t = end
-
-          verification_7d = [
-              r for r in verification_rows
-              if parse_dt(r["time"]) and parse_dt(r["time"]) >= now - timedelta(days=7)
-          ]
-          verification_30d = verification_rows
-
-          # 係数学習：検証後に更新し、次回予測に反映
-          coeff = update_coefficients(coeff, verification_rows)
-
-          verification = {
-              "updated_at": now.isoformat(),
-              "noaa": noaa_meta,
-              "wind_updated_at": wind_updated_at,
-              "last_7d": metrics(verification_7d),
-              "last_30d": metrics(verification_30d),
-              "latest_checks": verification_rows[-40:]
-          }
-
-          forecast_txt = format_forecast_txt(forecast_rows)
-
-
-          forecast_archive, leadtime_skill = archive_and_score_forecasts(forecast_rows, observed_kp_rows)
-
-          learned_formula = {
-              "wind_formula": "Vsw(t) = wp*V_recent + wr*V_27day + ww*V_WSA + wc*CME_pulse + bias_v",
-              "kp_formula": "Kp(t) = base + a*max(0,Vsw-350) + b*CME_effect + c*dVdt + d*max(0,Kp_recent-2) + impact_bonus + bias_kp",
-              "wind_terms": latest_wind_formula if False else None,
-              "kp_terms": {
-                  "base": coeff.get("weights", {}).get("base"),
-                  "wind_speed": coeff.get("weights", {}).get("wind_speed"),
-                  "cme_effect": coeff.get("weights", {}).get("cme_effect"),
-                  "dvdt": coeff.get("weights", {}).get("dvdt"),
-                  "persistence_kp": coeff.get("weights", {}).get("persistence_kp"),
-                  "bias": coeff.get("bias", {}).get("kp"),
-                  "bonus": coeff.get("bonus", {})
-              }
-          }
-
-          latest = {
-              "updated_at": now.isoformat(),
-              "model": "SWIFT Kp AI v0.1",
-              "source": "SWIFT Wind AI + NOAA observed Kp + DONKI CME metadata",
-              "description": "Self-tuning 5-day Kp forecast. Output is NOAA-style 3-hour Kp forecast for SwiftTEC integration.",
-              "range": {
-                  "forecast_days": forecast_days,
-                  "bin_hours": bin_hours,
-                  "forecast_bins": forecast_bins,
-                  "history_days": history_days
-              },
-              "inputs": {
-                  "noaa_kp": noaa_meta,
-                  "swift_wind_updated_at": wind_updated_at,
-                  "swift_wind_records": len(wind_records),
-                  "earth_directed_cme_count": len(wind_cmes)
-              },
-              "coefficients": coeff,
-              "verification": verification,
-              "leadtime_skill": leadtime_skill,
-              "learned_formula": learned_formula,
-              "forecast": forecast_rows,
-              "forecast_text_path": "./data/swift-kp/forecast.txt",
-              "forecast_archive_path": "./data/swift-kp/forecast-archive.json",
-              "leadtime_skill_path": "./data/swift-kp/leadtime-skill.json"
-          }
-
-          save_json(OUT_DIR / "latest.json", latest)
-          save_json(OUT_DIR / "coefficients.json", coeff)
-          save_json(OUT_DIR / "verification.json", verification)
-
-          (OUT_DIR / "forecast.txt").write_text(forecast_txt, encoding="utf-8")
-          print("saved", OUT_DIR / "forecast.txt")
-
-          # 日別snapshot
-          daily = OUT_DIR / f"{now.strftime('%Y-%m-%d')}.json"
-          save_json(daily, latest)
-
-          # 90日履歴ファイル
-          history_path = OUT_DIR / "history.json"
-          old_history = load_json_if_exists(history_path) or {"items": []}
-          items = old_history.get("items") or []
-
-          # 直近の検証点を追記。重複はtimeで上書き
-          by_time = {}
-          for r in items:
-              if r.get("time"):
-                  by_time[r["time"]] = r
-
-          for r in verification_rows:
-              if r.get("observed_kp") is None:
-                  continue
-              by_time[r["time"]] = {
-                  **r,
-                  "updated_at": now.isoformat()
-              }
-
-          keep_after = now - timedelta(days=history_keep_days)
-          new_items = []
-          for k, r in by_time.items():
-              dt = parse_dt(k)
-              if dt and dt >= keep_after:
-                  new_items.append(r)
-
-          new_items.sort(key=lambda x: x["time"])
-
-          history = {
-              "updated_at": now.isoformat(),
-              "keep_days": history_keep_days,
-              "count": len(new_items),
-              "metrics_all": metrics(new_items),
-              "items": new_items
-          }
-          save_json(history_path, history)
-
-          # 古い日別snapshot削除
-          cutoff = now - timedelta(days=history_keep_days)
-          for f in OUT_DIR.glob("*.json"):
-              if f.name in ("latest.json", "coefficients.json", "verification.json", "history.json", "index.json"):
-                  continue
-              try:
-                  dt = datetime.strptime(f.stem, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-                  if dt < cutoff:
-                      print("delete old swift-kp snapshot:", f)
-                      f.unlink()
-              except Exception:
-                  pass
-
-          files = []
-          for f in sorted(OUT_DIR.glob("*"), reverse=True):
-              if f.name == "index.json":
-                  continue
-              if not f.is_file():
-                  continue
-              files.append({
-                  "file": f.name,
-                  "path": f"./data/swift-kp/{f.name}",
-                  "size_bytes": f.stat().st_size
-              })
-
-          index = {
-              "updated_at": now.isoformat(),
-              "latest": "latest.json",
-              "forecast_txt": "forecast.txt",
-              "coefficients": "coefficients.json",
-              "verification": "verification.json",
-              "history": "history.json",
-              "forecast_archive": "forecast-archive.json",
-              "leadtime_skill": "leadtime-skill.json",
-              "files": files
-          }
-          save_json(OUT_DIR / "index.json", index)
-
-          print("forecast.txt:")
-          print(forecast_txt)
-          print(json.dumps({
-              "forecast_bins": len(forecast_rows),
-              "leadtime_skill": leadtime_skill.get("by_lead_day"),
-              "verification_7d": verification["last_7d"],
-              "verification_30d": verification["last_30d"],
-              "coefficients": coeff
-          }, ensure_ascii=False, indent=2))
-
+                  d=abs((r["time"]-t).total_seconds())
+                  if d<bd: bd=d; best=r
+              return best if best and bd<=max_minutes*60 else None
+
+          scored=[]
+          for a in archive[-12000:]:
+              if a.get("scored"):
+                  scored.append(a); continue
+              tt=parse_dt(a.get("target_time"))
+              if not tt or tt>now:
+                  scored.append(a); continue
+              obs=nearest_obs(tt)
+              if not obs:
+                  scored.append(a); continue
+              err=fnum(a.get("predicted_speed"),0)-obs["speed"]
+              aa=dict(a); aa.update({"scored":True,"observed_speed":round(obs["speed"],2),"error":round(err,2),"abs_error":round(abs(err),2),"hit_50kms":abs(err)<=50,"hit_75kms":abs(err)<=75,"hit_100kms":abs(err)<=100})
+              scored.append(aa)
+
+          def metrics(items):
+              items=[x for x in items if x.get("scored")]
+              if not items: return {"count":0,"status":"learning"}
+              errs=[fnum(x["error"],0) for x in items]
+              mae=sum(abs(e) for e in errs)/len(errs); bias=sum(errs)/len(errs); rmse=math.sqrt(sum(e*e for e in errs)/len(errs))
+              return {"count":len(items),"mae":round(mae,2),"bias":round(bias,2),"rmse":round(rmse,2),"hit_rate_50kms":round(sum(1 for x in items if x.get("hit_50kms"))/len(items)*100,1),"hit_rate_75kms":round(sum(1 for x in items if x.get("hit_75kms"))/len(items)*100,1),"hit_rate_100kms":round(sum(1 for x in items if x.get("hit_100kms"))/len(items)*100,1)}
+
+          def since(days):
+              cut=now-timedelta(days=days)
+              return [x for x in scored if parse_dt(x.get("target_time")) and parse_dt(x["target_time"])>=cut]
+          verification={"updated_at":now.isoformat(),"last_24h":metrics(since(1)),"last_7d":metrics(since(7)),"last_30d":metrics(since(30))}
+
+          v24=verification["last_24h"]
+          if v24.get("count",0)>=4 and v24.get("bias") is not None:
+              old_bias=fnum(coef.get("bias"),0)
+              coef["bias"]=round(clamp(old_bias-0.08*fnum(v24["bias"],0),-80,80),3)
+              coef["updated_at"]=now.isoformat()
+              coef["last_fit"]={"source":"last_24h_bias","bias_before":old_bias,"observed_bias":v24["bias"],"bias_after":coef["bias"]}
+
+          latest={"updated_at":now.isoformat(),"model":"SWIFT-Wind-AI-v0.3-nonlinear","forecast_days":forecast_days,"step_hours":step_hours,"target":"±50 km/s for 0-24h","forecast":forecast,"current":forecast[0] if forecast else None,"verification":verification,"coefficients":coef,"formula":"Vsw = smooth(limit(nonlinear[recent + shifted rotation27 + HSS sigmoid + CME pulse + bias]))"}
+          index={"updated_at":now.isoformat(),"latest":"latest.json","coefficients":"coefficients.json","verification":"verification.json","archive":"forecast-archive.json","files":[]}
+          save_json(LATEST_PATH,latest); save_json(COEF_PATH,coef); save_json(VERIF_PATH,verification); save_json(ARCHIVE_PATH,{"updated_at":now.isoformat(),"items":scored[-12000:]})
+          for f in sorted(OUT_DIR.glob("*.json")):
+              index["files"].append({"file":f.name,"path":f"./data/swift-wind/{f.name}","size_bytes":f.stat().st_size})
+          save_json(INDEX_PATH,index)
+          print(json.dumps({"current":latest["current"],"verification":verification,"bias":coef.get("bias")},ensure_ascii=False,indent=2))
           PY
 
       - name: Commit and push
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-
-          git add docs/data/swift-kp
-
-          git commit -m "Update SWIFT Kp AI forecast" || echo "No changes"
+          git add docs/data/swift-wind
+          git commit -m "Update nonlinear SWIFT wind forecast" || echo "No changes"
           git push
