@@ -3,6 +3,7 @@ name: Update SWIFT Wind AI
 on:
   workflow_dispatch:
   schedule:
+    # NOAA Wind History更新後に実行
     - cron: "23 */3 * * *"
 
 permissions:
@@ -23,15 +24,17 @@ jobs:
           from pathlib import Path
           from datetime import datetime, timedelta, timezone
 
-          OUT_DIR = Path("docs/data/swift-wind")
-          OUT_DIR.mkdir(parents=True, exist_ok=True)
+          OUT = Path("docs/data/swift-wind")
+          OUT.mkdir(parents=True, exist_ok=True)
+
           NOAA_WIND = Path("docs/data/noaa-wind/history.json")
           DONKI = Path("docs/data/donki/latest.json")
-          COEF_PATH = OUT_DIR / "coefficients.json"
-          LATEST_PATH = OUT_DIR / "latest.json"
-          VERIF_PATH = OUT_DIR / "verification.json"
-          ARCHIVE_PATH = OUT_DIR / "forecast-archive.json"
-          INDEX_PATH = OUT_DIR / "index.json"
+
+          LATEST = OUT / "latest.json"
+          COEF = OUT / "coefficients.json"
+          VERIF = OUT / "verification.json"
+          ARCHIVE = OUT / "forecast-archive.json"
+          INDEX = OUT / "index.json"
 
           now = datetime.now(timezone.utc)
           forecast_days = 5
@@ -80,200 +83,357 @@ jobs:
               vals = [fnum(x) for x in vals if fnum(x) is not None]
               return statistics.median(vals) if vals else default
 
+          def mean(vals, default=None):
+              vals = [fnum(x) for x in vals if fnum(x) is not None]
+              return sum(vals) / len(vals) if vals else default
+
           def sigmoid(x):
-              if x > 60: return 1.0
-              if x < -60: return 0.0
-              return 1/(1+math.exp(-x))
+              if x > 60:
+                  return 1.0
+              if x < -60:
+                  return 0.0
+              return 1.0 / (1.0 + math.exp(-x))
 
           def get_speed(r):
-              return fnum(r.get("speed") or r.get("speed_kms") or r.get("proton_speed") or r.get("v") or r.get("vsw") or r.get("bulk_speed") or r.get("speed_forecast"))
+              return fnum(
+                  r.get("speed") or r.get("speed_kms") or r.get("proton_speed") or
+                  r.get("bulk_speed") or r.get("v") or r.get("vsw") or r.get("speed_forecast")
+              )
 
           hist = load_json(NOAA_WIND, {"items": []})
-          rows = []
+          obs = []
           for r in hist.get("items", []) or []:
               dt = parse_dt(r.get("time"))
               sp = get_speed(r)
               if dt and sp is not None and 200 <= sp <= 1000:
-                  rows.append({"time": dt, "speed": sp})
-          rows.sort(key=lambda x: x["time"])
+                  obs.append({"time": dt, "speed": sp})
+          obs.sort(key=lambda x: x["time"])
 
-          def window(center, hours, source=rows):
-              lo = center - timedelta(hours=hours); hi = center + timedelta(hours=hours)
-              return [r for r in source if lo <= r["time"] <= hi]
+          def window(center, hours):
+              lo = center - timedelta(hours=hours)
+              hi = center + timedelta(hours=hours)
+              return [r for r in obs if lo <= r["time"] <= hi]
 
-          def before(t, hours, source=rows):
+          def before(t, hours):
               lo = t - timedelta(hours=hours)
-              return [r for r in source if lo <= r["time"] <= t]
+              return [r for r in obs if lo <= r["time"] <= t]
 
-          def speed_median(center, hours, default=None):
+          def speed_at(center, hours=1.6, default=None):
               return median([r["speed"] for r in window(center, hours)], default)
 
-          def recent_speed():
-              recent = before(now, 6)
-              return median([r["speed"] for r in recent], 400)
+          def recent_speed(hours=6, default=400):
+              return median([r["speed"] for r in before(now, hours)], default)
 
           def recent_trend():
-              recent = before(now, 9)
-              if len(recent) < 2: return 0.0
-              return (median([r["speed"] for r in recent[-2:]], recent[-1]["speed"]) - median([r["speed"] for r in recent[:2]], recent[0]["speed"])) / max(1, (recent[-1]["time"]-recent[0]["time"]).total_seconds()/3600)
+              r = before(now, 12)
+              if len(r) < 4:
+                  return 0.0
+              first = median([x["speed"] for x in r[:max(2, len(r)//4)]], r[0]["speed"])
+              last = median([x["speed"] for x in r[-max(2, len(r)//4):]], r[-1]["speed"])
+              dh = max(1, (r[-1]["time"] - r[0]["time"]).total_seconds()/3600)
+              return clamp((last-first)/dh, -20, 20)
 
-          def best_rotation27(t):
-              base = t - timedelta(days=27.27)
-              candidates = []
-              for sh in range(-36, 37, 3):
-                  c = base + timedelta(hours=sh)
-                  vals = [r["speed"] for r in window(c, 3)]
-                  if vals:
-                      sp = median(vals)
-                      prev = speed_median(c-timedelta(hours=6), 3, sp)
-                      nxt = speed_median(c+timedelta(hours=6), 3, sp)
-                      grad = (nxt-prev)/12
-                      score = 0.8*sigmoid((sp-430)/55) + 0.2*sigmoid(abs(grad)/12) - abs(sh)/120
-                      candidates.append((score, sh, sp, grad, len(vals)))
-              if not candidates:
-                  return None, {"shift_hours": None, "samples": 0}
-              best = max(candidates, key=lambda x: x[0])
-              return best[2], {"shift_hours": best[1], "gradient_kms_per_h": round(best[3],2), "samples": best[4]}
+          def fit_rotation_shift():
+              # 直近24hの観測と27.27日前を比較して、現在の太陽自転リピートの時刻ずれを推定
+              recent = before(now, 24)
+              if len(recent) < 6:
+                  return 0
+              best = (10**18, 0)
+              for shift in range(-36, 37, 3):
+                  errs = []
+                  for r in recent[::max(1, len(recent)//16)]:
+                      past_t = r["time"] - timedelta(days=27.27) + timedelta(hours=shift)
+                      sp = speed_at(past_t, 2.2)
+                      if sp is not None:
+                          errs.append(abs(sp - r["speed"]))
+                  if len(errs) >= 4:
+                      score = median(errs, 999) + abs(shift)*0.8
+                      if score < best[0]:
+                          best = (score, shift)
+              return best[1]
 
-          def load_donki_events():
+          rotation_shift_h = fit_rotation_shift()
+
+          def rotation27_speed(t):
+              c = t - timedelta(days=27.27) + timedelta(hours=rotation_shift_h)
+              vals = [r["speed"] for r in window(c, 4)]
+              if vals:
+                  return median(vals), {"shift_hours": rotation_shift_h, "samples": len(vals)}
+              vals = [r["speed"] for r in window(c, 12)]
+              return median(vals), {"shift_hours": rotation_shift_h, "samples": len(vals)}
+
+          def load_cme_events():
               data = load_json(DONKI, {})
-              events = []
+              found = []
               def walk(x):
                   if isinstance(x, dict):
-                      if any(k in x for k in ("arrival_time","predicted_arrival","estimated_arrival","impact_time","time21_5","startTime","start_time")):
-                          events.append(x)
-                      for v in x.values(): walk(v)
+                      if any(k in x for k in ("arrival_time","predicted_arrival","estimated_arrival","impact_time","time21_5")):
+                          found.append(x)
+                      for v in x.values():
+                          walk(v)
                   elif isinstance(x, list):
-                      for v in x: walk(v)
+                      for v in x:
+                          walk(v)
               walk(data)
-              out = []
-              for e in events:
+              events = []
+              for e in found:
                   arr = parse_dt(e.get("arrival_time") or e.get("predicted_arrival") or e.get("estimated_arrival") or e.get("impact_time") or e.get("time21_5"))
                   speed = fnum(e.get("speed") or e.get("arrival_speed") or e.get("cme_speed") or e.get("speed_kms"))
                   half = fnum(e.get("halfAngle") or e.get("half_angle") or e.get("halfAngleDeg"))
                   cls = str(e.get("impact_class") or e.get("impactClass") or e.get("hit_class") or e.get("classification") or "").upper()
                   if arr:
-                      out.append({"arrival": arr, "speed": speed, "half_angle": half, "impact_class": cls})
-              return out
+                      events.append({"arrival": arr, "speed": speed, "half_angle": half, "impact_class": cls})
+              return events
 
-          cme_events = load_donki_events()
+          cme_events = load_cme_events()
 
-          coef = load_json(COEF_PATH, None) or {
-              "version": "SWIFT-Wind-AI-v0.3-nonlinear",
+          default_coef = {
+              "version": "SWIFT-Wind-AI-v0.4-nonlinear-fit",
               "updated_at": now.isoformat(),
-              "weights": {"recent":0.30,"rotation27":0.45,"trend":0.10,"nonlinear_hss":0.12,"cme":0.03},
-              "limits": {"min_speed":280,"max_speed":850,"max_delta_per_3h":55,"ema_alpha":0.58},
-              "bias": 0.0,
-              "notes": "Nonlinear HSS/CIR model with rotation27 shift search, saturation, and slew-rate limiter for smoother ±50 km/s target."
+              "calibration": {"gain": 1.0, "offset": 0.0},
+              "limits": {"min_speed": 280, "max_speed": 850, "max_delta_per_3h": 38, "ema_alpha": 0.50},
+              "weights": {"recent": 0.38, "rotation27": 0.44, "hss_nonlinear": 0.13, "cme": 0.05},
+              "note": "Nonlinear sigmoid HSS/CIR model + 27-day phase fitting + smooth/slew limiter + observed-wind calibration."
           }
 
+          # 旧 coefficients.json に persistence / wsa などの古いキーだけが残っていると
+          # KeyError: 'recent' で落ちるため、新旧係数を安全にマージする。
+          loaded_coef = load_json(COEF, None) or {}
+          coef = dict(default_coef)
+          coef.update({k:v for k,v in loaded_coef.items() if k not in ("weights","limits","calibration")})
+
+          weights = dict(default_coef["weights"])
+          weights.update(loaded_coef.get("weights", {}) if isinstance(loaded_coef.get("weights"), dict) else {})
+          # 古いキーからの移行
+          if "recent" not in weights and "persistence" in weights:
+              weights["recent"] = fnum(weights.get("persistence"), default_coef["weights"]["recent"])
+          if "rotation27" not in weights and "rotation" in weights:
+              weights["rotation27"] = fnum(weights.get("rotation"), default_coef["weights"]["rotation27"])
+          # 必須キーを補完
+          for k,v in default_coef["weights"].items():
+              weights[k] = fnum(weights.get(k), v)
+          # 正規化しすぎるとCME項が消えるので、合計が極端な時だけ補正
+          s = sum(max(0, weights[k]) for k in default_coef["weights"])
+          if s < 0.2 or s > 2.0:
+              weights = dict(default_coef["weights"])
+          coef["weights"] = weights
+
+          limits = dict(default_coef["limits"])
+          limits.update(loaded_coef.get("limits", {}) if isinstance(loaded_coef.get("limits"), dict) else {})
+          for k,v in default_coef["limits"].items():
+              limits[k] = fnum(limits.get(k), v)
+          coef["limits"] = limits
+
+          cal = dict(default_coef["calibration"])
+          cal.update(loaded_coef.get("calibration", {}) if isinstance(loaded_coef.get("calibration"), dict) else {})
+          cal["gain"] = fnum(cal.get("gain"), 1.0)
+          cal["offset"] = fnum(cal.get("offset"), 0.0)
+          coef["calibration"] = cal
+
           def cme_pulse(t):
-              val = 0.0; best = None
+              total = 0.0
+              nearest = None
               for e in cme_events:
-                  arr = e.get("arrival")
-                  dh = (t-arr).total_seconds()/3600
-                  if abs(dh) > 24: continue
-                  speed = e.get("speed") or 650; half = e.get("half_angle") or 45; cls = e.get("impact_class") or ""
-                  amp = clamp((speed-450)/3.0, 0, 180) + clamp((half-40)*1.2, 0, 70)
-                  if "CORE" in cls: amp *= 1.25
-                  elif "FLANK" in cls: amp *= 0.65
-                  add = amp*math.exp(-(dh/9)**2)
-                  val += add
-                  if best is None or add > best["pulse"]:
-                      best = {"arrival": arr.isoformat(), "speed": speed, "impact_class": cls, "pulse": round(add,1)}
-              return clamp(val, 0, 220), best
+                  arr = e["arrival"]
+                  dh = (t - arr).total_seconds()/3600
+                  if abs(dh) > 24:
+                      continue
+                  speed = e.get("speed") or 650
+                  half = e.get("half_angle") or 45
+                  cls = e.get("impact_class") or ""
+                  amp = clamp((speed-500)/4.0, 0, 110) + clamp((half-45), 0, 45)
+                  if "CORE" in cls:
+                      amp *= 1.15
+                  elif "FLANK" in cls:
+                      amp *= 0.55
+                  shape = math.exp(-(dh/10.0)**2)
+                  add = amp * shape
+                  total += add
+                  if nearest is None or add > nearest["pulse"]:
+                      nearest = {"arrival": arr.isoformat(), "speed": speed, "impact_class": cls, "pulse": round(add, 1)}
+              return clamp(total, 0, 160), nearest
 
-          def nonlinear_predict_raw(t):
-              rec = recent_speed(); trend = recent_trend()
+          def raw_model(t, use_calibration=True):
               lead_h = max(0, (t-now).total_seconds()/3600)
-              rec_decay = math.exp(-lead_h/18)
-              rec_part = rec + clamp(trend * min(lead_h, 12), -70, 70)
-              rot, rot_meta = best_rotation27(t)
-              if rot is None: rot = rec
-              hss_gate = sigmoid((rot-455)/45)
-              hss_boost = 120*hss_gate + 25*math.tanh((rot-500)/90)
-              quiet_pull = -35*sigmoid((390-rot)/35)
-              cme, cme_meta = cme_pulse(t)
-              w = coef["weights"]
-              pred = (w["recent"]*(rec_part*rec_decay + rec*(1-rec_decay)) + w["rotation27"]*rot + w["trend"]*clamp(trend*12, -80, 80) + w["nonlinear_hss"]*(430+hss_boost+quiet_pull) + w["cme"]*(rec+cme))
-              pred += fnum(coef.get("bias"), 0.0)
-              pred = clamp(pred, coef["limits"]["min_speed"], coef["limits"]["max_speed"])
-              return pred, {"recent":round(rec,1), "trend_kms_per_h":round(trend,2), "rotation27":round(rot,1), "rotation27_meta":rot_meta, "hss_gate":round(hss_gate,3), "cme_pulse":round(cme,1), "nearest_cme":cme_meta}
+              rec = recent_speed(6)
+              trend = recent_trend()
+              rot, rmeta = rotation27_speed(t)
+              if rot is None:
+                  rot = rec
+                  rmeta = {"shift_hours": rotation_shift_h, "samples": 0}
 
-          def smooth_series(raw):
-              if not raw: return []
-              lim = coef["limits"]; alpha = fnum(lim.get("ema_alpha"),0.58); max_delta = fnum(lim.get("max_delta_per_3h"),55)
-              out=[]; prev=raw[0]["raw_speed"]
-              for i,r in enumerate(raw):
-                  x = r["raw_speed"]
-                  y = x if i==0 else prev + clamp((alpha*x+(1-alpha)*prev)-prev, -max_delta, max_delta)
-                  prev = y
-                  rr=dict(r); rr["speed"]=round(y,1); rr["speed_raw_nonlinear"]=round(x,1); rr["smoothing"]={"ema_alpha":alpha,"max_delta_per_3h":max_delta}
-                  out.append(rr)
-              return out
+              rec_decay = math.exp(-lead_h/18)
+              rec_term = rec + clamp(trend * min(lead_h, 12), -55, 55)
+
+              # 非線形HSS/CIR項：高速風は飽和、低速は静穏側へ寄せる
+              hss_gate = sigmoid((rot - 455) / 45)
+              hss_term = 380 + 250*hss_gate + 35*math.tanh((rot-500)/120)
+
+              cme, cmeta = cme_pulse(t)
+
+              w = coef["weights"]
+              pred = (
+                  w["recent"] * (rec_decay*rec_term + (1-rec_decay)*rec) +
+                  w["rotation27"] * rot +
+                  w["hss_nonlinear"] * hss_term +
+                  w["cme"] * (rec + cme)
+              )
+
+              # 極端値を抑える
+              pred = clamp(pred, coef["limits"]["min_speed"], coef["limits"]["max_speed"])
+
+              if use_calibration:
+                  cal = coef.get("calibration", {})
+                  pred = fnum(cal.get("gain"), 1.0) * pred + fnum(cal.get("offset"), 0.0)
+                  pred = clamp(pred, coef["limits"]["min_speed"], coef["limits"]["max_speed"])
+
+              return pred, {
+                  "recent": round(rec,1),
+                  "trend_kms_per_h": round(trend,2),
+                  "rotation27": round(rot,1),
+                  "rotation27_shift_hours": rotation_shift_h,
+                  "rotation27_samples": rmeta.get("samples"),
+                  "hss_gate": round(hss_gate,3),
+                  "cme_pulse": round(cme,1),
+                  "nearest_cme": cmeta
+              }
+
+          def fit_calibration():
+              # 過去7日を使い、非線形モデルの系統ズレを y = gain*x + offset で補正
+              pairs = []
+              for r in obs:
+                  if r["time"] < now - timedelta(days=7) or r["time"] > now - timedelta(hours=1):
+                      continue
+                  x, _ = raw_model(r["time"], use_calibration=False)
+                  y = r["speed"]
+                  if x is not None and y is not None:
+                      pairs.append((x, y))
+              if len(pairs) < 12:
+                  return None
+
+              xs = [p[0] for p in pairs]
+              ys = [p[1] for p in pairs]
+              mx = mean(xs, 0)
+              my = mean(ys, 0)
+              var = sum((x-mx)**2 for x in xs)
+              cov = sum((x-mx)*(y-my) for x,y in pairs)
+              if var <= 1e-6:
+                  return None
+              gain = clamp(cov/var, 0.75, 1.20)
+              offset = clamp(my - gain*mx, -120, 120)
+
+              # いきなり変えすぎない
+              old = coef.get("calibration", {})
+              old_gain = fnum(old.get("gain"), 1.0)
+              old_offset = fnum(old.get("offset"), 0.0)
+              gain = 0.75*old_gain + 0.25*gain
+              offset = 0.75*old_offset + 0.25*offset
+
+              errs = [gain*x + offset - y for x,y in pairs]
+              return {
+                  "gain": round(gain, 4),
+                  "offset": round(offset, 3),
+                  "fit_count": len(pairs),
+                  "fit_mae": round(mean([abs(e) for e in errs], 0), 2),
+                  "fit_bias": round(mean(errs, 0), 2)
+              }
+
+          fit = fit_calibration()
+          if fit:
+              coef["calibration"] = {"gain": fit["gain"], "offset": fit["offset"]}
+              coef["last_fit"] = fit
+              coef["updated_at"] = now.isoformat()
 
           start = now.replace(minute=0, second=0, microsecond=0)
           start = start.replace(hour=(start.hour//3)*3)
-          if start < now: start += timedelta(hours=3)
-          raw_forecast=[]
-          for i in range(forecast_days*8):
-              t = start + timedelta(hours=step_hours*i)
-              p, meta = nonlinear_predict_raw(t)
-              raw_forecast.append({"time":t.isoformat(),"lead_hours":round((t-now).total_seconds()/3600,1),"raw_speed":p,"features":meta})
-          forecast = smooth_series(raw_forecast)
+          if start < now:
+              start += timedelta(hours=3)
 
-          archive = load_json(ARCHIVE_PATH,{"items":[]}).get("items",[])
+          raw = []
+          for i in range(forecast_days*8):
+              t = start + timedelta(hours=3*i)
+              sp, meta = raw_model(t, use_calibration=True)
+              raw.append({"time": t.isoformat(), "lead_hours": round((t-now).total_seconds()/3600,1), "raw_speed": sp, "features": meta})
+
+          # EMA + slew-rate limiterで荒い変化を抑制
+          alpha = fnum(coef["limits"].get("ema_alpha"), 0.5)
+          max_delta = fnum(coef["limits"].get("max_delta_per_3h"), 38)
+          forecast = []
+          prev = raw[0]["raw_speed"] if raw else recent_speed()
+          for i, r in enumerate(raw):
+              x = r["raw_speed"]
+              if i == 0:
+                  y = x
+              else:
+                  ema = alpha*x + (1-alpha)*prev
+                  y = prev + clamp(ema-prev, -max_delta, max_delta)
+              prev = y
+              rr = dict(r)
+              rr["speed"] = round(y, 1)
+              rr["speed_raw_nonlinear"] = round(x, 1)
+              rr["smoothing"] = {"ema_alpha": alpha, "max_delta_per_3h": max_delta}
+              forecast.append(rr)
+
+          # その場で過去7/30日の直接検証も出す
+          def verify(days):
+              cut = now - timedelta(days=days)
+              items = []
+              for r in obs:
+                  if not (cut <= r["time"] <= now - timedelta(hours=1)):
+                      continue
+                  p, _ = raw_model(r["time"], use_calibration=True)
+                  e = p - r["speed"]
+                  items.append({"time": r["time"].isoformat(), "predicted_speed": round(p,1), "observed_speed": round(r["speed"],1), "error": round(e,1), "abs_error": round(abs(e),1)})
+              if not items:
+                  return {"count": 0, "status": "learning"}
+              errs = [x["error"] for x in items]
+              return {
+                  "count": len(items),
+                  "mae": round(mean([abs(e) for e in errs], 0), 2),
+                  "bias": round(mean(errs, 0), 2),
+                  "rmse": round(math.sqrt(mean([e*e for e in errs], 0)), 2),
+                  "hit_rate_50kms": round(sum(1 for x in items if x["abs_error"] <= 50)/len(items)*100, 1),
+                  "hit_rate_75kms": round(sum(1 for x in items if x["abs_error"] <= 75)/len(items)*100, 1),
+                  "hit_rate_100kms": round(sum(1 for x in items if x["abs_error"] <= 100)/len(items)*100, 1),
+                  "items": items[-300:]
+              }
+
+          verification = {
+              "updated_at": now.isoformat(),
+              "last_7d": verify(7),
+              "last_30d": verify(30)
+          }
+
+          latest = {
+              "updated_at": now.isoformat(),
+              "model": "SWIFT-Wind-AI-v0.4-nonlinear-fit",
+              "forecast_days": forecast_days,
+              "step_hours": step_hours,
+              "target": "±50 km/s",
+              "formula": "Vsw = smooth_slew( gain * nonlinear(recent, shifted_rotation27, sigmoid_HSS, CME_pulse) + offset )",
+              "current": forecast[0] if forecast else None,
+              "forecast": forecast,
+              "verification": verification,
+              "coefficients": coef
+          }
+
+          archive = load_json(ARCHIVE, {"items":[]})
+          aitems = archive.get("items", [])[-8000:]
           issued_at = now.isoformat()
           for r in forecast:
-              archive.append({"issued_at":issued_at,"target_time":r["time"],"lead_hours":r["lead_hours"],"predicted_speed":r["speed"],"scored":False})
+              aitems.append({"issued_at": issued_at, "target_time": r["time"], "predicted_speed": r["speed"], "lead_hours": r["lead_hours"]})
 
-          def nearest_obs(t, max_minutes=75):
-              best=None; bd=10**18
-              for r in rows:
-                  d=abs((r["time"]-t).total_seconds())
-                  if d<bd: bd=d; best=r
-              return best if best and bd<=max_minutes*60 else None
+          index = {"updated_at": now.isoformat(), "latest": "latest.json", "coefficients": "coefficients.json", "verification": "verification.json", "archive": "forecast-archive.json", "files": []}
 
-          scored=[]
-          for a in archive[-12000:]:
-              if a.get("scored"):
-                  scored.append(a); continue
-              tt=parse_dt(a.get("target_time"))
-              if not tt or tt>now:
-                  scored.append(a); continue
-              obs=nearest_obs(tt)
-              if not obs:
-                  scored.append(a); continue
-              err=fnum(a.get("predicted_speed"),0)-obs["speed"]
-              aa=dict(a); aa.update({"scored":True,"observed_speed":round(obs["speed"],2),"error":round(err,2),"abs_error":round(abs(err),2),"hit_50kms":abs(err)<=50,"hit_75kms":abs(err)<=75,"hit_100kms":abs(err)<=100})
-              scored.append(aa)
+          save_json(LATEST, latest)
+          save_json(COEF, coef)
+          save_json(VERIF, verification)
+          save_json(ARCHIVE, {"updated_at": now.isoformat(), "items": aitems})
+          for f in sorted(OUT.glob("*.json")):
+              index["files"].append({"file": f.name, "path": f"./data/swift-wind/{f.name}", "size_bytes": f.stat().st_size})
+          save_json(INDEX, index)
 
-          def metrics(items):
-              items=[x for x in items if x.get("scored")]
-              if not items: return {"count":0,"status":"learning"}
-              errs=[fnum(x["error"],0) for x in items]
-              mae=sum(abs(e) for e in errs)/len(errs); bias=sum(errs)/len(errs); rmse=math.sqrt(sum(e*e for e in errs)/len(errs))
-              return {"count":len(items),"mae":round(mae,2),"bias":round(bias,2),"rmse":round(rmse,2),"hit_rate_50kms":round(sum(1 for x in items if x.get("hit_50kms"))/len(items)*100,1),"hit_rate_75kms":round(sum(1 for x in items if x.get("hit_75kms"))/len(items)*100,1),"hit_rate_100kms":round(sum(1 for x in items if x.get("hit_100kms"))/len(items)*100,1)}
-
-          def since(days):
-              cut=now-timedelta(days=days)
-              return [x for x in scored if parse_dt(x.get("target_time")) and parse_dt(x["target_time"])>=cut]
-          verification={"updated_at":now.isoformat(),"last_24h":metrics(since(1)),"last_7d":metrics(since(7)),"last_30d":metrics(since(30))}
-
-          v24=verification["last_24h"]
-          if v24.get("count",0)>=4 and v24.get("bias") is not None:
-              old_bias=fnum(coef.get("bias"),0)
-              coef["bias"]=round(clamp(old_bias-0.08*fnum(v24["bias"],0),-80,80),3)
-              coef["updated_at"]=now.isoformat()
-              coef["last_fit"]={"source":"last_24h_bias","bias_before":old_bias,"observed_bias":v24["bias"],"bias_after":coef["bias"]}
-
-          latest={"updated_at":now.isoformat(),"model":"SWIFT-Wind-AI-v0.3-nonlinear","forecast_days":forecast_days,"step_hours":step_hours,"target":"±50 km/s for 0-24h","forecast":forecast,"current":forecast[0] if forecast else None,"verification":verification,"coefficients":coef,"formula":"Vsw = smooth(limit(nonlinear[recent + shifted rotation27 + HSS sigmoid + CME pulse + bias]))"}
-          index={"updated_at":now.isoformat(),"latest":"latest.json","coefficients":"coefficients.json","verification":"verification.json","archive":"forecast-archive.json","files":[]}
-          save_json(LATEST_PATH,latest); save_json(COEF_PATH,coef); save_json(VERIF_PATH,verification); save_json(ARCHIVE_PATH,{"updated_at":now.isoformat(),"items":scored[-12000:]})
-          for f in sorted(OUT_DIR.glob("*.json")):
-              index["files"].append({"file":f.name,"path":f"./data/swift-wind/{f.name}","size_bytes":f.stat().st_size})
-          save_json(INDEX_PATH,index)
-          print(json.dumps({"current":latest["current"],"verification":verification,"bias":coef.get("bias")},ensure_ascii=False,indent=2))
+          print(json.dumps({"current": latest["current"], "last_fit": coef.get("last_fit"), "verification_7d": verification["last_7d"]}, ensure_ascii=False, indent=2))
           PY
 
       - name: Commit and push
@@ -281,5 +441,5 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add docs/data/swift-wind
-          git commit -m "Update nonlinear SWIFT wind forecast" || echo "No changes"
+          git commit -m "Update nonlinear fitted SWIFT wind forecast" || echo "No changes"
           git push
