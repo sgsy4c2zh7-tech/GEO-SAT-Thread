@@ -1,13 +1,27 @@
 {
+  "version": "SWIFT-Wind-AI-v0.4-nonlinear-fit",
   "updated_at": "2026-06-24T23:11:36.074171+00:00",
+  "calibration": {
+    "gain": 1.0,
+    "offset": 0.0
+  },
+  "limits": {
+    "min_speed": 280.0,
+    "max_speed": 850.0,
+    "max_delta_per_3h": 38.0,
+    "ema_alpha": 0.5
+  },
+  "weights": {
+    "recent": 0.38,
+    "rotation27": 0.29850000000000004,
+    "hss_nonlinear": 0.13,
+    "cme": 1.0,
+    "persistence": 0.5029999999999999,
+    "wsa": 0.1985
+  },
+  "note": "Nonlinear sigmoid HSS/CIR model + 27-day phase fitting + smooth/slew limiter + observed-wind calibration.",
   "model": "SWIFT Wind AI v0.2",
   "learning_rate": 0.03,
-  "weights": {
-    "persistence": 0.5029999999999999,
-    "rotation27": 0.29850000000000004,
-    "wsa": 0.1985,
-    "cme": 1.0
-  },
   "bias": {
     "speed": -2.747
   },
