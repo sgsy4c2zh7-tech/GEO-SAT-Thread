@@ -1,27 +1,27 @@
 {
-  "updated_at": "2026-06-27T14:08:47.702732+00:00",
+  "updated_at": "2026-06-27T16:33:51.836720+00:00",
   "model": "SWIFT-Wind-AI-v0.4-nonlinear-fit",
   "forecast_days": 5,
   "step_hours": 3,
   "target": "±50 km/s",
   "formula": "Vsw = smooth_slew( gain * nonlinear(recent, shifted_rotation27, sigmoid_HSS, CME_pulse) + offset )",
   "current": {
-    "time": "2026-06-27T15:00:00+00:00",
-    "lead_hours": 0.9,
+    "time": "2026-06-27T18:00:00+00:00",
+    "lead_hours": 1.4,
     "raw_speed": 606.858,
     "features": {
-      "recent": 564.5,
-      "trend_kms_per_h": 4.65,
-      "rotation27": 564.5,
+      "recent": 544.1,
+      "trend_kms_per_h": -3.93,
+      "rotation27": 544.1,
       "rotation27_shift_hours": 0,
       "rotation27_samples": 0,
-      "hss_gate": 0.919,
-      "cme_pulse": 6.7,
+      "hss_gate": 0.879,
+      "cme_pulse": 2.4,
       "nearest_cme": {
         "arrival": "2026-06-27T01:55:00+00:00",
         "speed": 534.0,
         "impact_class": "",
-        "pulse": 1.5
+        "pulse": 0.6
       }
     },
     "speed": 606.9,
@@ -33,42 +33,16 @@
   },
   "forecast": [
     {
-      "time": "2026-06-27T15:00:00+00:00",
-      "lead_hours": 0.9,
-      "raw_speed": 606.858,
-      "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
-        "rotation27_shift_hours": 0,
-        "rotation27_samples": 0,
-        "hss_gate": 0.919,
-        "cme_pulse": 6.7,
-        "nearest_cme": {
-          "arrival": "2026-06-27T01:55:00+00:00",
-          "speed": 534.0,
-          "impact_class": "",
-          "pulse": 1.5
-        }
-      },
-      "speed": 606.9,
-      "speed_raw_nonlinear": 606.9,
-      "smoothing": {
-        "ema_alpha": 0.5,
-        "max_delta_per_3h": 38.0
-      }
-    },
-    {
       "time": "2026-06-27T18:00:00+00:00",
-      "lead_hours": 3.9,
+      "lead_hours": 1.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 2.4,
         "nearest_cme": {
           "arrival": "2026-06-27T01:55:00+00:00",
@@ -86,15 +60,15 @@
     },
     {
       "time": "2026-06-27T21:00:00+00:00",
-      "lead_hours": 6.9,
+      "lead_hours": 4.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0.7,
         "nearest_cme": {
           "arrival": "2026-06-27T01:55:00+00:00",
@@ -112,15 +86,15 @@
     },
     {
       "time": "2026-06-28T00:00:00+00:00",
-      "lead_hours": 9.9,
+      "lead_hours": 7.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0.2,
         "nearest_cme": {
           "arrival": "2026-06-27T01:55:00+00:00",
@@ -138,15 +112,15 @@
     },
     {
       "time": "2026-06-28T03:00:00+00:00",
-      "lead_hours": 12.9,
+      "lead_hours": 10.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0.0,
         "nearest_cme": {
           "arrival": "2026-06-27T05:36:00+00:00",
@@ -164,19 +138,19 @@
     },
     {
       "time": "2026-06-28T06:00:00+00:00",
-      "lead_hours": 15.9,
+      "lead_hours": 13.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": {
-          "arrival": "2026-06-27T08:07:00+00:00",
-          "speed": 276.0,
+          "arrival": "2026-06-27T12:10:00+00:00",
+          "speed": 428.0,
           "impact_class": "",
           "pulse": 0.0
         }
@@ -190,17 +164,22 @@
     },
     {
       "time": "2026-06-28T09:00:00+00:00",
-      "lead_hours": 18.9,
+      "lead_hours": 16.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
-        "nearest_cme": null
+        "nearest_cme": {
+          "arrival": "2026-06-27T12:10:00+00:00",
+          "speed": 428.0,
+          "impact_class": "",
+          "pulse": 0.0
+        }
       },
       "speed": 606.9,
       "speed_raw_nonlinear": 606.9,
@@ -211,17 +190,22 @@
     },
     {
       "time": "2026-06-28T12:00:00+00:00",
-      "lead_hours": 21.9,
+      "lead_hours": 19.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
-        "nearest_cme": null
+        "nearest_cme": {
+          "arrival": "2026-06-27T12:10:00+00:00",
+          "speed": 428.0,
+          "impact_class": "",
+          "pulse": 0.0
+        }
       },
       "speed": 606.9,
       "speed_raw_nonlinear": 606.9,
@@ -232,15 +216,15 @@
     },
     {
       "time": "2026-06-28T15:00:00+00:00",
-      "lead_hours": 24.9,
+      "lead_hours": 22.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -253,15 +237,15 @@
     },
     {
       "time": "2026-06-28T18:00:00+00:00",
-      "lead_hours": 27.9,
+      "lead_hours": 25.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -274,15 +258,15 @@
     },
     {
       "time": "2026-06-28T21:00:00+00:00",
-      "lead_hours": 30.9,
+      "lead_hours": 28.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -295,15 +279,15 @@
     },
     {
       "time": "2026-06-29T00:00:00+00:00",
-      "lead_hours": 33.9,
+      "lead_hours": 31.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -316,15 +300,15 @@
     },
     {
       "time": "2026-06-29T03:00:00+00:00",
-      "lead_hours": 36.9,
+      "lead_hours": 34.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -337,15 +321,15 @@
     },
     {
       "time": "2026-06-29T06:00:00+00:00",
-      "lead_hours": 39.9,
+      "lead_hours": 37.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -358,15 +342,15 @@
     },
     {
       "time": "2026-06-29T09:00:00+00:00",
-      "lead_hours": 42.9,
+      "lead_hours": 40.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -379,15 +363,15 @@
     },
     {
       "time": "2026-06-29T12:00:00+00:00",
-      "lead_hours": 45.9,
+      "lead_hours": 43.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -400,15 +384,15 @@
     },
     {
       "time": "2026-06-29T15:00:00+00:00",
-      "lead_hours": 48.9,
+      "lead_hours": 46.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -421,15 +405,15 @@
     },
     {
       "time": "2026-06-29T18:00:00+00:00",
-      "lead_hours": 51.9,
+      "lead_hours": 49.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -442,15 +426,15 @@
     },
     {
       "time": "2026-06-29T21:00:00+00:00",
-      "lead_hours": 54.9,
+      "lead_hours": 52.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -463,15 +447,15 @@
     },
     {
       "time": "2026-06-30T00:00:00+00:00",
-      "lead_hours": 57.9,
+      "lead_hours": 55.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -484,15 +468,15 @@
     },
     {
       "time": "2026-06-30T03:00:00+00:00",
-      "lead_hours": 60.9,
+      "lead_hours": 58.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -505,15 +489,15 @@
     },
     {
       "time": "2026-06-30T06:00:00+00:00",
-      "lead_hours": 63.9,
+      "lead_hours": 61.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -526,15 +510,15 @@
     },
     {
       "time": "2026-06-30T09:00:00+00:00",
-      "lead_hours": 66.9,
+      "lead_hours": 64.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -547,15 +531,15 @@
     },
     {
       "time": "2026-06-30T12:00:00+00:00",
-      "lead_hours": 69.9,
+      "lead_hours": 67.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -568,15 +552,15 @@
     },
     {
       "time": "2026-06-30T15:00:00+00:00",
-      "lead_hours": 72.9,
+      "lead_hours": 70.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -589,15 +573,15 @@
     },
     {
       "time": "2026-06-30T18:00:00+00:00",
-      "lead_hours": 75.9,
+      "lead_hours": 73.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -610,15 +594,15 @@
     },
     {
       "time": "2026-06-30T21:00:00+00:00",
-      "lead_hours": 78.9,
+      "lead_hours": 76.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -631,15 +615,15 @@
     },
     {
       "time": "2026-07-01T00:00:00+00:00",
-      "lead_hours": 81.9,
+      "lead_hours": 79.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -652,15 +636,15 @@
     },
     {
       "time": "2026-07-01T03:00:00+00:00",
-      "lead_hours": 84.9,
+      "lead_hours": 82.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -673,15 +657,15 @@
     },
     {
       "time": "2026-07-01T06:00:00+00:00",
-      "lead_hours": 87.9,
+      "lead_hours": 85.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -694,15 +678,15 @@
     },
     {
       "time": "2026-07-01T09:00:00+00:00",
-      "lead_hours": 90.9,
+      "lead_hours": 88.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -715,15 +699,15 @@
     },
     {
       "time": "2026-07-01T12:00:00+00:00",
-      "lead_hours": 93.9,
+      "lead_hours": 91.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -736,15 +720,15 @@
     },
     {
       "time": "2026-07-01T15:00:00+00:00",
-      "lead_hours": 96.9,
+      "lead_hours": 94.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -757,15 +741,15 @@
     },
     {
       "time": "2026-07-01T18:00:00+00:00",
-      "lead_hours": 99.9,
+      "lead_hours": 97.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -778,15 +762,15 @@
     },
     {
       "time": "2026-07-01T21:00:00+00:00",
-      "lead_hours": 102.9,
+      "lead_hours": 100.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -799,15 +783,15 @@
     },
     {
       "time": "2026-07-02T00:00:00+00:00",
-      "lead_hours": 105.9,
+      "lead_hours": 103.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -820,15 +804,15 @@
     },
     {
       "time": "2026-07-02T03:00:00+00:00",
-      "lead_hours": 108.9,
+      "lead_hours": 106.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -841,15 +825,15 @@
     },
     {
       "time": "2026-07-02T06:00:00+00:00",
-      "lead_hours": 111.9,
+      "lead_hours": 109.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -862,15 +846,15 @@
     },
     {
       "time": "2026-07-02T09:00:00+00:00",
-      "lead_hours": 114.9,
+      "lead_hours": 112.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -883,15 +867,36 @@
     },
     {
       "time": "2026-07-02T12:00:00+00:00",
-      "lead_hours": 117.9,
+      "lead_hours": 115.4,
       "raw_speed": 606.858,
       "features": {
-        "recent": 564.5,
-        "trend_kms_per_h": 4.65,
-        "rotation27": 564.5,
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
         "rotation27_shift_hours": 0,
         "rotation27_samples": 0,
-        "hss_gate": 0.919,
+        "hss_gate": 0.879,
+        "cme_pulse": 0,
+        "nearest_cme": null
+      },
+      "speed": 606.9,
+      "speed_raw_nonlinear": 606.9,
+      "smoothing": {
+        "ema_alpha": 0.5,
+        "max_delta_per_3h": 38.0
+      }
+    },
+    {
+      "time": "2026-07-02T15:00:00+00:00",
+      "lead_hours": 118.4,
+      "raw_speed": 606.858,
+      "features": {
+        "recent": 544.1,
+        "trend_kms_per_h": -3.93,
+        "rotation27": 544.1,
+        "rotation27_shift_hours": 0,
+        "rotation27_samples": 0,
+        "hss_gate": 0.879,
         "cme_pulse": 0,
         "nearest_cme": null
       },
@@ -904,1031 +909,16 @@
     }
   ],
   "verification": {
-    "updated_at": "2026-06-27T14:08:47.702732+00:00",
+    "updated_at": "2026-06-27T16:33:51.836720+00:00",
     "last_7d": {
       "count": 9568,
-      "mae": 175.82,
-      "bias": 175.02,
-      "rmse": 192.79,
-      "hit_rate_50kms": 11.2,
-      "hit_rate_75kms": 15.0,
-      "hit_rate_100kms": 18.8,
+      "mae": 173.37,
+      "bias": 172.56,
+      "rmse": 190.95,
+      "hit_rate_50kms": 11.4,
+      "hit_rate_75kms": 16.3,
+      "hit_rate_100kms": 20.3,
       "items": [
-        {
-          "time": "2026-06-27T07:43:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 558.1,
-          "error": 48.8,
-          "abs_error": 48.8
-        },
-        {
-          "time": "2026-06-27T07:44:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 543.3,
-          "error": 63.6,
-          "abs_error": 63.6
-        },
-        {
-          "time": "2026-06-27T07:45:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 537.5,
-          "error": 69.4,
-          "abs_error": 69.4
-        },
-        {
-          "time": "2026-06-27T07:46:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 529.2,
-          "error": 77.7,
-          "abs_error": 77.7
-        },
-        {
-          "time": "2026-06-27T07:47:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 564.7,
-          "error": 42.2,
-          "abs_error": 42.2
-        },
-        {
-          "time": "2026-06-27T07:48:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 556.8,
-          "error": 50.1,
-          "abs_error": 50.1
-        },
-        {
-          "time": "2026-06-27T07:49:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 556.7,
-          "error": 50.2,
-          "abs_error": 50.2
-        },
-        {
-          "time": "2026-06-27T07:50:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 551.7,
-          "error": 55.2,
-          "abs_error": 55.2
-        },
-        {
-          "time": "2026-06-27T07:51:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 541.1,
-          "error": 65.8,
-          "abs_error": 65.8
-        },
-        {
-          "time": "2026-06-27T07:52:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 542.8,
-          "error": 64.1,
-          "abs_error": 64.1
-        },
-        {
-          "time": "2026-06-27T07:53:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 568.0,
-          "error": 38.9,
-          "abs_error": 38.9
-        },
-        {
-          "time": "2026-06-27T07:54:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 541.0,
-          "error": 65.9,
-          "abs_error": 65.9
-        },
-        {
-          "time": "2026-06-27T07:55:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 573.2,
-          "error": 33.7,
-          "abs_error": 33.7
-        },
-        {
-          "time": "2026-06-27T07:56:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 577.8,
-          "error": 29.1,
-          "abs_error": 29.1
-        },
-        {
-          "time": "2026-06-27T07:57:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 574.4,
-          "error": 32.5,
-          "abs_error": 32.5
-        },
-        {
-          "time": "2026-06-27T07:58:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 581.5,
-          "error": 25.4,
-          "abs_error": 25.4
-        },
-        {
-          "time": "2026-06-27T07:59:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 560.1,
-          "error": 46.8,
-          "abs_error": 46.8
-        },
-        {
-          "time": "2026-06-27T08:00:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 578.6,
-          "error": 28.3,
-          "abs_error": 28.3
-        },
-        {
-          "time": "2026-06-27T08:01:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 540.0,
-          "error": 66.9,
-          "abs_error": 66.9
-        },
-        {
-          "time": "2026-06-27T08:02:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 543.0,
-          "error": 63.9,
-          "abs_error": 63.9
-        },
-        {
-          "time": "2026-06-27T08:03:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 560.9,
-          "error": 46.0,
-          "abs_error": 46.0
-        },
-        {
-          "time": "2026-06-27T08:04:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 573.5,
-          "error": 33.4,
-          "abs_error": 33.4
-        },
-        {
-          "time": "2026-06-27T08:05:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 562.0,
-          "error": 44.9,
-          "abs_error": 44.9
-        },
-        {
-          "time": "2026-06-27T08:06:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 558.2,
-          "error": 48.7,
-          "abs_error": 48.7
-        },
-        {
-          "time": "2026-06-27T08:07:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 581.4,
-          "error": 25.5,
-          "abs_error": 25.5
-        },
-        {
-          "time": "2026-06-27T08:08:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 554.0,
-          "error": 52.9,
-          "abs_error": 52.9
-        },
-        {
-          "time": "2026-06-27T08:09:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.9,
-          "error": 20.0,
-          "abs_error": 20.0
-        },
-        {
-          "time": "2026-06-27T08:10:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.4,
-          "error": 20.5,
-          "abs_error": 20.5
-        },
-        {
-          "time": "2026-06-27T08:11:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 572.9,
-          "error": 34.0,
-          "abs_error": 34.0
-        },
-        {
-          "time": "2026-06-27T08:12:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 563.6,
-          "error": 43.3,
-          "abs_error": 43.3
-        },
-        {
-          "time": "2026-06-27T08:13:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 556.4,
-          "error": 50.5,
-          "abs_error": 50.5
-        },
-        {
-          "time": "2026-06-27T08:14:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 578.5,
-          "error": 28.4,
-          "abs_error": 28.4
-        },
-        {
-          "time": "2026-06-27T08:15:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 569.9,
-          "error": 37.0,
-          "abs_error": 37.0
-        },
-        {
-          "time": "2026-06-27T08:16:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 598.6,
-          "error": 8.3,
-          "abs_error": 8.3
-        },
-        {
-          "time": "2026-06-27T08:17:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 583.9,
-          "error": 23.0,
-          "abs_error": 23.0
-        },
-        {
-          "time": "2026-06-27T08:18:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 592.3,
-          "error": 14.6,
-          "abs_error": 14.6
-        },
-        {
-          "time": "2026-06-27T08:19:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 594.3,
-          "error": 12.6,
-          "abs_error": 12.6
-        },
-        {
-          "time": "2026-06-27T08:20:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 580.2,
-          "error": 26.7,
-          "abs_error": 26.7
-        },
-        {
-          "time": "2026-06-27T08:21:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 569.0,
-          "error": 37.9,
-          "abs_error": 37.9
-        },
-        {
-          "time": "2026-06-27T08:22:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 597.0,
-          "error": 9.9,
-          "abs_error": 9.9
-        },
-        {
-          "time": "2026-06-27T08:23:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 566.2,
-          "error": 40.7,
-          "abs_error": 40.7
-        },
-        {
-          "time": "2026-06-27T08:24:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 567.2,
-          "error": 39.7,
-          "abs_error": 39.7
-        },
-        {
-          "time": "2026-06-27T08:25:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.6,
-          "error": 15.3,
-          "abs_error": 15.3
-        },
-        {
-          "time": "2026-06-27T08:26:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 589.6,
-          "error": 17.3,
-          "abs_error": 17.3
-        },
-        {
-          "time": "2026-06-27T08:27:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 553.7,
-          "error": 53.2,
-          "abs_error": 53.2
-        },
-        {
-          "time": "2026-06-27T08:28:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 568.6,
-          "error": 38.3,
-          "abs_error": 38.3
-        },
-        {
-          "time": "2026-06-27T08:29:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 585.0,
-          "error": 21.9,
-          "abs_error": 21.9
-        },
-        {
-          "time": "2026-06-27T08:30:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 550.6,
-          "error": 56.3,
-          "abs_error": 56.3
-        },
-        {
-          "time": "2026-06-27T08:31:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 560.4,
-          "error": 46.5,
-          "abs_error": 46.5
-        },
-        {
-          "time": "2026-06-27T08:32:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 567.3,
-          "error": 39.6,
-          "abs_error": 39.6
-        },
-        {
-          "time": "2026-06-27T08:33:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 588.4,
-          "error": 18.5,
-          "abs_error": 18.5
-        },
-        {
-          "time": "2026-06-27T08:34:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 572.7,
-          "error": 34.2,
-          "abs_error": 34.2
-        },
-        {
-          "time": "2026-06-27T08:35:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 593.7,
-          "error": 13.2,
-          "abs_error": 13.2
-        },
-        {
-          "time": "2026-06-27T08:36:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 549.7,
-          "error": 57.2,
-          "abs_error": 57.2
-        },
-        {
-          "time": "2026-06-27T08:37:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 567.2,
-          "error": 39.7,
-          "abs_error": 39.7
-        },
-        {
-          "time": "2026-06-27T08:38:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 587.5,
-          "error": 19.4,
-          "abs_error": 19.4
-        },
-        {
-          "time": "2026-06-27T08:39:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 584.6,
-          "error": 22.3,
-          "abs_error": 22.3
-        },
-        {
-          "time": "2026-06-27T08:40:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 582.3,
-          "error": 24.6,
-          "abs_error": 24.6
-        },
-        {
-          "time": "2026-06-27T08:41:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.3,
-          "error": 20.6,
-          "abs_error": 20.6
-        },
-        {
-          "time": "2026-06-27T08:42:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 587.9,
-          "error": 19.0,
-          "abs_error": 19.0
-        },
-        {
-          "time": "2026-06-27T08:43:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 583.6,
-          "error": 23.3,
-          "abs_error": 23.3
-        },
-        {
-          "time": "2026-06-27T08:44:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.8,
-          "error": 20.1,
-          "abs_error": 20.1
-        },
-        {
-          "time": "2026-06-27T08:45:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:46:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 589.1,
-          "error": 17.8,
-          "abs_error": 17.8
-        },
-        {
-          "time": "2026-06-27T08:47:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:48:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 588.7,
-          "error": 18.2,
-          "abs_error": 18.2
-        },
-        {
-          "time": "2026-06-27T08:49:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:50:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.1,
-          "error": 15.8,
-          "abs_error": 15.8
-        },
-        {
-          "time": "2026-06-27T08:51:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 592.4,
-          "error": 14.5,
-          "abs_error": 14.5
-        },
-        {
-          "time": "2026-06-27T08:52:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:53:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.4,
-          "error": 15.5,
-          "abs_error": 15.5
-        },
-        {
-          "time": "2026-06-27T08:54:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:55:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:56:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:57:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 593.1,
-          "error": 13.8,
-          "abs_error": 13.8
-        },
-        {
-          "time": "2026-06-27T08:58:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.5,
-          "error": 15.4,
-          "abs_error": 15.4
-        },
-        {
-          "time": "2026-06-27T08:59:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.6,
-          "error": 15.3,
-          "abs_error": 15.3
-        },
-        {
-          "time": "2026-06-27T09:00:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 594.8,
-          "error": 12.1,
-          "abs_error": 12.1
-        },
-        {
-          "time": "2026-06-27T09:01:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 593.3,
-          "error": 13.6,
-          "abs_error": 13.6
-        },
-        {
-          "time": "2026-06-27T09:02:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 592.7,
-          "error": 14.2,
-          "abs_error": 14.2
-        },
-        {
-          "time": "2026-06-27T09:03:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.6,
-          "error": 15.3,
-          "abs_error": 15.3
-        },
-        {
-          "time": "2026-06-27T09:04:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 590.9,
-          "error": 16.0,
-          "abs_error": 16.0
-        },
-        {
-          "time": "2026-06-27T09:05:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 589.3,
-          "error": 17.6,
-          "abs_error": 17.6
-        },
-        {
-          "time": "2026-06-27T09:06:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 589.2,
-          "error": 17.7,
-          "abs_error": 17.7
-        },
-        {
-          "time": "2026-06-27T09:07:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 589.4,
-          "error": 17.5,
-          "abs_error": 17.5
-        },
-        {
-          "time": "2026-06-27T09:08:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:09:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:10:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 588.3,
-          "error": 18.6,
-          "abs_error": 18.6
-        },
-        {
-          "time": "2026-06-27T09:11:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 549.1,
-          "error": 57.8,
-          "abs_error": 57.8
-        },
-        {
-          "time": "2026-06-27T09:12:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 589.0,
-          "error": 17.9,
-          "abs_error": 17.9
-        },
-        {
-          "time": "2026-06-27T09:13:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 592.6,
-          "error": 14.3,
-          "abs_error": 14.3
-        },
-        {
-          "time": "2026-06-27T09:14:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.9,
-          "error": 15.0,
-          "abs_error": 15.0
-        },
-        {
-          "time": "2026-06-27T09:15:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.8,
-          "error": 15.1,
-          "abs_error": 15.1
-        },
-        {
-          "time": "2026-06-27T09:16:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:17:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 594.6,
-          "error": 12.3,
-          "abs_error": 12.3
-        },
-        {
-          "time": "2026-06-27T09:18:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 590.3,
-          "error": 16.6,
-          "abs_error": 16.6
-        },
-        {
-          "time": "2026-06-27T09:19:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.4,
-          "error": 15.5,
-          "abs_error": 15.5
-        },
-        {
-          "time": "2026-06-27T09:20:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:21:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 590.3,
-          "error": 16.6,
-          "abs_error": 16.6
-        },
-        {
-          "time": "2026-06-27T09:22:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 577.6,
-          "error": 29.3,
-          "abs_error": 29.3
-        },
-        {
-          "time": "2026-06-27T09:23:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 590.1,
-          "error": 16.8,
-          "abs_error": 16.8
-        },
-        {
-          "time": "2026-06-27T09:24:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:25:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.3,
-          "error": 20.6,
-          "abs_error": 20.6
-        },
-        {
-          "time": "2026-06-27T09:26:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 594.5,
-          "error": 12.4,
-          "abs_error": 12.4
-        },
-        {
-          "time": "2026-06-27T09:27:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 590.6,
-          "error": 16.3,
-          "abs_error": 16.3
-        },
-        {
-          "time": "2026-06-27T09:28:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:29:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 587.4,
-          "error": 19.5,
-          "abs_error": 19.5
-        },
-        {
-          "time": "2026-06-27T09:30:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:31:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 588.7,
-          "error": 18.2,
-          "abs_error": 18.2
-        },
-        {
-          "time": "2026-06-27T09:32:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 576.5,
-          "error": 30.4,
-          "abs_error": 30.4
-        },
-        {
-          "time": "2026-06-27T09:33:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 584.8,
-          "error": 22.1,
-          "abs_error": 22.1
-        },
-        {
-          "time": "2026-06-27T09:34:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.2,
-          "error": 20.7,
-          "abs_error": 20.7
-        },
-        {
-          "time": "2026-06-27T09:35:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 587.5,
-          "error": 19.4,
-          "abs_error": 19.4
-        },
-        {
-          "time": "2026-06-27T09:36:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 553.6,
-          "error": 53.3,
-          "abs_error": 53.3
-        },
-        {
-          "time": "2026-06-27T09:37:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 560.4,
-          "error": 46.5,
-          "abs_error": 46.5
-        },
-        {
-          "time": "2026-06-27T09:38:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 584.1,
-          "error": 22.8,
-          "abs_error": 22.8
-        },
-        {
-          "time": "2026-06-27T09:39:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 561.5,
-          "error": 45.4,
-          "abs_error": 45.4
-        },
-        {
-          "time": "2026-06-27T09:40:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 584.3,
-          "error": 22.6,
-          "abs_error": 22.6
-        },
-        {
-          "time": "2026-06-27T09:41:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 588.2,
-          "error": 18.7,
-          "abs_error": 18.7
-        },
-        {
-          "time": "2026-06-27T09:42:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.5,
-          "error": 20.4,
-          "abs_error": 20.4
-        },
-        {
-          "time": "2026-06-27T09:43:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 551.0,
-          "error": 55.9,
-          "abs_error": 55.9
-        },
-        {
-          "time": "2026-06-27T09:44:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 549.2,
-          "error": 57.7,
-          "abs_error": 57.7
-        },
-        {
-          "time": "2026-06-27T09:45:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 550.3,
-          "error": 56.6,
-          "abs_error": 56.6
-        },
-        {
-          "time": "2026-06-27T09:46:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 541.4,
-          "error": 65.5,
-          "abs_error": 65.5
-        },
-        {
-          "time": "2026-06-27T09:47:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 547.0,
-          "error": 59.9,
-          "abs_error": 59.9
-        },
-        {
-          "time": "2026-06-27T09:48:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 561.8,
-          "error": 45.1,
-          "abs_error": 45.1
-        },
-        {
-          "time": "2026-06-27T09:49:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 560.6,
-          "error": 46.3,
-          "abs_error": 46.3
-        },
-        {
-          "time": "2026-06-27T09:50:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 545.5,
-          "error": 61.4,
-          "abs_error": 61.4
-        },
-        {
-          "time": "2026-06-27T09:51:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 550.1,
-          "error": 56.8,
-          "abs_error": 56.8
-        },
-        {
-          "time": "2026-06-27T09:52:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 551.7,
-          "error": 55.2,
-          "abs_error": 55.2
-        },
-        {
-          "time": "2026-06-27T09:53:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 559.3,
-          "error": 47.6,
-          "abs_error": 47.6
-        },
-        {
-          "time": "2026-06-27T09:54:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 551.3,
-          "error": 55.6,
-          "abs_error": 55.6
-        },
-        {
-          "time": "2026-06-27T09:55:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 542.3,
-          "error": 64.6,
-          "abs_error": 64.6
-        },
-        {
-          "time": "2026-06-27T09:56:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 555.1,
-          "error": 51.8,
-          "abs_error": 51.8
-        },
-        {
-          "time": "2026-06-27T09:57:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 557.0,
-          "error": 49.9,
-          "abs_error": 49.9
-        },
-        {
-          "time": "2026-06-27T09:58:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 545.1,
-          "error": 61.8,
-          "abs_error": 61.8
-        },
-        {
-          "time": "2026-06-27T09:59:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 550.9,
-          "error": 56.0,
-          "abs_error": 56.0
-        },
-        {
-          "time": "2026-06-27T10:00:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 541.5,
-          "error": 65.4,
-          "abs_error": 65.4
-        },
-        {
-          "time": "2026-06-27T10:01:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 547.9,
-          "error": 59.0,
-          "abs_error": 59.0
-        },
-        {
-          "time": "2026-06-27T10:02:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 545.4,
-          "error": 61.5,
-          "abs_error": 61.5
-        },
-        {
-          "time": "2026-06-27T10:03:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 551.4,
-          "error": 55.5,
-          "abs_error": 55.5
-        },
-        {
-          "time": "2026-06-27T10:04:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 550.0,
-          "error": 56.9,
-          "abs_error": 56.9
-        },
-        {
-          "time": "2026-06-27T10:05:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 579.3,
-          "error": 27.6,
-          "abs_error": 27.6
-        },
-        {
-          "time": "2026-06-27T10:06:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 590.9,
-          "error": 16.0,
-          "abs_error": 16.0
-        },
-        {
-          "time": "2026-06-27T10:07:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 558.0,
-          "error": 48.9,
-          "abs_error": 48.9
-        },
         {
           "time": "2026-06-27T10:08:00+00:00",
           "predicted_speed": 606.9,
@@ -3013,1033 +2003,1033 @@
           "observed_speed": 577.0,
           "error": 29.9,
           "abs_error": 29.9
+        },
+        {
+          "time": "2026-06-27T13:09:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 585.7,
+          "error": 21.2,
+          "abs_error": 21.2
+        },
+        {
+          "time": "2026-06-27T13:10:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 567.9,
+          "error": 39.0,
+          "abs_error": 39.0
+        },
+        {
+          "time": "2026-06-27T13:11:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.8,
+          "error": 69.1,
+          "abs_error": 69.1
+        },
+        {
+          "time": "2026-06-27T13:12:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 555.9,
+          "error": 51.0,
+          "abs_error": 51.0
+        },
+        {
+          "time": "2026-06-27T13:13:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 557.6,
+          "error": 49.3,
+          "abs_error": 49.3
+        },
+        {
+          "time": "2026-06-27T13:14:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.1,
+          "error": 57.8,
+          "abs_error": 57.8
+        },
+        {
+          "time": "2026-06-27T13:15:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 561.5,
+          "error": 45.4,
+          "abs_error": 45.4
+        },
+        {
+          "time": "2026-06-27T13:16:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 572.4,
+          "error": 34.5,
+          "abs_error": 34.5
+        },
+        {
+          "time": "2026-06-27T13:17:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 576.7,
+          "error": 30.2,
+          "abs_error": 30.2
+        },
+        {
+          "time": "2026-06-27T13:18:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 583.4,
+          "error": 23.5,
+          "abs_error": 23.5
+        },
+        {
+          "time": "2026-06-27T13:19:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 581.6,
+          "error": 25.3,
+          "abs_error": 25.3
+        },
+        {
+          "time": "2026-06-27T13:20:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 573.2,
+          "error": 33.7,
+          "abs_error": 33.7
+        },
+        {
+          "time": "2026-06-27T13:21:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 574.7,
+          "error": 32.2,
+          "abs_error": 32.2
+        },
+        {
+          "time": "2026-06-27T13:22:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 574.1,
+          "error": 32.8,
+          "abs_error": 32.8
+        },
+        {
+          "time": "2026-06-27T13:23:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 555.5,
+          "error": 51.4,
+          "abs_error": 51.4
+        },
+        {
+          "time": "2026-06-27T13:24:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 561.1,
+          "error": 45.8,
+          "abs_error": 45.8
+        },
+        {
+          "time": "2026-06-27T13:25:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 560.2,
+          "error": 46.7,
+          "abs_error": 46.7
+        },
+        {
+          "time": "2026-06-27T13:26:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.0,
+          "error": 68.9,
+          "abs_error": 68.9
+        },
+        {
+          "time": "2026-06-27T13:27:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 553.8,
+          "error": 53.1,
+          "abs_error": 53.1
+        },
+        {
+          "time": "2026-06-27T13:28:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.0,
+          "error": 66.9,
+          "abs_error": 66.9
+        },
+        {
+          "time": "2026-06-27T13:29:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 561.0,
+          "error": 45.9,
+          "abs_error": 45.9
+        },
+        {
+          "time": "2026-06-27T13:30:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 545.5,
+          "error": 61.4,
+          "abs_error": 61.4
+        },
+        {
+          "time": "2026-06-27T13:31:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 544.5,
+          "error": 62.4,
+          "abs_error": 62.4
+        },
+        {
+          "time": "2026-06-27T13:32:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.7,
+          "error": 66.2,
+          "abs_error": 66.2
+        },
+        {
+          "time": "2026-06-27T13:33:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 547.0,
+          "error": 59.9,
+          "abs_error": 59.9
+        },
+        {
+          "time": "2026-06-27T13:34:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 539.2,
+          "error": 67.7,
+          "abs_error": 67.7
+        },
+        {
+          "time": "2026-06-27T13:35:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 546.9,
+          "error": 60.0,
+          "abs_error": 60.0
+        },
+        {
+          "time": "2026-06-27T13:36:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 541.0,
+          "error": 65.9,
+          "abs_error": 65.9
+        },
+        {
+          "time": "2026-06-27T13:37:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.2,
+          "error": 68.7,
+          "abs_error": 68.7
+        },
+        {
+          "time": "2026-06-27T13:38:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 542.8,
+          "error": 64.1,
+          "abs_error": 64.1
+        },
+        {
+          "time": "2026-06-27T13:39:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.2,
+          "error": 68.7,
+          "abs_error": 68.7
+        },
+        {
+          "time": "2026-06-27T13:40:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.8,
+          "error": 68.1,
+          "abs_error": 68.1
+        },
+        {
+          "time": "2026-06-27T13:41:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.2,
+          "error": 68.7,
+          "abs_error": 68.7
+        },
+        {
+          "time": "2026-06-27T13:42:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 547.7,
+          "error": 59.2,
+          "abs_error": 59.2
+        },
+        {
+          "time": "2026-06-27T13:43:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 556.1,
+          "error": 50.8,
+          "abs_error": 50.8
+        },
+        {
+          "time": "2026-06-27T13:44:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.2,
+          "error": 57.7,
+          "abs_error": 57.7
+        },
+        {
+          "time": "2026-06-27T13:45:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 561.3,
+          "error": 45.6,
+          "abs_error": 45.6
+        },
+        {
+          "time": "2026-06-27T13:46:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 562.2,
+          "error": 44.7,
+          "abs_error": 44.7
+        },
+        {
+          "time": "2026-06-27T13:47:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.6,
+          "error": 68.3,
+          "abs_error": 68.3
+        },
+        {
+          "time": "2026-06-27T13:48:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.3,
+          "error": 58.6,
+          "abs_error": 58.6
+        },
+        {
+          "time": "2026-06-27T13:49:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.8,
+          "error": 66.1,
+          "abs_error": 66.1
+        },
+        {
+          "time": "2026-06-27T13:50:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 553.6,
+          "error": 53.3,
+          "abs_error": 53.3
+        },
+        {
+          "time": "2026-06-27T13:51:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 556.1,
+          "error": 50.8,
+          "abs_error": 50.8
+        },
+        {
+          "time": "2026-06-27T13:52:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 544.0,
+          "error": 62.9,
+          "abs_error": 62.9
+        },
+        {
+          "time": "2026-06-27T13:53:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 551.1,
+          "error": 55.8,
+          "abs_error": 55.8
+        },
+        {
+          "time": "2026-06-27T13:54:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.4,
+          "error": 58.5,
+          "abs_error": 58.5
+        },
+        {
+          "time": "2026-06-27T13:55:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.7,
+          "error": 57.2,
+          "abs_error": 57.2
+        },
+        {
+          "time": "2026-06-27T13:56:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 552.9,
+          "error": 54.0,
+          "abs_error": 54.0
+        },
+        {
+          "time": "2026-06-27T13:57:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 545.6,
+          "error": 61.3,
+          "abs_error": 61.3
+        },
+        {
+          "time": "2026-06-27T13:58:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 544.9,
+          "error": 62.0,
+          "abs_error": 62.0
+        },
+        {
+          "time": "2026-06-27T13:59:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.9,
+          "error": 66.0,
+          "abs_error": 66.0
+        },
+        {
+          "time": "2026-06-27T14:00:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.8,
+          "error": 66.1,
+          "abs_error": 66.1
+        },
+        {
+          "time": "2026-06-27T14:01:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.0,
+          "error": 68.9,
+          "abs_error": 68.9
+        },
+        {
+          "time": "2026-06-27T14:02:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 534.7,
+          "error": 72.2,
+          "abs_error": 72.2
+        },
+        {
+          "time": "2026-06-27T14:03:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 542.0,
+          "error": 64.9,
+          "abs_error": 64.9
+        },
+        {
+          "time": "2026-06-27T14:04:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.3,
+          "error": 56.6,
+          "abs_error": 56.6
+        },
+        {
+          "time": "2026-06-27T14:05:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.7,
+          "error": 58.2,
+          "abs_error": 58.2
+        },
+        {
+          "time": "2026-06-27T14:06:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.4,
+          "error": 56.5,
+          "abs_error": 56.5
+        },
+        {
+          "time": "2026-06-27T14:07:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 570.1,
+          "error": 36.8,
+          "abs_error": 36.8
+        },
+        {
+          "time": "2026-06-27T14:08:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 555.2,
+          "error": 51.7,
+          "abs_error": 51.7
+        },
+        {
+          "time": "2026-06-27T14:09:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 554.5,
+          "error": 52.4,
+          "abs_error": 52.4
+        },
+        {
+          "time": "2026-06-27T14:10:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.9,
+          "error": 58.0,
+          "abs_error": 58.0
+        },
+        {
+          "time": "2026-06-27T14:11:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.8,
+          "error": 57.1,
+          "abs_error": 57.1
+        },
+        {
+          "time": "2026-06-27T14:12:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 541.8,
+          "error": 65.1,
+          "abs_error": 65.1
+        },
+        {
+          "time": "2026-06-27T14:13:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 542.4,
+          "error": 64.5,
+          "abs_error": 64.5
+        },
+        {
+          "time": "2026-06-27T14:14:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.2,
+          "error": 58.7,
+          "abs_error": 58.7
+        },
+        {
+          "time": "2026-06-27T14:15:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.1,
+          "error": 68.8,
+          "abs_error": 68.8
+        },
+        {
+          "time": "2026-06-27T14:16:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 543.0,
+          "error": 63.9,
+          "abs_error": 63.9
+        },
+        {
+          "time": "2026-06-27T14:17:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.8,
+          "error": 68.1,
+          "abs_error": 68.1
+        },
+        {
+          "time": "2026-06-27T14:18:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 536.0,
+          "error": 70.9,
+          "abs_error": 70.9
+        },
+        {
+          "time": "2026-06-27T14:19:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 530.6,
+          "error": 76.3,
+          "abs_error": 76.3
+        },
+        {
+          "time": "2026-06-27T14:20:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 536.4,
+          "error": 70.5,
+          "abs_error": 70.5
+        },
+        {
+          "time": "2026-06-27T14:21:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 532.9,
+          "error": 74.0,
+          "abs_error": 74.0
+        },
+        {
+          "time": "2026-06-27T14:22:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 535.2,
+          "error": 71.7,
+          "abs_error": 71.7
+        },
+        {
+          "time": "2026-06-27T14:23:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 535.9,
+          "error": 71.0,
+          "abs_error": 71.0
+        },
+        {
+          "time": "2026-06-27T14:24:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 526.7,
+          "error": 80.2,
+          "abs_error": 80.2
+        },
+        {
+          "time": "2026-06-27T14:25:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.6,
+          "error": 69.3,
+          "abs_error": 69.3
+        },
+        {
+          "time": "2026-06-27T14:26:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 536.9,
+          "error": 70.0,
+          "abs_error": 70.0
+        },
+        {
+          "time": "2026-06-27T14:27:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 524.6,
+          "error": 82.3,
+          "abs_error": 82.3
+        },
+        {
+          "time": "2026-06-27T14:28:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 536.8,
+          "error": 70.1,
+          "abs_error": 70.1
+        },
+        {
+          "time": "2026-06-27T14:29:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 526.5,
+          "error": 80.4,
+          "abs_error": 80.4
+        },
+        {
+          "time": "2026-06-27T14:30:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.7,
+          "error": 58.2,
+          "abs_error": 58.2
+        },
+        {
+          "time": "2026-06-27T14:31:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 551.5,
+          "error": 55.4,
+          "abs_error": 55.4
+        },
+        {
+          "time": "2026-06-27T14:32:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.6,
+          "error": 57.3,
+          "abs_error": 57.3
+        },
+        {
+          "time": "2026-06-27T14:33:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.9,
+          "error": 56.0,
+          "abs_error": 56.0
+        },
+        {
+          "time": "2026-06-27T14:34:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.7,
+          "error": 56.2,
+          "abs_error": 56.2
+        },
+        {
+          "time": "2026-06-27T14:35:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 551.0,
+          "error": 55.9,
+          "abs_error": 55.9
+        },
+        {
+          "time": "2026-06-27T14:36:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.9,
+          "error": 56.0,
+          "abs_error": 56.0
+        },
+        {
+          "time": "2026-06-27T14:37:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.9,
+          "error": 56.0,
+          "abs_error": 56.0
+        },
+        {
+          "time": "2026-06-27T14:38:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.1,
+          "error": 56.8,
+          "abs_error": 56.8
+        },
+        {
+          "time": "2026-06-27T14:39:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.4,
+          "error": 57.5,
+          "abs_error": 57.5
+        },
+        {
+          "time": "2026-06-27T14:40:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.8,
+          "error": 57.1,
+          "abs_error": 57.1
+        },
+        {
+          "time": "2026-06-27T14:41:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 553.0,
+          "error": 53.9,
+          "abs_error": 53.9
+        },
+        {
+          "time": "2026-06-27T14:42:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 552.2,
+          "error": 54.7,
+          "abs_error": 54.7
+        },
+        {
+          "time": "2026-06-27T14:43:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 529.3,
+          "error": 77.6,
+          "abs_error": 77.6
+        },
+        {
+          "time": "2026-06-27T14:44:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.1,
+          "error": 58.8,
+          "abs_error": 58.8
+        },
+        {
+          "time": "2026-06-27T14:45:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 535.9,
+          "error": 71.0,
+          "abs_error": 71.0
+        },
+        {
+          "time": "2026-06-27T14:46:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 543.8,
+          "error": 63.1,
+          "abs_error": 63.1
+        },
+        {
+          "time": "2026-06-27T14:47:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 547.5,
+          "error": 59.4,
+          "abs_error": 59.4
+        },
+        {
+          "time": "2026-06-27T14:48:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.6,
+          "error": 69.3,
+          "abs_error": 69.3
+        },
+        {
+          "time": "2026-06-27T14:49:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 525.0,
+          "error": 81.9,
+          "abs_error": 81.9
+        },
+        {
+          "time": "2026-06-27T14:50:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 539.9,
+          "error": 67.0,
+          "abs_error": 67.0
+        },
+        {
+          "time": "2026-06-27T14:51:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 535.7,
+          "error": 71.2,
+          "abs_error": 71.2
+        },
+        {
+          "time": "2026-06-27T14:52:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 526.7,
+          "error": 80.2,
+          "abs_error": 80.2
+        },
+        {
+          "time": "2026-06-27T14:53:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 536.5,
+          "error": 70.4,
+          "abs_error": 70.4
+        },
+        {
+          "time": "2026-06-27T14:54:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.2,
+          "error": 66.7,
+          "abs_error": 66.7
+        },
+        {
+          "time": "2026-06-27T14:55:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.3,
+          "error": 69.6,
+          "abs_error": 69.6
+        },
+        {
+          "time": "2026-06-27T14:56:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 542.6,
+          "error": 64.3,
+          "abs_error": 64.3
+        },
+        {
+          "time": "2026-06-27T14:57:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 535.4,
+          "error": 71.5,
+          "abs_error": 71.5
+        },
+        {
+          "time": "2026-06-27T14:58:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.8,
+          "error": 69.1,
+          "abs_error": 69.1
+        },
+        {
+          "time": "2026-06-27T14:59:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 541.2,
+          "error": 65.7,
+          "abs_error": 65.7
+        },
+        {
+          "time": "2026-06-27T15:00:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 541.2,
+          "error": 65.7,
+          "abs_error": 65.7
+        },
+        {
+          "time": "2026-06-27T15:01:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 542.5,
+          "error": 64.4,
+          "abs_error": 64.4
+        },
+        {
+          "time": "2026-06-27T15:02:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.0,
+          "error": 69.9,
+          "abs_error": 69.9
+        },
+        {
+          "time": "2026-06-27T15:03:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 547.3,
+          "error": 59.6,
+          "abs_error": 59.6
+        },
+        {
+          "time": "2026-06-27T15:04:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.5,
+          "error": 69.4,
+          "abs_error": 69.4
+        },
+        {
+          "time": "2026-06-27T15:05:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 544.0,
+          "error": 62.9,
+          "abs_error": 62.9
+        },
+        {
+          "time": "2026-06-27T15:06:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.7,
+          "error": 66.2,
+          "abs_error": 66.2
+        },
+        {
+          "time": "2026-06-27T15:07:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 541.2,
+          "error": 65.7,
+          "abs_error": 65.7
+        },
+        {
+          "time": "2026-06-27T15:08:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 533.6,
+          "error": 73.3,
+          "abs_error": 73.3
+        },
+        {
+          "time": "2026-06-27T15:09:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.2,
+          "error": 69.7,
+          "abs_error": 69.7
+        },
+        {
+          "time": "2026-06-27T15:10:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 528.4,
+          "error": 78.5,
+          "abs_error": 78.5
+        },
+        {
+          "time": "2026-06-27T15:11:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.5,
+          "error": 69.4,
+          "abs_error": 69.4
+        },
+        {
+          "time": "2026-06-27T15:12:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 524.7,
+          "error": 82.2,
+          "abs_error": 82.2
+        },
+        {
+          "time": "2026-06-27T15:13:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 518.1,
+          "error": 88.8,
+          "abs_error": 88.8
+        },
+        {
+          "time": "2026-06-27T15:14:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 518.9,
+          "error": 88.0,
+          "abs_error": 88.0
+        },
+        {
+          "time": "2026-06-27T15:15:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 535.3,
+          "error": 71.6,
+          "abs_error": 71.6
+        },
+        {
+          "time": "2026-06-27T15:16:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 534.7,
+          "error": 72.2,
+          "abs_error": 72.2
+        },
+        {
+          "time": "2026-06-27T15:17:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 522.4,
+          "error": 84.5,
+          "abs_error": 84.5
+        },
+        {
+          "time": "2026-06-27T15:18:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 536.9,
+          "error": 70.0,
+          "abs_error": 70.0
+        },
+        {
+          "time": "2026-06-27T15:19:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 525.0,
+          "error": 81.9,
+          "abs_error": 81.9
+        },
+        {
+          "time": "2026-06-27T15:20:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 531.1,
+          "error": 75.8,
+          "abs_error": 75.8
+        },
+        {
+          "time": "2026-06-27T15:21:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 517.9,
+          "error": 89.0,
+          "abs_error": 89.0
+        },
+        {
+          "time": "2026-06-27T15:22:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 525.8,
+          "error": 81.1,
+          "abs_error": 81.1
+        },
+        {
+          "time": "2026-06-27T15:23:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 528.4,
+          "error": 78.5,
+          "abs_error": 78.5
+        },
+        {
+          "time": "2026-06-27T15:24:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 526.0,
+          "error": 80.9,
+          "abs_error": 80.9
+        },
+        {
+          "time": "2026-06-27T15:25:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.3,
+          "error": 68.6,
+          "abs_error": 68.6
+        },
+        {
+          "time": "2026-06-27T15:26:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 530.0,
+          "error": 76.9,
+          "abs_error": 76.9
+        },
+        {
+          "time": "2026-06-27T15:27:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 541.8,
+          "error": 65.1,
+          "abs_error": 65.1
+        },
+        {
+          "time": "2026-06-27T15:28:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.6,
+          "error": 69.3,
+          "abs_error": 69.3
+        },
+        {
+          "time": "2026-06-27T15:29:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.2,
+          "error": 66.7,
+          "abs_error": 66.7
+        },
+        {
+          "time": "2026-06-27T15:30:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.3,
+          "error": 68.6,
+          "abs_error": 68.6
+        },
+        {
+          "time": "2026-06-27T15:31:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.0,
+          "error": 69.9,
+          "abs_error": 69.9
+        },
+        {
+          "time": "2026-06-27T15:32:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 529.0,
+          "error": 77.9,
+          "abs_error": 77.9
+        },
+        {
+          "time": "2026-06-27T15:33:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 539.3,
+          "error": 67.6,
+          "abs_error": 67.6
         }
       ]
     },
     "last_30d": {
-      "count": 18004,
-      "mae": 178.15,
-      "bias": 177.72,
-      "rmse": 188.85,
+      "count": 18149,
+      "mae": 177.23,
+      "bias": 176.8,
+      "rmse": 188.19,
       "hit_rate_50kms": 6.0,
-      "hit_rate_75kms": 8.0,
-      "hit_rate_100kms": 10.4,
+      "hit_rate_75kms": 8.6,
+      "hit_rate_100kms": 11.1,
       "items": [
-        {
-          "time": "2026-06-27T07:43:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 558.1,
-          "error": 48.8,
-          "abs_error": 48.8
-        },
-        {
-          "time": "2026-06-27T07:44:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 543.3,
-          "error": 63.6,
-          "abs_error": 63.6
-        },
-        {
-          "time": "2026-06-27T07:45:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 537.5,
-          "error": 69.4,
-          "abs_error": 69.4
-        },
-        {
-          "time": "2026-06-27T07:46:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 529.2,
-          "error": 77.7,
-          "abs_error": 77.7
-        },
-        {
-          "time": "2026-06-27T07:47:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 564.7,
-          "error": 42.2,
-          "abs_error": 42.2
-        },
-        {
-          "time": "2026-06-27T07:48:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 556.8,
-          "error": 50.1,
-          "abs_error": 50.1
-        },
-        {
-          "time": "2026-06-27T07:49:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 556.7,
-          "error": 50.2,
-          "abs_error": 50.2
-        },
-        {
-          "time": "2026-06-27T07:50:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 551.7,
-          "error": 55.2,
-          "abs_error": 55.2
-        },
-        {
-          "time": "2026-06-27T07:51:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 541.1,
-          "error": 65.8,
-          "abs_error": 65.8
-        },
-        {
-          "time": "2026-06-27T07:52:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 542.8,
-          "error": 64.1,
-          "abs_error": 64.1
-        },
-        {
-          "time": "2026-06-27T07:53:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 568.0,
-          "error": 38.9,
-          "abs_error": 38.9
-        },
-        {
-          "time": "2026-06-27T07:54:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 541.0,
-          "error": 65.9,
-          "abs_error": 65.9
-        },
-        {
-          "time": "2026-06-27T07:55:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 573.2,
-          "error": 33.7,
-          "abs_error": 33.7
-        },
-        {
-          "time": "2026-06-27T07:56:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 577.8,
-          "error": 29.1,
-          "abs_error": 29.1
-        },
-        {
-          "time": "2026-06-27T07:57:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 574.4,
-          "error": 32.5,
-          "abs_error": 32.5
-        },
-        {
-          "time": "2026-06-27T07:58:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 581.5,
-          "error": 25.4,
-          "abs_error": 25.4
-        },
-        {
-          "time": "2026-06-27T07:59:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 560.1,
-          "error": 46.8,
-          "abs_error": 46.8
-        },
-        {
-          "time": "2026-06-27T08:00:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 578.6,
-          "error": 28.3,
-          "abs_error": 28.3
-        },
-        {
-          "time": "2026-06-27T08:01:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 540.0,
-          "error": 66.9,
-          "abs_error": 66.9
-        },
-        {
-          "time": "2026-06-27T08:02:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 543.0,
-          "error": 63.9,
-          "abs_error": 63.9
-        },
-        {
-          "time": "2026-06-27T08:03:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 560.9,
-          "error": 46.0,
-          "abs_error": 46.0
-        },
-        {
-          "time": "2026-06-27T08:04:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 573.5,
-          "error": 33.4,
-          "abs_error": 33.4
-        },
-        {
-          "time": "2026-06-27T08:05:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 562.0,
-          "error": 44.9,
-          "abs_error": 44.9
-        },
-        {
-          "time": "2026-06-27T08:06:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 558.2,
-          "error": 48.7,
-          "abs_error": 48.7
-        },
-        {
-          "time": "2026-06-27T08:07:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 581.4,
-          "error": 25.5,
-          "abs_error": 25.5
-        },
-        {
-          "time": "2026-06-27T08:08:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 554.0,
-          "error": 52.9,
-          "abs_error": 52.9
-        },
-        {
-          "time": "2026-06-27T08:09:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.9,
-          "error": 20.0,
-          "abs_error": 20.0
-        },
-        {
-          "time": "2026-06-27T08:10:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.4,
-          "error": 20.5,
-          "abs_error": 20.5
-        },
-        {
-          "time": "2026-06-27T08:11:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 572.9,
-          "error": 34.0,
-          "abs_error": 34.0
-        },
-        {
-          "time": "2026-06-27T08:12:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 563.6,
-          "error": 43.3,
-          "abs_error": 43.3
-        },
-        {
-          "time": "2026-06-27T08:13:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 556.4,
-          "error": 50.5,
-          "abs_error": 50.5
-        },
-        {
-          "time": "2026-06-27T08:14:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 578.5,
-          "error": 28.4,
-          "abs_error": 28.4
-        },
-        {
-          "time": "2026-06-27T08:15:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 569.9,
-          "error": 37.0,
-          "abs_error": 37.0
-        },
-        {
-          "time": "2026-06-27T08:16:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 598.6,
-          "error": 8.3,
-          "abs_error": 8.3
-        },
-        {
-          "time": "2026-06-27T08:17:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 583.9,
-          "error": 23.0,
-          "abs_error": 23.0
-        },
-        {
-          "time": "2026-06-27T08:18:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 592.3,
-          "error": 14.6,
-          "abs_error": 14.6
-        },
-        {
-          "time": "2026-06-27T08:19:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 594.3,
-          "error": 12.6,
-          "abs_error": 12.6
-        },
-        {
-          "time": "2026-06-27T08:20:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 580.2,
-          "error": 26.7,
-          "abs_error": 26.7
-        },
-        {
-          "time": "2026-06-27T08:21:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 569.0,
-          "error": 37.9,
-          "abs_error": 37.9
-        },
-        {
-          "time": "2026-06-27T08:22:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 597.0,
-          "error": 9.9,
-          "abs_error": 9.9
-        },
-        {
-          "time": "2026-06-27T08:23:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 566.2,
-          "error": 40.7,
-          "abs_error": 40.7
-        },
-        {
-          "time": "2026-06-27T08:24:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 567.2,
-          "error": 39.7,
-          "abs_error": 39.7
-        },
-        {
-          "time": "2026-06-27T08:25:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.6,
-          "error": 15.3,
-          "abs_error": 15.3
-        },
-        {
-          "time": "2026-06-27T08:26:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 589.6,
-          "error": 17.3,
-          "abs_error": 17.3
-        },
-        {
-          "time": "2026-06-27T08:27:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 553.7,
-          "error": 53.2,
-          "abs_error": 53.2
-        },
-        {
-          "time": "2026-06-27T08:28:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 568.6,
-          "error": 38.3,
-          "abs_error": 38.3
-        },
-        {
-          "time": "2026-06-27T08:29:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 585.0,
-          "error": 21.9,
-          "abs_error": 21.9
-        },
-        {
-          "time": "2026-06-27T08:30:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 550.6,
-          "error": 56.3,
-          "abs_error": 56.3
-        },
-        {
-          "time": "2026-06-27T08:31:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 560.4,
-          "error": 46.5,
-          "abs_error": 46.5
-        },
-        {
-          "time": "2026-06-27T08:32:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 567.3,
-          "error": 39.6,
-          "abs_error": 39.6
-        },
-        {
-          "time": "2026-06-27T08:33:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 588.4,
-          "error": 18.5,
-          "abs_error": 18.5
-        },
-        {
-          "time": "2026-06-27T08:34:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 572.7,
-          "error": 34.2,
-          "abs_error": 34.2
-        },
-        {
-          "time": "2026-06-27T08:35:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 593.7,
-          "error": 13.2,
-          "abs_error": 13.2
-        },
-        {
-          "time": "2026-06-27T08:36:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 549.7,
-          "error": 57.2,
-          "abs_error": 57.2
-        },
-        {
-          "time": "2026-06-27T08:37:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 567.2,
-          "error": 39.7,
-          "abs_error": 39.7
-        },
-        {
-          "time": "2026-06-27T08:38:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 587.5,
-          "error": 19.4,
-          "abs_error": 19.4
-        },
-        {
-          "time": "2026-06-27T08:39:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 584.6,
-          "error": 22.3,
-          "abs_error": 22.3
-        },
-        {
-          "time": "2026-06-27T08:40:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 582.3,
-          "error": 24.6,
-          "abs_error": 24.6
-        },
-        {
-          "time": "2026-06-27T08:41:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.3,
-          "error": 20.6,
-          "abs_error": 20.6
-        },
-        {
-          "time": "2026-06-27T08:42:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 587.9,
-          "error": 19.0,
-          "abs_error": 19.0
-        },
-        {
-          "time": "2026-06-27T08:43:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 583.6,
-          "error": 23.3,
-          "abs_error": 23.3
-        },
-        {
-          "time": "2026-06-27T08:44:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.8,
-          "error": 20.1,
-          "abs_error": 20.1
-        },
-        {
-          "time": "2026-06-27T08:45:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:46:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 589.1,
-          "error": 17.8,
-          "abs_error": 17.8
-        },
-        {
-          "time": "2026-06-27T08:47:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:48:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 588.7,
-          "error": 18.2,
-          "abs_error": 18.2
-        },
-        {
-          "time": "2026-06-27T08:49:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:50:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.1,
-          "error": 15.8,
-          "abs_error": 15.8
-        },
-        {
-          "time": "2026-06-27T08:51:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 592.4,
-          "error": 14.5,
-          "abs_error": 14.5
-        },
-        {
-          "time": "2026-06-27T08:52:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:53:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.4,
-          "error": 15.5,
-          "abs_error": 15.5
-        },
-        {
-          "time": "2026-06-27T08:54:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:55:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:56:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T08:57:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 593.1,
-          "error": 13.8,
-          "abs_error": 13.8
-        },
-        {
-          "time": "2026-06-27T08:58:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.5,
-          "error": 15.4,
-          "abs_error": 15.4
-        },
-        {
-          "time": "2026-06-27T08:59:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.6,
-          "error": 15.3,
-          "abs_error": 15.3
-        },
-        {
-          "time": "2026-06-27T09:00:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 594.8,
-          "error": 12.1,
-          "abs_error": 12.1
-        },
-        {
-          "time": "2026-06-27T09:01:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 593.3,
-          "error": 13.6,
-          "abs_error": 13.6
-        },
-        {
-          "time": "2026-06-27T09:02:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 592.7,
-          "error": 14.2,
-          "abs_error": 14.2
-        },
-        {
-          "time": "2026-06-27T09:03:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.6,
-          "error": 15.3,
-          "abs_error": 15.3
-        },
-        {
-          "time": "2026-06-27T09:04:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 590.9,
-          "error": 16.0,
-          "abs_error": 16.0
-        },
-        {
-          "time": "2026-06-27T09:05:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 589.3,
-          "error": 17.6,
-          "abs_error": 17.6
-        },
-        {
-          "time": "2026-06-27T09:06:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 589.2,
-          "error": 17.7,
-          "abs_error": 17.7
-        },
-        {
-          "time": "2026-06-27T09:07:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 589.4,
-          "error": 17.5,
-          "abs_error": 17.5
-        },
-        {
-          "time": "2026-06-27T09:08:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:09:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:10:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 588.3,
-          "error": 18.6,
-          "abs_error": 18.6
-        },
-        {
-          "time": "2026-06-27T09:11:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 549.1,
-          "error": 57.8,
-          "abs_error": 57.8
-        },
-        {
-          "time": "2026-06-27T09:12:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 589.0,
-          "error": 17.9,
-          "abs_error": 17.9
-        },
-        {
-          "time": "2026-06-27T09:13:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 592.6,
-          "error": 14.3,
-          "abs_error": 14.3
-        },
-        {
-          "time": "2026-06-27T09:14:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.9,
-          "error": 15.0,
-          "abs_error": 15.0
-        },
-        {
-          "time": "2026-06-27T09:15:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.8,
-          "error": 15.1,
-          "abs_error": 15.1
-        },
-        {
-          "time": "2026-06-27T09:16:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:17:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 594.6,
-          "error": 12.3,
-          "abs_error": 12.3
-        },
-        {
-          "time": "2026-06-27T09:18:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 590.3,
-          "error": 16.6,
-          "abs_error": 16.6
-        },
-        {
-          "time": "2026-06-27T09:19:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.4,
-          "error": 15.5,
-          "abs_error": 15.5
-        },
-        {
-          "time": "2026-06-27T09:20:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:21:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 590.3,
-          "error": 16.6,
-          "abs_error": 16.6
-        },
-        {
-          "time": "2026-06-27T09:22:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 577.6,
-          "error": 29.3,
-          "abs_error": 29.3
-        },
-        {
-          "time": "2026-06-27T09:23:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 590.1,
-          "error": 16.8,
-          "abs_error": 16.8
-        },
-        {
-          "time": "2026-06-27T09:24:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:25:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.3,
-          "error": 20.6,
-          "abs_error": 20.6
-        },
-        {
-          "time": "2026-06-27T09:26:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 594.5,
-          "error": 12.4,
-          "abs_error": 12.4
-        },
-        {
-          "time": "2026-06-27T09:27:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 590.6,
-          "error": 16.3,
-          "abs_error": 16.3
-        },
-        {
-          "time": "2026-06-27T09:28:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:29:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 587.4,
-          "error": 19.5,
-          "abs_error": 19.5
-        },
-        {
-          "time": "2026-06-27T09:30:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 591.0,
-          "error": 15.9,
-          "abs_error": 15.9
-        },
-        {
-          "time": "2026-06-27T09:31:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 588.7,
-          "error": 18.2,
-          "abs_error": 18.2
-        },
-        {
-          "time": "2026-06-27T09:32:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 576.5,
-          "error": 30.4,
-          "abs_error": 30.4
-        },
-        {
-          "time": "2026-06-27T09:33:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 584.8,
-          "error": 22.1,
-          "abs_error": 22.1
-        },
-        {
-          "time": "2026-06-27T09:34:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.2,
-          "error": 20.7,
-          "abs_error": 20.7
-        },
-        {
-          "time": "2026-06-27T09:35:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 587.5,
-          "error": 19.4,
-          "abs_error": 19.4
-        },
-        {
-          "time": "2026-06-27T09:36:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 553.6,
-          "error": 53.3,
-          "abs_error": 53.3
-        },
-        {
-          "time": "2026-06-27T09:37:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 560.4,
-          "error": 46.5,
-          "abs_error": 46.5
-        },
-        {
-          "time": "2026-06-27T09:38:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 584.1,
-          "error": 22.8,
-          "abs_error": 22.8
-        },
-        {
-          "time": "2026-06-27T09:39:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 561.5,
-          "error": 45.4,
-          "abs_error": 45.4
-        },
-        {
-          "time": "2026-06-27T09:40:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 584.3,
-          "error": 22.6,
-          "abs_error": 22.6
-        },
-        {
-          "time": "2026-06-27T09:41:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 588.2,
-          "error": 18.7,
-          "abs_error": 18.7
-        },
-        {
-          "time": "2026-06-27T09:42:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 586.5,
-          "error": 20.4,
-          "abs_error": 20.4
-        },
-        {
-          "time": "2026-06-27T09:43:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 551.0,
-          "error": 55.9,
-          "abs_error": 55.9
-        },
-        {
-          "time": "2026-06-27T09:44:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 549.2,
-          "error": 57.7,
-          "abs_error": 57.7
-        },
-        {
-          "time": "2026-06-27T09:45:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 550.3,
-          "error": 56.6,
-          "abs_error": 56.6
-        },
-        {
-          "time": "2026-06-27T09:46:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 541.4,
-          "error": 65.5,
-          "abs_error": 65.5
-        },
-        {
-          "time": "2026-06-27T09:47:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 547.0,
-          "error": 59.9,
-          "abs_error": 59.9
-        },
-        {
-          "time": "2026-06-27T09:48:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 561.8,
-          "error": 45.1,
-          "abs_error": 45.1
-        },
-        {
-          "time": "2026-06-27T09:49:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 560.6,
-          "error": 46.3,
-          "abs_error": 46.3
-        },
-        {
-          "time": "2026-06-27T09:50:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 545.5,
-          "error": 61.4,
-          "abs_error": 61.4
-        },
-        {
-          "time": "2026-06-27T09:51:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 550.1,
-          "error": 56.8,
-          "abs_error": 56.8
-        },
-        {
-          "time": "2026-06-27T09:52:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 551.7,
-          "error": 55.2,
-          "abs_error": 55.2
-        },
-        {
-          "time": "2026-06-27T09:53:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 559.3,
-          "error": 47.6,
-          "abs_error": 47.6
-        },
-        {
-          "time": "2026-06-27T09:54:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 551.3,
-          "error": 55.6,
-          "abs_error": 55.6
-        },
-        {
-          "time": "2026-06-27T09:55:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 542.3,
-          "error": 64.6,
-          "abs_error": 64.6
-        },
-        {
-          "time": "2026-06-27T09:56:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 555.1,
-          "error": 51.8,
-          "abs_error": 51.8
-        },
-        {
-          "time": "2026-06-27T09:57:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 557.0,
-          "error": 49.9,
-          "abs_error": 49.9
-        },
-        {
-          "time": "2026-06-27T09:58:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 545.1,
-          "error": 61.8,
-          "abs_error": 61.8
-        },
-        {
-          "time": "2026-06-27T09:59:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 550.9,
-          "error": 56.0,
-          "abs_error": 56.0
-        },
-        {
-          "time": "2026-06-27T10:00:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 541.5,
-          "error": 65.4,
-          "abs_error": 65.4
-        },
-        {
-          "time": "2026-06-27T10:01:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 547.9,
-          "error": 59.0,
-          "abs_error": 59.0
-        },
-        {
-          "time": "2026-06-27T10:02:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 545.4,
-          "error": 61.5,
-          "abs_error": 61.5
-        },
-        {
-          "time": "2026-06-27T10:03:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 551.4,
-          "error": 55.5,
-          "abs_error": 55.5
-        },
-        {
-          "time": "2026-06-27T10:04:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 550.0,
-          "error": 56.9,
-          "abs_error": 56.9
-        },
-        {
-          "time": "2026-06-27T10:05:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 579.3,
-          "error": 27.6,
-          "abs_error": 27.6
-        },
-        {
-          "time": "2026-06-27T10:06:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 590.9,
-          "error": 16.0,
-          "abs_error": 16.0
-        },
-        {
-          "time": "2026-06-27T10:07:00+00:00",
-          "predicted_speed": 606.9,
-          "observed_speed": 558.0,
-          "error": 48.9,
-          "abs_error": 48.9
-        },
         {
           "time": "2026-06-27T10:08:00+00:00",
           "predicted_speed": 606.9,
@@ -5124,6 +4114,1021 @@
           "observed_speed": 577.0,
           "error": 29.9,
           "abs_error": 29.9
+        },
+        {
+          "time": "2026-06-27T13:09:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 585.7,
+          "error": 21.2,
+          "abs_error": 21.2
+        },
+        {
+          "time": "2026-06-27T13:10:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 567.9,
+          "error": 39.0,
+          "abs_error": 39.0
+        },
+        {
+          "time": "2026-06-27T13:11:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.8,
+          "error": 69.1,
+          "abs_error": 69.1
+        },
+        {
+          "time": "2026-06-27T13:12:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 555.9,
+          "error": 51.0,
+          "abs_error": 51.0
+        },
+        {
+          "time": "2026-06-27T13:13:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 557.6,
+          "error": 49.3,
+          "abs_error": 49.3
+        },
+        {
+          "time": "2026-06-27T13:14:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.1,
+          "error": 57.8,
+          "abs_error": 57.8
+        },
+        {
+          "time": "2026-06-27T13:15:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 561.5,
+          "error": 45.4,
+          "abs_error": 45.4
+        },
+        {
+          "time": "2026-06-27T13:16:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 572.4,
+          "error": 34.5,
+          "abs_error": 34.5
+        },
+        {
+          "time": "2026-06-27T13:17:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 576.7,
+          "error": 30.2,
+          "abs_error": 30.2
+        },
+        {
+          "time": "2026-06-27T13:18:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 583.4,
+          "error": 23.5,
+          "abs_error": 23.5
+        },
+        {
+          "time": "2026-06-27T13:19:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 581.6,
+          "error": 25.3,
+          "abs_error": 25.3
+        },
+        {
+          "time": "2026-06-27T13:20:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 573.2,
+          "error": 33.7,
+          "abs_error": 33.7
+        },
+        {
+          "time": "2026-06-27T13:21:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 574.7,
+          "error": 32.2,
+          "abs_error": 32.2
+        },
+        {
+          "time": "2026-06-27T13:22:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 574.1,
+          "error": 32.8,
+          "abs_error": 32.8
+        },
+        {
+          "time": "2026-06-27T13:23:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 555.5,
+          "error": 51.4,
+          "abs_error": 51.4
+        },
+        {
+          "time": "2026-06-27T13:24:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 561.1,
+          "error": 45.8,
+          "abs_error": 45.8
+        },
+        {
+          "time": "2026-06-27T13:25:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 560.2,
+          "error": 46.7,
+          "abs_error": 46.7
+        },
+        {
+          "time": "2026-06-27T13:26:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.0,
+          "error": 68.9,
+          "abs_error": 68.9
+        },
+        {
+          "time": "2026-06-27T13:27:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 553.8,
+          "error": 53.1,
+          "abs_error": 53.1
+        },
+        {
+          "time": "2026-06-27T13:28:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.0,
+          "error": 66.9,
+          "abs_error": 66.9
+        },
+        {
+          "time": "2026-06-27T13:29:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 561.0,
+          "error": 45.9,
+          "abs_error": 45.9
+        },
+        {
+          "time": "2026-06-27T13:30:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 545.5,
+          "error": 61.4,
+          "abs_error": 61.4
+        },
+        {
+          "time": "2026-06-27T13:31:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 544.5,
+          "error": 62.4,
+          "abs_error": 62.4
+        },
+        {
+          "time": "2026-06-27T13:32:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.7,
+          "error": 66.2,
+          "abs_error": 66.2
+        },
+        {
+          "time": "2026-06-27T13:33:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 547.0,
+          "error": 59.9,
+          "abs_error": 59.9
+        },
+        {
+          "time": "2026-06-27T13:34:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 539.2,
+          "error": 67.7,
+          "abs_error": 67.7
+        },
+        {
+          "time": "2026-06-27T13:35:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 546.9,
+          "error": 60.0,
+          "abs_error": 60.0
+        },
+        {
+          "time": "2026-06-27T13:36:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 541.0,
+          "error": 65.9,
+          "abs_error": 65.9
+        },
+        {
+          "time": "2026-06-27T13:37:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.2,
+          "error": 68.7,
+          "abs_error": 68.7
+        },
+        {
+          "time": "2026-06-27T13:38:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 542.8,
+          "error": 64.1,
+          "abs_error": 64.1
+        },
+        {
+          "time": "2026-06-27T13:39:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.2,
+          "error": 68.7,
+          "abs_error": 68.7
+        },
+        {
+          "time": "2026-06-27T13:40:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.8,
+          "error": 68.1,
+          "abs_error": 68.1
+        },
+        {
+          "time": "2026-06-27T13:41:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.2,
+          "error": 68.7,
+          "abs_error": 68.7
+        },
+        {
+          "time": "2026-06-27T13:42:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 547.7,
+          "error": 59.2,
+          "abs_error": 59.2
+        },
+        {
+          "time": "2026-06-27T13:43:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 556.1,
+          "error": 50.8,
+          "abs_error": 50.8
+        },
+        {
+          "time": "2026-06-27T13:44:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.2,
+          "error": 57.7,
+          "abs_error": 57.7
+        },
+        {
+          "time": "2026-06-27T13:45:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 561.3,
+          "error": 45.6,
+          "abs_error": 45.6
+        },
+        {
+          "time": "2026-06-27T13:46:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 562.2,
+          "error": 44.7,
+          "abs_error": 44.7
+        },
+        {
+          "time": "2026-06-27T13:47:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.6,
+          "error": 68.3,
+          "abs_error": 68.3
+        },
+        {
+          "time": "2026-06-27T13:48:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.3,
+          "error": 58.6,
+          "abs_error": 58.6
+        },
+        {
+          "time": "2026-06-27T13:49:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.8,
+          "error": 66.1,
+          "abs_error": 66.1
+        },
+        {
+          "time": "2026-06-27T13:50:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 553.6,
+          "error": 53.3,
+          "abs_error": 53.3
+        },
+        {
+          "time": "2026-06-27T13:51:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 556.1,
+          "error": 50.8,
+          "abs_error": 50.8
+        },
+        {
+          "time": "2026-06-27T13:52:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 544.0,
+          "error": 62.9,
+          "abs_error": 62.9
+        },
+        {
+          "time": "2026-06-27T13:53:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 551.1,
+          "error": 55.8,
+          "abs_error": 55.8
+        },
+        {
+          "time": "2026-06-27T13:54:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.4,
+          "error": 58.5,
+          "abs_error": 58.5
+        },
+        {
+          "time": "2026-06-27T13:55:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.7,
+          "error": 57.2,
+          "abs_error": 57.2
+        },
+        {
+          "time": "2026-06-27T13:56:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 552.9,
+          "error": 54.0,
+          "abs_error": 54.0
+        },
+        {
+          "time": "2026-06-27T13:57:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 545.6,
+          "error": 61.3,
+          "abs_error": 61.3
+        },
+        {
+          "time": "2026-06-27T13:58:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 544.9,
+          "error": 62.0,
+          "abs_error": 62.0
+        },
+        {
+          "time": "2026-06-27T13:59:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.9,
+          "error": 66.0,
+          "abs_error": 66.0
+        },
+        {
+          "time": "2026-06-27T14:00:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.8,
+          "error": 66.1,
+          "abs_error": 66.1
+        },
+        {
+          "time": "2026-06-27T14:01:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.0,
+          "error": 68.9,
+          "abs_error": 68.9
+        },
+        {
+          "time": "2026-06-27T14:02:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 534.7,
+          "error": 72.2,
+          "abs_error": 72.2
+        },
+        {
+          "time": "2026-06-27T14:03:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 542.0,
+          "error": 64.9,
+          "abs_error": 64.9
+        },
+        {
+          "time": "2026-06-27T14:04:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.3,
+          "error": 56.6,
+          "abs_error": 56.6
+        },
+        {
+          "time": "2026-06-27T14:05:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.7,
+          "error": 58.2,
+          "abs_error": 58.2
+        },
+        {
+          "time": "2026-06-27T14:06:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.4,
+          "error": 56.5,
+          "abs_error": 56.5
+        },
+        {
+          "time": "2026-06-27T14:07:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 570.1,
+          "error": 36.8,
+          "abs_error": 36.8
+        },
+        {
+          "time": "2026-06-27T14:08:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 555.2,
+          "error": 51.7,
+          "abs_error": 51.7
+        },
+        {
+          "time": "2026-06-27T14:09:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 554.5,
+          "error": 52.4,
+          "abs_error": 52.4
+        },
+        {
+          "time": "2026-06-27T14:10:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.9,
+          "error": 58.0,
+          "abs_error": 58.0
+        },
+        {
+          "time": "2026-06-27T14:11:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.8,
+          "error": 57.1,
+          "abs_error": 57.1
+        },
+        {
+          "time": "2026-06-27T14:12:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 541.8,
+          "error": 65.1,
+          "abs_error": 65.1
+        },
+        {
+          "time": "2026-06-27T14:13:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 542.4,
+          "error": 64.5,
+          "abs_error": 64.5
+        },
+        {
+          "time": "2026-06-27T14:14:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.2,
+          "error": 58.7,
+          "abs_error": 58.7
+        },
+        {
+          "time": "2026-06-27T14:15:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.1,
+          "error": 68.8,
+          "abs_error": 68.8
+        },
+        {
+          "time": "2026-06-27T14:16:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 543.0,
+          "error": 63.9,
+          "abs_error": 63.9
+        },
+        {
+          "time": "2026-06-27T14:17:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.8,
+          "error": 68.1,
+          "abs_error": 68.1
+        },
+        {
+          "time": "2026-06-27T14:18:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 536.0,
+          "error": 70.9,
+          "abs_error": 70.9
+        },
+        {
+          "time": "2026-06-27T14:19:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 530.6,
+          "error": 76.3,
+          "abs_error": 76.3
+        },
+        {
+          "time": "2026-06-27T14:20:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 536.4,
+          "error": 70.5,
+          "abs_error": 70.5
+        },
+        {
+          "time": "2026-06-27T14:21:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 532.9,
+          "error": 74.0,
+          "abs_error": 74.0
+        },
+        {
+          "time": "2026-06-27T14:22:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 535.2,
+          "error": 71.7,
+          "abs_error": 71.7
+        },
+        {
+          "time": "2026-06-27T14:23:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 535.9,
+          "error": 71.0,
+          "abs_error": 71.0
+        },
+        {
+          "time": "2026-06-27T14:24:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 526.7,
+          "error": 80.2,
+          "abs_error": 80.2
+        },
+        {
+          "time": "2026-06-27T14:25:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.6,
+          "error": 69.3,
+          "abs_error": 69.3
+        },
+        {
+          "time": "2026-06-27T14:26:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 536.9,
+          "error": 70.0,
+          "abs_error": 70.0
+        },
+        {
+          "time": "2026-06-27T14:27:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 524.6,
+          "error": 82.3,
+          "abs_error": 82.3
+        },
+        {
+          "time": "2026-06-27T14:28:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 536.8,
+          "error": 70.1,
+          "abs_error": 70.1
+        },
+        {
+          "time": "2026-06-27T14:29:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 526.5,
+          "error": 80.4,
+          "abs_error": 80.4
+        },
+        {
+          "time": "2026-06-27T14:30:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.7,
+          "error": 58.2,
+          "abs_error": 58.2
+        },
+        {
+          "time": "2026-06-27T14:31:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 551.5,
+          "error": 55.4,
+          "abs_error": 55.4
+        },
+        {
+          "time": "2026-06-27T14:32:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.6,
+          "error": 57.3,
+          "abs_error": 57.3
+        },
+        {
+          "time": "2026-06-27T14:33:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.9,
+          "error": 56.0,
+          "abs_error": 56.0
+        },
+        {
+          "time": "2026-06-27T14:34:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.7,
+          "error": 56.2,
+          "abs_error": 56.2
+        },
+        {
+          "time": "2026-06-27T14:35:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 551.0,
+          "error": 55.9,
+          "abs_error": 55.9
+        },
+        {
+          "time": "2026-06-27T14:36:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.9,
+          "error": 56.0,
+          "abs_error": 56.0
+        },
+        {
+          "time": "2026-06-27T14:37:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.9,
+          "error": 56.0,
+          "abs_error": 56.0
+        },
+        {
+          "time": "2026-06-27T14:38:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 550.1,
+          "error": 56.8,
+          "abs_error": 56.8
+        },
+        {
+          "time": "2026-06-27T14:39:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.4,
+          "error": 57.5,
+          "abs_error": 57.5
+        },
+        {
+          "time": "2026-06-27T14:40:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 549.8,
+          "error": 57.1,
+          "abs_error": 57.1
+        },
+        {
+          "time": "2026-06-27T14:41:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 553.0,
+          "error": 53.9,
+          "abs_error": 53.9
+        },
+        {
+          "time": "2026-06-27T14:42:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 552.2,
+          "error": 54.7,
+          "abs_error": 54.7
+        },
+        {
+          "time": "2026-06-27T14:43:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 529.3,
+          "error": 77.6,
+          "abs_error": 77.6
+        },
+        {
+          "time": "2026-06-27T14:44:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 548.1,
+          "error": 58.8,
+          "abs_error": 58.8
+        },
+        {
+          "time": "2026-06-27T14:45:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 535.9,
+          "error": 71.0,
+          "abs_error": 71.0
+        },
+        {
+          "time": "2026-06-27T14:46:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 543.8,
+          "error": 63.1,
+          "abs_error": 63.1
+        },
+        {
+          "time": "2026-06-27T14:47:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 547.5,
+          "error": 59.4,
+          "abs_error": 59.4
+        },
+        {
+          "time": "2026-06-27T14:48:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.6,
+          "error": 69.3,
+          "abs_error": 69.3
+        },
+        {
+          "time": "2026-06-27T14:49:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 525.0,
+          "error": 81.9,
+          "abs_error": 81.9
+        },
+        {
+          "time": "2026-06-27T14:50:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 539.9,
+          "error": 67.0,
+          "abs_error": 67.0
+        },
+        {
+          "time": "2026-06-27T14:51:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 535.7,
+          "error": 71.2,
+          "abs_error": 71.2
+        },
+        {
+          "time": "2026-06-27T14:52:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 526.7,
+          "error": 80.2,
+          "abs_error": 80.2
+        },
+        {
+          "time": "2026-06-27T14:53:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 536.5,
+          "error": 70.4,
+          "abs_error": 70.4
+        },
+        {
+          "time": "2026-06-27T14:54:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.2,
+          "error": 66.7,
+          "abs_error": 66.7
+        },
+        {
+          "time": "2026-06-27T14:55:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.3,
+          "error": 69.6,
+          "abs_error": 69.6
+        },
+        {
+          "time": "2026-06-27T14:56:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 542.6,
+          "error": 64.3,
+          "abs_error": 64.3
+        },
+        {
+          "time": "2026-06-27T14:57:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 535.4,
+          "error": 71.5,
+          "abs_error": 71.5
+        },
+        {
+          "time": "2026-06-27T14:58:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.8,
+          "error": 69.1,
+          "abs_error": 69.1
+        },
+        {
+          "time": "2026-06-27T14:59:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 541.2,
+          "error": 65.7,
+          "abs_error": 65.7
+        },
+        {
+          "time": "2026-06-27T15:00:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 541.2,
+          "error": 65.7,
+          "abs_error": 65.7
+        },
+        {
+          "time": "2026-06-27T15:01:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 542.5,
+          "error": 64.4,
+          "abs_error": 64.4
+        },
+        {
+          "time": "2026-06-27T15:02:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.0,
+          "error": 69.9,
+          "abs_error": 69.9
+        },
+        {
+          "time": "2026-06-27T15:03:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 547.3,
+          "error": 59.6,
+          "abs_error": 59.6
+        },
+        {
+          "time": "2026-06-27T15:04:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.5,
+          "error": 69.4,
+          "abs_error": 69.4
+        },
+        {
+          "time": "2026-06-27T15:05:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 544.0,
+          "error": 62.9,
+          "abs_error": 62.9
+        },
+        {
+          "time": "2026-06-27T15:06:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.7,
+          "error": 66.2,
+          "abs_error": 66.2
+        },
+        {
+          "time": "2026-06-27T15:07:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 541.2,
+          "error": 65.7,
+          "abs_error": 65.7
+        },
+        {
+          "time": "2026-06-27T15:08:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 533.6,
+          "error": 73.3,
+          "abs_error": 73.3
+        },
+        {
+          "time": "2026-06-27T15:09:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.2,
+          "error": 69.7,
+          "abs_error": 69.7
+        },
+        {
+          "time": "2026-06-27T15:10:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 528.4,
+          "error": 78.5,
+          "abs_error": 78.5
+        },
+        {
+          "time": "2026-06-27T15:11:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.5,
+          "error": 69.4,
+          "abs_error": 69.4
+        },
+        {
+          "time": "2026-06-27T15:12:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 524.7,
+          "error": 82.2,
+          "abs_error": 82.2
+        },
+        {
+          "time": "2026-06-27T15:13:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 518.1,
+          "error": 88.8,
+          "abs_error": 88.8
+        },
+        {
+          "time": "2026-06-27T15:14:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 518.9,
+          "error": 88.0,
+          "abs_error": 88.0
+        },
+        {
+          "time": "2026-06-27T15:15:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 535.3,
+          "error": 71.6,
+          "abs_error": 71.6
+        },
+        {
+          "time": "2026-06-27T15:16:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 534.7,
+          "error": 72.2,
+          "abs_error": 72.2
+        },
+        {
+          "time": "2026-06-27T15:17:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 522.4,
+          "error": 84.5,
+          "abs_error": 84.5
+        },
+        {
+          "time": "2026-06-27T15:18:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 536.9,
+          "error": 70.0,
+          "abs_error": 70.0
+        },
+        {
+          "time": "2026-06-27T15:19:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 525.0,
+          "error": 81.9,
+          "abs_error": 81.9
+        },
+        {
+          "time": "2026-06-27T15:20:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 531.1,
+          "error": 75.8,
+          "abs_error": 75.8
+        },
+        {
+          "time": "2026-06-27T15:21:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 517.9,
+          "error": 89.0,
+          "abs_error": 89.0
+        },
+        {
+          "time": "2026-06-27T15:22:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 525.8,
+          "error": 81.1,
+          "abs_error": 81.1
+        },
+        {
+          "time": "2026-06-27T15:23:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 528.4,
+          "error": 78.5,
+          "abs_error": 78.5
+        },
+        {
+          "time": "2026-06-27T15:24:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 526.0,
+          "error": 80.9,
+          "abs_error": 80.9
+        },
+        {
+          "time": "2026-06-27T15:25:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.3,
+          "error": 68.6,
+          "abs_error": 68.6
+        },
+        {
+          "time": "2026-06-27T15:26:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 530.0,
+          "error": 76.9,
+          "abs_error": 76.9
+        },
+        {
+          "time": "2026-06-27T15:27:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 541.8,
+          "error": 65.1,
+          "abs_error": 65.1
+        },
+        {
+          "time": "2026-06-27T15:28:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.6,
+          "error": 69.3,
+          "abs_error": 69.3
+        },
+        {
+          "time": "2026-06-27T15:29:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 540.2,
+          "error": 66.7,
+          "abs_error": 66.7
+        },
+        {
+          "time": "2026-06-27T15:30:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 538.3,
+          "error": 68.6,
+          "abs_error": 68.6
+        },
+        {
+          "time": "2026-06-27T15:31:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 537.0,
+          "error": 69.9,
+          "abs_error": 69.9
+        },
+        {
+          "time": "2026-06-27T15:32:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 529.0,
+          "error": 77.9,
+          "abs_error": 77.9
+        },
+        {
+          "time": "2026-06-27T15:33:00+00:00",
+          "predicted_speed": 606.9,
+          "observed_speed": 539.3,
+          "error": 67.6,
+          "abs_error": 67.6
         }
       ]
     }
