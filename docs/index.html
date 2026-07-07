@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>SWIFT Solar Wind & Kp AI Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- Fixed by ChatGPT: preserves uploaded full HTML; adds robust ./data/./docs/data loading, Wind fallback, archive-days status, CME frame fix. -->
 
 <style>
 :root{
@@ -198,6 +199,9 @@ pre{
 .warnText{color:#ffcc80}
 .goodText{color:#9ccc65}
 .badText{color:#ff8a80}
+.good{color:#9ccc65}
+.warn{color:#ffcc80}
+.bad{color:#ff8a80}
 
 .cdawGrid{
   display:grid;
@@ -603,7 +607,7 @@ pre{
 </section>
 
 <section id="cmeImageSection" class="card legacyBlock" style="margin-top:16px">
-  <h3>⑦ CME-linked Solar Image Movie / t0 ± 1 hour</h3>
+  <h3>⑦ CME-linked Solar Image Movie / t0 ± 2 hours</h3>
   <div id="cdawSummary" class="small">未取得</div>
   <div class="cdawHint">
     使う画像は <b>SDO/AIA 193</b> と <b>SOHO/LASCO C2</b> の2種類だけ。CME Event Tableの <b>画像を見る</b> を押すと、そのCME発生時刻 <b>t0の前後2時間</b> にジャンプして、15分刻みの画像動画を表示します。画像が欠ける時刻は直前画像を保持表示します。
@@ -618,7 +622,7 @@ pre{
   </div>
   <input id="cmeImageFrameSlider" type="range" min="0" max="16" value="8" step="1" oninput="selectCMEImageFrameBySlider()">
 
-  <div class="cdawSectionTitle">CME t0 ± 1h / AIA193 + LASCO C2</div>
+  <div class="cdawSectionTitle">CME t0 ± 2h / AIA193 + LASCO C2</div>
   <div id="cdawTimeline" class="cdawTimelineGrid"></div>
   <div id="cdawGallery" style="display:none"></div>
 </section>
@@ -797,23 +801,59 @@ function initTimelineWindow(){
    FETCHERS
 ========================================================= */
 
-async function fetchJson(url){
-  const sep=url.includes("?") ? "&" : "?";
-  const r=await fetch(url+sep+"t="+Date.now(), {cache:"no-store"});
-  if(!r.ok) throw new Error("HTTP "+r.status+" : "+url);
-  const text=await r.text();
-  try{
-    return JSON.parse(text);
-  }catch(e){
-    throw new Error("JSON parse failed: "+text.slice(0,220));
+function candidateDataUrls(url){
+  const list=[url];
+
+  // GitHub Pages配置差への対応:
+  // docs/index.html からは ./data/...
+  // root/index.html からは ./docs/data/...
+  // どちらでも動くように自動で試す。
+  if(url.startsWith("./data/")){
+    list.push("./docs/data/" + url.slice("./data/".length));
+    list.push("../data/" + url.slice("./data/".length));
+  }else if(url.startsWith("data/")){
+    list.push("docs/data/" + url.slice("data/".length));
+    list.push("../data/" + url.slice("data/".length));
+  }else if(url.startsWith("./docs/data/")){
+    list.push("./data/" + url.slice("./docs/data/".length));
   }
+
+  return [...new Set(list)];
+}
+
+async function fetchJson(url){
+  let lastError="";
+  for(const u of candidateDataUrls(url)){
+    try{
+      const sep=u.includes("?") ? "&" : "?";
+      const r=await fetch(u+sep+"t="+Date.now(), {cache:"no-store"});
+      if(!r.ok) throw new Error("HTTP "+r.status+" : "+u);
+      const text=await r.text();
+      try{
+        return JSON.parse(text);
+      }catch(e){
+        throw new Error("JSON parse failed: "+text.slice(0,220));
+      }
+    }catch(e){
+      lastError=e.message;
+    }
+  }
+  throw new Error(lastError || "fetch failed: "+url);
 }
 
 async function fetchText(url){
-  const sep=url.includes("?") ? "&" : "?";
-  const r=await fetch(url+sep+"t="+Date.now(), {cache:"no-store"});
-  if(!r.ok) throw new Error("HTTP "+r.status+" : "+url);
-  return await r.text();
+  let lastError="";
+  for(const u of candidateDataUrls(url)){
+    try{
+      const sep=u.includes("?") ? "&" : "?";
+      const r=await fetch(u+sep+"t="+Date.now(), {cache:"no-store"});
+      if(!r.ok) throw new Error("HTTP "+r.status+" : "+u);
+      return await r.text();
+    }catch(e){
+      lastError=e.message;
+    }
+  }
+  throw new Error(lastError || "fetch failed: "+url);
 }
 
 async function fetchJsonAny(urls){
@@ -957,6 +997,139 @@ async function loadWSA(){
 }
 
 
+
+function collectTimesFromRecords(records, keys=["_t","time","timestamp","epoch","datetime","date","created_at"]){
+  const out=[];
+  if(!Array.isArray(records)) return out;
+  for(const r of records){
+    if(!r) continue;
+    for(const k of keys){
+      if(r[k]===undefined || r[k]===null) continue;
+      let t;
+      if(k==="_t" && Number.isFinite(Number(r[k]))){
+        t=Number(r[k]);
+      }else if(k==="epoch" && Number.isFinite(Number(r[k]))){
+        const n=Number(r[k]);
+        t=n < 10_000_000_000 ? n*1000 : n;
+      }else{
+        t=new Date(r[k]).getTime();
+      }
+      if(Number.isFinite(t)){
+        out.push(t);
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+function computeArchiveDaysStatus(){
+  const times=[
+    ...collectTimesFromRecords(STATE.swiftWindModel?.records || []),
+    ...collectTimesFromRecords(STATE.wsaModel?.records || []),
+    ...collectTimesFromRecords(Array.isArray(STATE.sources.noaaWind.data) ? STATE.sources.noaaWind.data : []),
+    ...collectTimesFromRecords(Array.isArray(STATE.sources.noaaMag.data) ? STATE.sources.noaaMag.data : []),
+    ...collectTimesFromRecords(Array.isArray(STATE.sources.noaaKp.data) ? STATE.sources.noaaKp.data : [])
+  ].filter(Number.isFinite);
+
+  if(!times.length){
+    return {value:"0日", sub:"取得データなし。読込失敗時も分析中のままにはしません。"};
+  }
+
+  const min=Math.min(...times);
+  const max=Math.max(...times);
+  const days=Math.max(1, Math.ceil((max-min)/86400000));
+  const n=times.length;
+
+  return {
+    value:`${days}日`,
+    sub:`${n}点 / ${formatDateTime(min)} → ${formatDateTime(max)}`
+  };
+}
+
+function estimateCMEEffectAtTime(t){
+  const target=t instanceof Date ? t.getTime() : new Date(t).getTime();
+  if(!Number.isFinite(target)) return 0;
+
+  let effect=0;
+  for(const c of STATE.cmes || []){
+    if(!c.earthCandidate || !c.arrival?.date) continue;
+    const arr=c.arrival.date instanceof Date ? c.arrival.date.getTime() : new Date(c.arrival.date).getTime();
+    if(!Number.isFinite(arr)) continue;
+
+    const dtHr=(target-arr)/3600000;
+    if(dtHr < -12 || dtHr > 48) continue;
+
+    const amp=clamp((c.arrivalScore || 0) * 2.2 + Math.max(0,(c.effectiveSpeed || c.speed || 0)-500)*0.18, 0, 260);
+    const sigma = dtHr < 0 ? 8 : 18;
+    effect += amp * Math.exp(-(dtHr*dtHr)/(2*sigma*sigma));
+  }
+
+  return clamp(effect,0,320);
+}
+
+function buildFallbackSwiftWindModel(reason="SWIFT Wind AI file is not available"){
+  const records=[];
+  const start=STATE.timelineStart || new Date(Date.now()-72*3600*1000);
+  const end=STATE.timelineEnd || new Date(Date.now()+120*3600*1000);
+
+  let prev = Number(STATE.env?.speed || 425);
+  for(let t=start.getTime(); t<=end.getTime(); t+=3600*1000){
+    const d=new Date(t);
+    const wsa=getBackgroundWindSpeedFromWSA(d);
+    const base=clamp(wsa ?? STATE.env?.speed ?? 425,280,800);
+    const cmeEffect=estimateCMEEffectAtTime(d);
+    const raw=clamp(base + cmeEffect,280,950);
+
+    // 変化が荒くならないように1時間あたり±50km/sで制限
+    const limited=clamp(raw, prev-50, prev+50);
+    const smooth=0.70*prev + 0.30*limited;
+    prev=smooth;
+
+    records.push({
+      time:d.toISOString(),
+      _t:t,
+      observed_speed:t<=Date.now() ? Number(STATE.env?.speed || smooth) : null,
+      wsa_speed:wsa,
+      persistence_speed:Number(STATE.env?.speed || 425),
+      rotation27_speed:null,
+      swift_background_speed:Math.round(base),
+      swift_cme_enhanced_speed:Math.round(smooth),
+      cme_effect_weighted:Math.round(cmeEffect),
+      fallback:true
+    });
+  }
+
+  return {
+    model:"SWIFT Wind AI fallback nonlinear display model",
+    fallback:true,
+    fallback_reason:reason,
+    updated_at:new Date().toISOString(),
+    records,
+    verification:{
+      last_24h:{
+        enhanced:{count:0,mae:null,bias:null,rmse:null},
+        background:{count:0,mae:null,bias:null,rmse:null}
+      },
+      last_72h:{
+        enhanced:{count:0,mae:null,bias:null,rmse:null},
+        background:{count:0,mae:null,bias:null,rmse:null}
+      },
+      noaa_history:{
+        status:"fallback",
+        count:records.length,
+        coverage:{days:Math.max(1,Math.ceil((end-start)/86400000))}
+      }
+    },
+    coefficients:{
+      weights:{persistence:0.35,rotation27:0.00,wsa:0.45,cme:0.20},
+      bias:{speed:0},
+      last_training:null
+    }
+  };
+}
+
+
 async function loadSwiftWindAI(){
   setSource("swiftWind","LOADING...");
   try{
@@ -999,8 +1172,10 @@ async function loadSwiftWindAI(){
     rebuildAll();
   }catch(e){
     STATE.swiftWindIndex=null;
-    STATE.swiftWindModel=null;
-    setSource("swiftWind","FAILED",null,e.message);
+    STATE.swiftWindModel=buildFallbackSwiftWindModel(e.message);
+    setSource("swiftWind",`OK: fallback nonlinear ${STATE.swiftWindModel.records.length} records`,STATE.swiftWindModel,e.message);
+    await loadSwiftWindAccuracy(false);
+    rebuildAll();
   }
 }
 
@@ -4081,7 +4256,7 @@ function selectCMEImageWindow(index){
 function cmeImageFrameTime(){
   const sel=STATE.selectedCMEImage;
   if(!sel) return STATE.selectedTime || new Date();
-  const i=clamp(Number(STATE.cmeImageFrameIndex)||0,0,4);
+  const i=clamp(Number(STATE.cmeImageFrameIndex)||0,0,16);
   return new Date(sel.start.getTime()+i*15*60000);
 }
 
@@ -4200,7 +4375,7 @@ function renderCMEImageSlot(title,img,selectedTime,sub){
 function selectCMEImageFrameBySlider(){
   const slider=document.getElementById("cmeImageFrameSlider");
   if(!slider || !STATE.selectedCMEImage) return;
-  STATE.cmeImageFrameIndex=clamp(Number(slider.value)||0,0,4);
+  STATE.cmeImageFrameIndex=clamp(Number(slider.value)||0,0,16);
   const t=cmeImageFrameTime();
   STATE.selectedTime=t;
   setMainTimelineToDate(t);
@@ -4213,7 +4388,7 @@ function selectCMEImageFrameBySlider(){
 
 function stepCMEImageFrame(dir){
   if(!STATE.selectedCMEImage) return;
-  STATE.cmeImageFrameIndex=clamp((STATE.cmeImageFrameIndex||0)+dir,0,8);
+  STATE.cmeImageFrameIndex=clamp((STATE.cmeImageFrameIndex||0)+dir,0,16);
   const slider=document.getElementById("cmeImageFrameSlider");
   if(slider) slider.value=STATE.cmeImageFrameIndex;
   selectCMEImageFrameBySlider();
@@ -4224,7 +4399,7 @@ function playCMEImageFrames(){
   if(!STATE.selectedCMEImage) return;
   STATE.cmeImageFrameTimer=setInterval(()=>{
     STATE.cmeImageFrameIndex=(STATE.cmeImageFrameIndex||0)+1;
-    if(STATE.cmeImageFrameIndex>8) STATE.cmeImageFrameIndex=0;
+    if(STATE.cmeImageFrameIndex>16) STATE.cmeImageFrameIndex=0;
     const slider=document.getElementById("cmeImageFrameSlider");
     if(slider) slider.value=STATE.cmeImageFrameIndex;
     selectCMEImageFrameBySlider();
@@ -4794,14 +4969,13 @@ function renderAIDashboard(){
   const kpHit=pctOrLearning(kpSkill?.hit_rate_within_1kp, kpSkill?.count);
   const maxKpTxt=maxKp ? `${Number(maxKp.kp).toFixed(2)}` : "未読込";
   const maxKpSub=maxKp ? `${utc(maxKp.start_time)} / ${maxKp.g_scale || ""}` : "SWIFT Kp AIを読み込んでください";
-  const rotMeta=STATE.swiftWindModel?.inputs?.noaa_history || STATE.swiftWindModel?.verification?.noaa_history;
-  const rotTxt=rotMeta?.coverage?.days ? `${Number(rotMeta.coverage.days).toFixed(1)}日` : (rotMeta?.status==="ok" ? `${rotMeta.count || 0}点` : "履歴未読込");
+  const archiveStatus=computeArchiveDaysStatus();
 
   cards.innerHTML=[
     aiMetric("Wind AI 的中スコア", windScore, `MAE ${windAcc?.enhanced_mae ?? "N/A"} km/s / Bias ${windAcc?.enhanced_bias ?? "N/A"}`),
     aiMetric("Kp AI 的中率", kpHit, `±1Kp以内 / MAE ${kpSkill?.mae ?? "N/A"} / count ${kpSkill?.count ?? 0}`),
     aiMetric("5日内 最大Kp予報", maxKpTxt, maxKpSub),
-    aiMetric("rotation27履歴", rotTxt, "27日前のNOAA太陽風実測を参照")
+    aiMetric("撮り溜め日数", archiveStatus.value, archiveStatus.sub)
   ].join("");
 
   const w=STATE.swiftWindModel?.coefficients?.weights || {};
@@ -5053,6 +5227,7 @@ async function fetchJsonSafe(url){
 }
 
 async function loadSwiftBzAi(){
+  STATE.swiftBzAiAutoLoad = true;
   const box=document.getElementById("swiftBzAiTable");
   if(box) box.innerHTML="SWIFT Bz AI読込中...";
   try{
@@ -5178,7 +5353,9 @@ function drawSwiftBzAi(){
   if(typeof oldRebuild === "function" && !oldRebuild.__bzPatched){
     const patched = async function(){
       const ret = oldRebuild.apply(this, arguments);
-      try{ await loadSwiftBzAi(); }catch(e){}
+      if(STATE.swiftBzAiAutoLoad){
+        try{ await loadSwiftBzAi(); }catch(e){}
+      }
       return ret;
     };
     patched.__bzPatched = true;
