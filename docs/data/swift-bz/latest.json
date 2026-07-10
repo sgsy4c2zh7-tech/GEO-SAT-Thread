@@ -1,18 +1,18 @@
 {
-  "updated_at": "2026-07-10T04:37:33.537233+00:00",
+  "updated_at": "2026-07-10T10:03:21.178252+00:00",
   "model": "SWIFT-Bz-AI-v0.1",
   "description": "Bz southward probability forecast. HSS/CIR uses 27.27-day IMF recurrence; CME/ICME Bz direction is treated probabilistically.",
   "forecast_days": 5,
   "step_hours": 3,
   "current": {
-    "time": "2026-07-10T06:00:00+00:00",
-    "lead_hours": 1.4,
-    "southward_bz_probability": 81.6,
-    "bz_min_forecast": -11.06,
-    "bt_forecast": 8.59,
-    "bz_risk": "HIGH",
+    "time": "2026-07-10T12:00:00+00:00",
+    "lead_hours": 1.9,
+    "southward_bz_probability": 56.9,
+    "bz_min_forecast": -7.6,
+    "bt_forecast": 6.62,
+    "bz_risk": "MODERATE",
     "confidence": 0.45,
-    "driver": "CME/ICME probability",
+    "driver": "persistence/fallback",
     "features": {
       "rotation27": {
         "available": false,
@@ -30,12 +30,12 @@
         "south_recent": null
       },
       "cme": {
-        "cme_bz_risk": 0.35,
+        "cme_bz_risk": 0.103,
         "nearest_cme": {
           "arrival": "2026-07-10T02:22:00+00:00",
           "speed": 636.0,
           "impact_class": "",
-          "effect": 0.176
+          "effect": 0.051
         }
       },
       "vsw_forecast": 552.1,
@@ -43,23 +43,23 @@
     }
   },
   "max_risk": {
-    "time": "2026-07-10T06:00:00+00:00",
-    "lead_hours": 1.4,
-    "southward_bz_probability": 81.6,
-    "bz_min_forecast": -11.06,
-    "bt_forecast": 8.59,
-    "bz_risk": "HIGH",
-    "confidence": 0.45,
-    "driver": "CME/ICME probability",
+    "time": "2026-07-13T21:00:00+00:00",
+    "lead_hours": 82.9,
+    "southward_bz_probability": 71.6,
+    "bz_min_forecast": -6.8,
+    "bt_forecast": 5.25,
+    "bz_risk": "MODERATE",
+    "confidence": 0.59,
+    "driver": "HSS/CIR rotation27",
     "features": {
       "rotation27": {
-        "available": false,
-        "bz_min_27d": null,
-        "bz_p10_27d": null,
-        "bt_median_27d": null,
-        "southward_fraction_27d": null,
-        "southward_strong_fraction_27d": null,
-        "samples": 0
+        "available": true,
+        "bz_min_27d": -6.56,
+        "bz_p10_27d": -4.53,
+        "bt_median_27d": 4.67,
+        "southward_fraction_27d": 0.891,
+        "southward_strong_fraction_27d": 0.066,
+        "samples": 211
       },
       "persistence": {
         "available": false,
@@ -68,98 +68,17 @@
         "south_recent": null
       },
       "cme": {
-        "cme_bz_risk": 0.35,
-        "nearest_cme": {
-          "arrival": "2026-07-10T02:22:00+00:00",
-          "speed": 636.0,
-          "impact_class": "",
-          "effect": 0.176
-        }
+        "cme_bz_risk": 0,
+        "nearest_cme": null
       },
       "vsw_forecast": 552.1,
-      "vsw_rotation27": null
+      "vsw_rotation27": 431.4
     }
   },
   "forecast": [
     {
-      "time": "2026-07-10T06:00:00+00:00",
-      "lead_hours": 1.4,
-      "southward_bz_probability": 81.6,
-      "bz_min_forecast": -11.06,
-      "bt_forecast": 8.59,
-      "bz_risk": "HIGH",
-      "confidence": 0.45,
-      "driver": "CME/ICME probability",
-      "features": {
-        "rotation27": {
-          "available": false,
-          "bz_min_27d": null,
-          "bz_p10_27d": null,
-          "bt_median_27d": null,
-          "southward_fraction_27d": null,
-          "southward_strong_fraction_27d": null,
-          "samples": 0
-        },
-        "persistence": {
-          "available": false,
-          "bz_recent": null,
-          "bt_recent": null,
-          "south_recent": null
-        },
-        "cme": {
-          "cme_bz_risk": 0.35,
-          "nearest_cme": {
-            "arrival": "2026-07-10T02:22:00+00:00",
-            "speed": 636.0,
-            "impact_class": "",
-            "effect": 0.176
-          }
-        },
-        "vsw_forecast": 552.1,
-        "vsw_rotation27": null
-      }
-    },
-    {
-      "time": "2026-07-10T09:00:00+00:00",
-      "lead_hours": 4.4,
-      "southward_bz_probability": 69.1,
-      "bz_min_forecast": -9.31,
-      "bt_forecast": 7.59,
-      "bz_risk": "MODERATE",
-      "confidence": 0.45,
-      "driver": "CME/ICME probability",
-      "features": {
-        "rotation27": {
-          "available": false,
-          "bz_min_27d": null,
-          "bz_p10_27d": null,
-          "bt_median_27d": null,
-          "southward_fraction_27d": null,
-          "southward_strong_fraction_27d": null,
-          "samples": 0
-        },
-        "persistence": {
-          "available": false,
-          "bz_recent": null,
-          "bt_recent": null,
-          "south_recent": null
-        },
-        "cme": {
-          "cme_bz_risk": 0.225,
-          "nearest_cme": {
-            "arrival": "2026-07-10T02:22:00+00:00",
-            "speed": 636.0,
-            "impact_class": "",
-            "effect": 0.109
-          }
-        },
-        "vsw_forecast": 552.1,
-        "vsw_rotation27": null
-      }
-    },
-    {
       "time": "2026-07-10T12:00:00+00:00",
-      "lead_hours": 7.4,
+      "lead_hours": 1.9,
       "southward_bz_probability": 56.9,
       "bz_min_forecast": -7.6,
       "bt_forecast": 6.62,
@@ -197,7 +116,7 @@
     },
     {
       "time": "2026-07-10T15:00:00+00:00",
-      "lead_hours": 10.4,
+      "lead_hours": 4.9,
       "southward_bz_probability": 50.2,
       "bz_min_forecast": -6.66,
       "bt_forecast": 6.08,
@@ -235,7 +154,7 @@
     },
     {
       "time": "2026-07-10T18:00:00+00:00",
-      "lead_hours": 13.4,
+      "lead_hours": 7.9,
       "southward_bz_probability": 54.7,
       "bz_min_forecast": -7.0,
       "bt_forecast": 5.86,
@@ -273,7 +192,7 @@
     },
     {
       "time": "2026-07-10T21:00:00+00:00",
-      "lead_hours": 16.4,
+      "lead_hours": 10.9,
       "southward_bz_probability": 53.3,
       "bz_min_forecast": -6.83,
       "bt_forecast": 5.79,
@@ -306,7 +225,7 @@
     },
     {
       "time": "2026-07-11T00:00:00+00:00",
-      "lead_hours": 19.4,
+      "lead_hours": 13.9,
       "southward_bz_probability": 52.4,
       "bz_min_forecast": -6.74,
       "bt_forecast": 5.79,
@@ -339,7 +258,7 @@
     },
     {
       "time": "2026-07-11T03:00:00+00:00",
-      "lead_hours": 22.4,
+      "lead_hours": 16.9,
       "southward_bz_probability": 51.2,
       "bz_min_forecast": -6.62,
       "bt_forecast": 5.79,
@@ -372,7 +291,7 @@
     },
     {
       "time": "2026-07-11T06:00:00+00:00",
-      "lead_hours": 25.4,
+      "lead_hours": 19.9,
       "southward_bz_probability": 50.5,
       "bz_min_forecast": -6.55,
       "bt_forecast": 5.79,
@@ -405,7 +324,7 @@
     },
     {
       "time": "2026-07-11T09:00:00+00:00",
-      "lead_hours": 28.4,
+      "lead_hours": 22.9,
       "southward_bz_probability": 50.0,
       "bz_min_forecast": -6.5,
       "bt_forecast": 5.79,
@@ -438,7 +357,7 @@
     },
     {
       "time": "2026-07-11T12:00:00+00:00",
-      "lead_hours": 31.4,
+      "lead_hours": 25.9,
       "southward_bz_probability": 49.8,
       "bz_min_forecast": -6.48,
       "bt_forecast": 5.79,
@@ -471,7 +390,7 @@
     },
     {
       "time": "2026-07-11T15:00:00+00:00",
-      "lead_hours": 34.4,
+      "lead_hours": 28.9,
       "southward_bz_probability": 49.7,
       "bz_min_forecast": -6.47,
       "bt_forecast": 5.79,
@@ -504,7 +423,7 @@
     },
     {
       "time": "2026-07-11T18:00:00+00:00",
-      "lead_hours": 37.4,
+      "lead_hours": 31.9,
       "southward_bz_probability": 49.4,
       "bz_min_forecast": -6.44,
       "bt_forecast": 5.79,
@@ -537,7 +456,7 @@
     },
     {
       "time": "2026-07-11T21:00:00+00:00",
-      "lead_hours": 40.4,
+      "lead_hours": 34.9,
       "southward_bz_probability": 48.8,
       "bz_min_forecast": -6.38,
       "bt_forecast": 5.79,
@@ -570,7 +489,7 @@
     },
     {
       "time": "2026-07-12T00:00:00+00:00",
-      "lead_hours": 43.4,
+      "lead_hours": 37.9,
       "southward_bz_probability": 48.4,
       "bz_min_forecast": -6.34,
       "bt_forecast": 5.79,
@@ -603,7 +522,7 @@
     },
     {
       "time": "2026-07-12T03:00:00+00:00",
-      "lead_hours": 46.4,
+      "lead_hours": 40.9,
       "southward_bz_probability": 48.2,
       "bz_min_forecast": -6.32,
       "bt_forecast": 5.79,
@@ -636,7 +555,7 @@
     },
     {
       "time": "2026-07-12T06:00:00+00:00",
-      "lead_hours": 49.4,
+      "lead_hours": 43.9,
       "southward_bz_probability": 47.9,
       "bz_min_forecast": -6.29,
       "bt_forecast": 5.79,
@@ -669,7 +588,7 @@
     },
     {
       "time": "2026-07-12T09:00:00+00:00",
-      "lead_hours": 52.4,
+      "lead_hours": 46.9,
       "southward_bz_probability": 48.0,
       "bz_min_forecast": -6.3,
       "bt_forecast": 5.79,
@@ -702,7 +621,7 @@
     },
     {
       "time": "2026-07-12T12:00:00+00:00",
-      "lead_hours": 55.4,
+      "lead_hours": 49.9,
       "southward_bz_probability": 47.9,
       "bz_min_forecast": -6.29,
       "bt_forecast": 5.79,
@@ -735,7 +654,7 @@
     },
     {
       "time": "2026-07-12T15:00:00+00:00",
-      "lead_hours": 58.4,
+      "lead_hours": 52.9,
       "southward_bz_probability": 47.7,
       "bz_min_forecast": -6.27,
       "bt_forecast": 5.79,
@@ -768,7 +687,7 @@
     },
     {
       "time": "2026-07-12T18:00:00+00:00",
-      "lead_hours": 61.4,
+      "lead_hours": 55.9,
       "southward_bz_probability": 47.4,
       "bz_min_forecast": -6.24,
       "bt_forecast": 5.79,
@@ -801,7 +720,7 @@
     },
     {
       "time": "2026-07-12T21:00:00+00:00",
-      "lead_hours": 64.4,
+      "lead_hours": 58.9,
       "southward_bz_probability": 46.8,
       "bz_min_forecast": -6.18,
       "bt_forecast": 5.79,
@@ -834,7 +753,7 @@
     },
     {
       "time": "2026-07-13T00:00:00+00:00",
-      "lead_hours": 67.4,
+      "lead_hours": 61.9,
       "southward_bz_probability": 46.6,
       "bz_min_forecast": -6.16,
       "bt_forecast": 5.79,
@@ -867,7 +786,7 @@
     },
     {
       "time": "2026-07-13T03:00:00+00:00",
-      "lead_hours": 70.4,
+      "lead_hours": 64.9,
       "southward_bz_probability": 46.6,
       "bz_min_forecast": -6.16,
       "bt_forecast": 5.79,
@@ -900,7 +819,7 @@
     },
     {
       "time": "2026-07-13T06:00:00+00:00",
-      "lead_hours": 73.4,
+      "lead_hours": 67.9,
       "southward_bz_probability": 46.6,
       "bz_min_forecast": -6.16,
       "bt_forecast": 5.79,
@@ -933,7 +852,7 @@
     },
     {
       "time": "2026-07-13T09:00:00+00:00",
-      "lead_hours": 76.4,
+      "lead_hours": 70.9,
       "southward_bz_probability": 46.6,
       "bz_min_forecast": -6.16,
       "bt_forecast": 5.79,
@@ -966,7 +885,7 @@
     },
     {
       "time": "2026-07-13T12:00:00+00:00",
-      "lead_hours": 79.4,
+      "lead_hours": 73.9,
       "southward_bz_probability": 46.6,
       "bz_min_forecast": -6.16,
       "bt_forecast": 5.79,
@@ -999,7 +918,7 @@
     },
     {
       "time": "2026-07-13T15:00:00+00:00",
-      "lead_hours": 82.4,
+      "lead_hours": 76.9,
       "southward_bz_probability": 46.6,
       "bz_min_forecast": -6.16,
       "bt_forecast": 5.79,
@@ -1032,7 +951,7 @@
     },
     {
       "time": "2026-07-13T18:00:00+00:00",
-      "lead_hours": 85.4,
+      "lead_hours": 79.9,
       "southward_bz_probability": 62.1,
       "bz_min_forecast": -6.14,
       "bt_forecast": 5.41,
@@ -1065,7 +984,7 @@
     },
     {
       "time": "2026-07-13T21:00:00+00:00",
-      "lead_hours": 88.4,
+      "lead_hours": 82.9,
       "southward_bz_probability": 71.6,
       "bz_min_forecast": -6.8,
       "bt_forecast": 5.25,
@@ -1098,7 +1017,7 @@
     },
     {
       "time": "2026-07-14T00:00:00+00:00",
-      "lead_hours": 91.4,
+      "lead_hours": 85.9,
       "southward_bz_probability": 60.9,
       "bz_min_forecast": -5.88,
       "bt_forecast": 4.97,
@@ -1131,7 +1050,7 @@
     },
     {
       "time": "2026-07-14T03:00:00+00:00",
-      "lead_hours": 94.4,
+      "lead_hours": 88.9,
       "southward_bz_probability": 58.5,
       "bz_min_forecast": -5.51,
       "bt_forecast": 4.44,
@@ -1164,7 +1083,7 @@
     },
     {
       "time": "2026-07-14T06:00:00+00:00",
-      "lead_hours": 97.4,
+      "lead_hours": 91.9,
       "southward_bz_probability": 57.8,
       "bz_min_forecast": -5.35,
       "bt_forecast": 4.32,
@@ -1197,7 +1116,7 @@
     },
     {
       "time": "2026-07-14T09:00:00+00:00",
-      "lead_hours": 100.4,
+      "lead_hours": 94.9,
       "southward_bz_probability": 58.9,
       "bz_min_forecast": -5.42,
       "bt_forecast": 4.3,
@@ -1230,7 +1149,7 @@
     },
     {
       "time": "2026-07-14T12:00:00+00:00",
-      "lead_hours": 103.4,
+      "lead_hours": 97.9,
       "southward_bz_probability": 57.5,
       "bz_min_forecast": -5.22,
       "bt_forecast": 4.28,
@@ -1263,7 +1182,7 @@
     },
     {
       "time": "2026-07-14T15:00:00+00:00",
-      "lead_hours": 106.4,
+      "lead_hours": 100.9,
       "southward_bz_probability": 56.3,
       "bz_min_forecast": -5.11,
       "bt_forecast": 4.28,
@@ -1296,7 +1215,7 @@
     },
     {
       "time": "2026-07-14T18:00:00+00:00",
-      "lead_hours": 109.4,
+      "lead_hours": 103.9,
       "southward_bz_probability": 54.4,
       "bz_min_forecast": -4.95,
       "bt_forecast": 4.34,
@@ -1329,7 +1248,7 @@
     },
     {
       "time": "2026-07-14T21:00:00+00:00",
-      "lead_hours": 112.4,
+      "lead_hours": 106.9,
       "southward_bz_probability": 55.5,
       "bz_min_forecast": -5.08,
       "bt_forecast": 4.4,
@@ -1362,7 +1281,7 @@
     },
     {
       "time": "2026-07-15T00:00:00+00:00",
-      "lead_hours": 115.4,
+      "lead_hours": 109.9,
       "southward_bz_probability": 56.9,
       "bz_min_forecast": -5.33,
       "bt_forecast": 4.45,
@@ -1395,7 +1314,7 @@
     },
     {
       "time": "2026-07-15T03:00:00+00:00",
-      "lead_hours": 118.4,
+      "lead_hours": 112.9,
       "southward_bz_probability": 58.3,
       "bz_min_forecast": -5.46,
       "bt_forecast": 4.58,
@@ -1425,10 +1344,76 @@
         "vsw_forecast": 552.1,
         "vsw_rotation27": 420.1
       }
+    },
+    {
+      "time": "2026-07-15T06:00:00+00:00",
+      "lead_hours": 115.9,
+      "southward_bz_probability": 63.2,
+      "bz_min_forecast": -5.85,
+      "bt_forecast": 4.77,
+      "bz_risk": "MODERATE",
+      "confidence": 0.59,
+      "driver": "HSS/CIR rotation27",
+      "features": {
+        "rotation27": {
+          "available": true,
+          "bz_min_27d": -7.07,
+          "bz_p10_27d": -3.45,
+          "bt_median_27d": 3.93,
+          "southward_fraction_27d": 0.62,
+          "southward_strong_fraction_27d": 0.041,
+          "samples": 2173
+        },
+        "persistence": {
+          "available": false,
+          "bz_recent": null,
+          "bt_recent": null,
+          "south_recent": null
+        },
+        "cme": {
+          "cme_bz_risk": 0,
+          "nearest_cme": null
+        },
+        "vsw_forecast": 552.1,
+        "vsw_rotation27": 420.1
+      }
+    },
+    {
+      "time": "2026-07-15T09:00:00+00:00",
+      "lead_hours": 118.9,
+      "southward_bz_probability": 63.7,
+      "bz_min_forecast": -5.92,
+      "bt_forecast": 4.98,
+      "bz_risk": "MODERATE",
+      "confidence": 0.59,
+      "driver": "HSS/CIR rotation27",
+      "features": {
+        "rotation27": {
+          "available": true,
+          "bz_min_27d": -7.07,
+          "bz_p10_27d": -3.54,
+          "bt_median_27d": 4.25,
+          "southward_fraction_27d": 0.641,
+          "southward_strong_fraction_27d": 0.039,
+          "samples": 2353
+        },
+        "persistence": {
+          "available": false,
+          "bz_recent": null,
+          "bt_recent": null,
+          "south_recent": null
+        },
+        "cme": {
+          "cme_bz_risk": 0,
+          "nearest_cme": null
+        },
+        "vsw_forecast": 552.1,
+        "vsw_rotation27": 420.1
+      }
     }
   ],
   "verification": {
-    "updated_at": "2026-07-10T04:37:33.537233+00:00",
+    "updated_at": "2026-07-10T10:03:21.178252+00:00",
     "last_7d": {
       "count": 0,
       "status": "learning"
