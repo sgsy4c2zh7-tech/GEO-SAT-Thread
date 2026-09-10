@@ -1,11 +1,11 @@
 {
-  "updated_at": "2026-09-09T08:18:07.280547+00:00",
+  "updated_at": "2026-09-10T08:17:42.425152+00:00",
   "source": "Local docs/data/donki + Helioviewer API takeScreenshot",
   "description": "Earth-directed DONKI-linked solar image windows only. CACTus images are disabled. Window is t0 ± 2 hours, 15-minute cadence. Retention is 7 days.",
   "mode": "earth_directed_donki_event_windows_only",
   "scan_days_this_run": 1,
   "retention_days": 7,
-  "retention_since": "2026-09-02T08:18:07.280547+00:00",
+  "retention_since": "2026-09-03T08:17:42.425152+00:00",
   "window_minutes": 120,
   "step_minutes": 15,
   "max_events_per_run": 80,
@@ -40,6 +40,10 @@
     "donki_dir": "docs/data/donki",
     "donki_files_loaded": [
       "latest.json",
+      "2026-09-10T0300Z.json",
+      "2026-09-09T2300Z.json",
+      "2026-09-09T1600Z.json",
+      "2026-09-09T1100Z.json",
       "2026-09-09T0400Z.json",
       "2026-09-08T2300Z.json",
       "2026-09-08T2000Z.json",
@@ -86,577 +90,96 @@
       "2026-08-30T1100Z.json",
       "2026-08-30T0400Z.json",
       "2026-08-29T2300Z.json",
-      "2026-08-27T1300Z.json",
-      "2026-08-27T0000Z.json",
-      "2026-08-26T1900Z.json",
-      "2026-08-26T1600Z.json",
-      "2026-08-26T1300Z.json",
-      "2026-08-26T0900Z.json",
-      "2026-08-26T0600Z.json"
+      "2026-08-27T1300Z.json"
     ],
-    "earth_directed_donki_events_this_run": 0,
+    "earth_directed_donki_events_this_run": 2,
     "skipped": {
-      "miss": 6030,
-      "no_geometry": 1358,
+      "miss": 6022,
+      "no_geometry": 1422,
       "old": 0,
       "other": 0
     },
     "cactus_events_this_run": 0
   },
   "event_count": 6,
-  "events_found_this_run": 0,
+  "events_found_this_run": 2,
   "image_count": 182,
-  "images_added_or_checked_this_run": 0,
+  "images_added_or_checked_this_run": 68,
   "by_kind": {
     "AIA193": 91,
     "LASCO_C2": 91
   },
-  "deleted_images": [],
+  "deleted_images": [
+    "aia193_20260902_0900.png",
+    "lasco_c2_20260902_1115.png",
+    "aia193_20260902_1045.png",
+    "aia193_20260903_0015.png",
+    "lasco_c2_20260902_0900.png",
+    "aia193_20260902_2115.png",
+    "lasco_c2_20260902_2245.png",
+    "lasco_c2_20260902_2015.png",
+    "lasco_c2_20260903_0015.png",
+    "aia193_20260902_1100.png",
+    "aia193_20260902_2245.png",
+    "lasco_c2_20260902_0845.png",
+    "aia193_20260903_0000.png",
+    "lasco_c2_20260902_1000.png",
+    "aia193_20260902_0945.png",
+    "aia193_20260902_2045.png",
+    "aia193_20260902_0845.png",
+    "aia193_20260902_1145.png",
+    "lasco_c2_20260902_2030.png",
+    "lasco_c2_20260902_0945.png",
+    "lasco_c2_20260902_2300.png",
+    "lasco_c2_20260902_1130.png",
+    "aia193_20260902_2300.png",
+    "aia193_20260902_2345.png",
+    "aia193_20260902_2015.png",
+    "aia193_20260902_2230.png",
+    "aia193_20260902_1015.png",
+    "lasco_c2_20260902_2345.png",
+    "lasco_c2_20260902_2315.png",
+    "lasco_c2_20260902_0930.png",
+    "aia193_20260902_1030.png",
+    "lasco_c2_20260902_0830.png",
+    "aia193_20260902_2315.png",
+    "lasco_c2_20260902_1145.png",
+    "lasco_c2_20260902_0915.png",
+    "aia193_20260902_1200.png",
+    "aia193_20260902_2100.png",
+    "aia193_20260902_1115.png",
+    "lasco_c2_20260902_2215.png",
+    "lasco_c2_20260902_2200.png",
+    "aia193_20260902_1000.png",
+    "aia193_20260902_0930.png",
+    "lasco_c2_20260902_2115.png",
+    "aia193_20260902_1130.png",
+    "lasco_c2_20260902_1030.png",
+    "aia193_20260902_2130.png",
+    "lasco_c2_20260902_1100.png",
+    "lasco_c2_20260902_2330.png",
+    "lasco_c2_20260902_2100.png",
+    "lasco_c2_20260902_2045.png",
+    "aia193_20260902_2200.png",
+    "lasco_c2_20260902_2130.png",
+    "lasco_c2_20260902_1215.png",
+    "lasco_c2_20260902_2230.png",
+    "aia193_20260902_2330.png",
+    "lasco_c2_20260902_1230.png",
+    "lasco_c2_20260902_1015.png",
+    "aia193_20260902_1215.png",
+    "aia193_20260902_0915.png",
+    "aia193_20260902_2145.png",
+    "aia193_20260902_2215.png",
+    "lasco_c2_20260903_0000.png",
+    "aia193_20260902_2030.png",
+    "aia193_20260902_1230.png",
+    "aia193_20260902_0830.png",
+    "lasco_c2_20260902_1045.png",
+    "lasco_c2_20260902_1200.png",
+    "lasco_c2_20260902_2145.png"
+  ],
   "items": [
-    {
-      "time": "2026-09-02T08:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_0830.png",
-      "path": "./data/helioviewer/images/aia193_20260902_0830.png",
-      "size_bytes": 1094601
-    },
-    {
-      "time": "2026-09-02T08:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_0830.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_0830.png",
-      "size_bytes": 764511
-    },
-    {
-      "time": "2026-09-02T08:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_0845.png",
-      "path": "./data/helioviewer/images/aia193_20260902_0845.png",
-      "size_bytes": 1093026
-    },
-    {
-      "time": "2026-09-02T08:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_0845.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_0845.png",
-      "size_bytes": 764511
-    },
-    {
-      "time": "2026-09-02T09:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_0900.png",
-      "path": "./data/helioviewer/images/aia193_20260902_0900.png",
-      "size_bytes": 1097698
-    },
-    {
-      "time": "2026-09-02T09:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_0900.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_0900.png",
-      "size_bytes": 764511
-    },
-    {
-      "time": "2026-09-02T09:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_0915.png",
-      "path": "./data/helioviewer/images/aia193_20260902_0915.png",
-      "size_bytes": 1098366
-    },
-    {
-      "time": "2026-09-02T09:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_0915.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_0915.png",
-      "size_bytes": 764511
-    },
-    {
-      "time": "2026-09-02T09:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_0930.png",
-      "path": "./data/helioviewer/images/aia193_20260902_0930.png",
-      "size_bytes": 1099161
-    },
-    {
-      "time": "2026-09-02T09:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_0930.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_0930.png",
-      "size_bytes": 764511
-    },
-    {
-      "time": "2026-09-02T09:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_0945.png",
-      "path": "./data/helioviewer/images/aia193_20260902_0945.png",
-      "size_bytes": 1097182
-    },
-    {
-      "time": "2026-09-02T09:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_0945.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_0945.png",
-      "size_bytes": 763920
-    },
-    {
-      "time": "2026-09-02T10:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1000.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1000.png",
-      "size_bytes": 1096575
-    },
-    {
-      "time": "2026-09-02T10:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1000.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1000.png",
-      "size_bytes": 764174
-    },
-    {
-      "time": "2026-09-02T10:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1015.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1015.png",
-      "size_bytes": 1095967
-    },
-    {
-      "time": "2026-09-02T10:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1015.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1015.png",
-      "size_bytes": 765481
-    },
-    {
-      "time": "2026-09-02T10:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1030.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1030.png",
-      "size_bytes": 1095455
-    },
-    {
-      "time": "2026-09-02T10:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1030.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1030.png",
-      "size_bytes": 765999
-    },
-    {
-      "time": "2026-09-02T10:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1045.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1045.png",
-      "size_bytes": 1095945
-    },
-    {
-      "time": "2026-09-02T10:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1045.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1045.png",
-      "size_bytes": 763165
-    },
-    {
-      "time": "2026-09-02T11:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1100.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1100.png",
-      "size_bytes": 1100486
-    },
-    {
-      "time": "2026-09-02T11:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1100.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1100.png",
-      "size_bytes": 764197
-    },
-    {
-      "time": "2026-09-02T11:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1115.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1115.png",
-      "size_bytes": 1100548
-    },
-    {
-      "time": "2026-09-02T11:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1115.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1115.png",
-      "size_bytes": 764173
-    },
-    {
-      "time": "2026-09-02T11:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1130.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1130.png",
-      "size_bytes": 1101300
-    },
-    {
-      "time": "2026-09-02T11:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1130.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1130.png",
-      "size_bytes": 764173
-    },
-    {
-      "time": "2026-09-02T11:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1145.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1145.png",
-      "size_bytes": 1097685
-    },
-    {
-      "time": "2026-09-02T11:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1145.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1145.png",
-      "size_bytes": 765746
-    },
-    {
-      "time": "2026-09-02T12:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1200.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1200.png",
-      "size_bytes": 1097317
-    },
-    {
-      "time": "2026-09-02T12:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1200.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1200.png",
-      "size_bytes": 764649
-    },
-    {
-      "time": "2026-09-02T12:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1215.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1215.png",
-      "size_bytes": 1098777
-    },
-    {
-      "time": "2026-09-02T12:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1215.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1215.png",
-      "size_bytes": 765705
-    },
-    {
-      "time": "2026-09-02T12:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1230.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1230.png",
-      "size_bytes": 1103803
-    },
-    {
-      "time": "2026-09-02T12:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1230.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1230.png",
-      "size_bytes": 765068
-    },
-    {
-      "time": "2026-09-02T20:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2015.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2015.png",
-      "size_bytes": 1263267
-    },
-    {
-      "time": "2026-09-02T20:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2015.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2015.png",
-      "size_bytes": 811677
-    },
-    {
-      "time": "2026-09-02T20:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2030.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2030.png",
-      "size_bytes": 1100044
-    },
-    {
-      "time": "2026-09-02T20:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2030.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2030.png",
-      "size_bytes": 800084
-    },
-    {
-      "time": "2026-09-02T20:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2045.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2045.png",
-      "size_bytes": 1084415
-    },
-    {
-      "time": "2026-09-02T20:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2045.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2045.png",
-      "size_bytes": 769626
-    },
-    {
-      "time": "2026-09-02T21:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2100.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2100.png",
-      "size_bytes": 1084765
-    },
-    {
-      "time": "2026-09-02T21:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2100.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2100.png",
-      "size_bytes": 764182
-    },
-    {
-      "time": "2026-09-02T21:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2115.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2115.png",
-      "size_bytes": 1084283
-    },
-    {
-      "time": "2026-09-02T21:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2115.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2115.png",
-      "size_bytes": 761405
-    },
-    {
-      "time": "2026-09-02T21:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2130.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2130.png",
-      "size_bytes": 1084919
-    },
-    {
-      "time": "2026-09-02T21:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2130.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2130.png",
-      "size_bytes": 759054
-    },
-    {
-      "time": "2026-09-02T21:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2145.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2145.png",
-      "size_bytes": 1084522
-    },
-    {
-      "time": "2026-09-02T21:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2145.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2145.png",
-      "size_bytes": 753345
-    },
-    {
-      "time": "2026-09-02T22:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2200.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2200.png",
-      "size_bytes": 1085153
-    },
-    {
-      "time": "2026-09-02T22:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2200.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2200.png",
-      "size_bytes": 754546
-    },
-    {
-      "time": "2026-09-02T22:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2215.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2215.png",
-      "size_bytes": 1087629
-    },
-    {
-      "time": "2026-09-02T22:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2215.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2215.png",
-      "size_bytes": 754142
-    },
-    {
-      "time": "2026-09-02T22:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2230.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2230.png",
-      "size_bytes": 1087249
-    },
-    {
-      "time": "2026-09-02T22:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2230.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2230.png",
-      "size_bytes": 755441
-    },
-    {
-      "time": "2026-09-02T22:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2245.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2245.png",
-      "size_bytes": 1086312
-    },
-    {
-      "time": "2026-09-02T22:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2245.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2245.png",
-      "size_bytes": 757671
-    },
-    {
-      "time": "2026-09-02T23:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2300.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2300.png",
-      "size_bytes": 1085261
-    },
-    {
-      "time": "2026-09-02T23:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2300.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2300.png",
-      "size_bytes": 764127
-    },
-    {
-      "time": "2026-09-02T23:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2315.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2315.png",
-      "size_bytes": 1087605
-    },
-    {
-      "time": "2026-09-02T23:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2315.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2315.png",
-      "size_bytes": 752046
-    },
-    {
-      "time": "2026-09-02T23:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2330.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2330.png",
-      "size_bytes": 1085832
-    },
-    {
-      "time": "2026-09-02T23:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2330.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2330.png",
-      "size_bytes": 751034
-    },
-    {
-      "time": "2026-09-02T23:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2345.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2345.png",
-      "size_bytes": 1086193
-    },
-    {
-      "time": "2026-09-02T23:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2345.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2345.png",
-      "size_bytes": 747546
-    },
-    {
-      "time": "2026-09-03T00:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260903_0000.png",
-      "path": "./data/helioviewer/images/aia193_20260903_0000.png",
-      "size_bytes": 1085727
-    },
-    {
-      "time": "2026-09-03T00:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260903_0000.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260903_0000.png",
-      "size_bytes": 748317
-    },
-    {
-      "time": "2026-09-03T00:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260903_0015.png",
-      "path": "./data/helioviewer/images/aia193_20260903_0015.png",
-      "size_bytes": 1086216
-    },
-    {
-      "time": "2026-09-03T00:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260903_0015.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260903_0015.png",
-      "size_bytes": 748322
-    },
     {
       "time": "2026-09-05T16:15:00+00:00",
       "kind": "AIA193",
@@ -1568,554 +1091,554 @@
       "file": "lasco_c2_20260906_1600.png",
       "path": "./data/helioviewer/images/lasco_c2_20260906_1600.png",
       "size_bytes": 781428
+    },
+    {
+      "time": "2026-09-09T08:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_0830.png",
+      "path": "./data/helioviewer/images/aia193_20260909_0830.png",
+      "size_bytes": 1047870
+    },
+    {
+      "time": "2026-09-09T08:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_0830.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_0830.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T08:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_0845.png",
+      "path": "./data/helioviewer/images/aia193_20260909_0845.png",
+      "size_bytes": 1049445
+    },
+    {
+      "time": "2026-09-09T08:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_0845.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_0845.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T09:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_0900.png",
+      "path": "./data/helioviewer/images/aia193_20260909_0900.png",
+      "size_bytes": 1052450
+    },
+    {
+      "time": "2026-09-09T09:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_0900.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_0900.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T09:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_0915.png",
+      "path": "./data/helioviewer/images/aia193_20260909_0915.png",
+      "size_bytes": 1051745
+    },
+    {
+      "time": "2026-09-09T09:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_0915.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_0915.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T09:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_0930.png",
+      "path": "./data/helioviewer/images/aia193_20260909_0930.png",
+      "size_bytes": 1052702
+    },
+    {
+      "time": "2026-09-09T09:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_0930.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_0930.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T09:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_0945.png",
+      "path": "./data/helioviewer/images/aia193_20260909_0945.png",
+      "size_bytes": 1054292
+    },
+    {
+      "time": "2026-09-09T09:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_0945.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_0945.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T10:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1000.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1000.png",
+      "size_bytes": 1054353
+    },
+    {
+      "time": "2026-09-09T10:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1000.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1000.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T10:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1015.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1015.png",
+      "size_bytes": 1055882
+    },
+    {
+      "time": "2026-09-09T10:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1015.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1015.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T10:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1030.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1030.png",
+      "size_bytes": 1053861
+    },
+    {
+      "time": "2026-09-09T10:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1030.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1030.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T10:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1045.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1045.png",
+      "size_bytes": 1055468
+    },
+    {
+      "time": "2026-09-09T10:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1045.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1045.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T11:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1100.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1100.png",
+      "size_bytes": 1056267
+    },
+    {
+      "time": "2026-09-09T11:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1100.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1100.png",
+      "size_bytes": 770558
+    },
+    {
+      "time": "2026-09-09T11:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1115.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1115.png",
+      "size_bytes": 1071014
+    },
+    {
+      "time": "2026-09-09T11:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1115.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1115.png",
+      "size_bytes": 772504
+    },
+    {
+      "time": "2026-09-09T11:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1130.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1130.png",
+      "size_bytes": 1072962
+    },
+    {
+      "time": "2026-09-09T11:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1130.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1130.png",
+      "size_bytes": 773265
+    },
+    {
+      "time": "2026-09-09T11:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1145.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1145.png",
+      "size_bytes": 1075984
+    },
+    {
+      "time": "2026-09-09T11:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1145.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1145.png",
+      "size_bytes": 775643
+    },
+    {
+      "time": "2026-09-09T12:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1200.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1200.png",
+      "size_bytes": 1080041
+    },
+    {
+      "time": "2026-09-09T12:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1200.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1200.png",
+      "size_bytes": 776569
+    },
+    {
+      "time": "2026-09-09T12:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1215.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1215.png",
+      "size_bytes": 1072115
+    },
+    {
+      "time": "2026-09-09T12:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1215.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1215.png",
+      "size_bytes": 778068
+    },
+    {
+      "time": "2026-09-09T12:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1230.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1230.png",
+      "size_bytes": 1069582
+    },
+    {
+      "time": "2026-09-09T12:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1230.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1230.png",
+      "size_bytes": 777077
+    },
+    {
+      "time": "2026-09-10T00:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0045.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0045.png",
+      "size_bytes": 1054374
+    },
+    {
+      "time": "2026-09-10T00:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0045.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0045.png",
+      "size_bytes": 754835
+    },
+    {
+      "time": "2026-09-10T01:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0100.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0100.png",
+      "size_bytes": 1054215
+    },
+    {
+      "time": "2026-09-10T01:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0100.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0100.png",
+      "size_bytes": 754835
+    },
+    {
+      "time": "2026-09-10T01:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0115.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0115.png",
+      "size_bytes": 1053245
+    },
+    {
+      "time": "2026-09-10T01:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0115.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0115.png",
+      "size_bytes": 754835
+    },
+    {
+      "time": "2026-09-10T01:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0130.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0130.png",
+      "size_bytes": 1055865
+    },
+    {
+      "time": "2026-09-10T01:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0130.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0130.png",
+      "size_bytes": 754835
+    },
+    {
+      "time": "2026-09-10T01:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0145.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0145.png",
+      "size_bytes": 1055898
+    },
+    {
+      "time": "2026-09-10T01:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0145.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0145.png",
+      "size_bytes": 754539
+    },
+    {
+      "time": "2026-09-10T02:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0200.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0200.png",
+      "size_bytes": 1054710
+    },
+    {
+      "time": "2026-09-10T02:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0200.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0200.png",
+      "size_bytes": 753837
+    },
+    {
+      "time": "2026-09-10T02:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0215.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0215.png",
+      "size_bytes": 1053664
+    },
+    {
+      "time": "2026-09-10T02:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0215.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0215.png",
+      "size_bytes": 755315
+    },
+    {
+      "time": "2026-09-10T02:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0230.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0230.png",
+      "size_bytes": 1056203
+    },
+    {
+      "time": "2026-09-10T02:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0230.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0230.png",
+      "size_bytes": 755315
+    },
+    {
+      "time": "2026-09-10T02:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0245.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0245.png",
+      "size_bytes": 1055842
+    },
+    {
+      "time": "2026-09-10T02:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0245.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0245.png",
+      "size_bytes": 750628
+    },
+    {
+      "time": "2026-09-10T03:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0300.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0300.png",
+      "size_bytes": 1053712
+    },
+    {
+      "time": "2026-09-10T03:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0300.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0300.png",
+      "size_bytes": 756283
+    },
+    {
+      "time": "2026-09-10T03:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0315.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0315.png",
+      "size_bytes": 1054445
+    },
+    {
+      "time": "2026-09-10T03:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0315.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0315.png",
+      "size_bytes": 756542
+    },
+    {
+      "time": "2026-09-10T03:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0330.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0330.png",
+      "size_bytes": 1056045
+    },
+    {
+      "time": "2026-09-10T03:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0330.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0330.png",
+      "size_bytes": 757697
+    },
+    {
+      "time": "2026-09-10T03:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0345.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0345.png",
+      "size_bytes": 1055141
+    },
+    {
+      "time": "2026-09-10T03:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0345.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0345.png",
+      "size_bytes": 754531
+    },
+    {
+      "time": "2026-09-10T04:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0400.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0400.png",
+      "size_bytes": 1054272
+    },
+    {
+      "time": "2026-09-10T04:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0400.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0400.png",
+      "size_bytes": 758810
+    },
+    {
+      "time": "2026-09-10T04:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0415.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0415.png",
+      "size_bytes": 1056220
+    },
+    {
+      "time": "2026-09-10T04:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0415.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0415.png",
+      "size_bytes": 759287
+    },
+    {
+      "time": "2026-09-10T04:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0430.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0430.png",
+      "size_bytes": 1056007
+    },
+    {
+      "time": "2026-09-10T04:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0430.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0430.png",
+      "size_bytes": 758433
+    },
+    {
+      "time": "2026-09-10T04:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0445.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0445.png",
+      "size_bytes": 1055253
+    },
+    {
+      "time": "2026-09-10T04:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0445.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0445.png",
+      "size_bytes": 759831
     }
   ],
   "images": [
     {
-      "time": "2026-09-02T08:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_0830.png",
-      "path": "./data/helioviewer/images/aia193_20260902_0830.png",
-      "size_bytes": 1094601
-    },
-    {
-      "time": "2026-09-02T08:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_0830.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_0830.png",
-      "size_bytes": 764511
-    },
-    {
-      "time": "2026-09-02T08:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_0845.png",
-      "path": "./data/helioviewer/images/aia193_20260902_0845.png",
-      "size_bytes": 1093026
-    },
-    {
-      "time": "2026-09-02T08:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_0845.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_0845.png",
-      "size_bytes": 764511
-    },
-    {
-      "time": "2026-09-02T09:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_0900.png",
-      "path": "./data/helioviewer/images/aia193_20260902_0900.png",
-      "size_bytes": 1097698
-    },
-    {
-      "time": "2026-09-02T09:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_0900.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_0900.png",
-      "size_bytes": 764511
-    },
-    {
-      "time": "2026-09-02T09:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_0915.png",
-      "path": "./data/helioviewer/images/aia193_20260902_0915.png",
-      "size_bytes": 1098366
-    },
-    {
-      "time": "2026-09-02T09:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_0915.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_0915.png",
-      "size_bytes": 764511
-    },
-    {
-      "time": "2026-09-02T09:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_0930.png",
-      "path": "./data/helioviewer/images/aia193_20260902_0930.png",
-      "size_bytes": 1099161
-    },
-    {
-      "time": "2026-09-02T09:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_0930.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_0930.png",
-      "size_bytes": 764511
-    },
-    {
-      "time": "2026-09-02T09:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_0945.png",
-      "path": "./data/helioviewer/images/aia193_20260902_0945.png",
-      "size_bytes": 1097182
-    },
-    {
-      "time": "2026-09-02T09:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_0945.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_0945.png",
-      "size_bytes": 763920
-    },
-    {
-      "time": "2026-09-02T10:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1000.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1000.png",
-      "size_bytes": 1096575
-    },
-    {
-      "time": "2026-09-02T10:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1000.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1000.png",
-      "size_bytes": 764174
-    },
-    {
-      "time": "2026-09-02T10:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1015.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1015.png",
-      "size_bytes": 1095967
-    },
-    {
-      "time": "2026-09-02T10:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1015.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1015.png",
-      "size_bytes": 765481
-    },
-    {
-      "time": "2026-09-02T10:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1030.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1030.png",
-      "size_bytes": 1095455
-    },
-    {
-      "time": "2026-09-02T10:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1030.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1030.png",
-      "size_bytes": 765999
-    },
-    {
-      "time": "2026-09-02T10:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1045.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1045.png",
-      "size_bytes": 1095945
-    },
-    {
-      "time": "2026-09-02T10:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1045.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1045.png",
-      "size_bytes": 763165
-    },
-    {
-      "time": "2026-09-02T11:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1100.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1100.png",
-      "size_bytes": 1100486
-    },
-    {
-      "time": "2026-09-02T11:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1100.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1100.png",
-      "size_bytes": 764197
-    },
-    {
-      "time": "2026-09-02T11:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1115.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1115.png",
-      "size_bytes": 1100548
-    },
-    {
-      "time": "2026-09-02T11:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1115.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1115.png",
-      "size_bytes": 764173
-    },
-    {
-      "time": "2026-09-02T11:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1130.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1130.png",
-      "size_bytes": 1101300
-    },
-    {
-      "time": "2026-09-02T11:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1130.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1130.png",
-      "size_bytes": 764173
-    },
-    {
-      "time": "2026-09-02T11:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1145.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1145.png",
-      "size_bytes": 1097685
-    },
-    {
-      "time": "2026-09-02T11:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1145.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1145.png",
-      "size_bytes": 765746
-    },
-    {
-      "time": "2026-09-02T12:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1200.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1200.png",
-      "size_bytes": 1097317
-    },
-    {
-      "time": "2026-09-02T12:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1200.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1200.png",
-      "size_bytes": 764649
-    },
-    {
-      "time": "2026-09-02T12:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1215.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1215.png",
-      "size_bytes": 1098777
-    },
-    {
-      "time": "2026-09-02T12:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1215.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1215.png",
-      "size_bytes": 765705
-    },
-    {
-      "time": "2026-09-02T12:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_1230.png",
-      "path": "./data/helioviewer/images/aia193_20260902_1230.png",
-      "size_bytes": 1103803
-    },
-    {
-      "time": "2026-09-02T12:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_1230.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_1230.png",
-      "size_bytes": 765068
-    },
-    {
-      "time": "2026-09-02T20:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2015.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2015.png",
-      "size_bytes": 1263267
-    },
-    {
-      "time": "2026-09-02T20:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2015.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2015.png",
-      "size_bytes": 811677
-    },
-    {
-      "time": "2026-09-02T20:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2030.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2030.png",
-      "size_bytes": 1100044
-    },
-    {
-      "time": "2026-09-02T20:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2030.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2030.png",
-      "size_bytes": 800084
-    },
-    {
-      "time": "2026-09-02T20:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2045.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2045.png",
-      "size_bytes": 1084415
-    },
-    {
-      "time": "2026-09-02T20:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2045.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2045.png",
-      "size_bytes": 769626
-    },
-    {
-      "time": "2026-09-02T21:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2100.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2100.png",
-      "size_bytes": 1084765
-    },
-    {
-      "time": "2026-09-02T21:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2100.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2100.png",
-      "size_bytes": 764182
-    },
-    {
-      "time": "2026-09-02T21:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2115.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2115.png",
-      "size_bytes": 1084283
-    },
-    {
-      "time": "2026-09-02T21:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2115.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2115.png",
-      "size_bytes": 761405
-    },
-    {
-      "time": "2026-09-02T21:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2130.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2130.png",
-      "size_bytes": 1084919
-    },
-    {
-      "time": "2026-09-02T21:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2130.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2130.png",
-      "size_bytes": 759054
-    },
-    {
-      "time": "2026-09-02T21:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2145.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2145.png",
-      "size_bytes": 1084522
-    },
-    {
-      "time": "2026-09-02T21:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2145.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2145.png",
-      "size_bytes": 753345
-    },
-    {
-      "time": "2026-09-02T22:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2200.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2200.png",
-      "size_bytes": 1085153
-    },
-    {
-      "time": "2026-09-02T22:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2200.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2200.png",
-      "size_bytes": 754546
-    },
-    {
-      "time": "2026-09-02T22:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2215.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2215.png",
-      "size_bytes": 1087629
-    },
-    {
-      "time": "2026-09-02T22:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2215.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2215.png",
-      "size_bytes": 754142
-    },
-    {
-      "time": "2026-09-02T22:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2230.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2230.png",
-      "size_bytes": 1087249
-    },
-    {
-      "time": "2026-09-02T22:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2230.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2230.png",
-      "size_bytes": 755441
-    },
-    {
-      "time": "2026-09-02T22:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2245.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2245.png",
-      "size_bytes": 1086312
-    },
-    {
-      "time": "2026-09-02T22:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2245.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2245.png",
-      "size_bytes": 757671
-    },
-    {
-      "time": "2026-09-02T23:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2300.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2300.png",
-      "size_bytes": 1085261
-    },
-    {
-      "time": "2026-09-02T23:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2300.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2300.png",
-      "size_bytes": 764127
-    },
-    {
-      "time": "2026-09-02T23:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2315.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2315.png",
-      "size_bytes": 1087605
-    },
-    {
-      "time": "2026-09-02T23:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2315.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2315.png",
-      "size_bytes": 752046
-    },
-    {
-      "time": "2026-09-02T23:30:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2330.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2330.png",
-      "size_bytes": 1085832
-    },
-    {
-      "time": "2026-09-02T23:30:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2330.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2330.png",
-      "size_bytes": 751034
-    },
-    {
-      "time": "2026-09-02T23:45:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260902_2345.png",
-      "path": "./data/helioviewer/images/aia193_20260902_2345.png",
-      "size_bytes": 1086193
-    },
-    {
-      "time": "2026-09-02T23:45:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260902_2345.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260902_2345.png",
-      "size_bytes": 747546
-    },
-    {
-      "time": "2026-09-03T00:00:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260903_0000.png",
-      "path": "./data/helioviewer/images/aia193_20260903_0000.png",
-      "size_bytes": 1085727
-    },
-    {
-      "time": "2026-09-03T00:00:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260903_0000.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260903_0000.png",
-      "size_bytes": 748317
-    },
-    {
-      "time": "2026-09-03T00:15:00+00:00",
-      "kind": "AIA193",
-      "label": "SDO/AIA 193",
-      "file": "aia193_20260903_0015.png",
-      "path": "./data/helioviewer/images/aia193_20260903_0015.png",
-      "size_bytes": 1086216
-    },
-    {
-      "time": "2026-09-03T00:15:00+00:00",
-      "kind": "LASCO_C2",
-      "label": "SOHO/LASCO C2",
-      "file": "lasco_c2_20260903_0015.png",
-      "path": "./data/helioviewer/images/lasco_c2_20260903_0015.png",
-      "size_bytes": 748322
-    },
-    {
       "time": "2026-09-05T16:15:00+00:00",
       "kind": "AIA193",
       "label": "SDO/AIA 193",
@@ -3026,9 +2549,603 @@
       "file": "lasco_c2_20260906_1600.png",
       "path": "./data/helioviewer/images/lasco_c2_20260906_1600.png",
       "size_bytes": 781428
+    },
+    {
+      "time": "2026-09-09T08:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_0830.png",
+      "path": "./data/helioviewer/images/aia193_20260909_0830.png",
+      "size_bytes": 1047870
+    },
+    {
+      "time": "2026-09-09T08:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_0830.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_0830.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T08:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_0845.png",
+      "path": "./data/helioviewer/images/aia193_20260909_0845.png",
+      "size_bytes": 1049445
+    },
+    {
+      "time": "2026-09-09T08:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_0845.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_0845.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T09:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_0900.png",
+      "path": "./data/helioviewer/images/aia193_20260909_0900.png",
+      "size_bytes": 1052450
+    },
+    {
+      "time": "2026-09-09T09:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_0900.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_0900.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T09:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_0915.png",
+      "path": "./data/helioviewer/images/aia193_20260909_0915.png",
+      "size_bytes": 1051745
+    },
+    {
+      "time": "2026-09-09T09:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_0915.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_0915.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T09:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_0930.png",
+      "path": "./data/helioviewer/images/aia193_20260909_0930.png",
+      "size_bytes": 1052702
+    },
+    {
+      "time": "2026-09-09T09:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_0930.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_0930.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T09:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_0945.png",
+      "path": "./data/helioviewer/images/aia193_20260909_0945.png",
+      "size_bytes": 1054292
+    },
+    {
+      "time": "2026-09-09T09:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_0945.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_0945.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T10:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1000.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1000.png",
+      "size_bytes": 1054353
+    },
+    {
+      "time": "2026-09-09T10:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1000.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1000.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T10:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1015.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1015.png",
+      "size_bytes": 1055882
+    },
+    {
+      "time": "2026-09-09T10:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1015.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1015.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T10:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1030.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1030.png",
+      "size_bytes": 1053861
+    },
+    {
+      "time": "2026-09-09T10:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1030.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1030.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T10:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1045.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1045.png",
+      "size_bytes": 1055468
+    },
+    {
+      "time": "2026-09-09T10:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1045.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1045.png",
+      "size_bytes": 768070
+    },
+    {
+      "time": "2026-09-09T11:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1100.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1100.png",
+      "size_bytes": 1056267
+    },
+    {
+      "time": "2026-09-09T11:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1100.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1100.png",
+      "size_bytes": 770558
+    },
+    {
+      "time": "2026-09-09T11:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1115.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1115.png",
+      "size_bytes": 1071014
+    },
+    {
+      "time": "2026-09-09T11:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1115.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1115.png",
+      "size_bytes": 772504
+    },
+    {
+      "time": "2026-09-09T11:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1130.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1130.png",
+      "size_bytes": 1072962
+    },
+    {
+      "time": "2026-09-09T11:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1130.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1130.png",
+      "size_bytes": 773265
+    },
+    {
+      "time": "2026-09-09T11:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1145.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1145.png",
+      "size_bytes": 1075984
+    },
+    {
+      "time": "2026-09-09T11:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1145.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1145.png",
+      "size_bytes": 775643
+    },
+    {
+      "time": "2026-09-09T12:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1200.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1200.png",
+      "size_bytes": 1080041
+    },
+    {
+      "time": "2026-09-09T12:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1200.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1200.png",
+      "size_bytes": 776569
+    },
+    {
+      "time": "2026-09-09T12:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1215.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1215.png",
+      "size_bytes": 1072115
+    },
+    {
+      "time": "2026-09-09T12:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1215.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1215.png",
+      "size_bytes": 778068
+    },
+    {
+      "time": "2026-09-09T12:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260909_1230.png",
+      "path": "./data/helioviewer/images/aia193_20260909_1230.png",
+      "size_bytes": 1069582
+    },
+    {
+      "time": "2026-09-09T12:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260909_1230.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260909_1230.png",
+      "size_bytes": 777077
+    },
+    {
+      "time": "2026-09-10T00:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0045.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0045.png",
+      "size_bytes": 1054374
+    },
+    {
+      "time": "2026-09-10T00:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0045.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0045.png",
+      "size_bytes": 754835
+    },
+    {
+      "time": "2026-09-10T01:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0100.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0100.png",
+      "size_bytes": 1054215
+    },
+    {
+      "time": "2026-09-10T01:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0100.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0100.png",
+      "size_bytes": 754835
+    },
+    {
+      "time": "2026-09-10T01:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0115.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0115.png",
+      "size_bytes": 1053245
+    },
+    {
+      "time": "2026-09-10T01:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0115.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0115.png",
+      "size_bytes": 754835
+    },
+    {
+      "time": "2026-09-10T01:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0130.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0130.png",
+      "size_bytes": 1055865
+    },
+    {
+      "time": "2026-09-10T01:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0130.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0130.png",
+      "size_bytes": 754835
+    },
+    {
+      "time": "2026-09-10T01:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0145.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0145.png",
+      "size_bytes": 1055898
+    },
+    {
+      "time": "2026-09-10T01:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0145.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0145.png",
+      "size_bytes": 754539
+    },
+    {
+      "time": "2026-09-10T02:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0200.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0200.png",
+      "size_bytes": 1054710
+    },
+    {
+      "time": "2026-09-10T02:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0200.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0200.png",
+      "size_bytes": 753837
+    },
+    {
+      "time": "2026-09-10T02:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0215.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0215.png",
+      "size_bytes": 1053664
+    },
+    {
+      "time": "2026-09-10T02:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0215.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0215.png",
+      "size_bytes": 755315
+    },
+    {
+      "time": "2026-09-10T02:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0230.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0230.png",
+      "size_bytes": 1056203
+    },
+    {
+      "time": "2026-09-10T02:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0230.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0230.png",
+      "size_bytes": 755315
+    },
+    {
+      "time": "2026-09-10T02:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0245.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0245.png",
+      "size_bytes": 1055842
+    },
+    {
+      "time": "2026-09-10T02:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0245.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0245.png",
+      "size_bytes": 750628
+    },
+    {
+      "time": "2026-09-10T03:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0300.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0300.png",
+      "size_bytes": 1053712
+    },
+    {
+      "time": "2026-09-10T03:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0300.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0300.png",
+      "size_bytes": 756283
+    },
+    {
+      "time": "2026-09-10T03:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0315.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0315.png",
+      "size_bytes": 1054445
+    },
+    {
+      "time": "2026-09-10T03:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0315.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0315.png",
+      "size_bytes": 756542
+    },
+    {
+      "time": "2026-09-10T03:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0330.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0330.png",
+      "size_bytes": 1056045
+    },
+    {
+      "time": "2026-09-10T03:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0330.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0330.png",
+      "size_bytes": 757697
+    },
+    {
+      "time": "2026-09-10T03:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0345.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0345.png",
+      "size_bytes": 1055141
+    },
+    {
+      "time": "2026-09-10T03:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0345.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0345.png",
+      "size_bytes": 754531
+    },
+    {
+      "time": "2026-09-10T04:00:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0400.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0400.png",
+      "size_bytes": 1054272
+    },
+    {
+      "time": "2026-09-10T04:00:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0400.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0400.png",
+      "size_bytes": 758810
+    },
+    {
+      "time": "2026-09-10T04:15:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0415.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0415.png",
+      "size_bytes": 1056220
+    },
+    {
+      "time": "2026-09-10T04:15:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0415.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0415.png",
+      "size_bytes": 759287
+    },
+    {
+      "time": "2026-09-10T04:30:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0430.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0430.png",
+      "size_bytes": 1056007
+    },
+    {
+      "time": "2026-09-10T04:30:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0430.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0430.png",
+      "size_bytes": 758433
+    },
+    {
+      "time": "2026-09-10T04:45:00+00:00",
+      "kind": "AIA193",
+      "label": "SDO/AIA 193",
+      "file": "aia193_20260910_0445.png",
+      "path": "./data/helioviewer/images/aia193_20260910_0445.png",
+      "size_bytes": 1055253
+    },
+    {
+      "time": "2026-09-10T04:45:00+00:00",
+      "kind": "LASCO_C2",
+      "label": "SOHO/LASCO C2",
+      "file": "lasco_c2_20260910_0445.png",
+      "path": "./data/helioviewer/images/lasco_c2_20260910_0445.png",
+      "size_bytes": 759831
     }
   ],
   "events": [
+    {
+      "id": "2026-09-09T10:23:00-CME-001",
+      "source": "DONKI_CMEAnalysis",
+      "t0": "2026-09-10T02:45:00+00:00",
+      "raw_time": "2026-09-10T02:47:00+00:00",
+      "window_start": "2026-09-10T00:45:00+00:00",
+      "window_end": "2026-09-10T04:45:00+00:00",
+      "image_count": 34,
+      "aia193_count": 17,
+      "lasco_c2_count": 17,
+      "meta": {
+        "speed": 207.0,
+        "latitude": 5.0,
+        "longitude": 5.0,
+        "raw_longitude": 5.0,
+        "halfAngle": 39.0,
+        "impact": "CORE-HIT",
+        "earth_candidate": true,
+        "sep": 7.067,
+        "ratio": 0.181,
+        "reason": "CORE-HIT: sep=7.1, half=39.0, ratio=0.18",
+        "data_file": "latest.json"
+      },
+      "last_seen_at": "2026-09-10T08:17:42.425152+00:00"
+    },
+    {
+      "id": "2026-09-09T10:23:00-CME-001",
+      "source": "DONKI_CME.cmeAnalyses",
+      "t0": "2026-09-09T10:30:00+00:00",
+      "raw_time": "2026-09-09T10:23:00+00:00",
+      "window_start": "2026-09-09T08:30:00+00:00",
+      "window_end": "2026-09-09T12:30:00+00:00",
+      "image_count": 34,
+      "aia193_count": 17,
+      "lasco_c2_count": 17,
+      "meta": {
+        "speed": 207.0,
+        "latitude": 5.0,
+        "longitude": 5.0,
+        "raw_longitude": 5.0,
+        "halfAngle": 39.0,
+        "impact": "CORE-HIT",
+        "earth_candidate": true,
+        "sep": 7.067,
+        "ratio": 0.181,
+        "reason": "CORE-HIT: sep=7.1, half=39.0, ratio=0.18",
+        "data_file": "latest.json"
+      },
+      "last_seen_at": "2026-09-10T08:17:42.425152+00:00"
+    },
     {
       "id": "2026-09-06T10:53:00-CME-001",
       "source": "DONKI_CMEAnalysis",
@@ -3128,56 +3245,6 @@
         "data_file": "latest.json"
       },
       "last_seen_at": "2026-09-06T08:01:46.491696+00:00"
-    },
-    {
-      "id": "2026-09-02T10:24:00-CME-001",
-      "source": "DONKI_CMEAnalysis",
-      "t0": "2026-09-02T22:15:00+00:00",
-      "raw_time": "2026-09-02T22:21:00+00:00",
-      "window_start": "2026-09-02T20:15:00+00:00",
-      "window_end": "2026-09-03T00:15:00+00:00",
-      "image_count": 34,
-      "aia193_count": 17,
-      "lasco_c2_count": 17,
-      "meta": {
-        "speed": 280.0,
-        "latitude": 6.0,
-        "longitude": 27.0,
-        "raw_longitude": 27.0,
-        "halfAngle": 38.0,
-        "impact": "BODY-HIT",
-        "earth_candidate": true,
-        "sep": 27.61,
-        "ratio": 0.727,
-        "reason": "BODY-HIT: sep=27.6, half=38.0, ratio=0.73",
-        "data_file": "latest.json"
-      },
-      "last_seen_at": "2026-09-03T08:12:16.683463+00:00"
-    },
-    {
-      "id": "2026-09-02T10:24:00-CME-001",
-      "source": "DONKI_CME.cmeAnalyses",
-      "t0": "2026-09-02T10:30:00+00:00",
-      "raw_time": "2026-09-02T10:24:00+00:00",
-      "window_start": "2026-09-02T08:30:00+00:00",
-      "window_end": "2026-09-02T12:30:00+00:00",
-      "image_count": 34,
-      "aia193_count": 17,
-      "lasco_c2_count": 17,
-      "meta": {
-        "speed": 280.0,
-        "latitude": 6.0,
-        "longitude": 27.0,
-        "raw_longitude": 27.0,
-        "halfAngle": 38.0,
-        "impact": "BODY-HIT",
-        "earth_candidate": true,
-        "sep": 27.61,
-        "ratio": 0.727,
-        "reason": "BODY-HIT: sep=27.6, half=38.0, ratio=0.73",
-        "data_file": "latest.json"
-      },
-      "last_seen_at": "2026-09-03T08:12:16.683463+00:00"
     }
   ],
   "errors_count": 0,
