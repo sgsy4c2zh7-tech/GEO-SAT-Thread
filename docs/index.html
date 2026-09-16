@@ -4,1733 +4,323 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>CME Animation</title>
+
+<!-- Three.js: 3D表示用。CDNが読めない場合でも2Dモードは動作します -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
 <style>
-  :root{
-    --bg1:#eef6ff;
-    --bg2:#dfefff;
-    --panel:#ffffff;
-    --panel2:#f8fbff;
-    --line:#cfe0ff;
-    --text:#14345f;
-    --muted:#6481aa;
-    --primary:#2f80ed;
-    --primary2:#67b2ff;
-    --good:#28b463;
-    --warn:#f5a623;
-    --bad:#f04d5d;
-    --cyan:#27c2ff;
-    --gold:#ffb347;
-    --shadow:0 18px 38px rgba(53,102,183,.14);
-  }
-
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
-  body{
-    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    color:var(--text);
-    background:
-      radial-gradient(circle at top left, #ffffff 0%, #eef6ff 28%, #e3f0ff 55%, #f6fbff 100%);
-  }
-
-  header{
-    position:sticky;
-    top:0;
-    z-index:30;
-    backdrop-filter:blur(12px);
-    background:linear-gradient(135deg, rgba(255,255,255,.92), rgba(235,245,255,.92));
-    border-bottom:1px solid var(--line);
-    box-shadow:0 8px 24px rgba(90,140,210,.08);
-    padding:20px 24px 16px;
-  }
-  header h1{
-    margin:0;
-    font-size:34px;
-    letter-spacing:.02em;
-  }
-  header p{
-    margin:8px 0 0;
-    color:var(--muted);
-    line-height:1.6;
-  }
-
-  main{
-    max-width:1580px;
-    margin:auto;
-    padding:18px;
-  }
-
-  .card{
-    background:linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
-    border:1px solid var(--line);
-    border-radius:22px;
-    padding:16px;
-    box-shadow:var(--shadow);
-  }
-
-  .toolbar{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    margin-top:12px;
-  }
-
-  button{
-    border:0;
-    border-radius:14px;
-    padding:11px 16px;
-    font-weight:800;
-    cursor:pointer;
-    color:#fff;
-    background:linear-gradient(135deg, var(--primary), var(--primary2));
-    box-shadow:0 10px 22px rgba(47,128,237,.22);
-  }
-  button:hover{filter:brightness(1.05)}
-  button.secondary{
-    background:linear-gradient(135deg,#76b0ff,#a9cbff);
-    color:#0f315f;
-  }
-  button.stop{
-    background:linear-gradient(135deg,#ff8c7a,#f04d5d);
-  }
-  button.ghost{
-    background:linear-gradient(135deg,#edf5ff,#ffffff);
-    color:var(--text);
-    border:1px solid var(--line);
-    box-shadow:none;
-  }
-
-  .small{
-    font-size:13px;
-    color:var(--muted);
-    line-height:1.6;
-  }
-
-  .topRow{
-    display:grid;
-    grid-template-columns:1fr;
-    gap:16px;
-  }
-
-  .toggleBox{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    margin-top:10px;
-  }
-  .toggleBox label{
-    background:#f3f8ff;
-    border:1px solid var(--line);
-    color:var(--text);
-    border-radius:999px;
-    padding:7px 12px;
-    font-size:13px;
-  }
-
-  .sourceGrid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-    gap:12px;
-    margin-top:14px;
-  }
-  .sourceCard{
-    background:#fff;
-    border:1px solid var(--line);
-    border-radius:18px;
-    padding:14px;
-  }
-  .sourceCard b{font-size:16px}
-  .ok{color:var(--good);font-weight:900}
-  .warn{color:var(--warn);font-weight:900}
-  .bad{color:var(--bad);font-weight:900}
-
-  .rangeRow{
-    display:flex;
-    flex-wrap:wrap;
-    align-items:center;
-    gap:12px;
-  }
-  input[type=range]{
-    width:min(760px,100%);
-  }
-
-  .summaryGrid{
-    display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:12px;
-    margin-top:14px;
-  }
-  @media(max-width:980px){
-    .summaryGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  }
-  @media(max-width:620px){
-    .summaryGrid{grid-template-columns:1fr}
-  }
-
-  .metric{
-    background:#fff;
-    border:1px solid var(--line);
-    border-radius:18px;
-    padding:14px;
-  }
-  .metric .label{
-    color:var(--muted);
-    font-size:12px;
-    margin-bottom:6px;
-  }
-  .metric .value{
-    font-size:27px;
-    font-weight:900;
-  }
-  .metric .sub{
-    font-size:12px;
-    color:var(--muted);
-    margin-top:6px;
-    line-height:1.5;
-  }
-
-  .heroGrid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:16px;
-    margin-top:16px;
-  }
-  @media(max-width:1100px){
-    .heroGrid{grid-template-columns:1fr}
-  }
-
-  .canvasWrap{
-    position:relative;
-    width:100%;
-    height:470px;
-    border-radius:20px;
-    overflow:hidden;
-    border:1px solid var(--line);
-    background:linear-gradient(180deg,#081326 0%, #0d1a31 50%, #132443 100%);
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);
-  }
-  canvas{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-  }
-
-  .legend{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    margin-top:12px;
-  }
-  .legend .item{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    background:#f4f8ff;
-    border:1px solid var(--line);
-    border-radius:999px;
-    padding:7px 11px;
-    font-size:12px;
-    color:var(--muted);
-  }
-  .dot{
-    width:12px;height:12px;border-radius:50%;
-  }
-
-  .eventList{
-    margin-top:12px;
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(270px,1fr));
-    gap:12px;
-  }
-
-  .eventItem{
-    background:#fff;
-    border:1px solid var(--line);
-    border-radius:18px;
-    padding:14px;
-  }
-  .tag{
-    display:inline-block;
-    font-size:11px;
-    font-weight:900;
-    border-radius:999px;
-    padding:4px 9px;
-    margin-right:6px;
-    margin-bottom:6px;
-  }
-  .tag.core{background:#ffe6ea;color:#d63a53}
-  .tag.body{background:#fff1df;color:#d48113}
-  .tag.flank{background:#fff8d9;color:#9e8100}
-  .tag.cactus{background:#e8f8ff;color:#0d8ec7}
-  .tag.miss{background:#edf2f8;color:#6f849e}
-
-  .footerNote{
-    margin-top:12px;
-    padding:12px 14px;
-    border:1px dashed var(--line);
-    border-radius:16px;
-    background:#f7fbff;
-    color:var(--muted);
-  }
-
-  .codeHint{
-    font-family:ui-monospace,Consolas,monospace;
-    background:#edf5ff;
-    border:1px solid var(--line);
-    border-radius:8px;
-    padding:2px 6px;
-  }
+:root{
+  --bg:#030916;
+  --bg2:#07152b;
+  --panel:rgba(8,24,48,.86);
+  --panel2:rgba(11,32,62,.76);
+  --line:#1e78d7;
+  --lineSoft:rgba(70,157,255,.30);
+  --text:#eef7ff;
+  --muted:#9bb8da;
+  --blue:#2f9bff;
+  --blue2:#70c7ff;
+  --cyan:#35d7ff;
+  --green:#36d98b;
+  --yellow:#ffd65a;
+  --orange:#ff9e2c;
+  --red:#ff526f;
+  --purple:#ca62ff;
+  --shadow:0 18px 50px rgba(0,76,170,.22);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;min-height:100%;background:var(--bg);color:var(--text)}
+body{
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:
+    radial-gradient(circle at 76% 8%,rgba(0,122,255,.15),transparent 28%),
+    radial-gradient(circle at 15% 30%,rgba(52,100,255,.10),transparent 35%),
+    linear-gradient(180deg,#041022 0%,#020713 58%,#030916 100%);
+  overflow-x:hidden;
+}
+body:before{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.30;z-index:-1;
+  background-image:
+    radial-gradient(circle at 8% 18%,#fff 0 1px,transparent 1.5px),
+    radial-gradient(circle at 22% 72%,#fff 0 1px,transparent 1.5px),
+    radial-gradient(circle at 42% 24%,#9fd4ff 0 1px,transparent 1.5px),
+    radial-gradient(circle at 65% 59%,#fff 0 1px,transparent 1.4px),
+    radial-gradient(circle at 84% 22%,#fff 0 1px,transparent 1.4px),
+    radial-gradient(circle at 93% 81%,#91bfff 0 1px,transparent 1.5px);
+  background-size:210px 190px,260px 240px,300px 210px,350px 260px,280px 230px,320px 280px;
+}
+header{
+  position:sticky;top:0;z-index:30;
+  display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;
+  padding:16px 22px;
+  border-bottom:1px solid rgba(47,155,255,.40);
+  background:linear-gradient(180deg,rgba(4,16,36,.96),rgba(4,14,31,.88));
+  backdrop-filter:blur(16px);
+  box-shadow:0 8px 30px rgba(0,0,0,.22);
+}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{
+  width:48px;height:48px;border-radius:50%;position:relative;
+  background:conic-gradient(from 30deg,#5fdcff,#056fff,#25c6ff,#6d5cff,#5fdcff);
+  box-shadow:0 0 25px rgba(45,175,255,.70);
+}
+.logo:after{content:"";position:absolute;inset:9px;border-radius:50%;background:#061229;box-shadow:inset 0 0 12px rgba(99,217,255,.7)}
+.brand h1{margin:0;font-size:30px;line-height:1.05;letter-spacing:.01em}
+.brand .sub{font-size:11px;color:var(--muted);margin-top:5px;letter-spacing:.09em}
+.headerRight{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.statusPill{border:1px solid rgba(54,217,139,.55);color:#8ff0bc;background:rgba(24,126,83,.15);border-radius:999px;padding:8px 13px;font-size:12px;font-weight:800}
+.statusDot{display:inline-block;width:8px;height:8px;background:var(--green);border-radius:50%;margin-right:7px;box-shadow:0 0 10px var(--green)}
+.utcClock{font-size:12px;color:#b7cae2;border:1px solid rgba(75,144,221,.32);border-radius:10px;padding:8px 11px;background:rgba(9,28,53,.7)}
+main{max-width:1680px;margin:auto;padding:16px}
+.card{
+  border:1px solid rgba(40,139,238,.55);border-radius:19px;
+  background:linear-gradient(180deg,rgba(8,28,56,.88),rgba(4,16,35,.88));
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.panelHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid rgba(42,130,223,.28);background:linear-gradient(180deg,rgba(10,37,71,.76),rgba(6,25,49,.42))}
+.panelTitle{font-weight:900;font-size:17px}.panelSub{font-size:12px;color:var(--muted);margin-top:3px}
+.panelBody{padding:14px}
+button{
+  border:1px solid rgba(77,174,255,.45);border-radius:11px;padding:9px 13px;
+  font-weight:800;cursor:pointer;color:#eef8ff;
+  background:linear-gradient(180deg,#1668ba,#0e4b8b);
+  box-shadow:0 7px 18px rgba(0,84,176,.20);
+}
+button:hover{filter:brightness(1.12)}
+button.active{background:linear-gradient(180deg,#32a9ff,#0872db);box-shadow:0 0 22px rgba(37,163,255,.38)}
+button.ghost{background:rgba(12,37,70,.62);box-shadow:none}
+button.stop{background:linear-gradient(180deg,#b72d40,#781b2a);border-color:rgba(255,85,111,.55)}
+.modeBar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:10px 12px;border:1px solid rgba(54,138,229,.32);border-radius:15px;background:rgba(5,22,45,.72)}
+.modeButtons{display:flex;gap:8px;flex-wrap:wrap}.modeHint{font-size:12px;color:var(--muted)}
+.controlsGrid{display:grid;grid-template-columns:1.3fr .7fr;gap:14px;margin-bottom:14px}@media(max-width:1080px){.controlsGrid{grid-template-columns:1fr}}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}.toggleBox{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.toggleBox label{font-size:12px;color:#bdd1e9;background:rgba(8,31,60,.72);border:1px solid rgba(63,136,213,.28);border-radius:999px;padding:7px 10px}
+.sourceGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px}.sourceCard{border:1px solid rgba(57,132,214,.28);border-radius:12px;padding:10px;background:rgba(4,16,35,.56)}.sourceTitle{font-size:13px;font-weight:900}.sourceStatus{font-size:12px;font-weight:900;margin-top:5px}.ok{color:#72e7a8}.bad{color:#ff7289}.loading{color:#ffd66a}.small{font-size:12px;color:var(--muted);line-height:1.55}
+.timelineRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.timelineRow input[type=range]{flex:1;min-width:240px}.timeLabel{font-size:12px;color:#d6e6fa}
+.metricGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:12px}@media(max-width:900px){.metricGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.metricGrid{grid-template-columns:1fr}}
+.metric{border:1px solid rgba(64,139,218,.30);border-radius:13px;background:rgba(6,23,45,.72);padding:11px}.metric .label{font-size:11px;color:#86a8cf}.metric .value{font-size:21px;font-weight:900;margin-top:3px}.metric .sub{font-size:11px;color:#93afd0;margin-top:4px}
+.viewGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:1120px){.viewGrid{grid-template-columns:1fr}}
+.viewCard:fullscreen{background:#020713;padding:12px}.viewCard:fullscreen .scene2d{height:calc(100vh - 95px)}.viewCard:fullscreen .threeScene{height:calc(100vh - 95px)}
+.scene2d,.threeScene{height:520px;position:relative;background:#020817;overflow:hidden}.scene2d canvas,#threeContainer canvas{position:absolute;inset:0;width:100%;height:100%;display:block}.threeScene{height:680px}.threeOverlay{position:absolute;z-index:5;inset:0;pointer-events:none}.hudBox{position:absolute;left:14px;bottom:14px;max-width:280px;padding:9px 10px;background:rgba(2,10,24,.72);border:1px solid rgba(68,151,240,.34);border-radius:10px;color:#b9d1ec;font-size:11px;line-height:1.55;backdrop-filter:blur(6px)}
+.viewTools{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.chip{border:1px solid rgba(67,148,235,.28);background:rgba(6,27,52,.65);border-radius:999px;padding:5px 9px;font-size:11px;color:#9fc0e6}.legend{display:flex;flex-wrap:wrap;gap:7px;padding:9px 12px;border-top:1px solid rgba(45,129,218,.25);background:rgba(3,15,32,.68)}.legendItem{font-size:11px;color:#9fb9d9;display:flex;align-items:center;gap:6px}.dot{width:9px;height:9px;border-radius:50%}
+.eventList{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:9px}.event{border:1px solid rgba(61,137,219,.28);border-radius:12px;padding:11px;background:rgba(4,17,36,.60)}.eventHead{display:flex;align-items:center;justify-content:space-between;gap:8px}.eventName{font-size:13px;font-weight:900}.tag{border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900}.tag.core{color:#ff96a7;background:rgba(255,82,111,.15)}.tag.body{color:#ffc56f;background:rgba(255,158,44,.14)}.tag.flank{color:#ffe98a;background:rgba(255,214,90,.12)}.tag.enlil{color:#e29cff;background:rgba(202,98,255,.13)}.tag.cactus{color:#75eaff;background:rgba(53,215,255,.12)}.tag.miss{color:#a9bad1;background:rgba(150,170,196,.10)}
+#mode3d{display:none}.error3d{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:25px;color:#ff9eb0;background:#071428;z-index:9}.camHelp{position:absolute;right:14px;bottom:14px;padding:8px 10px;border:1px solid rgba(63,139,218,.32);border-radius:9px;background:rgba(2,10,24,.70);font-size:11px;color:#a8c0df}
 </style>
 </head>
 <body>
 <header>
-  <h1>CME Animation</h1>
-  <p>
-    CME到達アニメーション専用UI。<b>上から見た図</b>で地球への当たり角度を見やすくし、<b>横から見た図</b>で到達の進み具合を表示します。<br>
-    画面は明るいデザインに整理しつつ、アニメーション領域は<b>宇宙空間っぽい表現</b>にしています。
-  </p>
+  <div class="brand">
+    <div class="logo"></div>
+    <div><h1>CME Animation</h1><div class="sub">REAL-TIME CME PROPAGATION & EARTH-IMPACT VISUALIZATION</div></div>
+  </div>
+  <div class="headerRight"><div class="statusPill"><span class="statusDot"></span>Visualization Ready</div><div class="utcClock" id="utcClock">UTC --</div></div>
 </header>
 
 <main>
-  <section class="card">
-    <h2 style="margin:0 0 6px">1. Data Controls</h2>
-    <div class="small">DONKI / WSA / CACTus / NOAA を読み込み、CME到達候補だけをアニメーションします。</div>
-
-    <div class="toolbar">
-      <button onclick="loadDONKICache()">DONKI Cache読込</button>
-      <button onclick="loadWSA()">WSA背景風読込</button>
-      <button onclick="loadCACTusCache()">CACTus読込</button>
-      <button onclick="loadNOAAAll()">NOAA環境取得</button>
-      <button class="secondary" onclick="loadAll()">全部取得</button>
-      <button class="ghost" onclick="rebuildAll()">再計算</button>
+  <div class="modeBar">
+    <div class="modeButtons">
+      <button id="btnMode2d" class="active" onclick="switchMode('2d')">◉ 2D View</button>
+      <button id="btnMode3d" onclick="switchMode('3d')">⬡ 3D View</button>
     </div>
+    <div class="modeHint">2D: 上面＋側面 / 3D: 自由回転・Top・Sideカメラ切替。CMEは地球通過後もそのまま進みます。</div>
+  </div>
 
-    <div class="toggleBox">
-      <label><input id="showMissTop" type="checkbox" checked onchange="updateTimeline()"> 上面図にMISSも薄く表示</label>
-      <label><input id="useCactusHazard" type="checkbox" onchange="rebuildAll()"> CACTus広幅/haloを到達候補に含める</label>
-      <label><input id="strictDonkiOnly" type="checkbox" checked onchange="rebuildAll()"> DONKIがある時はCACTusを参考扱い</label>
-      <label><input id="mergeSevenDays" type="checkbox" checked onchange="loadDONKICache()"> DONKI保存14日分を統合</label>
-    </div>
-
-    <div id="sourcePanel" class="sourceGrid"></div>
-  </section>
-
-  <section class="card" style="margin-top:16px">
-    <h2 style="margin:0 0 8px">2. Timeline</h2>
-    <div class="rangeRow">
-      <button onclick="playTimeline()">▶ 再生</button>
-      <button class="stop" onclick="stopTimeline()">停止</button>
-      <input id="timeSlider" type="range" min="0" max="192" value="72" step="1" oninput="updateTimeline()">
-      <span id="timeLabel" class="small"></span>
-    </div>
-
-    <div id="summaryCards" class="summaryGrid"></div>
-
-    <div class="footerNote">
-      表示期間は <span class="codeHint">現在 -3日 〜 +5日</span>。  
-      CMEは <b>発生後に出現</b>し、<b>地球到達後は横から見た図から消えます</b>。
-    </div>
-  </section>
-
-  <div class="heroGrid">
+  <div class="controlsGrid">
     <section class="card">
-      <h3 style="margin:0 0 8px">3A. Top View / Sun–Earth Plane</h3>
-      <div class="small">太陽と地球を上から見た図。地球への当たり角度やコーン幅を見やすくしています。</div>
-      <div class="canvasWrap" style="margin-top:10px">
-        <canvas id="topCanvas"></canvas>
+      <div class="panelHeader"><div><div class="panelTitle">Data Controls</div><div class="panelSub">DONKI / WSA / CACTus / NOAA</div></div></div>
+      <div class="panelBody">
+        <div class="toolbar">
+          <button onclick="loadDONKICache()">DONKI Cache</button>
+          <button onclick="loadWSA()">WSA</button>
+          <button onclick="loadCACTusCache()">CACTus</button>
+          <button onclick="loadNOAAAll()">NOAA</button>
+          <button class="active" onclick="loadAll()">全部取得</button>
+          <button class="ghost" onclick="rebuildAll()">再計算</button>
+        </div>
+        <div class="toggleBox">
+          <label><input id="showMissTop" type="checkbox" checked onchange="updateTimeline()"> MISSも表示</label>
+          <label><input id="useCactusHazard" type="checkbox" onchange="rebuildAll()"> CACTus広幅/haloを候補化</label>
+          <label><input id="strictDonkiOnly" type="checkbox" checked onchange="rebuildAll()"> DONKI優先</label>
+          <label><input id="mergeSevenDays" type="checkbox" checked onchange="loadDONKICache()"> DONKI保存データ統合</label>
+        </div>
+        <div id="sourcePanel" class="sourceGrid"></div>
       </div>
-      <div class="legend">
-        <div class="item"><span class="dot" style="background:#f04d5d"></span> CORE-HIT</div>
-        <div class="item"><span class="dot" style="background:#f5a623"></span> BODY-HIT</div>
-        <div class="item"><span class="dot" style="background:#ffe15b"></span> FLANK-HIT</div>
-        <div class="item"><span class="dot" style="background:#27c2ff"></span> CACTus</div>
-        <div class="item"><span class="dot" style="background:#98abc4"></span> MISS</div>
-      </div>
-      <div id="topSummary" class="small" style="margin-top:10px">未計算</div>
     </section>
 
     <section class="card">
-      <h3 style="margin:0 0 8px">3B. Side View / Propagation</h3>
-      <div class="small">SunからEarthまでの進行を横から表示。到達までの進み具合が分かります。</div>
-      <div class="canvasWrap" style="margin-top:10px">
-        <canvas id="sideCanvas"></canvas>
+      <div class="panelHeader"><div><div class="panelTitle">Animation Controls</div><div class="panelSub">現在 -3日 → +5日</div></div></div>
+      <div class="panelBody">
+        <div class="timelineRow">
+          <button onclick="stepTimeline(-1)">◀</button>
+          <button class="active" onclick="playTimeline()">▶</button>
+          <button class="stop" onclick="stopTimeline()">■</button>
+          <button onclick="stepTimeline(1)">▶|</button>
+          <input id="timeSlider" type="range" min="0" max="192" value="72" step="1" oninput="updateTimeline()">
+        </div>
+        <div id="timeLabel" class="timeLabel" style="margin-top:8px"></div>
+        <div class="metricGrid" id="summaryCards"></div>
       </div>
-      <div id="sideSummary" class="small" style="margin-top:10px">未計算</div>
     </section>
   </div>
 
-  <section class="card" style="margin-top:16px">
-    <h2 style="margin:0 0 8px">4. Earth-directed CME Summary</h2>
-    <div class="small">アニメーション対象イベント一覧です。</div>
-    <div id="eventList" class="eventList"></div>
+  <div id="mode2d">
+    <div class="viewGrid">
+      <section class="card viewCard" id="topViewCard">
+        <div class="panelHeader">
+          <div><div class="panelTitle">Top View <span class="chip">Earth impact angle</span></div><div class="panelSub">North ecliptic perspective</div></div>
+          <div class="viewTools"><button class="ghost" onclick="toggleFullscreen('topViewCard')">⛶ 全画面</button></div>
+        </div>
+        <div class="scene2d"><canvas id="topCanvas"></canvas></div>
+        <div class="legend">
+          <span class="legendItem"><span class="dot" style="background:#ca62ff"></span>ENLIL-HIT</span>
+          <span class="legendItem"><span class="dot" style="background:#ff526f"></span>CORE-HIT</span>
+          <span class="legendItem"><span class="dot" style="background:#ff9e2c"></span>BODY-HIT</span>
+          <span class="legendItem"><span class="dot" style="background:#ffd65a"></span>FLANK-HIT</span>
+          <span class="legendItem"><span class="dot" style="background:#35d7ff"></span>CACTus</span>
+          <span class="legendItem"><span class="dot" style="background:#91a6bf"></span>MISS</span>
+        </div>
+      </section>
+
+      <section class="card viewCard" id="sideViewCard">
+        <div class="panelHeader">
+          <div><div class="panelTitle">Side View <span class="chip">Propagation</span></div><div class="panelSub">Sun → Earth → downstream</div></div>
+          <div class="viewTools"><button class="ghost" onclick="toggleFullscreen('sideViewCard')">⛶ 全画面</button></div>
+        </div>
+        <div class="scene2d"><canvas id="sideCanvas"></canvas></div>
+        <div class="legend"><span class="legendItem">地球到達後も最大36時間、CME前面をそのまま先へ通過表示します。</span></div>
+      </section>
+    </div>
+  </div>
+
+  <div id="mode3d">
+    <section class="card viewCard" id="threeViewCard">
+      <div class="panelHeader">
+        <div><div class="panelTitle">3D CME Model <span class="chip">WebGL / Three.js</span></div><div class="panelSub">Sun・Earth・CME shellを3D表示。ドラッグ回転 / ホイールズーム。</div></div>
+        <div class="viewTools">
+          <button onclick="set3DCamera('top')">Top</button>
+          <button onclick="set3DCamera('side')">Side</button>
+          <button onclick="set3DCamera('perspective')">Perspective</button>
+          <button class="ghost" onclick="toggleFullscreen('threeViewCard')">⛶ 全画面</button>
+        </div>
+      </div>
+      <div class="threeScene" id="threeContainer">
+        <div class="error3d" id="error3d">Three.js を読み込めませんでした。<br>2Dモードはそのまま利用できます。</div>
+        <div class="threeOverlay"><div class="hudBox" id="threeHud">3D初期化待ち</div><div class="camHelp">Drag: rotate / Wheel: zoom / Right drag: pan</div></div>
+      </div>
+      <div class="legend"><span class="legendItem"><span class="dot" style="background:#ff9e2c"></span>Sun</span><span class="legendItem"><span class="dot" style="background:#3e9dff"></span>Earth</span><span class="legendItem"><span class="dot" style="background:#ca62ff"></span>CME shell</span><span class="legendItem">Earth通過後も+45%先まで進行表示</span></div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:14px">
+    <div class="panelHeader"><div><div class="panelTitle">Earth-directed CME Events</div><div class="panelSub">到達時刻 / CME速度 / Earth-hit geometry</div></div></div>
+    <div class="panelBody"><div id="eventList" class="eventList"></div></div>
   </section>
 </main>
 
 <script>
-/* ==============================
-   CONFIG
-============================== */
-const DONKI_CACHE_INDEX = "./data/donki/index.json";
-const WSA_CACHE_INDEX = "./data/wsa/index.json";
-const CACTUS_CACHE_INDEX = "./data/cactus/index.json";
-const DONKI_LON_POSITIVE_WEST = true;
-
-const NOAA = {
+const DATA_ROOTS=["./data","./docs/data"];
+function dataCandidates(rel){return DATA_ROOTS.map(r=>`${r}/${rel}`);}
+const DONKI_INDEX=dataCandidates("donki/index.json");
+const WSA_INDEX=dataCandidates("wsa/index.json");
+const CACTUS_INDEX=dataCandidates("cactus/index.json");
+const DONKI_LON_POSITIVE_WEST=true;
+const NOAA={
   wind:"https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json",
-  mag:"https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json",
   windOld:"https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json",
+  mag:"https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json",
   magOld:"https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json",
   kp:"https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json",
   kpAlt:"https://services.swpc.noaa.gov/products/noaa-estimated-planetary-k-index-1-minute.json"
 };
+const AU_KM=149597870,R_SUN_KM=695700;
+const DBM={gamma:.3e-7,r0Km:21.5*R_SUN_KM,targetKm:AU_KM,dtSec:300,maxDays:7};
+const POST_PASS_HOURS=36;
 
-const AU_KM = 149597870;
-const R_SUN_KM = 695700;
-
-const DBM = {
-  gamma:0.3e-7,
-  r0Km:21.5 * R_SUN_KM,
-  targetKm:AU_KM,
-  dtSec:300,
-  maxDays:7
+const STATE={
+  sources:{donkiCache:src("DONKI Cache","未取得"),donkiAnalysis:src("DONKI CMEAnalysis","未取得"),donkiCME:src("DONKI CME","未取得"),wsa:src("WSA Wind","未取得"),cactus:src("CACTus","未取得"),noaaWind:src("NOAA Wind","未取得"),noaaMag:src("NOAA IMF","未取得"),noaaKp:src("NOAA Kp","未取得")},
+  donkiPayloads:[],wsaModel:null,cactusEvents:[],env:defaultEnv(),cmes:[],timelineCenter:new Date(),timelineStart:new Date(),timelineEnd:new Date(),selectedTime:new Date(),timer:null,
+  starsTop:[],starsSide:[],mode:"2d",
+  three:{ready:false,scene:null,camera:null,renderer:null,controls:null,sun:null,earth:null,cmeGroup:null,starPoints:null,clock:null}
 };
-
-const STATE = {
-  sources:{
-    donkiCache:src("DONKI Cache","未取得"),
-    donkiAnalysis:src("DONKI CMEAnalysis","未取得"),
-    donkiCME:src("DONKI CME","未取得"),
-    wsa:src("WSA Wind Model","未取得"),
-    cactus:src("CACTus Cache","未取得"),
-    noaaWind:src("NOAA Wind","未取得"),
-    noaaMag:src("NOAA IMF","未取得"),
-    noaaKp:src("NOAA Kp","未取得")
-  },
-  donkiIndex:null,
-  donkiPayloads:[],
-  wsaModel:null,
-  cactusIndex:null,
-  cactusEvents:[],
-  env:defaultEnv(),
-  cmes:[],
-  timelineCenter:new Date(),
-  timelineStart:new Date(),
-  timelineEnd:new Date(),
-  selectedTime:new Date(),
-  timer:null,
-  starsTop:[],
-  starsSide:[]
-};
-
-/* ==============================
-   BASIC UTILS
-============================== */
-function src(label,status){ return {label,status,data:null,time:null,error:null}; }
-
-function setSource(key,status,data=null,error=null){
-  STATE.sources[key].status=status;
-  STATE.sources[key].data=data;
-  STATE.sources[key].error=error;
-  STATE.sources[key].time=new Date();
-  renderSourcePanel();
-}
-
-function escapeHtml(s){
-  return String(s ?? "").replace(/[&<>"']/g,m=>({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  }[m]));
-}
-
-function finiteOr(v,def){
-  const n=Number(v);
-  return Number.isFinite(n) ? n : def;
-}
-function clamp(v,min,max){
-  return Math.max(min,Math.min(max,v));
-}
-function formatNum(v,d=1){
-  const n=Number(v);
-  return Number.isFinite(n) ? n.toFixed(d) : "-";
-}
-function shortId(id){
-  const s=String(id || "CME");
-  if(s.includes("CME")){
-    const tail=s.split("CME").pop().replace(/[^0-9]/g,"").slice(-4);
-    return tail ? "CME"+tail : s.slice(-8);
-  }
-  return s.slice(-10);
-}
-function latest(arr){
-  if(!Array.isArray(arr)) return {};
-  for(let i=arr.length-1;i>=0;i--){
-    const r=arr[i];
-    if(Array.isArray(r)){
-      if(String(r[0]).toLowerCase().includes("time")) continue;
-      return r;
-    }
-    if(r && typeof r==="object") return r;
-  }
-  return {};
-}
-function pick(obj,names){
-  for(const n of names){
-    if(typeof n==="number" && Array.isArray(obj)){
-      const v=Number(obj[n]);
-      if(Number.isFinite(v)) return v;
-    }
-    if(typeof n==="string" && obj && obj[n]!==undefined){
-      const v=Number(obj[n]);
-      if(Number.isFinite(v)) return v;
-    }
-  }
-  return 0;
-}
-function classColor(cls){
-  if(cls==="ENLIL-HIT") return "#d56cff";
-  if(cls==="CORE-HIT") return "#ff5b70";
-  if(cls==="BODY-HIT") return "#ffb347";
-  if(cls==="FLANK-HIT") return "#ffe15b";
-  if(String(cls).startsWith("CACTUS")) return "#2dc3ff";
-  return "#9db0c8";
-}
-function riskLabel(v){
-  if(v>=85) return "EXTREME";
-  if(v>=70) return "HIGH";
-  if(v>=45) return "MODERATE";
-  if(v>=20) return "LOW";
-  return "MINIMAL";
-}
-
-/* ==============================
-   INIT
-============================== */
-function initTimelineWindow(){
-  STATE.timelineCenter = new Date();
-  STATE.timelineStart = new Date(STATE.timelineCenter.getTime() - 72*3600*1000);
-  STATE.timelineEnd = new Date(STATE.timelineCenter.getTime() + 120*3600*1000);
-  STATE.selectedTime = new Date(STATE.timelineCenter);
-
-  const slider=document.getElementById("timeSlider");
-  slider.min=0;
-  slider.max=192;
-  slider.value=72;
-}
-
-function generateStarField(count){
-  const out=[];
-  for(let i=0;i<count;i++){
-    out.push({
-      x:Math.random(),
-      y:Math.random(),
-      r:Math.random()*1.7 + 0.2,
-      a:Math.random()*0.75 + 0.15
-    });
-  }
-  return out;
-}
-
-/* ==============================
-   FETCHERS
-============================== */
-async function fetchJson(url){
-  const sep=url.includes("?") ? "&" : "?";
-  const r=await fetch(url+sep+"t="+Date.now(), {cache:"no-store"});
-  if(!r.ok) throw new Error("HTTP "+r.status+" : "+url);
-  return await r.json();
-}
-async function fetchJsonAny(urls){
-  let last="";
-  for(const u of urls){
-    try{
-      return await fetchJson(u);
-    }catch(e){ last=e.message; }
-  }
-  throw new Error(last);
-}
-
-/* ==============================
-   ENV
-============================== */
-function defaultEnv(){
-  return {
-    speed:425,
-    density:0,
-    bt:0,
-    by:0,
-    bz:0,
-    kp:0,
-    dynamicPressure:0
-  };
-}
-function parseEnvironment(wind,mag,kp){
-  const w=latest(wind);
-  const b=latest(mag);
-  const k=latest(kp);
-
-  const speed=pick(w,["speed","proton_speed","bulk_speed",2]) || 425;
-  const density=pick(w,["density","proton_density",1]) || 0;
-  const by=pick(b,["by_gsm","by",2]) || 0;
-  const bz=pick(b,["bz_gsm","bz",3]) || 0;
-  const bt=pick(b,["bt","total_field",6]) || Math.hypot(by,bz);
-  const kpVal=pick(k,["kp_index","kp","estimated_kp","Kp",1]) || 0;
-  const pdyn=density && speed ? 1.6726e-6 * density * speed * speed : 0;
-
-  return {speed,density,bt,by,bz,kp:kpVal,dynamicPressure:pdyn};
-}
-
-/* ==============================
-   LOADERS
-============================== */
-async function loadDONKICache(){
-  setSource("donkiCache","LOADING...");
-  try{
-    const index=await fetchJson(DONKI_CACHE_INDEX);
-    STATE.donkiIndex=index;
-
-    const merge=document.getElementById("mergeSevenDays")?.checked ?? true;
-    let files=[];
-    if(merge){
-      files=(index.files || []).filter(f=>f.valid!==false && f.path).slice(0,24);
-    }else{
-      if(index.latest) files=[{path:"./data/donki/"+index.latest, valid:true}];
-    }
-    if(!files.length) throw new Error("No valid DONKI cache files");
-
-    const payloads=[];
-    for(const f of files){
-      try{
-        const p=await fetchJson(f.path);
-        payloads.push({file:f.path,payload:p});
-      }catch(e){}
-    }
-    if(!payloads.length) throw new Error("All DONKI cache files failed");
-
-    STATE.donkiPayloads=payloads;
-
-    const analysis=payloads.flatMap(x=>x.payload.sources?.cmeAnalysis?.data || []);
-    const cme=payloads.flatMap(x=>x.payload.sources?.cme?.data || []);
-
-    setSource("donkiCache",`OK: loaded ${payloads.length} file(s)`,payloads);
-    setSource("donkiAnalysis",`OK merged: ${analysis.length}`,analysis);
-    setSource("donkiCME",`OK merged: ${cme.length}`,cme);
-
-    rebuildAll();
-  }catch(e){
-    setSource("donkiCache","FAILED",null,e.message);
-  }
-}
-
-async function loadWSA(){
-  setSource("wsa","LOADING...");
-  try{
-    const index=await fetchJson(WSA_CACHE_INDEX);
-    const latestName=index.latest || "latest.json";
-    const model=await fetchJson("./data/wsa/" + latestName);
-
-    const records=(model.records || [])
-      .map(r=>({
-        ...r,
-        _t:new Date(r.time).getTime(),
-        speed:Number(r.speed)
-      }))
-      .filter(r=>Number.isFinite(r._t) && Number.isFinite(r.speed))
-      .sort((a,b)=>a._t-b._t);
-
-    if(!records.length) throw new Error("WSA has no records");
-    STATE.wsaModel={...model,records};
-    setSource("wsa",`OK: ${records.length} records`,STATE.wsaModel);
-    rebuildAll();
-  }catch(e){
-    STATE.wsaModel=null;
-    setSource("wsa","FAILED",null,e.message);
-  }
-}
-
-async function loadCACTusCache(){
-  setSource("cactus","LOADING...");
-  try{
-    const index=await fetchJson(CACTUS_CACHE_INDEX);
-    const events=(index.events || []).map((ev,i)=>({
-      ...ev,
-      _i:i,
-      _t:new Date(ev.t0 || ev.time || ev.startTime || Date.now()).getTime(),
-      pa:Number(ev.pa),
-      da:Number(ev.da),
-      speed:Number(ev.speed || 0),
-      halo:ev.halo || "",
-      id:ev.id || `CACTus-${i+1}`
-    })).filter(ev=>Number.isFinite(ev._t)).sort((a,b)=>b._t-a._t);
-
-    STATE.cactusIndex=index;
-    STATE.cactusEvents=events;
-    setSource("cactus",`OK local: ${events.length} events`,{index,events});
-    rebuildAll();
-  }catch(e){
-    STATE.cactusEvents=[];
-    setSource("cactus","FAILED",null,e.message);
-  }
-}
-
-async function loadNOAAWind(){
-  setSource("noaaWind","LOADING...");
-  try{
-    const data=await fetchJsonAny([NOAA.wind,NOAA.windOld]);
-    setSource("noaaWind",`OK: ${Array.isArray(data)?data.length:1}`,data);
-    rebuildAll();
-  }catch(e){
-    setSource("noaaWind","FAILED",null,e.message);
-  }
-}
-async function loadNOAAMag(){
-  setSource("noaaMag","LOADING...");
-  try{
-    const data=await fetchJsonAny([NOAA.mag,NOAA.magOld]);
-    setSource("noaaMag",`OK: ${Array.isArray(data)?data.length:1}`,data);
-    rebuildAll();
-  }catch(e){
-    setSource("noaaMag","FAILED",null,e.message);
-  }
-}
-async function loadNOAAKp(){
-  setSource("noaaKp","LOADING...");
-  try{
-    const data=await fetchJsonAny([NOAA.kp,NOAA.kpAlt]);
-    setSource("noaaKp",`OK: ${Array.isArray(data)?data.length:1}`,data);
-    rebuildAll();
-  }catch(e){
-    setSource("noaaKp","FAILED",null,e.message);
-  }
-}
-async function loadNOAAAll(){
-  await Promise.allSettled([loadNOAAWind(),loadNOAAMag(),loadNOAAKp()]);
-  rebuildAll();
-}
-async function loadAll(){
-  await Promise.allSettled([
-    loadDONKICache(),
-    loadWSA(),
-    loadCACTusCache(),
-    loadNOAAWind(),
-    loadNOAAMag(),
-    loadNOAAKp()
-  ]);
-  rebuildAll();
-}
-
-/* ==============================
-   SOURCE PANEL
-============================== */
-function renderSourcePanel(){
-  const rows=[
-    ["donkiCache","DONKI Cache",loadDONKICache],
-    ["wsa","WSA Wind Model",loadWSA],
-    ["cactus","CACTus Cache",loadCACTusCache],
-    ["noaaWind","NOAA Wind",loadNOAAWind],
-    ["noaaMag","NOAA IMF",loadNOAAMag],
-    ["noaaKp","NOAA Kp",loadNOAAKp]
-  ];
-
-  document.getElementById("sourcePanel").innerHTML=rows.map(([key,title,fn])=>{
-    const x=STATE.sources[key];
-    const cls =
-      x.status.startsWith("OK") ? "ok" :
-      x.status.startsWith("FAILED") ? "bad" :
-      x.status.startsWith("LOADING") ? "warn" : "";
-
-    const when = x.time ? x.time.toISOString().slice(11,19)+" UTC" : "-";
-
-    return `
-      <div class="sourceCard">
-        <b>${title}</b><br>
-        <div class="${cls}" style="margin-top:6px">${escapeHtml(x.status)}</div>
-        <div class="small">Last: ${when}</div>
-        ${x.error ? `<div class="small bad">${escapeHtml(x.error)}</div>` : ""}
-        <div style="margin-top:10px"><button onclick="${fn.name}()">LOAD</button></div>
-      </div>
-    `;
-  }).join("");
-}
-
-/* ==============================
-   WSA
-============================== */
-function getBackgroundWindSpeedFromWSA(time){
-  const records=STATE.wsaModel?.records || [];
-  if(!records.length) return null;
-
-  const target=time.getTime();
-  let prev=null,next=null;
-
-  for(const rec of records){
-    if(rec._t<=target){
-      prev=rec;
-      continue;
-    }
-    if(rec._t>target){
-      next=rec;
-      break;
-    }
-  }
-
-  if(!prev && next) return clamp(Number(next.speed),300,800);
-  if(prev && !next) return clamp(Number(prev.speed),300,800);
-  if(!prev && !next) return null;
-  if(next._t===prev._t) return clamp(Number(prev.speed),300,800);
-
-  const f=(target-prev._t)/(next._t-prev._t);
-  return clamp(Number(prev.speed)+(Number(next.speed)-Number(prev.speed))*f,300,800);
-}
-
-/* ==============================
-   CME GEOMETRY / PROP
-============================== */
-function angularSeparationFromEarth(lonDeg,latDeg){
-  const lon=lonDeg*Math.PI/180;
-  const lat=latDeg*Math.PI/180;
-  const cosD=Math.cos(lat)*Math.cos(lon);
-  return Math.acos(clamp(cosD,-1,1))*180/Math.PI;
-}
-
-function classifyConeHit(sep,halfAngle){
-  const ratio=halfAngle>0 ? sep/halfAngle : 999;
-
-  if(ratio<=0.50){
-    return {earthCandidate:true,impactClass:"CORE-HIT",earthConfidence:0.95,speedFactor:1.00,geometryMultiplier:1.00,ratio};
-  }
-  if(ratio<=0.85){
-    const x=(ratio-0.50)/0.35;
-    return {earthCandidate:true,impactClass:"BODY-HIT",earthConfidence:0.85-0.15*x,speedFactor:0.95-0.10*x,geometryMultiplier:0.85-0.25*x,ratio};
-  }
-  if(ratio<=1.0){
-    const x=(ratio-0.85)/0.15;
-    return {earthCandidate:true,impactClass:"FLANK-HIT",earthConfidence:0.55-0.20*x,speedFactor:0.80-0.20*x,geometryMultiplier:0.55-0.25*x,ratio};
-  }
-  return {earthCandidate:false,impactClass:"MISS",earthConfidence:0.02,speedFactor:0,geometryMultiplier:0,ratio};
-}
-
-function evaluateDonkiEarthImpactAdvanced(lon,lat,halfAngle,speed,arrivalSource){
-  const sep=angularSeparationFromEarth(lon,lat);
-  const cone=classifyConeHit(sep,halfAngle);
-
-  if(arrivalSource==="ENLIL"){
-    return {
-      ...cone,
-      earthCandidate:true,
-      impactClass:"ENLIL-HIT",
-      earthConfidence:1.0,
-      speedFactor:Math.max(cone.speedFactor,0.90),
-      geometryMultiplier:1.0,
-      angularSeparation:sep,
-      effectiveSpeed:speed,
-      earthReason:`ENLIL arrival available. sep=${sep.toFixed(1)}°, half=${halfAngle.toFixed(1)}°`
-    };
-  }
-  if(!cone.earthCandidate){
-    return {
-      ...cone,
-      angularSeparation:sep,
-      effectiveSpeed:0,
-      earthReason:`MISS: sep=${sep.toFixed(1)}° > half=${halfAngle.toFixed(1)}°`
-    };
-  }
-  return {
-    ...cone,
-    angularSeparation:sep,
-    effectiveSpeed:Math.max(250,speed*cone.speedFactor),
-    earthReason:`${cone.impactClass}: sep=${sep.toFixed(1)}°, half=${halfAngle.toFixed(1)}°, ratio=${cone.ratio.toFixed(2)}`
-  };
-}
-
-function evaluateCactusEarthImpact(pa,da,halo){
-  const useCactus=document.getElementById("useCactusHazard")?.checked ?? false;
-  if(!useCactus){
-    return {
-      earthCandidate:false,
-      impactClass:"CACTUS-REFERENCE",
-      earthConfidence:0.05,
-      speedFactor:0,
-      geometryMultiplier:0,
-      earthReason:"CACTus reference only"
-    };
-  }
-
-  const isHalo=Boolean(halo && halo.length);
-  const veryWide=da>=270;
-  const wide=da>=180;
-
-  if(isHalo || veryWide){
-    return {
-      earthCandidate:true,
-      impactClass:"CACTUS-WIDE-HALO",
-      earthConfidence:0.40,
-      speedFactor:0.70,
-      geometryMultiplier:0.35,
-      earthReason:"CACTus wide/halo"
-    };
-  }
-  if(wide){
-    return {
-      earthCandidate:true,
-      impactClass:"CACTUS-BROAD",
-      earthConfidence:0.22,
-      speedFactor:0.55,
-      geometryMultiplier:0.20,
-      earthReason:"CACTus broad"
-    };
-  }
-  return {
-    earthCandidate:false,
-    impactClass:"CACTUS-MISS",
-    earthConfidence:0.03,
-    speedFactor:0,
-    geometryMultiplier:0,
-    earthReason:"CACTus narrow/non-halo"
-  };
-}
-
-function computeArrivalDBMLite(t0,v0,env){
-  let r=DBM.r0Km;
-  let v=clamp(v0 || 425,250,3000);
-  let t=0;
-
-  let usedWSA=false;
-  let wSum=0,wCount=0,wMin=9999,wMax=0;
-
-  while(r<DBM.targetKm && t<DBM.maxDays*86400){
-    const currentTime=new Date(t0.getTime()+t*1000);
-    const wsaSpeed=getBackgroundWindSpeedFromWSA(currentTime);
-    const w=clamp(wsaSpeed ?? env.speed ?? 425,300,800);
-
-    if(wsaSpeed!==null) usedWSA=true;
-
-    wSum += w;
-    wCount += 1;
-    wMin = Math.min(wMin,w);
-    wMax = Math.max(wMax,w);
-
-    const dv=v-w;
-    const a=-DBM.gamma * dv * Math.abs(dv);
-    v += a*DBM.dtSec;
-    v = clamp(v,250,3000);
-
-    r += v*DBM.dtSec;
-    t += DBM.dtSec;
-  }
-
-  const arrival=new Date(t0.getTime()+t*1000);
-  return {
-    source:usedWSA ? "DBM-lite + WSA wind" : "DBM-lite",
-    date:arrival,
-    utc:arrival.toISOString(),
-    transitHours:t/3600,
-    arrivalSpeed:Math.round(v),
-    backgroundWind:Math.round(wSum/Math.max(1,wCount)),
-    backgroundWindMin:Math.round(wMin===9999 ? 0 : wMin),
-    backgroundWindMax:Math.round(wMax),
-    usedWSA,
-    gamma:DBM.gamma
-  };
-}
-
-function scoreDONKIAdvanced(speed,half,earth,env){
-  if(!earth.earthCandidate) return 0;
-
-  const geom=earth.geometryMultiplier || 0;
-  const sp =
-    speed>=2200 ? 34 :
-    speed>=1700 ? 29 :
-    speed>=1200 ? 22 :
-    speed>=800 ? 15 :
-    speed>=500 ? 9 : 4;
-
-  const width =
-    half>=90 ? 24 :
-    half>=60 ? 20 :
-    half>=40 ? 15 :
-    half>=25 ? 10 : 5;
-
-  const envBoost =
-    (env.kp>=6 ? 8 : env.kp>=4 ? 4 : 0) +
-    (env.bz<=-10 ? 8 : env.bz<=-5 ? 4 : 0) +
-    (env.dynamicPressure>=8 ? 4 : 0);
-
-  const base=(sp+width+envBoost)*(0.55+0.55*geom);
-  const enlilBonus=earth.impactClass==="ENLIL-HIT" ? 15 : 0;
-  return clamp(Math.round(base*(earth.earthConfidence || 0.5) + enlilBonus),0,100);
-}
-
-function scoreCACTus(da,speed,halo,earth){
-  const width =
-    da>=300 ? 36 :
-    da>=220 ? 28 :
-    da>=180 ? 20 :
-    da>=120 ? 12 : 4;
-
-  const sp =
-    speed>=1800 ? 26 :
-    speed>=1200 ? 19 :
-    speed>=800 ? 12 : 5;
-
-  const haloBonus =
-    halo==="IV" ? 18 :
-    halo==="III" ? 12 :
-    halo==="II" ? 7 :
-    halo==="I" ? 3 : 0;
-
-  return clamp(Math.round((width+sp+haloBonus)*(earth.geometryMultiplier||0)),0,65);
-}
-
-function buildCME(c){
-  const arr=c.arrival?.date instanceof Date ? c.arrival.date : new Date(c.arrival?.date || c.t0);
-  const duration = Math.max(6, Math.round(18 + (c.halfAngle||20)*0.35));
-
-  return {
-    ...c,
-    activeStart:new Date(arr.getTime()-6*3600*1000),
-    activeEnd:new Date(arr.getTime()+duration*3600*1000),
-    shockStart:new Date(arr.getTime()-2*3600*1000),
-    shockEnd:new Date(arr.getTime()+3*3600*1000)
-  };
-}
-
-function parseDONKIActivityIDTime(c){
-  const ids=[c.activityID,c.associatedCMEID,c.id].filter(Boolean);
-  for(const id of ids){
-    const m=String(id).match(/(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})/);
-    if(m){
-      const d=new Date(`${m[1]}T${m[2]}Z`);
-      if(Number.isFinite(d.getTime())) return d;
-    }
-  }
-  return null;
-}
-function getDONKIEventStartTime(c){
-  const byActivity=c.activityStartTime ? new Date(c.activityStartTime) : null;
-  if(byActivity && Number.isFinite(byActivity.getTime())) return byActivity;
-
-  const byId=parseDONKIActivityIDTime(c);
-  if(byId && Number.isFinite(byId.getTime())) return byId;
-
-  const byTime215=c.time21_5 ? new Date(c.time21_5) : null;
-  if(byTime215 && Number.isFinite(byTime215.getTime())) return byTime215;
-
-  return new Date();
-}
-
-function parseDONKIAnalysis(c,env){
-  const rawLon=finiteOr(c.longitude,0);
-  const lon=DONKI_LON_POSITIVE_WEST ? rawLon : -rawLon;
-  const lat=finiteOr(c.latitude,0);
-  const speed=finiteOr(c.speed,500);
-  const half=finiteOr(c.halfAngle,30);
-  const t0=getDONKIEventStartTime(c);
-
-  const enlil=Array.isArray(c.enlilList)
-    ? c.enlilList.find(x=>x?.estimatedShockArrivalTime)
-    : null;
-
-  const preliminary = enlil
-    ? {
-        source:"ENLIL",
-        date:new Date(enlil.estimatedShockArrivalTime),
-        utc:new Date(enlil.estimatedShockArrivalTime).toISOString()
-      }
-    : computeArrivalDBMLite(t0,speed,env);
-
-  const earth=evaluateDonkiEarthImpactAdvanced(lon,lat,half,speed,preliminary.source);
-  let arrival;
-
-  if(preliminary.source==="ENLIL"){
-    const dbm=computeArrivalDBMLite(t0,Math.max(250,earth.effectiveSpeed || speed),env);
-    arrival={
-      ...preliminary,
-      arrivalSpeed:dbm.arrivalSpeed,
-      backgroundWind:dbm.backgroundWind,
-      backgroundWindMin:dbm.backgroundWindMin,
-      backgroundWindMax:dbm.backgroundWindMax,
-      usedWSA:dbm.usedWSA,
-      gamma:dbm.gamma
-    };
-  }else if(earth.earthCandidate){
-    arrival=computeArrivalDBMLite(t0,earth.effectiveSpeed,env);
-  }else{
-    arrival={
-      source:"MISS",
-      date:t0,
-      utc:t0.toISOString(),
-      transitHours:null,
-      arrivalSpeed:0,
-      backgroundWind:Math.round(env.speed || 425),
-      backgroundWindMin:null,
-      backgroundWindMax:null,
-      usedWSA:false,
-      gamma:DBM.gamma
-    };
-  }
-
-  return buildCME({
-    id:c.activityID || c.associatedCMEID || "DONKI",
-    type:"DONKI",
-    coordType:"heliographic",
-    lon, lat, speed,
-    effectiveSpeed:earth.effectiveSpeed || 0,
-    halfAngle:half,
-    t0,
-    arrival,
-    arrivalScore:earth.earthCandidate ? scoreDONKIAdvanced(speed,half,earth,env) : 0,
-    earthCandidate:earth.earthCandidate,
-    earthConfidence:earth.earthConfidence,
-    earthReason:earth.earthReason,
-    angularSeparation:earth.angularSeparation,
-    edgeRatio:earth.ratio,
-    impactClass:earth.impactClass,
-    speedFactor:earth.speedFactor,
-    geometryMultiplier:earth.geometryMultiplier,
-    sources:["DONKI"],
-    confidence:preliminary.source==="ENLIL" ? 1 : earth.earthConfidence
-  });
-}
-
-function parseDONKICME(list,env){
-  const out=[];
-  for(const c of list){
-    const analyses=Array.isArray(c.cmeAnalyses) ? c.cmeAnalyses : [];
-    if(analyses.length){
-      for(const a of analyses){
-        const item=parseDONKIAnalysis({
-          ...a,
-          activityID:c.activityID || a.activityID,
-          activityStartTime:c.startTime || a.activityStartTime
-        },env);
-        if(item) out.push(item);
-      }
-    }
-  }
-  return out;
-}
-
-function parseCACTusCacheEvents(events,env){
-  const out=[];
-  for(const ev of events || []){
-    const t0=new Date(ev.t0 || ev.time || ev.startTime || Date.now());
-    if(!Number.isFinite(t0.getTime())) continue;
-
-    const pa=Number(ev.pa);
-    const da=Number(ev.da);
-    const speed=Number(ev.speed || 0);
-    const halo=ev.halo || "";
-
-    const earth=evaluateCactusEarthImpact(pa,da,halo);
-    const effectiveSpeed=earth.earthCandidate ? Math.max(250,(speed || 500)*earth.speedFactor) : 0;
-    const arrival=earth.earthCandidate
-      ? computeArrivalDBMLite(t0,effectiveSpeed,env)
-      : {
-          source:"CACTUS-REFERENCE",
-          date:t0,
-          utc:t0.toISOString(),
-          transitHours:null,
-          arrivalSpeed:0,
-          backgroundWind:0,
-          backgroundWindMin:null,
-          backgroundWindMax:null,
-          usedWSA:false
-        };
-
-    out.push(buildCME({
-      id:ev.id || `CACTus-${t0.toISOString()}`,
-      type:"CACTus",
-      coordType:"pa",
-      pa, da, halo,
-      speed,
-      effectiveSpeed,
-      halfAngle:Math.max(15,Math.min(90,(Number.isFinite(da) ? da : 60)/2)),
-      t0,
-      arrival,
-      arrivalScore:earth.earthCandidate ? scoreCACTus(da,speed,halo,earth) : 0,
-      earthCandidate:earth.earthCandidate,
-      earthConfidence:earth.earthConfidence,
-      earthReason:earth.earthReason,
-      impactClass:earth.impactClass,
-      geometryMultiplier:earth.geometryMultiplier,
-      sources:["CACTus"],
-      confidence:earth.earthConfidence
-    }));
-  }
-  return out;
-}
-
-function sourceRank(c){
-  if(c.type==="DONKI" && c.arrival?.source==="ENLIL") return 6;
-  if(c.type==="DONKI") return 5;
-  if(c.type==="CACTus") return 1;
-  return 0;
-}
-
-function dedupeCMEs(items){
-  const sorted=[...items].sort((a,b)=>sourceRank(b)-sourceRank(a) || b.confidence-a.confidence);
-  const merged=[];
-
-  for(const c of sorted){
-    const near=merged.find(m=>{
-      const dt=Math.abs(m.t0-c.t0)/3600000;
-      if(dt>3) return false;
-
-      if(m.coordType==="heliographic" && c.coordType==="heliographic"){
-        const dl=Math.abs((m.lon||0)-(c.lon||0));
-        const db=Math.abs((m.lat||0)-(c.lat||0));
-        return dl<=30 && db<=25;
-      }
-      if(m.coordType==="pa" && c.coordType==="pa"){
-        return Math.abs((m.pa||0)-(c.pa||0))<=40;
-      }
-      return dt<=1.0;
-    });
-
-    if(near){
-      near.sources=[...new Set([...(near.sources||[]), ...(c.sources||[])])];
-      near.confidence=Math.max(near.confidence||0,c.confidence||0);
-      near.earthCandidate=near.earthCandidate || c.earthCandidate;
-      near.earthConfidence=Math.max(near.earthConfidence||0,c.earthConfidence||0);
-      near.arrivalScore=Math.max(near.arrivalScore||0,c.arrivalScore||0);
-
-      if(sourceRank(c)>sourceRank(near)){
-        const keepSources=near.sources;
-        Object.assign(near,c);
-        near.sources=keepSources;
-      }
-    }else{
-      merged.push(c);
-    }
-  }
-  return merged;
-}
-
-/* ==============================
-   REBUILD
-============================== */
-function rebuildAll(){
-  STATE.env=parseEnvironment(
-    STATE.sources.noaaWind.data,
-    STATE.sources.noaaMag.data,
-    STATE.sources.noaaKp.data
-  );
-
-  let events=[];
-
-  const analysis=STATE.sources.donkiAnalysis.data;
-  if(Array.isArray(analysis)){
-    events.push(...analysis.map(x=>parseDONKIAnalysis(x,STATE.env)).filter(Boolean));
-  }
-
-  const cme=STATE.sources.donkiCME.data;
-  if(Array.isArray(cme)){
-    events.push(...parseDONKICME(cme,STATE.env));
-  }
-
-  if(Array.isArray(STATE.cactusEvents) && STATE.cactusEvents.length){
-    events.push(...parseCACTusCacheEvents(STATE.cactusEvents,STATE.env));
-  }
-
-  let merged=dedupeCMEs(events);
-
-  const strict=document.getElementById("strictDonkiOnly")?.checked ?? true;
-  const donkiHits=merged.filter(c=>c.earthCandidate && c.type==="DONKI").length;
-
-  if(strict && donkiHits>0){
-    merged=merged.map(c=>{
-      if(c.type==="CACTus"){
-        return {
-          ...c,
-          earthCandidate:false,
-          arrivalScore:0,
-          impactClass:"CACTUS-REFERENCE",
-          earthReason:"CACTus kept as reference because DONKI Earth-directed candidates are available."
-        };
-      }
-      return c;
-    });
-  }
-
-  STATE.cmes=merged.sort((a,b)=>{
-    if((b.earthCandidate?1:0)!==(a.earthCandidate?1:0)){
-      return (b.earthCandidate?1:0)-(a.earthCandidate?1:0);
-    }
-    return sourceRank(b)-sourceRank(a) || b.arrivalScore-a.arrivalScore;
-  });
-
-  renderSummaryCards();
-  renderEventList();
-  updateTimeline();
-}
-
-/* ==============================
-   SUMMARY UI
-============================== */
-function renderSummaryCards(){
-  const total=STATE.cmes.length;
-  const earth=STATE.cmes.filter(c=>c.earthCandidate).length;
-  const miss=STATE.cmes.filter(c=>!c.earthCandidate).length;
-  const top=STATE.cmes.find(c=>c.earthCandidate);
-
-  document.getElementById("summaryCards").innerHTML=`
-    <div class="metric">
-      <div class="label">Earth-directed CME</div>
-      <div class="value">${earth}</div>
-      <div class="sub">Earthに当たる候補</div>
-    </div>
-    <div class="metric">
-      <div class="label">MISS / Reference</div>
-      <div class="value">${miss}</div>
-      <div class="sub">表示のみ / 参考イベント</div>
-    </div>
-    <div class="metric">
-      <div class="label">Current background wind</div>
-      <div class="value">${Math.round(STATE.env.speed || 425)} km/s</div>
-      <div class="sub">${STATE.wsaModel ? "WSA併用可能" : "NOAA/fallback"}</div>
-    </div>
-    <div class="metric">
-      <div class="label">Highest risk</div>
-      <div class="value">${top ? top.arrivalScore : 0}</div>
-      <div class="sub">${top ? top.impactClass : "No Earth-directed CME"}</div>
-    </div>
-  `;
-}
-
-function renderEventList(){
-  const earth=STATE.cmes.filter(c=>c.earthCandidate).slice(0,12);
-
-  if(!earth.length){
-    document.getElementById("eventList").innerHTML=`<div class="small">Earth-directed CMEがまだありません。</div>`;
-    return;
-  }
-
-  document.getElementById("eventList").innerHTML=earth.map(c=>{
-    let tag="miss";
-    if(c.impactClass==="CORE-HIT") tag="core";
-    else if(c.impactClass==="BODY-HIT") tag="body";
-    else if(c.impactClass==="FLANK-HIT") tag="flank";
-    else if(String(c.impactClass).startsWith("CACTUS")) tag="cactus";
-
-    return `
-      <div class="eventItem">
-        <span class="tag ${tag}">${escapeHtml(c.impactClass)}</span>
-        <b>${escapeHtml(shortId(c.id))}</b><br>
-        <div class="small">
-          Source: ${escapeHtml((c.sources||[]).join("+"))}<br>
-          Speed: <b>${Math.round(c.speed || 0)} km/s</b> → effective <b>${Math.round(c.effectiveSpeed || 0)} km/s</b><br>
-          Arrival: <b>${c.arrival?.utc ? c.arrival.utc.slice(0,16).replace("T"," ") : "-"}</b> UTC<br>
-          Risk: <b>${c.arrivalScore}</b> (${riskLabel(c.arrivalScore)})<br>
-          ${c.angularSeparation!==undefined && c.angularSeparation!==null ? `sep=${formatNum(c.angularSeparation,1)}°, ` : ""}
-          half=${formatNum(c.halfAngle,1)}°
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-/* ==============================
-   CANVAS HELPERS
-============================== */
-function setupCanvas(id){
-  const c=document.getElementById(id);
-  const rect=c.getBoundingClientRect();
-  const dpr=window.devicePixelRatio || 1;
-  c.width=rect.width*dpr;
-  c.height=rect.height*dpr;
-  const ctx=c.getContext("2d");
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  return {ctx,w:rect.width,h:rect.height};
-}
-
-function drawStars(ctx,w,h,stars){
-  ctx.save();
-  for(const s of stars){
-    ctx.beginPath();
-    ctx.fillStyle=`rgba(255,255,255,${s.a})`;
-    ctx.arc(s.x*w,s.y*h,s.r,0,Math.PI*2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-function drawGlowCircle(ctx,x,y,r,coreColor,edgeColor){
-  const g=ctx.createRadialGradient(x-r*0.25,y-r*0.25,r*0.1,x,y,r);
-  g.addColorStop(0,coreColor);
-  g.addColorStop(.55,edgeColor);
-  g.addColorStop(1,"rgba(0,0,0,0)");
-  ctx.beginPath();
-  ctx.fillStyle=g;
-  ctx.arc(x,y,r,0,Math.PI*2);
-  ctx.fill();
-}
-
-function drawSunRealistic(ctx,x,y,r){
-  drawGlowCircle(ctx,x,y,r*1.65,"rgba(255,250,200,.9)","rgba(255,170,40,.18)");
-
-  const g=ctx.createRadialGradient(x-r*0.3,y-r*0.3,r*0.18,x,y,r);
-  g.addColorStop(0,"#fff7cf");
-  g.addColorStop(.35,"#ffd36a");
-  g.addColorStop(.7,"#ff9b2f");
-  g.addColorStop(1,"#ff6f1f");
-
-  ctx.beginPath();
-  ctx.fillStyle=g;
-  ctx.arc(x,y,r,0,Math.PI*2);
-  ctx.fill();
-
-  ctx.save();
-  ctx.clip();
-  for(let i=0;i<18;i++){
-    const ang=i*Math.PI*2/18;
-    const rx=x+Math.cos(ang)*r*0.35;
-    const ry=y+Math.sin(ang)*r*0.35;
-    ctx.beginPath();
-    ctx.fillStyle=`rgba(255,255,255,${0.03+Math.random()*0.05})`;
-    ctx.arc(rx,ry,r*(0.12+Math.random()*0.12),0,Math.PI*2);
-    ctx.fill();
-  }
-  ctx.restore();
-
-  ctx.strokeStyle="rgba(255,230,160,.9)";
-  ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.arc(x,y,r,0,Math.PI*2);
-  ctx.stroke();
-}
-
-function drawEarthRealistic(ctx,x,y,r){
-  drawGlowCircle(ctx,x,y,r*1.45,"rgba(150,220,255,.35)","rgba(60,130,255,.12)");
-
-  const g=ctx.createRadialGradient(x-r*0.3,y-r*0.35,r*0.15,x,y,r);
-  g.addColorStop(0,"#d9f4ff");
-  g.addColorStop(.25,"#62c1ff");
-  g.addColorStop(.55,"#2a7dff");
-  g.addColorStop(1,"#173f9b");
-
-  ctx.beginPath();
-  ctx.fillStyle=g;
-  ctx.arc(x,y,r,0,Math.PI*2);
-  ctx.fill();
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(x,y,r,0,Math.PI*2);
-  ctx.clip();
-
-  ctx.fillStyle="rgba(48,176,96,.92)";
-  ctx.beginPath();
-  ctx.ellipse(x-r*0.18,y-r*0.05,r*0.26,r*0.17,.5,0,Math.PI*2);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.ellipse(x+r*0.1,y+r*0.12,r*0.22,r*0.14,-.4,0,Math.PI*2);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.ellipse(x-r*0.02,y-r*0.28,r*0.11,r*0.08,.2,0,Math.PI*2);
-  ctx.fill();
-
-  const shade=ctx.createLinearGradient(x-r,y-r,x+r,y+r);
-  shade.addColorStop(0,"rgba(255,255,255,.28)");
-  shade.addColorStop(.55,"rgba(255,255,255,0)");
-  shade.addColorStop(1,"rgba(0,0,0,.22)");
-  ctx.fillStyle=shade;
-  ctx.fillRect(x-r,y-r,r*2,r*2);
-
-  ctx.restore();
-
-  ctx.strokeStyle="rgba(200,240,255,.9)";
-  ctx.lineWidth=1.6;
-  ctx.beginPath();
-  ctx.arc(x,y,r,0,Math.PI*2);
-  ctx.stroke();
-}
-
-/* ==============================
-   TIMELINE UPDATE
-============================== */
-function updateTimeline(){
-  const slider=document.getElementById("timeSlider");
-  const h=Number(slider.value);
-  const t=new Date(STATE.timelineStart.getTime()+h*3600*1000);
-  STATE.selectedTime=t;
-
-  const offset=h-72;
-  const sign=offset>=0 ? "+" : "";
-  const wind=getBackgroundWindSpeedFromWSA(t);
-  const windTxt=wind!==null ? `${Math.round(wind)} km/s` : "N/A";
-
-  document.getElementById("timeLabel").innerHTML =
-    `<b>${t.toISOString().slice(0,16).replace("T"," ")} UTC</b> / 現在${sign}${offset}h / 背景風=${windTxt}`;
-
-  drawTopView(t);
-  drawSideView(t);
-}
-
-/* ==============================
-   DRAW TOP VIEW
-============================== */
-function drawTopView(time){
-  const {ctx,w,h}=setupCanvas("topCanvas");
-
-  ctx.clearRect(0,0,w,h);
-  ctx.fillStyle="#0b1324";
-  ctx.fillRect(0,0,w,h);
-  drawStars(ctx,w,h,STATE.starsTop);
-
-  const sunX=w*0.22;
-  const sunY=h*0.5;
-  const earthX=w*0.80;
-  const earthY=h*0.5;
-  const orbitR=Math.min(w,h)*0.26;
-
-  // orbit guide
-  ctx.strokeStyle="rgba(255,255,255,.08)";
-  ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.moveTo(sunX,sunY);
-  ctx.lineTo(earthX,earthY);
-  ctx.stroke();
-
-  // AU ticks
-  for(let i=1;i<=5;i++){
-    const x=sunX+(earthX-sunX)*i/5;
-    ctx.strokeStyle="rgba(255,255,255,.06)";
-    ctx.beginPath();
-    ctx.moveTo(x,sunY-8);
-    ctx.lineTo(x,sunY+8);
-    ctx.stroke();
-  }
-
-  drawSunRealistic(ctx,sunX,sunY,40);
-  drawEarthRealistic(ctx,earthX,earthY,18);
-
-  // labels
-  ctx.fillStyle="rgba(255,255,255,.92)";
-  ctx.font="bold 15px system-ui";
-  ctx.fillText("SUN", sunX-18, sunY+66);
-  ctx.fillText("EARTH", earthX-26, earthY+42);
-  ctx.fillStyle="rgba(255,255,255,.65)";
-  ctx.font="12px system-ui";
-  ctx.fillText("Top View / hit angle visible", 14, 24);
-
-  const showMiss=document.getElementById("showMissTop")?.checked ?? true;
-  const events=STATE.cmes.filter(c=>showMiss || c.earthCandidate);
-
-  let shown=0;
-  let earthCount=0;
-
-  events.slice(0,18).forEach((c,idx)=>{
-    if(time < c.t0) return;
-
-    if(c.coordType!=="heliographic" && c.coordType!=="pa") return;
-
-    let angleDeg=0;
-    let widthDeg=20;
-
-    if(c.coordType==="heliographic"){
-      angleDeg = -(c.lon || 0);
-      widthDeg = Math.max(8, Math.min(140, (c.halfAngle || 20)*2));
-    }else{
-      angleDeg = -((c.pa || 0)-90);
-      widthDeg = Math.max(8, Math.min(140, c.da || 40));
-    }
-
-    const total=c.arrival.date-c.t0;
-    if(total<=0) return;
-    const frac=clamp((time-c.t0)/total,0,1);
-
-    const dir=angleDeg*Math.PI/180;
-    const x=sunX + Math.cos(dir)*(earthX-sunX)*frac;
-    const y=sunY + Math.sin(dir)*(orbitR*0.9)*frac;
-
-    const color=c.earthCandidate ? classColor(c.impactClass) : "rgba(157,176,200,.6)";
-
-    // cone
-    ctx.save();
-    ctx.translate(x,y);
-    ctx.rotate(dir);
-
-    ctx.globalAlpha=c.earthCandidate ? 0.22 : 0.10;
-    ctx.fillStyle=color;
-    ctx.beginPath();
-    ctx.moveTo(0,0);
-    ctx.arc(0,0,24+(c.halfAngle||20)*0.7,-(widthDeg/2)*Math.PI/180,(widthDeg/2)*Math.PI/180);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.globalAlpha=c.earthCandidate ? 0.85 : 0.25;
-    ctx.strokeStyle=color;
-    ctx.lineWidth=c.earthCandidate ? 2.2 : 1.2;
-    ctx.beginPath();
-    ctx.arc(0,0,22+(c.halfAngle||20)*0.65,-(widthDeg/2)*Math.PI/180,(widthDeg/2)*Math.PI/180);
-    ctx.stroke();
-    ctx.restore();
-
-    // moving front
-    ctx.beginPath();
-    ctx.fillStyle=color;
-    ctx.arc(x,y,c.earthCandidate ? 6 : 4,0,Math.PI*2);
-    ctx.fill();
-
-    if(c.earthCandidate){
-      earthCount++;
-      // if near Earth, emphasize
-      const dist=Math.hypot(x-earthX,y-earthY);
-      if(dist<42){
-        ctx.beginPath();
-        ctx.strokeStyle=color;
-        ctx.lineWidth=3;
-        ctx.arc(earthX,earthY,28,0,Math.PI*2);
-        ctx.stroke();
-      }
-    }
-
-    if(shown<8){
-      ctx.fillStyle="rgba(255,255,255,.88)";
-      ctx.font="11px system-ui";
-      ctx.fillText(`${shortId(c.id)} ${c.impactClass}`, x+8, y-8);
-      shown++;
-    }
-  });
-
-  document.getElementById("topSummary").innerHTML =
-    `表示イベント: <b>${events.length}</b>件 / Earth-directed: <b>${earthCount}</b><br>`+
-    `上面図では、太陽から見たCMEの進行方向とコーン幅で「地球に当たる角度」を見やすくしています。`;
-}
-
-/* ==============================
-   DRAW SIDE VIEW
-============================== */
-function drawSideView(time){
-  const {ctx,w,h}=setupCanvas("sideCanvas");
-
-  ctx.clearRect(0,0,w,h);
-  ctx.fillStyle="#0b1324";
-  ctx.fillRect(0,0,w,h);
-  drawStars(ctx,w,h,STATE.starsSide);
-
-  const sx=90;
-  const ex=w-90;
-  const y=h*0.54;
-  const len=ex-sx;
-
-  // distance line
-  ctx.strokeStyle="rgba(255,255,255,.14)";
-  ctx.lineWidth=2;
-  ctx.beginPath();
-  ctx.moveTo(sx,y);
-  ctx.lineTo(ex,y);
-  ctx.stroke();
-
-  drawSunRealistic(ctx,sx,y,34);
-  drawEarthRealistic(ctx,ex,y,16);
-
-  ctx.fillStyle="rgba(255,255,255,.92)";
-  ctx.font="bold 15px system-ui";
-  ctx.fillText("SUN", sx-16, y+58);
-  ctx.fillText("EARTH", ex-25, y+38);
-
-  ctx.fillStyle="rgba(255,255,255,.65)";
-  ctx.font="12px system-ui";
-  ctx.fillText("Side View / propagation", 14, 24);
-
-  const earthCMEs=STATE.cmes.filter(c=>c.earthCandidate);
-  if(!earthCMEs.length){
-    ctx.fillStyle="rgba(255,255,255,.7)";
-    ctx.fillText("No Earth-directed CME candidates.", 18, 48);
-    document.getElementById("sideSummary").innerHTML = "Earth-directed CMEなし";
-    return;
-  }
-
-  let activeCount=0;
-
-  earthCMEs.slice(0,14).forEach((c,idx)=>{
-    const total=c.arrival.date-c.t0;
-    if(!total || total<=0) return;
-    if(time < c.t0 || time > c.arrival.date) return;
-
-    const frac=clamp((time-c.t0)/total,0,1);
-    const lane=y-110+(idx%8)*26;
-    const drawX=sx+frac*len;
-    const col=classColor(c.impactClass);
-    const shellR=18+(c.halfAngle||20)*0.55;
-
-    // trail
-    ctx.strokeStyle=col+"66";
-    ctx.lineWidth=2;
-    ctx.beginPath();
-    ctx.moveTo(sx,lane);
-    ctx.lineTo(drawX,lane);
-    ctx.stroke();
-
-    // front shell
-    ctx.save();
-    ctx.globalAlpha=.84;
-    ctx.strokeStyle=col;
-    ctx.lineWidth=Math.max(2,Math.min(18,(c.halfAngle||20)/4));
-    ctx.beginPath();
-    ctx.arc(drawX,lane,shellR,-.95,.95);
-    ctx.stroke();
-
-    ctx.globalAlpha=.26;
-    ctx.lineWidth=2;
-    ctx.beginPath();
-    ctx.arc(drawX,lane,shellR+10,-.95,.95);
-    ctx.stroke();
-    ctx.restore();
-
-    // core dot
-    ctx.beginPath();
-    ctx.fillStyle=col;
-    ctx.arc(drawX,lane,5.5,0,Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle="rgba(255,255,255,.9)";
-    ctx.font="11px system-ui";
-    ctx.fillText(`${shortId(c.id)} ${Math.round(frac*100)}%`, drawX+8, lane-8);
-    ctx.fillStyle="rgba(255,255,255,.62)";
-    ctx.fillText(`${Math.round(c.effectiveSpeed||0)}→${Math.round(c.arrival.arrivalSpeed||0)} km/s`, drawX+8, lane+7);
-
-    activeCount++;
-  });
-
-  document.getElementById("sideSummary").innerHTML =
-    `現在表示中の進行CME: <b>${activeCount}</b>件<br>`+
-    `横から見た図では、Sun→Earth方向の進行距離と到達までの割合を表示します。`;
-}
-
-/* ==============================
-   PLAYBACK
-============================== */
-function playTimeline(){
-  stopTimeline();
-  STATE.timer=setInterval(()=>{
-    const s=document.getElementById("timeSlider");
-    const max=Number(s.max);
-    let v=Number(s.value)+1;
-    if(v>max) v=0;
-    s.value=v;
-    updateTimeline();
-  },280);
-}
-function stopTimeline(){
-  if(STATE.timer) clearInterval(STATE.timer);
-  STATE.timer=null;
-}
-
-/* ==============================
-   START
-============================== */
-window.addEventListener("resize", ()=>updateTimeline());
-
-renderSourcePanel();
-initTimelineWindow();
-STATE.starsTop=generateStarField(220);
-STATE.starsSide=generateStarField(260);
-renderSummaryCards();
-renderEventList();
-updateTimeline();
+function src(label,status){return{label,status,data:null,time:null,error:null};}
+function setSource(k,status,data=null,error=null){const s=STATE.sources[k];s.status=status;s.data=data;s.error=error;s.time=new Date();renderSourcePanel();}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function num(v,d=0){const n=Number(v);return Number.isFinite(n)?n:d;}
+function formatTime(v){const d=v instanceof Date?v:new Date(v);return Number.isFinite(d.getTime())?d.toISOString().slice(0,16).replace("T"," ")+" UTC":"-";}
+function shortId(id){const s=String(id||"CME");const m=s.match(/CME[-:]?(\d+)/i);return m?`CME${m[1].slice(-6)}`:s.slice(-12);}
+function classColor(c){if(c==="ENLIL-HIT")return"#ca62ff";if(c==="CORE-HIT")return"#ff526f";if(c==="BODY-HIT")return"#ff9e2c";if(c==="FLANK-HIT")return"#ffd65a";if(String(c).startsWith("CACTUS"))return"#35d7ff";return"#91a6bf";}
+function latest(arr){if(!Array.isArray(arr))return{};for(let i=arr.length-1;i>=0;i--){const r=arr[i];if(Array.isArray(r)){if(String(r[0]).toLowerCase().includes("time"))continue;return r;}if(r&&typeof r==="object")return r;}return{};}
+function pick(obj,names){for(const n of names){if(typeof n==="number"&&Array.isArray(obj)){const v=Number(obj[n]);if(Number.isFinite(v))return v;}if(typeof n==="string"&&obj&&obj[n]!==undefined){const v=Number(obj[n]);if(Number.isFinite(v))return v;}}return 0;}
+function defaultEnv(){return{speed:425,density:0,bt:0,by:0,bz:0,kp:0,dynamicPressure:0};}
+function initTimeline(){STATE.timelineCenter=new Date();STATE.timelineStart=new Date(STATE.timelineCenter.getTime()-72*3600e3);STATE.timelineEnd=new Date(STATE.timelineCenter.getTime()+120*3600e3);STATE.selectedTime=new Date(STATE.timelineCenter);const s=document.getElementById("timeSlider");s.value=72;}
+async function fetchJson(url){const sep=url.includes("?")?"&":"?";const r=await fetch(url+sep+"t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error(`HTTP ${r.status}: ${url}`);return await r.json();}
+async function fetchJsonAny(urls){let last="";for(const u of urls){try{return{data:await fetchJson(u),url:u};}catch(e){last=e.message;}}throw new Error(last);}
+function sibling(base,file){return base.replace(/[^/]+$/,String(file));}
+
+function parseEnvironment(wind,mag,kp){const w=latest(wind),b=latest(mag),k=latest(kp);const speed=pick(w,["speed","proton_speed","bulk_speed",2])||425,density=pick(w,["density","proton_density",1])||0,by=pick(b,["by_gsm","by",2])||0,bz=pick(b,["bz_gsm","bz",3])||0,bt=pick(b,["bt","total_field",6])||Math.hypot(by,bz),kpv=pick(k,["kp_index","kp","estimated_kp","Kp",1])||0;return{speed,density,by,bz,bt,kp:kpv,dynamicPressure:density&&speed?1.6726e-6*density*speed*speed:0};}
+async function loadDONKICache(){setSource("donkiCache","LOADING...");try{const got=await fetchJsonAny(DONKI_INDEX),index=got.data;let files=[];if(document.getElementById("mergeSevenDays")?.checked??true)files=(index.files||[]).filter(f=>f.valid!==false&&(f.path||f.file)).slice(0,24);else if(index.latest)files=[{path:sibling(got.url,index.latest)}];const payloads=[];for(const f of files){try{let p=f.path||f.file;if(!/^https?:|^\.\//.test(String(p)))p=sibling(got.url,p);payloads.push({file:p,payload:await fetchJson(p)});}catch(_){}}if(!payloads.length)throw new Error("DONKI cache files could not be loaded");STATE.donkiPayloads=payloads;const analysis=payloads.flatMap(x=>x.payload.sources?.cmeAnalysis?.data||[]),cme=payloads.flatMap(x=>x.payload.sources?.cme?.data||[]);setSource("donkiCache",`OK: ${payloads.length} files`,payloads);setSource("donkiAnalysis",`OK: ${analysis.length}`,analysis);setSource("donkiCME",`OK: ${cme.length}`,cme);rebuildAll();}catch(e){setSource("donkiCache","FAILED",null,e.message);}}
+async function loadWSA(){setSource("wsa","LOADING...");try{const got=await fetchJsonAny(WSA_INDEX),idx=got.data;const latest=idx.latest||"latest.json";const model=await fetchJson(sibling(got.url,latest));const records=(model.records||[]).map(r=>({...r,_t:new Date(r.time).getTime(),speed:Number(r.speed)})).filter(r=>Number.isFinite(r._t)&&Number.isFinite(r.speed)).sort((a,b)=>a._t-b._t);if(!records.length)throw new Error("WSA model has no records");STATE.wsaModel={...model,records};setSource("wsa",`OK: ${records.length} records`,STATE.wsaModel);rebuildAll();}catch(e){STATE.wsaModel=null;setSource("wsa","FAILED",null,e.message);}}
+async function loadCACTusCache(){setSource("cactus","LOADING...");try{const got=await fetchJsonAny(CACTUS_INDEX),idx=got.data;const evs=(idx.events||[]).map((e,i)=>({...e,_t:new Date(e.t0||e.time||e.startTime||Date.now()).getTime(),id:e.id||`CACTus-${i+1}`,pa:Number(e.pa),da:Number(e.da),speed:Number(e.speed||0),halo:e.halo||""})).filter(e=>Number.isFinite(e._t)).sort((a,b)=>b._t-a._t);STATE.cactusEvents=evs;setSource("cactus",`OK: ${evs.length}`,evs);rebuildAll();}catch(e){STATE.cactusEvents=[];setSource("cactus","FAILED",null,e.message);}}
+async function loadNOAAWind(){setSource("noaaWind","LOADING...");try{const d=(await fetchJsonAny([NOAA.wind,NOAA.windOld])).data;setSource("noaaWind",`OK: ${Array.isArray(d)?d.length:1}`,d);rebuildAll();}catch(e){setSource("noaaWind","FAILED",null,e.message);}}
+async function loadNOAAMag(){setSource("noaaMag","LOADING...");try{const d=(await fetchJsonAny([NOAA.mag,NOAA.magOld])).data;setSource("noaaMag",`OK: ${Array.isArray(d)?d.length:1}`,d);rebuildAll();}catch(e){setSource("noaaMag","FAILED",null,e.message);}}
+async function loadNOAAKp(){setSource("noaaKp","LOADING...");try{const d=(await fetchJsonAny([NOAA.kp,NOAA.kpAlt])).data;setSource("noaaKp",`OK: ${Array.isArray(d)?d.length:1}`,d);rebuildAll();}catch(e){setSource("noaaKp","FAILED",null,e.message);}}
+async function loadNOAAAll(){await Promise.allSettled([loadNOAAWind(),loadNOAAMag(),loadNOAAKp()]);rebuildAll();}
+async function loadAll(){await Promise.allSettled([loadDONKICache(),loadWSA(),loadCACTusCache(),loadNOAAWind(),loadNOAAMag(),loadNOAAKp()]);rebuildAll();}
+function renderSourcePanel(){const rows=[["donkiCache","DONKI",loadDONKICache],["wsa","WSA",loadWSA],["cactus","CACTus",loadCACTusCache],["noaaWind","NOAA Wind",loadNOAAWind],["noaaMag","NOAA IMF",loadNOAAMag],["noaaKp","NOAA Kp",loadNOAAKp]];document.getElementById("sourcePanel").innerHTML=rows.map(([k,t,f])=>{const x=STATE.sources[k],cl=x.status.startsWith("OK")?"ok":x.status.startsWith("FAILED")?"bad":x.status.startsWith("LOADING")?"loading":"",tm=x.time?x.time.toISOString().slice(11,19)+" UTC":"-";return`<div class="sourceCard"><div class="sourceTitle">${t}</div><div class="sourceStatus ${cl}">${esc(x.status)}</div><div class="small">${tm}</div>${x.error?`<div class="small bad">${esc(x.error).slice(0,80)}</div>`:""}<button style="margin-top:7px;padding:5px 8px;font-size:10px" onclick="${f.name}()">LOAD</button></div>`;}).join("");}
+function getBackgroundWindSpeedFromWSA(t){const a=STATE.wsaModel?.records||[];if(!a.length)return null;const x=t.getTime();let p=null,n=null;for(const r of a){if(r._t<=x){p=r;continue;}n=r;break;}if(!p&&n)return clamp(n.speed,300,800);if(p&&!n)return clamp(p.speed,300,800);if(!p)return null;const f=(x-p._t)/(n._t-p._t||1);return clamp(p.speed+(n.speed-p.speed)*f,300,800);}
+function angularSeparation(lon,lat){const lo=lon*Math.PI/180,la=lat*Math.PI/180;return Math.acos(clamp(Math.cos(la)*Math.cos(lo),-1,1))*180/Math.PI;}
+function classifyHit(sep,half){const r=half>0?sep/half:999;if(r<=.5)return{earthCandidate:true,impactClass:"CORE-HIT",earthConfidence:.95,speedFactor:1,geometryMultiplier:1,ratio:r};if(r<=.85){const x=(r-.5)/.35;return{earthCandidate:true,impactClass:"BODY-HIT",earthConfidence:.85-.15*x,speedFactor:.95-.1*x,geometryMultiplier:.85-.25*x,ratio:r};}if(r<=1){const x=(r-.85)/.15;return{earthCandidate:true,impactClass:"FLANK-HIT",earthConfidence:.55-.2*x,speedFactor:.8-.2*x,geometryMultiplier:.55-.25*x,ratio:r};}return{earthCandidate:false,impactClass:"MISS",earthConfidence:.02,speedFactor:0,geometryMultiplier:0,ratio:r};}
+function evaluateDonki(lon,lat,half,speed,source){const sep=angularSeparation(lon,lat),c=classifyHit(sep,half);if(source==="ENLIL")return{...c,earthCandidate:true,impactClass:"ENLIL-HIT",earthConfidence:1,speedFactor:Math.max(c.speedFactor,.9),geometryMultiplier:1,angularSeparation:sep,effectiveSpeed:speed};return{...c,angularSeparation:sep,effectiveSpeed:c.earthCandidate?Math.max(250,speed*c.speedFactor):0};}
+function evaluateCactus(pa,da,halo){if(!(document.getElementById("useCactusHazard")?.checked??false))return{earthCandidate:false,impactClass:"CACTUS-REFERENCE",earthConfidence:.05,speedFactor:0,geometryMultiplier:0};if((halo&&halo.length)||da>=270)return{earthCandidate:true,impactClass:"CACTUS-WIDE-HALO",earthConfidence:.4,speedFactor:.7,geometryMultiplier:.35};if(da>=180)return{earthCandidate:true,impactClass:"CACTUS-BROAD",earthConfidence:.22,speedFactor:.55,geometryMultiplier:.2};return{earthCandidate:false,impactClass:"CACTUS-MISS",earthConfidence:.03,speedFactor:0,geometryMultiplier:0};}
+function computeArrival(t0,v0,env){let r=DBM.r0Km,v=clamp(v0||425,250,3000),s=0;while(r<DBM.targetKm&&s<DBM.maxDays*86400){const time=new Date(t0.getTime()+s*1000),w=clamp(getBackgroundWindSpeedFromWSA(time)??env.speed??425,300,800),dv=v-w;v+=(-DBM.gamma*dv*Math.abs(dv))*DBM.dtSec;v=clamp(v,250,3000);r+=v*DBM.dtSec;s+=DBM.dtSec;}const d=new Date(t0.getTime()+s*1000);return{source:STATE.wsaModel?"DBM-lite + WSA":"DBM-lite",date:d,utc:d.toISOString(),arrivalSpeed:Math.round(v),transitHours:s/3600};}
+function parseActivityTime(c){if(c.activityStartTime){const d=new Date(c.activityStartTime);if(Number.isFinite(d.getTime()))return d;}for(const id of [c.activityID,c.associatedCMEID,c.id].filter(Boolean)){const m=String(id).match(/(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})/);if(m)return new Date(`${m[1]}T${m[2]}Z`);}if(c.time21_5)return new Date(c.time21_5);return new Date();}
+function score(speed,half,e,env){if(!e.earthCandidate)return 0;const s=speed>=1700?28:speed>=1200?22:speed>=800?15:8,w=half>=60?20:half>=40?15:half>=25?10:5,boost=(env.kp>=5?5:0)+(env.bz<=-8?6:0);return clamp(Math.round((s+w+boost)*(.65+.45*(e.geometryMultiplier||0))+(e.impactClass==="ENLIL-HIT"?12:0)),0,100);}
+function buildCME(x){return x;}
+function parseDonkiAnalysis(c,env){const lon=DONKI_LON_POSITIVE_WEST?num(c.longitude): -num(c.longitude),lat=num(c.latitude),speed=num(c.speed,500),half=num(c.halfAngle,30),t0=parseActivityTime(c),enlil=Array.isArray(c.enlilList)?c.enlilList.find(x=>x?.estimatedShockArrivalTime):null,pre=enlil?{source:"ENLIL",date:new Date(enlil.estimatedShockArrivalTime),utc:new Date(enlil.estimatedShockArrivalTime).toISOString(),arrivalSpeed:null}:computeArrival(t0,speed,env),earth=evaluateDonki(lon,lat,half,speed,pre.source),arrival=pre.source==="ENLIL"?{...pre,arrivalSpeed:computeArrival(t0,speed,env).arrivalSpeed}:earth.earthCandidate?computeArrival(t0,earth.effectiveSpeed,env):{source:"MISS",date:t0,utc:t0.toISOString(),arrivalSpeed:0};return buildCME({id:c.activityID||c.associatedCMEID||"DONKI",type:"DONKI",coordType:"heliographic",lon,lat,speed,effectiveSpeed:earth.effectiveSpeed||0,halfAngle:half,t0,arrival,arrivalScore:score(speed,half,earth,env),earthCandidate:earth.earthCandidate,earthConfidence:earth.earthConfidence,angularSeparation:earth.angularSeparation,impactClass:earth.impactClass,geometryMultiplier:earth.geometryMultiplier,sources:["DONKI"]});}
+function parseDonkiCME(list,env){const out=[];for(const c of list||[]){for(const a of (Array.isArray(c.cmeAnalyses)?c.cmeAnalyses:[])){out.push(parseDonkiAnalysis({...a,activityID:c.activityID||a.activityID,activityStartTime:c.startTime||a.activityStartTime},env));}}return out;}
+function parseCactus(list,env){const out=[];for(const e of list||[]){const t0=new Date(e.t0||e.time||Date.now()),pa=num(e.pa),da=num(e.da),speed=num(e.speed,500),earth=evaluateCactus(pa,da,e.halo||""),eff=earth.earthCandidate?Math.max(250,speed*earth.speedFactor):0,arr=earth.earthCandidate?computeArrival(t0,eff,env):{source:"REFERENCE",date:t0,utc:t0.toISOString(),arrivalSpeed:0};out.push({id:e.id||"CACTus",type:"CACTus",coordType:"pa",pa,da,halo:e.halo||"",speed,effectiveSpeed:eff,halfAngle:Math.max(15,Math.min(90,da/2||30)),t0,arrival:arr,arrivalScore:earth.earthCandidate?30:0,earthCandidate:earth.earthCandidate,earthConfidence:earth.earthConfidence,impactClass:earth.impactClass,geometryMultiplier:earth.geometryMultiplier,sources:["CACTus"]});}return out;}
+function sourceRank(c){if(c.type==="DONKI"&&c.arrival?.source==="ENLIL")return 6;if(c.type==="DONKI")return 5;if(c.type==="CACTus")return 1;return 0;}
+function dedupe(a){const out=[];for(const c of [...a].sort((x,y)=>sourceRank(y)-sourceRank(x))){const near=out.find(m=>Math.abs(m.t0-c.t0)<3*3600e3&&m.type===c.type);if(!near)out.push(c);}return out;}
+function rebuildAll(){STATE.env=parseEnvironment(STATE.sources.noaaWind.data,STATE.sources.noaaMag.data,STATE.sources.noaaKp.data);let ev=[];if(Array.isArray(STATE.sources.donkiAnalysis.data))ev.push(...STATE.sources.donkiAnalysis.data.map(x=>parseDonkiAnalysis(x,STATE.env)));if(Array.isArray(STATE.sources.donkiCME.data))ev.push(...parseDonkiCME(STATE.sources.donkiCME.data,STATE.env));ev.push(...parseCactus(STATE.cactusEvents,STATE.env));let merged=dedupe(ev);if((document.getElementById("strictDonkiOnly")?.checked??true)&&merged.some(c=>c.type==="DONKI"&&c.earthCandidate))merged=merged.map(c=>c.type==="CACTus"?{...c,earthCandidate:false,impactClass:"CACTUS-REFERENCE",arrivalScore:0}:c);STATE.cmes=merged.sort((a,b)=>(b.earthCandidate-a.earthCandidate)||sourceRank(b)-sourceRank(a)||(b.arrivalScore-a.arrivalScore));renderSummary();renderEvents();updateTimeline();}
+function renderSummary(){const hits=STATE.cmes.filter(c=>c.earthCandidate),best=hits[0];document.getElementById("summaryCards").innerHTML=`<div class="metric"><div class="label">Earth-directed</div><div class="value">${hits.length}</div><div class="sub">CME candidates</div></div><div class="metric"><div class="label">Top event</div><div class="value">${best?esc(best.impactClass):"-"}</div><div class="sub">${best?esc(shortId(best.id)):"No hit"}</div></div><div class="metric"><div class="label">Solar wind</div><div class="value">${Math.round(STATE.env.speed)} km/s</div><div class="sub">NOAA current</div></div><div class="metric"><div class="label">Kp / Bz</div><div class="value">${num(STATE.env.kp).toFixed(1)} / ${num(STATE.env.bz).toFixed(1)}</div><div class="sub">Current environment</div></div>`;}
+function renderEvents(){const a=STATE.cmes.filter(c=>c.earthCandidate).slice(0,12),box=document.getElementById("eventList");if(!a.length){box.innerHTML='<div class="small">Earth-directed CMEなし。データを読み込んでください。</div>';return;}box.innerHTML=a.map(c=>{const cls=c.impactClass==="CORE-HIT"?"core":c.impactClass==="BODY-HIT"?"body":c.impactClass==="FLANK-HIT"?"flank":c.impactClass==="ENLIL-HIT"?"enlil":String(c.impactClass).startsWith("CACTUS")?"cactus":"miss";return`<div class="event"><div class="eventHead"><div class="eventName">${esc(shortId(c.id))}</div><span class="tag ${cls}">${esc(c.impactClass)}</span></div><div class="small" style="margin-top:6px">Start: ${formatTime(c.t0)}<br>Arrival: <b>${formatTime(c.arrival.date)}</b><br>Speed: ${Math.round(c.speed)} → ${Math.round(c.arrival.arrivalSpeed||0)} km/s<br>Half angle: ${num(c.halfAngle).toFixed(1)}°</div></div>`;}).join("");}
+function generateStars(n){return Array.from({length:n},()=>({x:Math.random(),y:Math.random(),r:.3+Math.random()*1.4,a:.15+Math.random()*.8}));}
+function setupCanvas(id){const c=document.getElementById(id),r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);const ctx=c.getContext("2d");ctx.setTransform(d,0,0,d,0,0);return{ctx,w:r.width,h:r.height};}
+function drawStars(ctx,w,h,s){for(const p of s){ctx.beginPath();ctx.fillStyle=`rgba(255,255,255,${p.a})`;ctx.arc(p.x*w,p.y*h,p.r,0,Math.PI*2);ctx.fill();}}
+function drawSun2D(ctx,x,y,r){const glow=ctx.createRadialGradient(x,y,r*.3,x,y,r*2.3);glow.addColorStop(0,"rgba(255,186,57,.55)");glow.addColorStop(.45,"rgba(255,117,18,.18)");glow.addColorStop(1,"rgba(255,80,0,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,r*2.3,0,Math.PI*2);ctx.fill();const g=ctx.createRadialGradient(x-r*.28,y-r*.30,r*.05,x,y,r);g.addColorStop(0,"#fff7ba");g.addColorStop(.3,"#ffd35a");g.addColorStop(.72,"#ff8a24");g.addColorStop(1,"#f35b0c");ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();for(let i=0;i<16;i++){const a=i/16*Math.PI*2,rr=r*(.2+.6*Math.random());ctx.fillStyle=`rgba(255,245,170,${.05+Math.random()*.10})`;ctx.beginPath();ctx.arc(x+Math.cos(a)*rr*.55,y+Math.sin(a)*rr*.55,r*(.05+Math.random()*.08),0,Math.PI*2);ctx.fill();}}
+function drawEarth2D(ctx,x,y,r){const glow=ctx.createRadialGradient(x,y,r,x,y,r*1.8);glow.addColorStop(0,"rgba(77,164,255,.42)");glow.addColorStop(1,"rgba(30,100,255,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,r*1.8,0,Math.PI*2);ctx.fill();const g=ctx.createRadialGradient(x-r*.25,y-r*.3,1,x,y,r);g.addColorStop(0,"#9fe6ff");g.addColorStop(.4,"#2d9cff");g.addColorStop(1,"#0b357d");ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.clip();ctx.fillStyle="#4db76a";ctx.beginPath();ctx.ellipse(x-r*.17,y-r*.1,r*.28,r*.14,.45,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(x+r*.13,y+r*.14,r*.23,r*.12,-.3,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(255,255,255,.75)";ctx.lineWidth=1.2;for(let i=-1;i<2;i++){ctx.beginPath();ctx.arc(x,y+i*r*.25,r*.75,0,Math.PI*1.6);ctx.stroke();}ctx.restore();ctx.strokeStyle="#aee8ff";ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();}
+function progression(c,time){const total=c.arrival.date-c.t0;if(total<=0)return null;const elapsed=time-c.t0,post=POST_PASS_HOURS*3600e3;if(elapsed<0||elapsed>total+post)return null;if(elapsed<=total)return{f:elapsed/total,alpha:1,passed:false,postFrac:0};const q=(elapsed-total)/post;return{f:1+q*.45,alpha:1-q*.78,passed:true,postFrac:q};}
+function drawTop(time){const{ctx,w,h}=setupCanvas("topCanvas");ctx.fillStyle="#020817";ctx.fillRect(0,0,w,h);drawStars(ctx,w,h,STATE.starsTop);const sx=w*.18,sy=h*.53,ex=w*.80,ey=h*.53,len=ex-sx;ctx.strokeStyle="rgba(89,155,228,.18)";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();for(let i=1;i<6;i++){const x=sx+len*i/5;ctx.beginPath();ctx.moveTo(x,sy-9);ctx.lineTo(x,sy+9);ctx.stroke();}drawSun2D(ctx,sx,sy,Math.min(w,h)*.085);drawEarth2D(ctx,ex,ey,Math.min(w,h)*.038);ctx.fillStyle="#dfeaff";ctx.font="bold 13px system-ui";ctx.fillText("SUN",sx-17,sy+62);ctx.fillText("EARTH",ex-24,ey+44);ctx.fillStyle="#99b1cd";ctx.font="12px system-ui";ctx.fillText("Top View / hit angle visible",16,25);const showMiss=document.getElementById("showMissTop")?.checked??true;let labelCount=0;for(const c of STATE.cmes.filter(x=>showMiss||x.earthCandidate).slice(0,22)){const p=progression(c,time);if(!p)continue;let ang=0;if(c.coordType==="heliographic")ang=-num(c.lon)*Math.PI/180;else if(c.coordType==="pa")ang=(90-num(c.pa))*Math.PI/180;const color=classColor(c.impactClass),x=sx+Math.cos(ang)*len*p.f,y=sy+Math.sin(ang)*len*.48*p.f,rr=18+num(c.halfAngle,25)*.65;ctx.save();ctx.globalAlpha=p.alpha*(c.earthCandidate?1:.34);ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=c.earthCandidate?2.4:1.2;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(x,y);ctx.stroke();ctx.globalAlpha*=.18;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(x,y-rr*.55);ctx.arc(x,y,rr,ang-.65,ang+.65);ctx.closePath();ctx.fill();ctx.globalAlpha=p.alpha;ctx.beginPath();ctx.arc(x,y,5.5,0,Math.PI*2);ctx.fill();if(c.earthCandidate&&Math.hypot(x-ex,y-ey)<35){ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=3;ctx.arc(ex,ey,28,0,Math.PI*2);ctx.stroke();}if(labelCount<8&&!p.passed){ctx.fillStyle="#dfe9f8";ctx.font="11px system-ui";ctx.fillText(`${shortId(c.id)} ${c.impactClass}`,x+8,y-7);labelCount++;}ctx.restore();}}
+function drawSide(time){const{ctx,w,h}=setupCanvas("sideCanvas");ctx.fillStyle="#020817";ctx.fillRect(0,0,w,h);drawStars(ctx,w,h,STATE.starsSide);const sx=w*.12,ex=w*.73,y=h*.54,len=ex-sx;ctx.strokeStyle="rgba(89,155,228,.20)";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(sx,y);ctx.lineTo(w*.94,y);ctx.stroke();drawSun2D(ctx,sx,y,Math.min(w,h)*.075);drawEarth2D(ctx,ex,y,Math.min(w,h)*.034);ctx.fillStyle="#dfeaff";ctx.font="bold 13px system-ui";ctx.fillText("SUN",sx-17,y+58);ctx.fillText("EARTH",ex-25,y+40);ctx.fillStyle="#99b1cd";ctx.font="12px system-ui";ctx.fillText("Side View / CME passes beyond Earth",16,25);let idx=0;for(const c of STATE.cmes.filter(x=>x.earthCandidate).slice(0,14)){const p=progression(c,time);if(!p)continue;const lane=y-115+(idx%8)*29,drawX=sx+len*p.f,col=classColor(c.impactClass),rr=15+num(c.halfAngle,25)*.50;ctx.save();ctx.globalAlpha=p.alpha;ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(sx,lane);ctx.lineTo(drawX,lane);ctx.stroke();ctx.lineWidth=Math.min(14,Math.max(3,num(c.halfAngle,25)/4));ctx.beginPath();ctx.arc(drawX,lane,rr,-.95,.95);ctx.stroke();ctx.globalAlpha*=.25;ctx.lineWidth=2;ctx.beginPath();ctx.arc(drawX,lane,rr+10,-.95,.95);ctx.stroke();ctx.globalAlpha=p.alpha;ctx.fillStyle=col;ctx.beginPath();ctx.arc(drawX,lane,5,0,Math.PI*2);ctx.fill();if(!p.passed){ctx.fillStyle="#dfe9f8";ctx.font="11px system-ui";ctx.fillText(`${shortId(c.id)} ${Math.round(p.f*100)}%`,drawX+9,lane-6);}else{ctx.fillStyle="#8ea7c7";ctx.font="10px system-ui";ctx.fillText(`passed +${Math.round(p.postFrac*POST_PASS_HOURS)}h`,drawX+8,lane-5);}ctx.restore();idx++;}}
+function updateTimeline(){const h=Number(document.getElementById("timeSlider").value),t=new Date(STATE.timelineStart.getTime()+h*3600e3);STATE.selectedTime=t;const off=h-72,w=getBackgroundWindSpeedFromWSA(t);document.getElementById("timeLabel").innerHTML=`<b>${formatTime(t)}</b> / now ${off>=0?"+":""}${off}h / background ${Math.round(w??STATE.env.speed)} km/s`;drawTop(t);drawSide(t);update3D(t);}
+function playTimeline(){stopTimeline();STATE.timer=setInterval(()=>{const s=document.getElementById("timeSlider");let v=Number(s.value)+1;if(v>Number(s.max))v=0;s.value=v;updateTimeline();},260);}
+function stopTimeline(){if(STATE.timer)clearInterval(STATE.timer);STATE.timer=null;}
+function stepTimeline(d){const s=document.getElementById("timeSlider");s.value=clamp(Number(s.value)+d,Number(s.min),Number(s.max));updateTimeline();}
+function toggleFullscreen(id){const el=document.getElementById(id);if(document.fullscreenElement)document.exitFullscreen();else el?.requestFullscreen?.();}
+function switchMode(m){STATE.mode=m;document.getElementById("mode2d").style.display=m==="2d"?"block":"none";document.getElementById("mode3d").style.display=m==="3d"?"block":"none";document.getElementById("btnMode2d").classList.toggle("active",m==="2d");document.getElementById("btnMode3d").classList.toggle("active",m==="3d");if(m==="3d"){init3D();setTimeout(()=>{resize3D();update3D(STATE.selectedTime);},60);}else updateTimeline();}
+
+/* ============================== 3D ============================== */
+function makeCanvasTexture(kind){const c=document.createElement("canvas");c.width=512;c.height=256;const x=c.getContext("2d");if(kind==="sun"){const g=x.createRadialGradient(220,90,10,256,128,250);g.addColorStop(0,"#fffbd0");g.addColorStop(.18,"#ffd95e");g.addColorStop(.62,"#ff8c1b");g.addColorStop(1,"#b53000");x.fillStyle=g;x.fillRect(0,0,c.width,c.height);for(let i=0;i<650;i++){x.fillStyle=`rgba(255,${130+Math.floor(Math.random()*110)},20,${.05+Math.random()*.18})`;x.beginPath();x.arc(Math.random()*512,Math.random()*256,1+Math.random()*9,0,Math.PI*2);x.fill();}}else{const g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,"#1f76cb");g.addColorStop(.5,"#0d5faf");g.addColorStop(1,"#083e7e");x.fillStyle=g;x.fillRect(0,0,512,256);x.fillStyle="#3fa95d";for(let i=0;i<18;i++){x.beginPath();x.ellipse(Math.random()*512,40+Math.random()*180,18+Math.random()*45,8+Math.random()*26,Math.random()*Math.PI,0,Math.PI*2);x.fill();}x.strokeStyle="rgba(255,255,255,.50)";x.lineWidth=2;for(let i=0;i<14;i++){x.beginPath();x.moveTo(0,Math.random()*256);for(let px=0;px<=512;px+=32)x.lineTo(px,80+Math.random()*120);x.stroke();}}return new THREE.CanvasTexture(c);}
+function glowSprite(color){const c=document.createElement("canvas");c.width=c.height=128;const x=c.getContext("2d"),g=x.createRadialGradient(64,64,4,64,64,64);g.addColorStop(0,color);g.addColorStop(.2,color);g.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=g;x.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c),m=new THREE.SpriteMaterial({map:t,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}),s=new THREE.Sprite(m);return s;}
+function init3D(){if(STATE.three.ready)return;if(!window.THREE){document.getElementById("error3d").style.display="flex";return;}const box=document.getElementById("threeContainer"),scene=new THREE.Scene();scene.background=new THREE.Color(0x020713);scene.fog=new THREE.FogExp2(0x020713,.0035);const camera=new THREE.PerspectiveCamera(46,box.clientWidth/box.clientHeight,.1,1000);camera.position.set(28,36,86);const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setSize(box.clientWidth,box.clientHeight);renderer.outputEncoding=THREE.sRGBEncoding;renderer.shadowMap.enabled=true;box.insertBefore(renderer.domElement,box.firstChild);const controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.06;controls.target.set(27,0,0);controls.minDistance=28;controls.maxDistance=170;
+const ambient=new THREE.AmbientLight(0x2d5d95,.65);scene.add(ambient);const sunLight=new THREE.PointLight(0xffb347,3.4,240,1.25);sunLight.position.set(-34,0,0);scene.add(sunLight);
+const sunTex=makeCanvasTexture("sun"),sunMat=new THREE.MeshBasicMaterial({map:sunTex}),sun=new THREE.Mesh(new THREE.SphereGeometry(8.5,64,64),sunMat);sun.position.set(-34,0,0);scene.add(sun);const sg=glowSprite("rgba(255,145,20,1)");sg.position.copy(sun.position);sg.scale.set(29,29,1);scene.add(sg);
+const earthTex=makeCanvasTexture("earth"),earthMat=new THREE.MeshPhongMaterial({map:earthTex,shininess:14,specular:0x2255aa}),earth=new THREE.Mesh(new THREE.SphereGeometry(3.1,64,64),earthMat);earth.position.set(34,0,0);scene.add(earth);const eg=glowSprite("rgba(62,157,255,.75)");eg.position.copy(earth.position);eg.scale.set(10,10,1);scene.add(eg);
+const atmosphere=new THREE.Mesh(new THREE.SphereGeometry(3.35,48,48),new THREE.MeshBasicMaterial({color:0x7ec8ff,transparent:true,opacity:.10,side:THREE.BackSide,blending:THREE.AdditiveBlending}));atmosphere.position.copy(earth.position);scene.add(atmosphere);
+const points=[];for(let i=0;i<1700;i++){const r=80+Math.random()*260,th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);points.push(r*Math.sin(ph)*Math.cos(th),r*Math.cos(ph),r*Math.sin(ph)*Math.sin(th));}const geom=new THREE.BufferGeometry();geom.setAttribute("position",new THREE.Float32BufferAttribute(points,3));const stars=new THREE.Points(geom,new THREE.PointsMaterial({color:0xddeeff,size:.38,sizeAttenuation:true,transparent:true,opacity:.9}));scene.add(stars);
+const orbitMat=new THREE.LineDashedMaterial({color:0x23598e,dashSize:1,gapSize:1,transparent:true,opacity:.45}),orbitGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-34,0,0),new THREE.Vector3(34,0,0),new THREE.Vector3(65,0,0)]),orbit=new THREE.Line(orbitGeo,orbitMat);orbit.computeLineDistances();scene.add(orbit);
+const cmeGroup=new THREE.Group();scene.add(cmeGroup);STATE.three={ready:true,scene,camera,renderer,controls,sun,earth,cmeGroup,starPoints:stars,clock:new THREE.Clock()};animate3D();update3D(STATE.selectedTime);}
+function make3DCME(c,p,index){const col=new THREE.Color(classColor(c.impactClass)),group=new THREE.Group(),angle=c.coordType==="heliographic"?-num(c.lon)*Math.PI/180:(90-num(c.pa))*Math.PI/180,dist=68*p.f,x=-34+Math.cos(angle)*dist,z=Math.sin(angle)*dist*.65,y=c.coordType==="heliographic"?num(c.lat)*.10:0;group.position.set(x,y,z);const shellR=2.2+num(c.halfAngle,25)*.10,geo=new THREE.SphereGeometry(shellR,24,14,0,Math.PI*2,0,Math.PI*.52),mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.20*p.alpha,wireframe:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}),shell=new THREE.Mesh(geo,mat);shell.rotation.z=Math.PI/2;shell.rotation.y=-angle;group.add(shell);const ring=new THREE.Mesh(new THREE.TorusGeometry(shellR*.72,.08,8,36),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.72*p.alpha,blending:THREE.AdditiveBlending}));ring.rotation.y=Math.PI/2-angle;group.add(ring);const core=new THREE.Mesh(new THREE.SphereGeometry(.55,18,18),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.95*p.alpha}));group.add(core);group.userData={id:c.id,passed:p.passed};return group;}
+function update3D(time){if(!STATE.three.ready)return;const g=STATE.three.cmeGroup;while(g.children.length)g.remove(g.children[0]);let active=0,passed=0;for(const [i,c] of STATE.cmes.filter(x=>x.earthCandidate).slice(0,18).entries()){const p=progression(c,time);if(!p)continue;g.add(make3DCME(c,p,i));active++;if(p.passed)passed++;}STATE.three.earth.rotation.y+=.02;STATE.three.sun.rotation.y+=.006;document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Earth-directed total: ${STATE.cmes.filter(c=>c.earthCandidate).length}<br>Solar wind: ${Math.round(STATE.env.speed)} km/s`;}
+function animate3D(){if(!STATE.three.ready)return;requestAnimationFrame(animate3D);const t=STATE.three;const dt=t.clock.getDelta();t.sun.rotation.y+=dt*.035;t.earth.rotation.y+=dt*.14;t.starPoints.rotation.y+=dt*.002;t.controls.update();t.renderer.render(t.scene,t.camera);}
+function resize3D(){if(!STATE.three.ready)return;const box=document.getElementById("threeContainer"),t=STATE.three;t.camera.aspect=box.clientWidth/box.clientHeight;t.camera.updateProjectionMatrix();t.renderer.setSize(box.clientWidth,box.clientHeight);}
+function set3DCamera(mode){if(!STATE.three.ready)init3D();if(!STATE.three.ready)return;const c=STATE.three.camera,k=STATE.three.controls;if(mode==="top")c.position.set(0,96,0.1);else if(mode==="side")c.position.set(27,4,90);else c.position.set(42,36,82);k.target.set(15,0,0);k.update();}
+window.addEventListener("resize",()=>{if(STATE.mode==="2d")updateTimeline();else resize3D();});
+document.addEventListener("fullscreenchange",()=>setTimeout(()=>{if(STATE.mode==="3d")resize3D();else updateTimeline();},100));
+setInterval(()=>{document.getElementById("utcClock").textContent=new Date().toISOString().replace("T"," ").slice(0,19)+" UTC";},1000);
+
+STATE.starsTop=generateStars(260);STATE.starsSide=generateStars(300);renderSourcePanel();initTimeline();renderSummary();renderEvents();updateTimeline();
 </script>
 </body>
 </html>
