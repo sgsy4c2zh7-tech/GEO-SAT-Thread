@@ -1,85 +1,70 @@
 {
-  "updated_at": "2026-09-16T17:08:25Z",
-  "keep_days": 31,
+  "updated_at": "2026-09-16T18:55:45Z",
   "products": {
     "wind": {
       "ok": true,
-      "new_records": 3428,
-      "existing_records": 2635,
-      "merged_records": 2844,
+      "new_records": 3420,
+      "merged_records": 2973,
       "used_urls": [
         {
           "url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json",
-          "records": 3428
+          "records": 3420
         }
       ],
-      "errors": [
-        {
-          "url": "https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json",
-          "error": "404 Client Error: Not Found for url: https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json"
-        },
-        {
-          "url": "https://services.swpc.noaa.gov/products/solar-wind/plasma-3-day.json",
-          "error": "404 Client Error: Not Found for url: https://services.swpc.noaa.gov/products/solar-wind/plasma-3-day.json"
-        }
+      "errors": [],
+      "legacy_sources_merged": [
+        "docs/data/noaa-wind/history.json",
+        "docs/data/noaa_wind_history.json"
       ],
       "coverage": {
-        "count": 2844,
-        "days": 1.249,
+        "count": 2973,
+        "days": 1.324,
         "start": "2026-09-15T11:04:00Z",
-        "end": "2026-09-16T17:03:00Z"
+        "end": "2026-09-16T18:51:05Z"
       }
     },
     "mag": {
       "ok": true,
-      "new_records": 3435,
-      "existing_records": 2622,
-      "merged_records": 2831,
+      "new_records": 3415,
+      "merged_records": 2962,
       "used_urls": [
         {
           "url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json",
-          "records": 3435
+          "records": 3415
         }
       ],
-      "errors": [
-        {
-          "url": "https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json",
-          "error": "404 Client Error: Not Found for url: https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json"
-        },
-        {
-          "url": "https://services.swpc.noaa.gov/products/solar-wind/mag-3-day.json",
-          "error": "404 Client Error: Not Found for url: https://services.swpc.noaa.gov/products/solar-wind/mag-3-day.json"
-        }
+      "errors": [],
+      "legacy_sources_merged": [
+        "docs/data/noaa-imf/history.json",
+        "docs/data/noaa_imf_history.json"
       ],
       "coverage": {
-        "count": 2831,
-        "days": 1.243,
+        "count": 2962,
+        "days": 1.319,
         "start": "2026-09-15T11:13:00Z",
-        "end": "2026-09-16T17:03:00Z"
+        "end": "2026-09-16T18:52:03Z"
       }
     },
     "kp": {
       "ok": true,
-      "new_records": 61,
-      "existing_records": 731,
-      "merged_records": 247,
+      "new_records": 62,
+      "merged_records": 733,
       "used_urls": [
         {
           "url": "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json",
-          "records": 61
+          "records": 62
         }
       ],
-      "errors": [
-        {
-          "url": "https://services.swpc.noaa.gov/products/noaa-estimated-planetary-k-index-1-minute.json",
-          "error": "404 Client Error: Not Found for url: https://services.swpc.noaa.gov/products/noaa-estimated-planetary-k-index-1-minute.json"
-        }
+      "errors": [],
+      "legacy_sources_merged": [
+        "docs/data/noaa-kp/history.json",
+        "docs/data/noaa_kp_history.json"
       ],
       "coverage": {
-        "count": 247,
-        "days": 30.75,
-        "start": "2026-08-16T18:00:00Z",
-        "end": "2026-09-16T12:00:00Z"
+        "count": 733,
+        "days": 91.625,
+        "start": "2026-06-17T00:00:00Z",
+        "end": "2026-09-16T15:00:00Z"
       }
     }
   }
