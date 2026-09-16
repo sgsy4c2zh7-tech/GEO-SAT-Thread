@@ -195,7 +195,7 @@ button.stop{background:linear-gradient(180deg,#b72d40,#781b2a);border-color:rgba
   <div id="mode3d">
     <section class="card viewCard" id="threeViewCard">
       <div class="panelHeader">
-        <div><div class="panelTitle">3D CME Model <span class="chip">WebGL / Three.js</span></div><div class="panelSub">Sun・雲付きEarth・磁気圏・CME shellを3D表示。ドラッグ回転 / ホイールズーム。</div></div>
+        <div><div class="panelTitle">3D CME Model <span class="chip">WebGL / Three.js</span></div><div class="panelSub">Procedural Sun・雲付きEarth・磁気圏・CME shellを3D表示。太陽表面はgranulation / sunspot / limb darkening / coronaを再現。ドラッグ回転 / ホイールズーム。</div></div>
         <div class="viewTools">
           <button onclick="set3DCamera('top')">Top</button>
           <button onclick="set3DCamera('side')">Side</button>
@@ -288,7 +288,61 @@ function renderEvents(){const a=STATE.cmes.filter(c=>c.earthCandidate).slice(0,1
 function generateStars(n){return Array.from({length:n},()=>({x:Math.random(),y:Math.random(),r:.3+Math.random()*1.4,a:.15+Math.random()*.8}));}
 function setupCanvas(id){const c=document.getElementById(id),r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);const ctx=c.getContext("2d");ctx.setTransform(d,0,0,d,0,0);return{ctx,w:r.width,h:r.height};}
 function drawStars(ctx,w,h,s){for(const p of s){ctx.beginPath();ctx.fillStyle=`rgba(255,255,255,${p.a})`;ctx.arc(p.x*w,p.y*h,p.r,0,Math.PI*2);ctx.fill();}}
-function drawSun2D(ctx,x,y,r){const glow=ctx.createRadialGradient(x,y,r*.3,x,y,r*2.3);glow.addColorStop(0,"rgba(255,186,57,.55)");glow.addColorStop(.45,"rgba(255,117,18,.18)");glow.addColorStop(1,"rgba(255,80,0,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,r*2.3,0,Math.PI*2);ctx.fill();const g=ctx.createRadialGradient(x-r*.28,y-r*.30,r*.05,x,y,r);g.addColorStop(0,"#fff7ba");g.addColorStop(.3,"#ffd35a");g.addColorStop(.72,"#ff8a24");g.addColorStop(1,"#f35b0c");ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();for(let i=0;i<16;i++){const a=i/16*Math.PI*2,rr=r*(.2+.6*Math.random());ctx.fillStyle=`rgba(255,245,170,${.05+Math.random()*.10})`;ctx.beginPath();ctx.arc(x+Math.cos(a)*rr*.55,y+Math.sin(a)*rr*.55,r*(.05+Math.random()*.08),0,Math.PI*2);ctx.fill();}}
+let SUN2D_CACHE=null;
+function buildSun2DTexture(){
+  if(SUN2D_CACHE)return SUN2D_CACHE;
+  const c=document.createElement("canvas");c.width=c.height=768;
+  const g=c.getContext("2d");
+  let seed=246813579;
+  const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+  const cx=384,cy=384,R=360;
+  const base=g.createRadialGradient(cx-70,cy-95,15,cx,cy,R);
+  base.addColorStop(0,"#fff7bd");base.addColorStop(.20,"#ffe06a");base.addColorStop(.48,"#ffad24");base.addColorStop(.74,"#ff6e0c");base.addColorStop(1,"#b72b00");
+  g.fillStyle=base;g.fillRect(0,0,c.width,c.height);
+  g.save();g.beginPath();g.arc(cx,cy,R,0,Math.PI*2);g.clip();
+  // Photospheric granulation: many small hot/cool cells, fixed seed to avoid frame flicker.
+  for(let i=0;i<6200;i++){
+    const a=rnd()*Math.PI*2,rr=Math.sqrt(rnd())*R*.98,px=cx+Math.cos(a)*rr,py=cy+Math.sin(a)*rr;
+    const hot=rnd(),rad=1.2+rnd()*7.5;
+    g.fillStyle=hot>.56?`rgba(255,244,155,${.025+rnd()*.16})`:`rgba(120,20,0,${.018+rnd()*.095})`;
+    g.beginPath();g.arc(px,py,rad,0,Math.PI*2);g.fill();
+  }
+  // Fine fibrils / supergranulation.
+  for(let j=0;j<210;j++){
+    const yy=35+rnd()*700;g.strokeStyle=`rgba(255,231,135,${.035+rnd()*.085})`;g.lineWidth=.5+rnd()*1.5;
+    g.beginPath();let py=yy;
+    for(let px=-20;px<790;px+=12){py+=(rnd()-.5)*11;if(px<0)g.moveTo(px,py);else g.lineTo(px,py);}g.stroke();
+  }
+  // Active regions / bright plages with dark sunspots.
+  const AR=[[280,278,1.0],[474,365,.86],[360,505,.72],[540,225,.62],[205,430,.55]];
+  for(const [ax,ay,sc] of AR){
+    const halo=g.createRadialGradient(ax,ay,2,ax,ay,70*sc);halo.addColorStop(0,"rgba(255,255,205,.55)");halo.addColorStop(.38,"rgba(255,194,58,.18)");halo.addColorStop(1,"rgba(255,110,0,0)");g.fillStyle=halo;g.beginPath();g.arc(ax,ay,70*sc,0,Math.PI*2);g.fill();
+    const spots=2+Math.floor(rnd()*4);
+    for(let k=0;k<spots;k++){const sx=ax+(rnd()-.5)*38*sc,sy=ay+(rnd()-.5)*28*sc;g.fillStyle=`rgba(86,17,2,${.45+rnd()*.35})`;g.beginPath();g.ellipse(sx,sy,(4+rnd()*8)*sc,(2.4+rnd()*5)*sc,rnd()*Math.PI,0,Math.PI*2);g.fill();}
+  }
+  g.restore();
+  // Limb darkening + thin chromosphere rim.
+  const limb=g.createRadialGradient(cx,cy,R*.60,cx,cy,R);limb.addColorStop(0,"rgba(0,0,0,0)");limb.addColorStop(.73,"rgba(110,25,0,.03)");limb.addColorStop(.94,"rgba(95,15,0,.17)");limb.addColorStop(1,"rgba(55,5,0,.38)");g.fillStyle=limb;g.beginPath();g.arc(cx,cy,R,0,Math.PI*2);g.fill();
+  g.strokeStyle="rgba(255,210,92,.90)";g.lineWidth=5;g.beginPath();g.arc(cx,cy,R-2,0,Math.PI*2);g.stroke();
+  SUN2D_CACHE=c;return c;
+}
+function drawSun2D(ctx,x,y,r){
+  ctx.save();
+  // Multi-layer corona.
+  let glow=ctx.createRadialGradient(x,y,r*.80,x,y,r*2.8);glow.addColorStop(0,"rgba(255,185,60,.28)");glow.addColorStop(.38,"rgba(255,123,22,.18)");glow.addColorStop(.70,"rgba(255,85,5,.055)");glow.addColorStop(1,"rgba(255,80,0,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,r*2.8,0,Math.PI*2);ctx.fill();
+  // Corona streamers.
+  ctx.translate(x,y);
+  for(let i=0;i<22;i++){
+    const a=i*Math.PI*2/22 + (i%2)*.08;ctx.save();ctx.rotate(a);const L=r*(1.35+(i%5)*.11),W=r*(.08+(i%3)*.025);const cg=ctx.createLinearGradient(r*.72,0,L,0);cg.addColorStop(0,"rgba(255,211,104,.20)");cg.addColorStop(.45,"rgba(255,151,45,.075)");cg.addColorStop(1,"rgba(255,105,20,0)");ctx.fillStyle=cg;ctx.beginPath();ctx.moveTo(r*.74,-W);ctx.quadraticCurveTo(L*.72,-W*.35,L,0);ctx.quadraticCurveTo(L*.72,W*.35,r*.74,W);ctx.closePath();ctx.fill();ctx.restore();
+  }
+  ctx.translate(-x,-y);
+  const tex=buildSun2DTexture();ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.clip();ctx.drawImage(tex,x-r,y-r,r*2,r*2);ctx.restore();
+  // Thin prominences hugging the limb.
+  ctx.strokeStyle="rgba(255,137,35,.72)";ctx.lineWidth=Math.max(1.2,r*.025);
+  const arcs=[[-.9,.42,.52],[.25,.36,.60],[1.85,.30,.44],[2.70,.38,.55]];
+  for(const [a,span,h] of arcs){const px=x+Math.cos(a)*r*.90,py=y+Math.sin(a)*r*.90;ctx.beginPath();ctx.arc(px,py,r*h,a-span,a+span);ctx.stroke();}
+  ctx.restore();
+}
 function drawEarth2D(ctx,x,y,r){const glow=ctx.createRadialGradient(x,y,r,x,y,r*1.8);glow.addColorStop(0,"rgba(77,164,255,.42)");glow.addColorStop(1,"rgba(30,100,255,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,r*1.8,0,Math.PI*2);ctx.fill();const g=ctx.createRadialGradient(x-r*.25,y-r*.3,1,x,y,r);g.addColorStop(0,"#9fe6ff");g.addColorStop(.4,"#2d9cff");g.addColorStop(1,"#0b357d");ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.clip();ctx.fillStyle="#4db76a";ctx.beginPath();ctx.ellipse(x-r*.17,y-r*.1,r*.28,r*.14,.45,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(x+r*.13,y+r*.14,r*.23,r*.12,-.3,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(255,255,255,.75)";ctx.lineWidth=1.2;for(let i=-1;i<2;i++){ctx.beginPath();ctx.arc(x,y+i*r*.25,r*.75,0,Math.PI*1.6);ctx.stroke();}ctx.restore();ctx.strokeStyle="#aee8ff";ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();}
 function progression(c,time){const total=c.arrival.date-c.t0;if(total<=0)return null;const elapsed=time-c.t0,post=POST_PASS_HOURS*3600e3;if(elapsed<0||elapsed>total+post)return null;if(elapsed<=total)return{f:elapsed/total,alpha:1,passed:false,postFrac:0};const q=(elapsed-total)/post;return{f:1+q*.45,alpha:1-q*.78,passed:true,postFrac:q};}
 function drawTop(time){const{ctx,w,h}=setupCanvas("topCanvas");ctx.fillStyle="#020817";ctx.fillRect(0,0,w,h);drawStars(ctx,w,h,STATE.starsTop);const sx=w*.18,sy=h*.53,ex=w*.80,ey=h*.53,len=ex-sx;ctx.strokeStyle="rgba(89,155,228,.18)";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();for(let i=1;i<6;i++){const x=sx+len*i/5;ctx.beginPath();ctx.moveTo(x,sy-9);ctx.lineTo(x,sy+9);ctx.stroke();}drawSun2D(ctx,sx,sy,Math.min(w,h)*.085);drawEarth2D(ctx,ex,ey,Math.min(w,h)*.038);ctx.fillStyle="#dfeaff";ctx.font="bold 13px system-ui";ctx.fillText("SUN",sx-17,sy+62);ctx.fillText("EARTH",ex-24,ey+44);ctx.fillStyle="#99b1cd";ctx.font="12px system-ui";ctx.fillText("Top View / hit angle visible",16,25);const showMiss=document.getElementById("showMissTop")?.checked??true;let labelCount=0;for(const c of STATE.cmes.filter(x=>showMiss||x.earthCandidate).slice(0,22)){const p=progression(c,time);if(!p)continue;let ang=0;if(c.coordType==="heliographic")ang=-num(c.lon)*Math.PI/180;else if(c.coordType==="pa")ang=(90-num(c.pa))*Math.PI/180;const color=classColor(c.impactClass),x=sx+Math.cos(ang)*len*p.f,y=sy+Math.sin(ang)*len*.48*p.f,rr=18+num(c.halfAngle,25)*.65;ctx.save();ctx.globalAlpha=p.alpha*(c.earthCandidate?1:.34);ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=c.earthCandidate?2.4:1.2;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(x,y);ctx.stroke();ctx.globalAlpha*=.18;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(x,y-rr*.55);ctx.arc(x,y,rr,ang-.65,ang+.65);ctx.closePath();ctx.fill();ctx.globalAlpha=p.alpha;ctx.beginPath();ctx.arc(x,y,5.5,0,Math.PI*2);ctx.fill();if(c.earthCandidate&&Math.hypot(x-ex,y-ey)<35){ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=3;ctx.arc(ex,ey,28,0,Math.PI*2);ctx.stroke();}if(labelCount<8&&!p.passed){ctx.fillStyle="#dfe9f8";ctx.font="11px system-ui";ctx.fillText(`${shortId(c.id)} ${c.impactClass}`,x+8,y-7);labelCount++;}ctx.restore();}}
@@ -389,6 +443,76 @@ function makeCanvasTexture(kind){
   t.wrapS=THREE.RepeatWrapping;
   t.needsUpdate=true;
   return t;
+}
+
+function createSolarShaderMaterial(){
+  return new THREE.ShaderMaterial({
+    uniforms:{uTime:{value:0}},
+    vertexShader:`
+      varying vec2 vUv;
+      varying vec3 vNormalV;
+      varying vec3 vViewDir;
+      void main(){
+        vUv=uv;
+        vec4 mv=modelViewMatrix*vec4(position,1.0);
+        vNormalV=normalize(normalMatrix*normal);
+        vViewDir=normalize(-mv.xyz);
+        gl_Position=projectionMatrix*mv;
+      }
+    `,
+    fragmentShader:`
+      precision highp float;
+      uniform float uTime;
+      varying vec2 vUv;
+      varying vec3 vNormalV;
+      varying vec3 vViewDir;
+      float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);}
+      float noise(vec2 p){
+        vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+        return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);
+      }
+      float fbm(vec2 p){float v=0.0,a=.52;mat2 m=mat2(1.6,1.2,-1.2,1.6);for(int i=0;i<6;i++){v+=a*noise(p);p=m*p+.17;a*=.48;}return v;}
+      void main(){
+        vec2 uv=vUv;
+        float t=uTime;
+        // Differential rotation / advection gives a slow living photosphere.
+        vec2 p=vec2(uv.x*13.0+t*.013*(.7+uv.y*.5),uv.y*8.0-t*.006);
+        float broad=fbm(p*.62);
+        float fine=fbm(p*2.15+vec2(t*.011,-t*.008));
+        float cells=smoothstep(.34,.82,fine);
+        float lanes=smoothstep(.48,.74,fbm(p*3.7+7.3));
+        float active=pow(smoothstep(.63,.90,fbm(vec2(uv.x*4.8-t*.004,uv.y*3.4)+12.0)),2.0);
+        float micro=noise(p*11.0+t*.035);
+        vec3 deep=vec3(.90,.075,.003);
+        vec3 orange=vec3(1.00,.29,.008);
+        vec3 gold=vec3(1.00,.62,.055);
+        vec3 hot=vec3(1.00,.92,.46);
+        float tex=clamp(.18+.52*broad+.33*cells-.12*lanes+.08*micro,0.0,1.0);
+        vec3 col=mix(deep,orange,smoothstep(.08,.56,tex));
+        col=mix(col,gold,smoothstep(.48,.82,tex));
+        col=mix(col,hot,active*.72);
+        // Sunspot-like dark knots inside some active belts.
+        float spots=smoothstep(.79,.90,fbm(vec2(uv.x*8.0+t*.002,uv.y*5.5)+31.0))*active;
+        col*=1.0-spots*.58;
+        float facing=clamp(dot(normalize(vNormalV),normalize(vViewDir)),0.0,1.0);
+        float limb=pow(facing,.38);
+        col*=.50+.58*limb;
+        // Hot chromosphere at the extreme rim.
+        float rim=pow(1.0-facing,5.0);
+        col+=vec3(1.0,.22,.015)*rim*.35;
+        gl_FragColor=vec4(col,1.0);
+      }
+    `
+  });
+}
+
+function createCoronaShellMaterial(color,opacity,power){
+  return new THREE.ShaderMaterial({
+    transparent:true,depthWrite:false,side:THREE.BackSide,blending:THREE.AdditiveBlending,
+    uniforms:{uColor:{value:new THREE.Color(color)},uOpacity:{value:opacity},uPower:{value:power},uTime:{value:0}},
+    vertexShader:`varying vec3 vN;varying vec3 vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`,
+    fragmentShader:`precision highp float;uniform vec3 uColor;uniform float uOpacity;uniform float uPower;uniform float uTime;varying vec3 vN;varying vec3 vV;void main(){float f=pow(1.0-abs(dot(normalize(vN),normalize(vV))),uPower);float pulse=.88+.12*sin(uTime*.55);gl_FragColor=vec4(uColor,f*uOpacity*pulse);}`
+  });
 }
 
 function glowSprite(color){
@@ -521,30 +645,43 @@ function init3D(){
   const hemi=new THREE.HemisphereLight(0x5088c7,0x05080e,.34);scene.add(hemi);
   const sunLight=new THREE.PointLight(0xffc06a,4.2,300,1.1);sunLight.position.set(-34,0,0);sunLight.castShadow=true;scene.add(sunLight);
 
-  // --- Sun ---
-  const sunTex=makeCanvasTexture("sun");
-  const sunMat=new THREE.MeshBasicMaterial({map:sunTex});
-  const sun=new THREE.Mesh(new THREE.SphereGeometry(8.7,80,64),sunMat);
+  // --- Sun: procedural photosphere + chromosphere + layered corona ---
+  const sunMat=createSolarShaderMaterial();
+  const sun=new THREE.Mesh(new THREE.SphereGeometry(8.7,128,96),sunMat);
   sun.position.set(-34,0,0);scene.add(sun);
 
-  const sunAtmos=new THREE.Mesh(
-    new THREE.SphereGeometry(9.45,48,40),
-    new THREE.MeshBasicMaterial({color:0xff7a1a,transparent:true,opacity:.085,side:THREE.BackSide,blending:THREE.AdditiveBlending,depthWrite:false})
-  );
+  const chromoMat=createCoronaShellMaterial(0xff7b19,.34,2.8);
+  const sunAtmos=new THREE.Mesh(new THREE.SphereGeometry(9.12,72,56),chromoMat);
   sunAtmos.position.copy(sun.position);scene.add(sunAtmos);
 
-  const sg1=glowSprite("rgba(255,160,45,1)");sg1.position.copy(sun.position);sg1.scale.set(33,33,1);scene.add(sg1);
-  const sg2=glowSprite("rgba(255,92,14,.55)");sg2.position.copy(sun.position);sg2.scale.set(45,45,1);sg2.material.opacity=.48;scene.add(sg2);
+  const coronaMaterials=[
+    createCoronaShellMaterial(0xffa13c,.22,1.55),
+    createCoronaShellMaterial(0xff7b20,.12,1.25),
+    createCoronaShellMaterial(0xffc96a,.065,.95)
+  ];
+  const coronaShells=[];
+  [9.8,10.7,12.0].forEach((rr,i)=>{
+    const sh=new THREE.Mesh(new THREE.SphereGeometry(rr,64,48),coronaMaterials[i]);
+    sh.position.copy(sun.position);scene.add(sh);coronaShells.push(sh);
+  });
 
-  // Solar prominence loops
-  const loopMat=new THREE.MeshBasicMaterial({color:0xffa03d,transparent:true,opacity:.22,blending:THREE.AdditiveBlending,depthWrite:false});
+  const sg1=glowSprite("rgba(255,177,55,1)");sg1.position.copy(sun.position);sg1.scale.set(34,34,1);sg1.material.opacity=.67;scene.add(sg1);
+  const sg2=glowSprite("rgba(255,91,14,.55)");sg2.position.copy(sun.position);sg2.scale.set(49,49,1);sg2.material.opacity=.34;scene.add(sg2);
+  const sg3=glowSprite("rgba(255,210,105,.35)");sg3.position.copy(sun.position);sg3.scale.set(61,61,1);sg3.material.opacity=.16;scene.add(sg3);
+
+  // Prominence arcs: partial loops attached near the limb, not full decorative rings.
   const sunLoops=[];
-  for(let i=0;i<4;i++){
-    const loop=new THREE.Mesh(new THREE.TorusGeometry(10.2+i*.45,.055,8,96),loopMat.clone());
-    loop.position.copy(sun.position);
-    loop.rotation.set(.5+i*.35,.25+i*.65,.15+i*.4);
-    loop.scale.set(1,.72,1);
-    scene.add(loop);sunLoops.push(loop);
+  const promSpecs=[
+    {r:10.0,t:.075,arc:Math.PI*1.02,rot:[.22,.72,.32],op:.42},
+    {r:10.25,t:.060,arc:Math.PI*.82,rot:[1.03,.18,.88],op:.34},
+    {r:9.95,t:.055,arc:Math.PI*.70,rot:[.58,1.62,.12],op:.30},
+    {r:10.35,t:.048,arc:Math.PI*.58,rot:[1.30,.92,1.18],op:.25},
+    {r:10.10,t:.042,arc:Math.PI*.52,rot:[.18,2.30,.76],op:.22}
+  ];
+  for(const sp of promSpecs){
+    const mat=new THREE.MeshBasicMaterial({color:0xff9c38,transparent:true,opacity:sp.op,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
+    const loop=new THREE.Mesh(new THREE.TorusGeometry(sp.r,sp.t,10,120,sp.arc),mat);
+    loop.position.copy(sun.position);loop.rotation.set(sp.rot[0],sp.rot[1],sp.rot[2]);scene.add(loop);sunLoops.push(loop);
   }
 
   // --- Earth ---
@@ -586,7 +723,7 @@ function init3D(){
   const orbit=new THREE.Line(orbitGeo,orbitMat);orbit.computeLineDistances();scene.add(orbit);
 
   const cmeGroup=new THREE.Group();scene.add(cmeGroup);
-  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunAtmos,sunGlows:[sg1,sg2],sunLoops,earth,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock()};
+  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,coronaShells,earth,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock()};
   animate3D();update3D(STATE.selectedTime);
 }
 
@@ -631,14 +768,17 @@ function animate3D(){
   if(!STATE.three.ready)return;
   requestAnimationFrame(animate3D);
   const t=STATE.three,dt=t.clock.getDelta(),elapsed=t.clock.elapsedTime;
-  t.sun.rotation.y+=dt*.040;
-  if(t.sunAtmos)t.sunAtmos.rotation.y-=dt*.018;
+  t.sun.rotation.y+=dt*.026;
+  if(t.sunMaterial?.uniforms?.uTime)t.sunMaterial.uniforms.uTime.value=elapsed;
+  if(t.sunAtmos){t.sunAtmos.rotation.y-=dt*.010;if(t.sunAtmos.material?.uniforms?.uTime)t.sunAtmos.material.uniforms.uTime.value=elapsed;}
+  if(t.coronaShells)t.coronaShells.forEach((sh,i)=>{sh.rotation.y+=dt*(.003+i*.0015);if(sh.material?.uniforms?.uTime)sh.material.uniforms.uTime.value=elapsed+i*.8;});
   if(t.sunGlows){
-    const pulse=1+Math.sin(elapsed*1.8)*.035;
-    t.sunGlows[0].scale.set(33*pulse,33*pulse,1);
-    t.sunGlows[1].scale.set(45*(1+Math.sin(elapsed*1.1)*.025),45*(1+Math.sin(elapsed*1.1)*.025),1);
+    const pulse=1+Math.sin(elapsed*1.28)*.018;
+    t.sunGlows[0].scale.set(34*pulse,34*pulse,1);
+    const p2=1+Math.sin(elapsed*.83+.7)*.016;t.sunGlows[1].scale.set(49*p2,49*p2,1);
+    const p3=1+Math.sin(elapsed*.51+1.4)*.012;t.sunGlows[2].scale.set(61*p3,61*p3,1);
   }
-  if(t.sunLoops)t.sunLoops.forEach((l,i)=>{l.rotation.z+=dt*(.010+i*.003);});
+  if(t.sunLoops)t.sunLoops.forEach((l,i)=>{l.rotation.z+=dt*(.0025+i*.0007);l.material.opacity=(.20+.18*(.5+.5*Math.sin(elapsed*(.32+i*.05)+i)))*(1-i*.08);});
   t.earth.rotation.y+=dt*.12;
   if(t.clouds)t.clouds.rotation.y+=dt*.155;
   if(t.atmosphere)t.atmosphere.rotation.y-=dt*.015;
