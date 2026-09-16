@@ -97,7 +97,7 @@ button.stop{background:linear-gradient(180deg,#b72d40,#781b2a);border-color:rgba
 .toolbar{display:flex;gap:8px;flex-wrap:wrap}.toggleBox{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.toggleBox label{font-size:12px;color:#bdd1e9;background:rgba(8,31,60,.72);border:1px solid rgba(63,136,213,.28);border-radius:999px;padding:7px 10px}
 .sourceGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px}.sourceCard{border:1px solid rgba(57,132,214,.28);border-radius:12px;padding:10px;background:rgba(4,16,35,.56)}.sourceTitle{font-size:13px;font-weight:900}.sourceStatus{font-size:12px;font-weight:900;margin-top:5px}.ok{color:#72e7a8}.bad{color:#ff7289}.loading{color:#ffd66a}.small{font-size:12px;color:var(--muted);line-height:1.55}
 .timelineRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.timelineRow input[type=range]{flex:1;min-width:240px}.timeLabel{font-size:12px;color:#d6e6fa}
-.metricGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:12px}@media(max-width:900px){.metricGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.metricGrid{grid-template-columns:1fr}}
+.metricGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-top:12px}@media(max-width:900px){.metricGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.metricGrid{grid-template-columns:1fr}}
 .metric{border:1px solid rgba(64,139,218,.30);border-radius:13px;background:rgba(6,23,45,.72);padding:11px}.metric .label{font-size:11px;color:#86a8cf}.metric .value{font-size:21px;font-weight:900;margin-top:3px}.metric .sub{font-size:11px;color:#93afd0;margin-top:4px}
 .viewGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:1120px){.viewGrid{grid-template-columns:1fr}}
 .viewCard:fullscreen{background:#020713;padding:12px}.viewCard:fullscreen .scene2d{height:calc(100vh - 95px)}.viewCard:fullscreen .threeScene{height:calc(100vh - 95px)}
@@ -140,7 +140,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 .modelStrip{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;background:#f8fbfe;border-top:1px solid #d5e1ec}
 .modelChip{border:1px solid #c8d8e6;background:#fff;border-radius:999px;padding:6px 10px;font-size:11px;color:#47637e}
 .windPanel{margin-top:14px}.windGraphWrap{height:360px;position:relative;background:#fff}.windGraphWrap canvas{position:absolute;inset:0;width:100%;height:100%}
-.windStats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;padding:12px 14px;background:#f8fbfe;border-top:1px solid #d5e1ec}
+.windStats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;padding:12px 14px;background:#f8fbfe;border-top:1px solid #d5e1ec}
 .windStat{background:#fff;border:1px solid #d1dfeb;border-radius:10px;padding:10px}.windStat .k{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#7690a8}.windStat .v{font-size:19px;font-weight:900;color:#183752;margin-top:4px}
 .event{background:#f9fbfd;border-color:#cfdeeb}.eventName{color:#17324f}.event .small{color:#5d7894}
 @media(max-width:1100px){.controlsGrid{grid-template-columns:1fr}.speedHud{position:absolute;width:260px}.windStats{grid-template-columns:repeat(2,minmax(0,1fr))}.threeScene{height:680px}}
@@ -170,6 +170,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
           <button onclick="loadSwiftWind()">SWIFT Wind</button>
           <button class="active" onclick="loadAll()">全部取得</button>
           <button class="ghost" onclick="rebuildAll()">再計算</button>
+          <button class="excel" id="excelMonthlyBtn" onclick="downloadMonthlyExcel()">Excel（月次）</button>
         </div>
         <div class="toggleBox">
           <label><input id="useCactusHazard" type="checkbox" onchange="rebuildAll()"> CACTus広幅/haloを到達候補化</label>
@@ -228,7 +229,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 
   <section class="card windPanel">
     <div class="panelHeader">
-      <div><div class="panelTitle">Solar Wind Speed Timeline</div><div class="panelSub">過去27日 NOAA実測 + 今後3日 SWIFT Wind AI予報。3Dアニメーション時刻の縦線が同期します。</div></div>
+      <div><div class="panelTitle">Solar Wind Speed Timeline</div><div class="panelSub">過去27日 NOAA実測 + 今後3日 SWIFT Wind AI予報。実測のピーク/谷を保持したジグザグ表示。3Dアニメーション時刻の縦線が同期します。</div></div>
       <div class="viewTools"><button class="ghost" onclick="toggleFullscreen('windPanelCard')" style="display:none">⛶</button></div>
     </div>
     <div class="windGraphWrap"><canvas id="windGraph"></canvas></div>
@@ -248,6 +249,7 @@ const DONKI_INDEX=dataCandidates("donki/index.json");
 const WSA_INDEX=dataCandidates("wsa/index.json");
 const CACTUS_INDEX=dataCandidates("cactus/index.json");
 const SWIFT_WIND_LATEST=dataCandidates("swift-wind/latest.json");
+const REPORT_INDEX_CANDIDATES=["./reports/index.json","./docs/reports/index.json"];
 const NOAA_WIND_HISTORY=[...dataCandidates("noaa/wind_history.json"),...dataCandidates("noaa_wind_history.json"),...dataCandidates("noaa-wind/history.json")];
 const DONKI_LON_POSITIVE_WEST=true;
 const NOAA={
@@ -273,7 +275,7 @@ const POST_PASS_HOURS=36;
 const STATE={
   sources:{donkiCache:src("DONKI Cache","未取得"),donkiAnalysis:src("DONKI CMEAnalysis","未取得"),donkiCME:src("DONKI CME","未取得"),wsa:src("WSA Wind","未取得"),cactus:src("CACTus","未取得"),noaaWind:src("NOAA Wind","未取得"),noaaMag:src("NOAA IMF","未取得"),noaaKp:src("NOAA Kp","未取得"),swiftWind:src("SWIFT Wind AI","未取得")},
   donkiPayloads:[],wsaModel:null,cactusEvents:[],env:defaultEnv(),cmes:[],timelineCenter:new Date(),timelineStart:new Date(),timelineEnd:new Date(),selectedTime:new Date(),timer:null,
-  windObserved:[],windForecast:[],windVersion:0,propagationCache:new Map(),mode:"3d",
+  windObserved:[],windForecast:[],windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,propagationCache:new Map(),mode:"3d",
   three:{ready:false,scene:null,camera:null,renderer:null,controls:null,sun:null,earth:null,cmeGroup:null,starPoints:null,clock:null,parkerGroup:null,windParticles:null,windSpeed:425,impactStrength:0}
 };
 function src(label,status){return{label,status,data:null,time:null,error:null};}
@@ -343,6 +345,32 @@ function normalizeWindPayload(payload,mode="auto"){
   return out.sort((a,b)=>a._t-b._t);
 }
 function mergeWind(a,b){const m=new Map();for(const r of [...(a||[]),...(b||[])])m.set(Math.round(r._t/60000),r);return[...m.values()].sort((x,y)=>x._t-y._t);}
+
+function finiteOrNull(v){const n=Number(v);return Number.isFinite(n)?n:null;}
+function updateWindAccuracyFromPayload(obj){
+  if(!obj||typeof obj!=="object")return;
+  const v24=obj.verification?.last_24h?.enhanced || obj.last_24h?.enhanced || obj.accuracy?.last_24h?.enhanced || null;
+  const hit=finiteOrNull(v24?.hit_rate_50kms ?? obj.enhanced_hit_rate_50 ?? obj.enhanced_accuracy_score ?? obj.accuracy?.enhanced_hit_rate_50);
+  const count=finiteOrNull(v24?.count ?? obj.count ?? obj.accuracy?.count);
+  if(hit!==null)STATE.windAccuracy50=hit;
+  if(count!==null)STATE.windAccuracyCount=Math.max(0,Math.round(count));
+  STATE.windAccuracyWindow="24h";
+}
+async function loadReportIndex(){
+  if(STATE.reportIndex)return STATE.reportIndex;
+  try{const got=await fetchJsonAny(REPORT_INDEX_CANDIDATES);STATE.reportIndex=got.data;return STATE.reportIndex;}catch(_){return null;}
+}
+async function downloadMonthlyExcel(){
+  const btn=document.getElementById("excelMonthlyBtn");const old=btn?.textContent;if(btn)btn.textContent="Excel確認中...";
+  try{
+    const idx=await loadReportIndex();
+    const ym=new Date().toISOString().slice(0,7);
+    let url=idx?.current_month_url || idx?.monthly_latest_url || idx?.latest_url || idx?.latest_docs_url || `./reports/swift_space_weather_${ym}.xlsx`;
+    if(url.startsWith("./docs/reports/"))url="./reports/"+url.slice("./docs/reports/".length);
+    const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";a.download="";document.body.appendChild(a);a.click();a.remove();
+  }catch(e){alert(`Excelを開けませんでした: ${e.message}`);}finally{if(btn)btn.textContent=old||"Excel（月次）";}
+}
+
 async function loadSwiftWind(){
   setSource("swiftWind","LOADING...");
   let latestObj=null,latestUrl="",historyObj=null;
@@ -350,6 +378,7 @@ async function loadSwiftWind(){
   try{historyObj=(await fetchJsonAny(NOAA_WIND_HISTORY)).data;}catch(_){ }
   if(historyObj)STATE.windObserved=mergeWind(STATE.windObserved,normalizeWindPayload(historyObj,"observed"));
   if(latestObj){
+    updateWindAccuracyFromPayload(latestObj);
     const recs=Array.isArray(latestObj.records)?latestObj.records:[];
     const fc=Array.isArray(latestObj.forecast)?latestObj.forecast:[];
     STATE.windObserved=mergeWind(STATE.windObserved,normalizeWindPayload(recs,"auto").filter(x=>x.kind==="observed"));
@@ -395,7 +424,17 @@ function parseCactus(list,env){const out=[];for(const e of list||[]){const t0=ne
 function sourceRank(c){if(c.type==="DONKI"&&c.arrival?.source==="ENLIL")return 6;if(c.type==="DONKI")return 5;if(c.type==="CACTus")return 1;return 0;}
 function dedupe(a){const out=[];for(const c of [...a].sort((x,y)=>sourceRank(y)-sourceRank(x))){const near=out.find(m=>Math.abs(m.t0-c.t0)<3*3600e3&&m.type===c.type);if(!near)out.push(c);}return out;}
 function rebuildAll(){STATE.propagationCache.clear();STATE.env=parseEnvironment(STATE.sources.noaaWind.data,STATE.sources.noaaMag.data,STATE.sources.noaaKp.data);let ev=[];if(Array.isArray(STATE.sources.donkiAnalysis.data))ev.push(...STATE.sources.donkiAnalysis.data.map(x=>parseDonkiAnalysis(x,STATE.env)));if(Array.isArray(STATE.sources.donkiCME.data))ev.push(...parseDonkiCME(STATE.sources.donkiCME.data,STATE.env));ev.push(...parseCactus(STATE.cactusEvents,STATE.env));let merged=dedupe(ev);if((document.getElementById("strictDonkiOnly")?.checked??true)&&merged.some(c=>c.type==="DONKI"&&c.earthCandidate))merged=merged.map(c=>c.type==="CACTus"?{...c,earthCandidate:false,impactClass:"CACTUS-REFERENCE",arrivalScore:0}:c);STATE.cmes=merged.sort((a,b)=>(b.earthCandidate-a.earthCandidate)||sourceRank(b)-sourceRank(a)||(b.arrivalScore-a.arrivalScore));renderSummary();renderEvents();updateTimeline();}
-function renderSummary(){const hits=STATE.cmes.filter(c=>c.earthCandidate),best=hits[0],ws=windStateAt(STATE.selectedTime||new Date());document.getElementById("summaryCards").innerHTML=`<div class="metric"><div class="label">Earth-directed</div><div class="value">${hits.length}</div><div class="sub">CME candidates</div></div><div class="metric"><div class="label">Top event</div><div class="value">${best?esc(best.impactClass):"-"}</div><div class="sub">${best?esc(shortId(best.id)):"No hit"}</div></div><div class="metric"><div class="label">Solar wind @ sim time</div><div class="value">${Math.round(ws.speed)} km/s</div><div class="sub">${esc(ws.source)}</div></div><div class="metric"><div class="label">Kp / Bz</div><div class="value">${num(STATE.env.kp).toFixed(1)} / ${num(STATE.env.bz).toFixed(1)}</div><div class="sub">Current environment</div></div>`;}
+function renderSummary(){
+  const hits=STATE.cmes.filter(c=>c.earthCandidate),best=hits[0],ws=windStateAt(STATE.selectedTime||new Date());
+  const acc=Number.isFinite(STATE.windAccuracy50)?`${STATE.windAccuracy50.toFixed(1)}%`:"--";
+  const accSub=Number.isFinite(STATE.windAccuracy50)?`±50 km/s / last ${STATE.windAccuracyWindow} / n=${STATE.windAccuracyCount}`:"SWIFT verification waiting";
+  document.getElementById("summaryCards").innerHTML=`
+    <div class="metric"><div class="label">Earth-directed</div><div class="value">${hits.length}</div><div class="sub">CME candidates</div></div>
+    <div class="metric"><div class="label">Top event</div><div class="value">${best?esc(best.impactClass):"-"}</div><div class="sub">${best?esc(shortId(best.id)):"No hit"}</div></div>
+    <div class="metric"><div class="label">Solar wind @ sim time</div><div class="value">${Math.round(ws.speed)} km/s</div><div class="sub">${esc(ws.source)}</div></div>
+    <div class="metric"><div class="label">Wind accuracy ±50</div><div class="value">${acc}</div><div class="sub">${accSub}</div></div>
+    <div class="metric"><div class="label">Kp / Bz</div><div class="value">${num(STATE.env.kp).toFixed(1)} / ${num(STATE.env.bz).toFixed(1)}</div><div class="sub">Current environment</div></div>`;
+}
 function renderEvents(){const a=STATE.cmes.filter(c=>c.earthCandidate).slice(0,12),box=document.getElementById("eventList");if(!a.length){box.innerHTML='<div class="small">Earth-directed CMEなし。データを読み込んでください。</div>';return;}box.innerHTML=a.map(c=>{const cls=c.impactClass==="CORE-HIT"?"core":c.impactClass==="BODY-HIT"?"body":c.impactClass==="FLANK-HIT"?"flank":c.impactClass==="ENLIL-HIT"?"enlil":String(c.impactClass).startsWith("CACTUS")?"cactus":"miss",m=getPropagationModel(c);return`<div class="event"><div class="eventHead"><div class="eventName">${esc(shortId(c.id))}</div><span class="tag ${cls}">${esc(c.impactClass)}</span></div><div class="small" style="margin-top:6px">Launch: ${formatTime(c.t0)}<br>DBM ETA: <b>${m.earthArrival?formatTime(m.earthArrival.time):"-"}</b><br>DBM speed @ Earth: <b>${m.earthArrival?Math.round(m.earthArrival.v):0} km/s</b><br>DONKI/ENLIL ETA: ${formatTime(c.arrival.date)}<br>Initial speed: ${Math.round(c.effectiveSpeed||c.speed)} km/s / Half angle: ${num(c.halfAngle).toFixed(1)}°</div></div>`;}).join("");}
 function generateStars(n){return Array.from({length:n},()=>({x:Math.random(),y:Math.random(),r:.3+Math.random()*1.4,a:.15+Math.random()*.8}));}
 function setupCanvas(id){const c=document.getElementById(id),r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);const ctx=c.getContext("2d");ctx.setTransform(d,0,0,d,0,0);return{ctx,w:r.width,h:r.height};}
@@ -497,24 +536,43 @@ function cmeDirection(c){const lon=(c.coordType==="heliographic"?-num(c.lon):(90
 function sceneDistanceForR(rKm){return((rKm-DBM.r0Km)/(AU_KM-DBM.r0Km))*SCENE.span;}
 function parkerAngleDeg(v){return OMEGA_PARKER*((AU_KM-DBM.r0Km)/Math.max(250,v))*180/Math.PI;}
 
-function downsampleSeries(a,maxN=1300){if(a.length<=maxN)return a;const step=a.length/maxN,out=[];for(let i=0;i<maxN;i++){out.push(a[Math.min(a.length-1,Math.floor(i*step))]);}return out;}
+function extremaDownsample(series,maxPoints=2200){
+  if(series.length<=maxPoints)return series;
+  const bucket=Math.ceil(series.length/Math.max(1,Math.floor(maxPoints/2))),out=[];
+  for(let i=0;i<series.length;i+=bucket){
+    const part=series.slice(i,Math.min(series.length,i+bucket));if(!part.length)continue;
+    let lo=part[0],hi=part[0];for(const p of part){if(p.speed<lo.speed)lo=p;if(p.speed>hi.speed)hi=p;}
+    if(lo._t<=hi._t){out.push(lo);if(hi!==lo)out.push(hi);}else{out.push(hi);if(hi!==lo)out.push(lo);}
+  }
+  return out.sort((a,b)=>a._t-b._t);
+}
 function drawWindGraph(){
   const canvas=document.getElementById("windGraph");if(!canvas)return;const{ctx,w,h}=setupCanvas("windGraph");
   ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);const pad={l:58,r:22,t:24,b:42},now=Date.now(),x0=now-27*86400e3,x1=now+3*86400e3;
-  const obs=downsampleSeries(STATE.windObserved.filter(r=>r._t>=x0&&r._t<=now),1200),fc=downsampleSeries(STATE.windForecast.filter(r=>r._t>=now-3600e3&&r._t<=x1),500),vals=[...obs,...fc].map(r=>r.speed).filter(Number.isFinite);
+  // Keep local minima/maxima instead of uniform thinning so real NOAA variability remains visibly jagged.
+  const obs=extremaDownsample(STATE.windObserved.filter(r=>r._t>=x0&&r._t<=now),2400);
+  const fc=STATE.windForecast.filter(r=>r._t>=now-3600e3&&r._t<=x1);
+  const vals=[...obs,...fc].map(r=>r.speed).filter(Number.isFinite);
   let ymin=250,ymax=850;if(vals.length){ymin=Math.max(200,Math.floor((Math.min(...vals)-60)/50)*50);ymax=Math.min(1200,Math.ceil((Math.max(...vals)+60)/50)*50);if(ymax-ymin<250)ymax=ymin+250;}
   const X=t=>pad.l+(t-x0)/(x1-x0)*(w-pad.l-pad.r),Y=v=>pad.t+(ymax-v)/(ymax-ymin)*(h-pad.t-pad.b);
   ctx.strokeStyle="#e2eaf2";ctx.lineWidth=1;ctx.fillStyle="#668099";ctx.font="11px system-ui";
   for(let v=Math.ceil(ymin/100)*100;v<=ymax;v+=100){const y=Y(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillText(String(v),10,y+4);}
   for(let d=-27;d<=3;d+=3){const t=now+d*86400e3,x=X(t);ctx.strokeStyle=d===0?"#8aa0b5":"#eef2f6";ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();ctx.fillStyle="#6f879e";ctx.fillText(d===0?"NOW":`${d>0?"+":""}${d}d`,x-14,h-18);}
-  function line(series,color,dash=[]){if(series.length<2)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=2.2;ctx.setLineDash(dash);ctx.beginPath();series.forEach((r,i)=>{const x=X(r._t),y=Y(r.speed);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.restore();}
-  line(obs,"#1d79bd",[]);line(fc,"#f39a2f",[7,5]);
+  function line(series,color,dash=[],markers=false){if(series.length<2)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=markers?1.9:1.55;ctx.lineJoin="miter";ctx.lineCap="butt";ctx.setLineDash(dash);ctx.beginPath();series.forEach((r,i)=>{const x=X(r._t),y=Y(r.speed);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.setLineDash([]);if(markers){ctx.fillStyle=color;for(const r of series){const x=X(r._t),y=Y(r.speed);ctx.beginPath();ctx.arc(x,y,2.1,0,Math.PI*2);ctx.fill();}}ctx.restore();}
+  line(obs,"#1d79bd",[],false);line(fc,"#f39a2f",[5,3],true);
   for(const c of STATE.cmes.filter(c=>c.earthCandidate)){const m=getPropagationModel(c),t=m.earthArrival?m.earthArrival._t:null;if(!t||t<x0||t>x1)continue;const x=X(t);ctx.strokeStyle="rgba(226,65,79,.50)";ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();ctx.save();ctx.translate(x+3,pad.t+8);ctx.rotate(Math.PI/2);ctx.fillStyle="#b53545";ctx.font="10px system-ui";ctx.fillText(shortId(c.id),0,0);ctx.restore();}
   const st=STATE.selectedTime?.getTime?.()||now;if(st>=x0&&st<=x1){const x=X(st),ws=windStateAt(new Date(st));ctx.strokeStyle="#7b48cc";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();ctx.fillStyle="#7b48cc";ctx.font="bold 11px system-ui";ctx.fillText(`${Math.round(ws.speed)} km/s`,Math.min(w-92,x+6),pad.t+15);}
-  ctx.fillStyle="#24415d";ctx.font="bold 12px system-ui";ctx.fillText("Solar wind speed [km/s]",pad.l,pad.t-7);
-  ctx.fillStyle="#1d79bd";ctx.fillRect(w-255,12,18,3);ctx.fillStyle="#506980";ctx.font="11px system-ui";ctx.fillText("NOAA observed",w-232,16);ctx.strokeStyle="#f39a2f";ctx.setLineDash([6,4]);ctx.beginPath();ctx.moveTo(w-135,13);ctx.lineTo(w-117,13);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle="#506980";ctx.fillText("SWIFT forecast",w-112,16);
-  const ws=windStateAt(STATE.selectedTime||new Date()),pangle=parkerAngleDeg(ws.speed),top=STATE.cmes.filter(c=>c.earthCandidate).map(c=>({c,m:getPropagationModel(c)})).sort((a,b)=>Math.abs((a.m.earthArrival?._t||9e20)-(STATE.selectedTime?.getTime?.()||now))-Math.abs((b.m.earthArrival?._t||9e20)-(STATE.selectedTime?.getTime?.()||now)))[0];
-  document.getElementById("windStats").innerHTML=`<div class="windStat"><div class="k">Simulation wind</div><div class="v">${Math.round(ws.speed)} km/s</div></div><div class="windStat"><div class="k">Wind source</div><div class="v" style="font-size:14px">${esc(ws.source)}</div></div><div class="windStat"><div class="k">Parker angle @ 1 AU</div><div class="v">${pangle.toFixed(1)}°</div></div><div class="windStat"><div class="k">Observed archive</div><div class="v">${STATE.windObserved.length?((STATE.windObserved.at(-1)._t-STATE.windObserved[0]._t)/86400e3).toFixed(1):"0"} d</div></div><div class="windStat"><div class="k">Forecast horizon</div><div class="v">${STATE.windForecast.length?((STATE.windForecast.at(-1)._t-now)/3600e3).toFixed(0):"0"} h</div></div>`;
+  ctx.fillStyle="#24415d";ctx.font="bold 12px system-ui";ctx.fillText("Solar wind speed [km/s] — measured/model points, no curve smoothing",pad.l,pad.t-7);
+  ctx.fillStyle="#1d79bd";ctx.fillRect(w-280,12,18,3);ctx.fillStyle="#506980";ctx.font="11px system-ui";ctx.fillText("NOAA observed",w-257,16);ctx.strokeStyle="#f39a2f";ctx.setLineDash([5,3]);ctx.beginPath();ctx.moveTo(w-155,13);ctx.lineTo(w-137,13);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle="#506980";ctx.fillText("SWIFT forecast",w-132,16);
+  const ws=windStateAt(STATE.selectedTime||new Date()),pangle=parkerAngleDeg(ws.speed);
+  const acc=Number.isFinite(STATE.windAccuracy50)?`${STATE.windAccuracy50.toFixed(1)}%`:"--";
+  document.getElementById("windStats").innerHTML=`
+    <div class="windStat"><div class="k">Simulation wind</div><div class="v">${Math.round(ws.speed)} km/s</div></div>
+    <div class="windStat"><div class="k">Wind source</div><div class="v" style="font-size:14px">${esc(ws.source)}</div></div>
+    <div class="windStat"><div class="k">±50 km/s hit rate</div><div class="v">${acc}</div><div class="small">last 24h / n=${STATE.windAccuracyCount}</div></div>
+    <div class="windStat"><div class="k">Parker angle @ 1 AU</div><div class="v">${pangle.toFixed(1)}°</div></div>
+    <div class="windStat"><div class="k">Observed archive</div><div class="v">${STATE.windObserved.length?((STATE.windObserved.at(-1)._t-STATE.windObserved[0]._t)/86400e3).toFixed(1):"0"} d</div></div>
+    <div class="windStat"><div class="k">Forecast horizon</div><div class="v">${STATE.windForecast.length?((STATE.windForecast.at(-1)._t-now)/3600e3).toFixed(0):"0"} h</div></div>`;
 }
 
 /* ============================== 3D ============================== */
@@ -987,7 +1045,7 @@ window.addEventListener("resize",()=>{resize3D();drawWindGraph();});
 document.addEventListener("fullscreenchange",()=>setTimeout(()=>{resize3D();drawWindGraph();},100));
 setInterval(()=>{document.getElementById("utcClock").textContent=new Date().toISOString().replace("T"," ").slice(0,19)+" UTC";},1000);
 
-renderSourcePanel();initTimeline();init3D();renderSummary();renderEvents();updateTimeline();drawWindGraph();loadAll();
+renderSourcePanel();initTimeline();init3D();renderSummary();renderEvents();updateTimeline();drawWindGraph();loadReportIndex();loadAll();
 </script>
 </body>
 </html>
