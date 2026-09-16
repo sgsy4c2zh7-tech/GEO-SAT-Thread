@@ -1,326 +1,373 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CME Animation</title>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
 
-<!-- Three.js: 3D表示用。CDNが読めない場合でも2Dモードは動作します -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+let scene, camera, renderer, controls;
+let sunGroup, earthGroup, cloudMesh, magnetosphereGroup;
+let cmeGroup;
+let clock = new THREE.Clock();
 
-<style>
-:root{
-  --bg:#030916;
-  --bg2:#07152b;
-  --panel:rgba(8,24,48,.86);
-  --panel2:rgba(11,32,62,.76);
-  --line:#1e78d7;
-  --lineSoft:rgba(70,157,255,.30);
-  --text:#eef7ff;
-  --muted:#9bb8da;
-  --blue:#2f9bff;
-  --blue2:#70c7ff;
-  --cyan:#35d7ff;
-  --green:#36d98b;
-  --yellow:#ffd65a;
-  --orange:#ff9e2c;
-  --red:#ff526f;
-  --purple:#ca62ff;
-  --shadow:0 18px 50px rgba(0,76,170,.22);
+init3D();
+animate3D();
+
+function init3D(){
+  const container = document.getElementById("view3d");
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x020817);
+
+  camera = new THREE.PerspectiveCamera(45, w/h, 0.1, 5000);
+  camera.position.set(0, 120, 320);
+
+  renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  container.innerHTML = "";
+  container.appendChild(renderer.domElement);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.target.set(40, 0, 0);
+
+  // ===== Lights =====
+  const ambient = new THREE.AmbientLight(0x7aa2ff, 0.35);
+  scene.add(ambient);
+
+  const sunLight = new THREE.PointLight(0xffddaa, 3.2, 0, 2);
+  sunLight.position.set(-150, 0, 0);
+  scene.add(sunLight);
+
+  // ===== Star background =====
+  addStarField();
+
+  // ===== Axes line Sun-Earth =====
+  const axisMat = new THREE.LineBasicMaterial({ color:0x35506f, transparent:true, opacity:0.45 });
+  const axisGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-150, 0, 0),
+    new THREE.Vector3(150, 0, 0)
+  ]);
+  const axisLine = new THREE.Line(axisGeo, axisMat);
+  scene.add(axisLine);
+
+  // ===== Sun =====
+  sunGroup = new THREE.Group();
+  sunGroup.position.set(-150, 0, 0);
+  scene.add(sunGroup);
+  createSun();
+
+  // ===== Earth =====
+  earthGroup = new THREE.Group();
+  earthGroup.position.set(120, 0, 0);
+  scene.add(earthGroup);
+  createEarth();
+
+  // ===== Magnetosphere =====
+  magnetosphereGroup = new THREE.Group();
+  magnetosphereGroup.position.copy(earthGroup.position);
+  scene.add(magnetosphereGroup);
+  createMagnetosphere();
+
+  // ===== CME group =====
+  cmeGroup = new THREE.Group();
+  scene.add(cmeGroup);
+
+  // サンプルCME
+  addSampleCME();
+
+  window.addEventListener("resize", onResize3D);
 }
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;min-height:100%;background:var(--bg);color:var(--text)}
-body{
-  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  background:
-    radial-gradient(circle at 76% 8%,rgba(0,122,255,.15),transparent 28%),
-    radial-gradient(circle at 15% 30%,rgba(52,100,255,.10),transparent 35%),
-    linear-gradient(180deg,#041022 0%,#020713 58%,#030916 100%);
-  overflow-x:hidden;
+
+function createSun(){
+  const sunGeo = new THREE.SphereGeometry(28, 64, 64);
+
+  const sunMat = new THREE.MeshStandardMaterial({
+    color: 0xffa020,
+    emissive: 0xff7a00,
+    emissiveIntensity: 2.4,
+    roughness: 0.75,
+    metalness: 0.0
+  });
+
+  const sun = new THREE.Mesh(sunGeo, sunMat);
+  sunGroup.add(sun);
+
+  // outer glow
+  const glowGeo = new THREE.SphereGeometry(34, 48, 48);
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0xffb347,
+    transparent: true,
+    opacity: 0.18,
+    side: THREE.BackSide
+  });
+  const glow = new THREE.Mesh(glowGeo, glowMat);
+  sunGroup.add(glow);
+
+  // corona shell
+  const coronaGeo = new THREE.SphereGeometry(40, 48, 48);
+  const coronaMat = new THREE.MeshBasicMaterial({
+    color: 0xffcc66,
+    transparent: true,
+    opacity: 0.07,
+    side: THREE.BackSide
+  });
+  const corona = new THREE.Mesh(coronaGeo, coronaMat);
+  sunGroup.add(corona);
+
+  sunGroup.userData.sunCore = sun;
+  sunGroup.userData.sunGlow = glow;
+  sunGroup.userData.sunCorona = corona;
 }
-body:before{
-  content:"";position:fixed;inset:0;pointer-events:none;opacity:.30;z-index:-1;
-  background-image:
-    radial-gradient(circle at 8% 18%,#fff 0 1px,transparent 1.5px),
-    radial-gradient(circle at 22% 72%,#fff 0 1px,transparent 1.5px),
-    radial-gradient(circle at 42% 24%,#9fd4ff 0 1px,transparent 1.5px),
-    radial-gradient(circle at 65% 59%,#fff 0 1px,transparent 1.4px),
-    radial-gradient(circle at 84% 22%,#fff 0 1px,transparent 1.4px),
-    radial-gradient(circle at 93% 81%,#91bfff 0 1px,transparent 1.5px);
-  background-size:210px 190px,260px 240px,300px 210px,350px 260px,280px 230px,320px 280px;
+
+function createEarth(){
+  const earthRadius = 14;
+
+  // 地球本体
+  const earthGeo = new THREE.SphereGeometry(earthRadius, 64, 64);
+  const earthMat = new THREE.MeshStandardMaterial({
+    color: 0x2f6fff,
+    roughness: 0.95,
+    metalness: 0.0
+  });
+  const earth = new THREE.Mesh(earthGeo, earthMat);
+  earthGroup.add(earth);
+
+  // 簡易的な大陸っぽいデコ
+  const continentMat = new THREE.MeshStandardMaterial({
+    color: 0x56a04a,
+    roughness: 1.0,
+    metalness: 0.0
+  });
+
+  const patches = [];
+  for(let i=0;i<7;i++){
+    const g = new THREE.SphereGeometry(earthRadius*0.22, 18, 18);
+    const m = continentMat.clone();
+    const patch = new THREE.Mesh(g, m);
+    const theta = Math.random()*Math.PI*2;
+    const phi = Math.random()*Math.PI;
+    const rr = earthRadius*0.92;
+    patch.position.set(
+      Math.sin(phi)*Math.cos(theta)*rr,
+      Math.cos(phi)*rr,
+      Math.sin(phi)*Math.sin(theta)*rr
+    );
+    patch.lookAt(0,0,0);
+    patch.scale.set(1.8, 0.8, 1.2);
+    earth.add(patch);
+    patches.push(patch);
+  }
+
+  // 雲レイヤー
+  const cloudGeo = new THREE.SphereGeometry(earthRadius*1.03, 64, 64);
+  const cloudMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.22,
+    roughness: 1.0,
+    metalness: 0.0
+  });
+  cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
+  earthGroup.add(cloudMesh);
+
+  // 大気グロー
+  const atmoGeo = new THREE.SphereGeometry(earthRadius*1.12, 64, 64);
+  const atmoMat = new THREE.MeshBasicMaterial({
+    color: 0x66c2ff,
+    transparent: true,
+    opacity: 0.12,
+    side: THREE.BackSide
+  });
+  const atmosphere = new THREE.Mesh(atmoGeo, atmoMat);
+  earthGroup.add(atmosphere);
+
+  earthGroup.userData.earth = earth;
+  earthGroup.userData.atmosphere = atmosphere;
 }
-header{
-  position:sticky;top:0;z-index:30;
-  display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;
-  padding:16px 22px;
-  border-bottom:1px solid rgba(47,155,255,.40);
-  background:linear-gradient(180deg,rgba(4,16,36,.96),rgba(4,14,31,.88));
-  backdrop-filter:blur(16px);
-  box-shadow:0 8px 30px rgba(0,0,0,.22);
+
+function createMagnetosphere(){
+  const group = magnetosphereGroup;
+  group.clear();
+
+  // 磁気圏本体（昼側圧縮・夜側長い）
+  const shellMat = new THREE.MeshBasicMaterial({
+    color: 0x68a8ff,
+    transparent: true,
+    opacity: 0.11,
+    side: THREE.DoubleSide,
+    wireframe: false
+  });
+
+  const shellGeo = new THREE.SphereGeometry(34, 64, 64);
+  const shell = new THREE.Mesh(shellGeo, shellMat);
+  shell.scale.set(1.2, 0.82, 0.82);   // 横長ベース
+  shell.position.x = 6;               // 少し夜側にずらす
+  group.add(shell);
+
+  // 夜側マグネトテイル
+  const tailGeo = new THREE.CylinderGeometry(10, 22, 120, 32, 1, true);
+  const tailMat = new THREE.MeshBasicMaterial({
+    color: 0x557dff,
+    transparent: true,
+    opacity: 0.10,
+    side: THREE.DoubleSide
+  });
+  const tail = new THREE.Mesh(tailGeo, tailMat);
+  tail.rotation.z = Math.PI/2;
+  tail.position.x = 55;
+  group.add(tail);
+
+  // bow shock
+  const shockGeo = new THREE.SphereGeometry(48, 48, 48, 0, Math.PI*2, 0.4, 2.3);
+  const shockMat = new THREE.MeshBasicMaterial({
+    color: 0xff8a65,
+    transparent: true,
+    opacity: 0.08,
+    side: THREE.DoubleSide
+  });
+  const shock = new THREE.Mesh(shockGeo, shockMat);
+  shock.rotation.z = Math.PI/2;
+  shock.position.x = -8;
+  group.add(shock);
+
+  // 磁力線ライン
+  for(let i=0;i<8;i++){
+    const lat = -0.85 + i*(1.7/7);
+    const curve = buildDipoleLikeCurve(lat);
+    const pts = curve.getPoints(120);
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineBasicMaterial({
+      color: 0x9ecbff,
+      transparent: true,
+      opacity: 0.55
+    });
+    const line = new THREE.Line(geo, mat);
+    group.add(line);
+  }
 }
-.brand{display:flex;align-items:center;gap:14px}
-.logo{
-  width:48px;height:48px;border-radius:50%;position:relative;
-  background:conic-gradient(from 30deg,#5fdcff,#056fff,#25c6ff,#6d5cff,#5fdcff);
-  box-shadow:0 0 25px rgba(45,175,255,.70);
+
+function buildDipoleLikeCurve(latOffset){
+  const pts = [];
+  for(let t=-Math.PI*0.82; t<=Math.PI*0.82; t+=0.04){
+    const r = 18 + 34*Math.pow(Math.cos(t),2);
+    let x = Math.cos(t)*r;
+    let y = Math.sin(t)*r*0.55 + latOffset*6;
+    let z = latOffset*18;
+    if(x > 0) x *= 1.8;   // 夜側を長く
+    else x *= 0.75;       // 昼側を短く
+    pts.push(new THREE.Vector3(x, y, z));
+  }
+  return new THREE.CatmullRomCurve3(pts);
 }
-.logo:after{content:"";position:absolute;inset:9px;border-radius:50%;background:#061229;box-shadow:inset 0 0 12px rgba(99,217,255,.7)}
-.brand h1{margin:0;font-size:30px;line-height:1.05;letter-spacing:.01em}
-.brand .sub{font-size:11px;color:var(--muted);margin-top:5px;letter-spacing:.09em}
-.headerRight{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.statusPill{border:1px solid rgba(54,217,139,.55);color:#8ff0bc;background:rgba(24,126,83,.15);border-radius:999px;padding:8px 13px;font-size:12px;font-weight:800}
-.statusDot{display:inline-block;width:8px;height:8px;background:var(--green);border-radius:50%;margin-right:7px;box-shadow:0 0 10px var(--green)}
-.utcClock{font-size:12px;color:#b7cae2;border:1px solid rgba(75,144,221,.32);border-radius:10px;padding:8px 11px;background:rgba(9,28,53,.7)}
-main{max-width:1680px;margin:auto;padding:16px}
-.card{
-  border:1px solid rgba(40,139,238,.55);border-radius:19px;
-  background:linear-gradient(180deg,rgba(8,28,56,.88),rgba(4,16,35,.88));
-  box-shadow:var(--shadow);overflow:hidden;
+
+function addStarField(){
+  const geo = new THREE.BufferGeometry();
+  const count = 2400;
+  const arr = new Float32Array(count*3);
+
+  for(let i=0;i<count;i++){
+    arr[i*3+0] = (Math.random()-0.5)*1800;
+    arr[i*3+1] = (Math.random()-0.5)*1000;
+    arr[i*3+2] = (Math.random()-0.5)*1800;
+  }
+
+  geo.setAttribute("position", new THREE.BufferAttribute(arr, 3));
+
+  const mat = new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 1.5,
+    transparent: true,
+    opacity: 0.75
+  });
+
+  const stars = new THREE.Points(geo, mat);
+  scene.add(stars);
 }
-.panelHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid rgba(42,130,223,.28);background:linear-gradient(180deg,rgba(10,37,71,.76),rgba(6,25,49,.42))}
-.panelTitle{font-weight:900;font-size:17px}.panelSub{font-size:12px;color:var(--muted);margin-top:3px}
-.panelBody{padding:14px}
-button{
-  border:1px solid rgba(77,174,255,.45);border-radius:11px;padding:9px 13px;
-  font-weight:800;cursor:pointer;color:#eef8ff;
-  background:linear-gradient(180deg,#1668ba,#0e4b8b);
-  box-shadow:0 7px 18px rgba(0,84,176,.20);
+
+function addSampleCME(){
+  const color = 0xcc66ff;
+
+  const cme = new THREE.Group();
+
+  const waveGeo = new THREE.SphereGeometry(16, 32, 32, -0.45, 0.9, 1.0, 1.1);
+  const waveMat = new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0.35,
+    side: THREE.DoubleSide
+  });
+  const wave = new THREE.Mesh(waveGeo, waveMat);
+  wave.rotation.z = -Math.PI/2;
+  cme.add(wave);
+
+  const coreGeo = new THREE.SphereGeometry(3.4, 24, 24);
+  const coreMat = new THREE.MeshBasicMaterial({ color:0xd580ff });
+  const core = new THREE.Mesh(coreGeo, coreMat);
+  core.position.set(0, 0, 0);
+  cme.add(core);
+
+  cme.position.set(-90, 20, 0);
+  cme.userData.progress = 0;
+  cme.userData.speed = 0.12;
+  cme.userData.passedEarth = false;
+
+  cmeGroup.add(cme);
 }
-button:hover{filter:brightness(1.12)}
-button.active{background:linear-gradient(180deg,#32a9ff,#0872db);box-shadow:0 0 22px rgba(37,163,255,.38)}
-button.ghost{background:rgba(12,37,70,.62);box-shadow:none}
-button.stop{background:linear-gradient(180deg,#b72d40,#781b2a);border-color:rgba(255,85,111,.55)}
-.modeBar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:10px 12px;border:1px solid rgba(54,138,229,.32);border-radius:15px;background:rgba(5,22,45,.72)}
-.modeButtons{display:flex;gap:8px;flex-wrap:wrap}.modeHint{font-size:12px;color:var(--muted)}
-.controlsGrid{display:grid;grid-template-columns:1.3fr .7fr;gap:14px;margin-bottom:14px}@media(max-width:1080px){.controlsGrid{grid-template-columns:1fr}}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap}.toggleBox{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.toggleBox label{font-size:12px;color:#bdd1e9;background:rgba(8,31,60,.72);border:1px solid rgba(63,136,213,.28);border-radius:999px;padding:7px 10px}
-.sourceGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px}.sourceCard{border:1px solid rgba(57,132,214,.28);border-radius:12px;padding:10px;background:rgba(4,16,35,.56)}.sourceTitle{font-size:13px;font-weight:900}.sourceStatus{font-size:12px;font-weight:900;margin-top:5px}.ok{color:#72e7a8}.bad{color:#ff7289}.loading{color:#ffd66a}.small{font-size:12px;color:var(--muted);line-height:1.55}
-.timelineRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.timelineRow input[type=range]{flex:1;min-width:240px}.timeLabel{font-size:12px;color:#d6e6fa}
-.metricGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:12px}@media(max-width:900px){.metricGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.metricGrid{grid-template-columns:1fr}}
-.metric{border:1px solid rgba(64,139,218,.30);border-radius:13px;background:rgba(6,23,45,.72);padding:11px}.metric .label{font-size:11px;color:#86a8cf}.metric .value{font-size:21px;font-weight:900;margin-top:3px}.metric .sub{font-size:11px;color:#93afd0;margin-top:4px}
-.viewGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:1120px){.viewGrid{grid-template-columns:1fr}}
-.viewCard:fullscreen{background:#020713;padding:12px}.viewCard:fullscreen .scene2d{height:calc(100vh - 95px)}.viewCard:fullscreen .threeScene{height:calc(100vh - 95px)}
-.scene2d,.threeScene{height:520px;position:relative;background:#020817;overflow:hidden}.scene2d canvas,#threeContainer canvas{position:absolute;inset:0;width:100%;height:100%;display:block}.threeScene{height:680px}.threeOverlay{position:absolute;z-index:5;inset:0;pointer-events:none}.hudBox{position:absolute;left:14px;bottom:14px;max-width:280px;padding:9px 10px;background:rgba(2,10,24,.72);border:1px solid rgba(68,151,240,.34);border-radius:10px;color:#b9d1ec;font-size:11px;line-height:1.55;backdrop-filter:blur(6px)}
-.viewTools{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.chip{border:1px solid rgba(67,148,235,.28);background:rgba(6,27,52,.65);border-radius:999px;padding:5px 9px;font-size:11px;color:#9fc0e6}.legend{display:flex;flex-wrap:wrap;gap:7px;padding:9px 12px;border-top:1px solid rgba(45,129,218,.25);background:rgba(3,15,32,.68)}.legendItem{font-size:11px;color:#9fb9d9;display:flex;align-items:center;gap:6px}.dot{width:9px;height:9px;border-radius:50%}
-.eventList{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:9px}.event{border:1px solid rgba(61,137,219,.28);border-radius:12px;padding:11px;background:rgba(4,17,36,.60)}.eventHead{display:flex;align-items:center;justify-content:space-between;gap:8px}.eventName{font-size:13px;font-weight:900}.tag{border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900}.tag.core{color:#ff96a7;background:rgba(255,82,111,.15)}.tag.body{color:#ffc56f;background:rgba(255,158,44,.14)}.tag.flank{color:#ffe98a;background:rgba(255,214,90,.12)}.tag.enlil{color:#e29cff;background:rgba(202,98,255,.13)}.tag.cactus{color:#75eaff;background:rgba(53,215,255,.12)}.tag.miss{color:#a9bad1;background:rgba(150,170,196,.10)}
-#mode3d{display:none}.error3d{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:25px;color:#ff9eb0;background:#071428;z-index:9}.camHelp{position:absolute;right:14px;bottom:14px;padding:8px 10px;border:1px solid rgba(63,139,218,.32);border-radius:9px;background:rgba(2,10,24,.70);font-size:11px;color:#a8c0df}
-</style>
-</head>
-<body>
-<header>
-  <div class="brand">
-    <div class="logo"></div>
-    <div><h1>CME Animation</h1><div class="sub">REAL-TIME CME PROPAGATION & EARTH-IMPACT VISUALIZATION</div></div>
-  </div>
-  <div class="headerRight"><div class="statusPill"><span class="statusDot"></span>Visualization Ready</div><div class="utcClock" id="utcClock">UTC --</div></div>
-</header>
 
-<main>
-  <div class="modeBar">
-    <div class="modeButtons">
-      <button id="btnMode2d" class="active" onclick="switchMode('2d')">◉ 2D View</button>
-      <button id="btnMode3d" onclick="switchMode('3d')">⬡ 3D View</button>
-    </div>
-    <div class="modeHint">2D: 上面＋側面 / 3D: 自由回転・Top・Sideカメラ切替。CMEは地球通過後もそのまま進みます。</div>
-  </div>
+function animate3D(){
+  requestAnimationFrame(animate3D);
+  const t = clock.getElapsedTime();
 
-  <div class="controlsGrid">
-    <section class="card">
-      <div class="panelHeader"><div><div class="panelTitle">Data Controls</div><div class="panelSub">DONKI / WSA / CACTus / NOAA</div></div></div>
-      <div class="panelBody">
-        <div class="toolbar">
-          <button onclick="loadDONKICache()">DONKI Cache</button>
-          <button onclick="loadWSA()">WSA</button>
-          <button onclick="loadCACTusCache()">CACTus</button>
-          <button onclick="loadNOAAAll()">NOAA</button>
-          <button class="active" onclick="loadAll()">全部取得</button>
-          <button class="ghost" onclick="rebuildAll()">再計算</button>
-        </div>
-        <div class="toggleBox">
-          <label><input id="showMissTop" type="checkbox" checked onchange="updateTimeline()"> MISSも表示</label>
-          <label><input id="useCactusHazard" type="checkbox" onchange="rebuildAll()"> CACTus広幅/haloを候補化</label>
-          <label><input id="strictDonkiOnly" type="checkbox" checked onchange="rebuildAll()"> DONKI優先</label>
-          <label><input id="mergeSevenDays" type="checkbox" checked onchange="loadDONKICache()"> DONKI保存データ統合</label>
-        </div>
-        <div id="sourcePanel" class="sourceGrid"></div>
-      </div>
-    </section>
+  controls.update();
 
-    <section class="card">
-      <div class="panelHeader"><div><div class="panelTitle">Animation Controls</div><div class="panelSub">現在 -3日 → +5日</div></div></div>
-      <div class="panelBody">
-        <div class="timelineRow">
-          <button onclick="stepTimeline(-1)">◀</button>
-          <button class="active" onclick="playTimeline()">▶</button>
-          <button class="stop" onclick="stopTimeline()">■</button>
-          <button onclick="stepTimeline(1)">▶|</button>
-          <input id="timeSlider" type="range" min="0" max="192" value="72" step="1" oninput="updateTimeline()">
-        </div>
-        <div id="timeLabel" class="timeLabel" style="margin-top:8px"></div>
-        <div class="metricGrid" id="summaryCards"></div>
-      </div>
-    </section>
-  </div>
+  // 太陽アニメーション
+  if(sunGroup){
+    sunGroup.rotation.y += 0.002;
+    const glow = sunGroup.userData.sunGlow;
+    const corona = sunGroup.userData.sunCorona;
+    if(glow) glow.scale.setScalar(1 + Math.sin(t*2.0)*0.02);
+    if(corona) corona.scale.setScalar(1 + Math.sin(t*1.6)*0.04);
+  }
 
-  <div id="mode2d">
-    <div class="viewGrid">
-      <section class="card viewCard" id="topViewCard">
-        <div class="panelHeader">
-          <div><div class="panelTitle">Top View <span class="chip">Earth impact angle</span></div><div class="panelSub">North ecliptic perspective</div></div>
-          <div class="viewTools"><button class="ghost" onclick="toggleFullscreen('topViewCard')">⛶ 全画面</button></div>
-        </div>
-        <div class="scene2d"><canvas id="topCanvas"></canvas></div>
-        <div class="legend">
-          <span class="legendItem"><span class="dot" style="background:#ca62ff"></span>ENLIL-HIT</span>
-          <span class="legendItem"><span class="dot" style="background:#ff526f"></span>CORE-HIT</span>
-          <span class="legendItem"><span class="dot" style="background:#ff9e2c"></span>BODY-HIT</span>
-          <span class="legendItem"><span class="dot" style="background:#ffd65a"></span>FLANK-HIT</span>
-          <span class="legendItem"><span class="dot" style="background:#35d7ff"></span>CACTus</span>
-          <span class="legendItem"><span class="dot" style="background:#91a6bf"></span>MISS</span>
-        </div>
-      </section>
+  // 地球自転
+  if(earthGroup?.userData?.earth){
+    earthGroup.userData.earth.rotation.y += 0.004;
+  }
+  if(cloudMesh){
+    cloudMesh.rotation.y += 0.0055;
+  }
 
-      <section class="card viewCard" id="sideViewCard">
-        <div class="panelHeader">
-          <div><div class="panelTitle">Side View <span class="chip">Propagation</span></div><div class="panelSub">Sun → Earth → downstream</div></div>
-          <div class="viewTools"><button class="ghost" onclick="toggleFullscreen('sideViewCard')">⛶ 全画面</button></div>
-        </div>
-        <div class="scene2d"><canvas id="sideCanvas"></canvas></div>
-        <div class="legend"><span class="legendItem">地球到達後も最大36時間、CME前面をそのまま先へ通過表示します。</span></div>
-      </section>
-    </div>
-  </div>
+  // CME進行
+  cmeGroup.children.forEach(cme=>{
+    cme.userData.progress += cme.userData.speed;
+    cme.position.x += cme.userData.speed;
 
-  <div id="mode3d">
-    <section class="card viewCard" id="threeViewCard">
-      <div class="panelHeader">
-        <div><div class="panelTitle">3D CME Model <span class="chip">WebGL / Three.js</span></div><div class="panelSub">Sun・Earth・CME shellを3D表示。ドラッグ回転 / ホイールズーム。</div></div>
-        <div class="viewTools">
-          <button onclick="set3DCamera('top')">Top</button>
-          <button onclick="set3DCamera('side')">Side</button>
-          <button onclick="set3DCamera('perspective')">Perspective</button>
-          <button class="ghost" onclick="toggleFullscreen('threeViewCard')">⛶ 全画面</button>
-        </div>
-      </div>
-      <div class="threeScene" id="threeContainer">
-        <div class="error3d" id="error3d">Three.js を読み込めませんでした。<br>2Dモードはそのまま利用できます。</div>
-        <div class="threeOverlay"><div class="hudBox" id="threeHud">3D初期化待ち</div><div class="camHelp">Drag: rotate / Wheel: zoom / Right drag: pan</div></div>
-      </div>
-      <div class="legend"><span class="legendItem"><span class="dot" style="background:#ff9e2c"></span>Sun</span><span class="legendItem"><span class="dot" style="background:#3e9dff"></span>Earth</span><span class="legendItem"><span class="dot" style="background:#ca62ff"></span>CME shell</span><span class="legendItem">Earth通過後も+45%先まで進行表示</span></div>
-    </section>
-  </div>
+    // 地球通過後もそのまま通り過ぎる
+    if(cme.position.x > earthGroup.position.x + 30){
+      cme.userData.passedEarth = true;
+    }
 
-  <section class="card" style="margin-top:14px">
-    <div class="panelHeader"><div><div class="panelTitle">Earth-directed CME Events</div><div class="panelSub">到達時刻 / CME速度 / Earth-hit geometry</div></div></div>
-    <div class="panelBody"><div id="eventList" class="eventList"></div></div>
-  </section>
-</main>
+    // 波面拡大
+    cme.scale.setScalar(1 + cme.userData.progress*0.004);
 
-<script>
-const DATA_ROOTS=["./data","./docs/data"];
-function dataCandidates(rel){return DATA_ROOTS.map(r=>`${r}/${rel}`);}
-const DONKI_INDEX=dataCandidates("donki/index.json");
-const WSA_INDEX=dataCandidates("wsa/index.json");
-const CACTUS_INDEX=dataCandidates("cactus/index.json");
-const DONKI_LON_POSITIVE_WEST=true;
-const NOAA={
-  wind:"https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json",
-  windOld:"https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json",
-  mag:"https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json",
-  magOld:"https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json",
-  kp:"https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json",
-  kpAlt:"https://services.swpc.noaa.gov/products/noaa-estimated-planetary-k-index-1-minute.json"
-};
-const AU_KM=149597870,R_SUN_KM=695700;
-const DBM={gamma:.3e-7,r0Km:21.5*R_SUN_KM,targetKm:AU_KM,dtSec:300,maxDays:7};
-const POST_PASS_HOURS=36;
+    // 遠くへ行ったら消す
+    if(cme.position.x > 340){
+      cme.visible = false;
+    }
+  });
 
-const STATE={
-  sources:{donkiCache:src("DONKI Cache","未取得"),donkiAnalysis:src("DONKI CMEAnalysis","未取得"),donkiCME:src("DONKI CME","未取得"),wsa:src("WSA Wind","未取得"),cactus:src("CACTus","未取得"),noaaWind:src("NOAA Wind","未取得"),noaaMag:src("NOAA IMF","未取得"),noaaKp:src("NOAA Kp","未取得")},
-  donkiPayloads:[],wsaModel:null,cactusEvents:[],env:defaultEnv(),cmes:[],timelineCenter:new Date(),timelineStart:new Date(),timelineEnd:new Date(),selectedTime:new Date(),timer:null,
-  starsTop:[],starsSide:[],mode:"2d",
-  three:{ready:false,scene:null,camera:null,renderer:null,controls:null,sun:null,earth:null,cmeGroup:null,starPoints:null,clock:null}
-};
-function src(label,status){return{label,status,data:null,time:null,error:null};}
-function setSource(k,status,data=null,error=null){const s=STATE.sources[k];s.status=status;s.data=data;s.error=error;s.time=new Date();renderSourcePanel();}
-function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
-function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-function num(v,d=0){const n=Number(v);return Number.isFinite(n)?n:d;}
-function formatTime(v){const d=v instanceof Date?v:new Date(v);return Number.isFinite(d.getTime())?d.toISOString().slice(0,16).replace("T"," ")+" UTC":"-";}
-function shortId(id){const s=String(id||"CME");const m=s.match(/CME[-:]?(\d+)/i);return m?`CME${m[1].slice(-6)}`:s.slice(-12);}
-function classColor(c){if(c==="ENLIL-HIT")return"#ca62ff";if(c==="CORE-HIT")return"#ff526f";if(c==="BODY-HIT")return"#ff9e2c";if(c==="FLANK-HIT")return"#ffd65a";if(String(c).startsWith("CACTUS"))return"#35d7ff";return"#91a6bf";}
-function latest(arr){if(!Array.isArray(arr))return{};for(let i=arr.length-1;i>=0;i--){const r=arr[i];if(Array.isArray(r)){if(String(r[0]).toLowerCase().includes("time"))continue;return r;}if(r&&typeof r==="object")return r;}return{};}
-function pick(obj,names){for(const n of names){if(typeof n==="number"&&Array.isArray(obj)){const v=Number(obj[n]);if(Number.isFinite(v))return v;}if(typeof n==="string"&&obj&&obj[n]!==undefined){const v=Number(obj[n]);if(Number.isFinite(v))return v;}}return 0;}
-function defaultEnv(){return{speed:425,density:0,bt:0,by:0,bz:0,kp:0,dynamicPressure:0};}
-function initTimeline(){STATE.timelineCenter=new Date();STATE.timelineStart=new Date(STATE.timelineCenter.getTime()-72*3600e3);STATE.timelineEnd=new Date(STATE.timelineCenter.getTime()+120*3600e3);STATE.selectedTime=new Date(STATE.timelineCenter);const s=document.getElementById("timeSlider");s.value=72;}
-async function fetchJson(url){const sep=url.includes("?")?"&":"?";const r=await fetch(url+sep+"t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error(`HTTP ${r.status}: ${url}`);return await r.json();}
-async function fetchJsonAny(urls){let last="";for(const u of urls){try{return{data:await fetchJson(u),url:u};}catch(e){last=e.message;}}throw new Error(last);}
-function sibling(base,file){return base.replace(/[^/]+$/,String(file));}
+  renderer.render(scene, camera);
+}
 
-function parseEnvironment(wind,mag,kp){const w=latest(wind),b=latest(mag),k=latest(kp);const speed=pick(w,["speed","proton_speed","bulk_speed",2])||425,density=pick(w,["density","proton_density",1])||0,by=pick(b,["by_gsm","by",2])||0,bz=pick(b,["bz_gsm","bz",3])||0,bt=pick(b,["bt","total_field",6])||Math.hypot(by,bz),kpv=pick(k,["kp_index","kp","estimated_kp","Kp",1])||0;return{speed,density,by,bz,bt,kp:kpv,dynamicPressure:density&&speed?1.6726e-6*density*speed*speed:0};}
-async function loadDONKICache(){setSource("donkiCache","LOADING...");try{const got=await fetchJsonAny(DONKI_INDEX),index=got.data;let files=[];if(document.getElementById("mergeSevenDays")?.checked??true)files=(index.files||[]).filter(f=>f.valid!==false&&(f.path||f.file)).slice(0,24);else if(index.latest)files=[{path:sibling(got.url,index.latest)}];const payloads=[];for(const f of files){try{let p=f.path||f.file;if(!/^https?:|^\.\//.test(String(p)))p=sibling(got.url,p);payloads.push({file:p,payload:await fetchJson(p)});}catch(_){}}if(!payloads.length)throw new Error("DONKI cache files could not be loaded");STATE.donkiPayloads=payloads;const analysis=payloads.flatMap(x=>x.payload.sources?.cmeAnalysis?.data||[]),cme=payloads.flatMap(x=>x.payload.sources?.cme?.data||[]);setSource("donkiCache",`OK: ${payloads.length} files`,payloads);setSource("donkiAnalysis",`OK: ${analysis.length}`,analysis);setSource("donkiCME",`OK: ${cme.length}`,cme);rebuildAll();}catch(e){setSource("donkiCache","FAILED",null,e.message);}}
-async function loadWSA(){setSource("wsa","LOADING...");try{const got=await fetchJsonAny(WSA_INDEX),idx=got.data;const latest=idx.latest||"latest.json";const model=await fetchJson(sibling(got.url,latest));const records=(model.records||[]).map(r=>({...r,_t:new Date(r.time).getTime(),speed:Number(r.speed)})).filter(r=>Number.isFinite(r._t)&&Number.isFinite(r.speed)).sort((a,b)=>a._t-b._t);if(!records.length)throw new Error("WSA model has no records");STATE.wsaModel={...model,records};setSource("wsa",`OK: ${records.length} records`,STATE.wsaModel);rebuildAll();}catch(e){STATE.wsaModel=null;setSource("wsa","FAILED",null,e.message);}}
-async function loadCACTusCache(){setSource("cactus","LOADING...");try{const got=await fetchJsonAny(CACTUS_INDEX),idx=got.data;const evs=(idx.events||[]).map((e,i)=>({...e,_t:new Date(e.t0||e.time||e.startTime||Date.now()).getTime(),id:e.id||`CACTus-${i+1}`,pa:Number(e.pa),da:Number(e.da),speed:Number(e.speed||0),halo:e.halo||""})).filter(e=>Number.isFinite(e._t)).sort((a,b)=>b._t-a._t);STATE.cactusEvents=evs;setSource("cactus",`OK: ${evs.length}`,evs);rebuildAll();}catch(e){STATE.cactusEvents=[];setSource("cactus","FAILED",null,e.message);}}
-async function loadNOAAWind(){setSource("noaaWind","LOADING...");try{const d=(await fetchJsonAny([NOAA.wind,NOAA.windOld])).data;setSource("noaaWind",`OK: ${Array.isArray(d)?d.length:1}`,d);rebuildAll();}catch(e){setSource("noaaWind","FAILED",null,e.message);}}
-async function loadNOAAMag(){setSource("noaaMag","LOADING...");try{const d=(await fetchJsonAny([NOAA.mag,NOAA.magOld])).data;setSource("noaaMag",`OK: ${Array.isArray(d)?d.length:1}`,d);rebuildAll();}catch(e){setSource("noaaMag","FAILED",null,e.message);}}
-async function loadNOAAKp(){setSource("noaaKp","LOADING...");try{const d=(await fetchJsonAny([NOAA.kp,NOAA.kpAlt])).data;setSource("noaaKp",`OK: ${Array.isArray(d)?d.length:1}`,d);rebuildAll();}catch(e){setSource("noaaKp","FAILED",null,e.message);}}
-async function loadNOAAAll(){await Promise.allSettled([loadNOAAWind(),loadNOAAMag(),loadNOAAKp()]);rebuildAll();}
-async function loadAll(){await Promise.allSettled([loadDONKICache(),loadWSA(),loadCACTusCache(),loadNOAAWind(),loadNOAAMag(),loadNOAAKp()]);rebuildAll();}
-function renderSourcePanel(){const rows=[["donkiCache","DONKI",loadDONKICache],["wsa","WSA",loadWSA],["cactus","CACTus",loadCACTusCache],["noaaWind","NOAA Wind",loadNOAAWind],["noaaMag","NOAA IMF",loadNOAAMag],["noaaKp","NOAA Kp",loadNOAAKp]];document.getElementById("sourcePanel").innerHTML=rows.map(([k,t,f])=>{const x=STATE.sources[k],cl=x.status.startsWith("OK")?"ok":x.status.startsWith("FAILED")?"bad":x.status.startsWith("LOADING")?"loading":"",tm=x.time?x.time.toISOString().slice(11,19)+" UTC":"-";return`<div class="sourceCard"><div class="sourceTitle">${t}</div><div class="sourceStatus ${cl}">${esc(x.status)}</div><div class="small">${tm}</div>${x.error?`<div class="small bad">${esc(x.error).slice(0,80)}</div>`:""}<button style="margin-top:7px;padding:5px 8px;font-size:10px" onclick="${f.name}()">LOAD</button></div>`;}).join("");}
-function getBackgroundWindSpeedFromWSA(t){const a=STATE.wsaModel?.records||[];if(!a.length)return null;const x=t.getTime();let p=null,n=null;for(const r of a){if(r._t<=x){p=r;continue;}n=r;break;}if(!p&&n)return clamp(n.speed,300,800);if(p&&!n)return clamp(p.speed,300,800);if(!p)return null;const f=(x-p._t)/(n._t-p._t||1);return clamp(p.speed+(n.speed-p.speed)*f,300,800);}
-function angularSeparation(lon,lat){const lo=lon*Math.PI/180,la=lat*Math.PI/180;return Math.acos(clamp(Math.cos(la)*Math.cos(lo),-1,1))*180/Math.PI;}
-function classifyHit(sep,half){const r=half>0?sep/half:999;if(r<=.5)return{earthCandidate:true,impactClass:"CORE-HIT",earthConfidence:.95,speedFactor:1,geometryMultiplier:1,ratio:r};if(r<=.85){const x=(r-.5)/.35;return{earthCandidate:true,impactClass:"BODY-HIT",earthConfidence:.85-.15*x,speedFactor:.95-.1*x,geometryMultiplier:.85-.25*x,ratio:r};}if(r<=1){const x=(r-.85)/.15;return{earthCandidate:true,impactClass:"FLANK-HIT",earthConfidence:.55-.2*x,speedFactor:.8-.2*x,geometryMultiplier:.55-.25*x,ratio:r};}return{earthCandidate:false,impactClass:"MISS",earthConfidence:.02,speedFactor:0,geometryMultiplier:0,ratio:r};}
-function evaluateDonki(lon,lat,half,speed,source){const sep=angularSeparation(lon,lat),c=classifyHit(sep,half);if(source==="ENLIL")return{...c,earthCandidate:true,impactClass:"ENLIL-HIT",earthConfidence:1,speedFactor:Math.max(c.speedFactor,.9),geometryMultiplier:1,angularSeparation:sep,effectiveSpeed:speed};return{...c,angularSeparation:sep,effectiveSpeed:c.earthCandidate?Math.max(250,speed*c.speedFactor):0};}
-function evaluateCactus(pa,da,halo){if(!(document.getElementById("useCactusHazard")?.checked??false))return{earthCandidate:false,impactClass:"CACTUS-REFERENCE",earthConfidence:.05,speedFactor:0,geometryMultiplier:0};if((halo&&halo.length)||da>=270)return{earthCandidate:true,impactClass:"CACTUS-WIDE-HALO",earthConfidence:.4,speedFactor:.7,geometryMultiplier:.35};if(da>=180)return{earthCandidate:true,impactClass:"CACTUS-BROAD",earthConfidence:.22,speedFactor:.55,geometryMultiplier:.2};return{earthCandidate:false,impactClass:"CACTUS-MISS",earthConfidence:.03,speedFactor:0,geometryMultiplier:0};}
-function computeArrival(t0,v0,env){let r=DBM.r0Km,v=clamp(v0||425,250,3000),s=0;while(r<DBM.targetKm&&s<DBM.maxDays*86400){const time=new Date(t0.getTime()+s*1000),w=clamp(getBackgroundWindSpeedFromWSA(time)??env.speed??425,300,800),dv=v-w;v+=(-DBM.gamma*dv*Math.abs(dv))*DBM.dtSec;v=clamp(v,250,3000);r+=v*DBM.dtSec;s+=DBM.dtSec;}const d=new Date(t0.getTime()+s*1000);return{source:STATE.wsaModel?"DBM-lite + WSA":"DBM-lite",date:d,utc:d.toISOString(),arrivalSpeed:Math.round(v),transitHours:s/3600};}
-function parseActivityTime(c){if(c.activityStartTime){const d=new Date(c.activityStartTime);if(Number.isFinite(d.getTime()))return d;}for(const id of [c.activityID,c.associatedCMEID,c.id].filter(Boolean)){const m=String(id).match(/(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})/);if(m)return new Date(`${m[1]}T${m[2]}Z`);}if(c.time21_5)return new Date(c.time21_5);return new Date();}
-function score(speed,half,e,env){if(!e.earthCandidate)return 0;const s=speed>=1700?28:speed>=1200?22:speed>=800?15:8,w=half>=60?20:half>=40?15:half>=25?10:5,boost=(env.kp>=5?5:0)+(env.bz<=-8?6:0);return clamp(Math.round((s+w+boost)*(.65+.45*(e.geometryMultiplier||0))+(e.impactClass==="ENLIL-HIT"?12:0)),0,100);}
-function buildCME(x){return x;}
-function parseDonkiAnalysis(c,env){const lon=DONKI_LON_POSITIVE_WEST?num(c.longitude): -num(c.longitude),lat=num(c.latitude),speed=num(c.speed,500),half=num(c.halfAngle,30),t0=parseActivityTime(c),enlil=Array.isArray(c.enlilList)?c.enlilList.find(x=>x?.estimatedShockArrivalTime):null,pre=enlil?{source:"ENLIL",date:new Date(enlil.estimatedShockArrivalTime),utc:new Date(enlil.estimatedShockArrivalTime).toISOString(),arrivalSpeed:null}:computeArrival(t0,speed,env),earth=evaluateDonki(lon,lat,half,speed,pre.source),arrival=pre.source==="ENLIL"?{...pre,arrivalSpeed:computeArrival(t0,speed,env).arrivalSpeed}:earth.earthCandidate?computeArrival(t0,earth.effectiveSpeed,env):{source:"MISS",date:t0,utc:t0.toISOString(),arrivalSpeed:0};return buildCME({id:c.activityID||c.associatedCMEID||"DONKI",type:"DONKI",coordType:"heliographic",lon,lat,speed,effectiveSpeed:earth.effectiveSpeed||0,halfAngle:half,t0,arrival,arrivalScore:score(speed,half,earth,env),earthCandidate:earth.earthCandidate,earthConfidence:earth.earthConfidence,angularSeparation:earth.angularSeparation,impactClass:earth.impactClass,geometryMultiplier:earth.geometryMultiplier,sources:["DONKI"]});}
-function parseDonkiCME(list,env){const out=[];for(const c of list||[]){for(const a of (Array.isArray(c.cmeAnalyses)?c.cmeAnalyses:[])){out.push(parseDonkiAnalysis({...a,activityID:c.activityID||a.activityID,activityStartTime:c.startTime||a.activityStartTime},env));}}return out;}
-function parseCactus(list,env){const out=[];for(const e of list||[]){const t0=new Date(e.t0||e.time||Date.now()),pa=num(e.pa),da=num(e.da),speed=num(e.speed,500),earth=evaluateCactus(pa,da,e.halo||""),eff=earth.earthCandidate?Math.max(250,speed*earth.speedFactor):0,arr=earth.earthCandidate?computeArrival(t0,eff,env):{source:"REFERENCE",date:t0,utc:t0.toISOString(),arrivalSpeed:0};out.push({id:e.id||"CACTus",type:"CACTus",coordType:"pa",pa,da,halo:e.halo||"",speed,effectiveSpeed:eff,halfAngle:Math.max(15,Math.min(90,da/2||30)),t0,arrival:arr,arrivalScore:earth.earthCandidate?30:0,earthCandidate:earth.earthCandidate,earthConfidence:earth.earthConfidence,impactClass:earth.impactClass,geometryMultiplier:earth.geometryMultiplier,sources:["CACTus"]});}return out;}
-function sourceRank(c){if(c.type==="DONKI"&&c.arrival?.source==="ENLIL")return 6;if(c.type==="DONKI")return 5;if(c.type==="CACTus")return 1;return 0;}
-function dedupe(a){const out=[];for(const c of [...a].sort((x,y)=>sourceRank(y)-sourceRank(x))){const near=out.find(m=>Math.abs(m.t0-c.t0)<3*3600e3&&m.type===c.type);if(!near)out.push(c);}return out;}
-function rebuildAll(){STATE.env=parseEnvironment(STATE.sources.noaaWind.data,STATE.sources.noaaMag.data,STATE.sources.noaaKp.data);let ev=[];if(Array.isArray(STATE.sources.donkiAnalysis.data))ev.push(...STATE.sources.donkiAnalysis.data.map(x=>parseDonkiAnalysis(x,STATE.env)));if(Array.isArray(STATE.sources.donkiCME.data))ev.push(...parseDonkiCME(STATE.sources.donkiCME.data,STATE.env));ev.push(...parseCactus(STATE.cactusEvents,STATE.env));let merged=dedupe(ev);if((document.getElementById("strictDonkiOnly")?.checked??true)&&merged.some(c=>c.type==="DONKI"&&c.earthCandidate))merged=merged.map(c=>c.type==="CACTus"?{...c,earthCandidate:false,impactClass:"CACTUS-REFERENCE",arrivalScore:0}:c);STATE.cmes=merged.sort((a,b)=>(b.earthCandidate-a.earthCandidate)||sourceRank(b)-sourceRank(a)||(b.arrivalScore-a.arrivalScore));renderSummary();renderEvents();updateTimeline();}
-function renderSummary(){const hits=STATE.cmes.filter(c=>c.earthCandidate),best=hits[0];document.getElementById("summaryCards").innerHTML=`<div class="metric"><div class="label">Earth-directed</div><div class="value">${hits.length}</div><div class="sub">CME candidates</div></div><div class="metric"><div class="label">Top event</div><div class="value">${best?esc(best.impactClass):"-"}</div><div class="sub">${best?esc(shortId(best.id)):"No hit"}</div></div><div class="metric"><div class="label">Solar wind</div><div class="value">${Math.round(STATE.env.speed)} km/s</div><div class="sub">NOAA current</div></div><div class="metric"><div class="label">Kp / Bz</div><div class="value">${num(STATE.env.kp).toFixed(1)} / ${num(STATE.env.bz).toFixed(1)}</div><div class="sub">Current environment</div></div>`;}
-function renderEvents(){const a=STATE.cmes.filter(c=>c.earthCandidate).slice(0,12),box=document.getElementById("eventList");if(!a.length){box.innerHTML='<div class="small">Earth-directed CMEなし。データを読み込んでください。</div>';return;}box.innerHTML=a.map(c=>{const cls=c.impactClass==="CORE-HIT"?"core":c.impactClass==="BODY-HIT"?"body":c.impactClass==="FLANK-HIT"?"flank":c.impactClass==="ENLIL-HIT"?"enlil":String(c.impactClass).startsWith("CACTUS")?"cactus":"miss";return`<div class="event"><div class="eventHead"><div class="eventName">${esc(shortId(c.id))}</div><span class="tag ${cls}">${esc(c.impactClass)}</span></div><div class="small" style="margin-top:6px">Start: ${formatTime(c.t0)}<br>Arrival: <b>${formatTime(c.arrival.date)}</b><br>Speed: ${Math.round(c.speed)} → ${Math.round(c.arrival.arrivalSpeed||0)} km/s<br>Half angle: ${num(c.halfAngle).toFixed(1)}°</div></div>`;}).join("");}
-function generateStars(n){return Array.from({length:n},()=>({x:Math.random(),y:Math.random(),r:.3+Math.random()*1.4,a:.15+Math.random()*.8}));}
-function setupCanvas(id){const c=document.getElementById(id),r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);const ctx=c.getContext("2d");ctx.setTransform(d,0,0,d,0,0);return{ctx,w:r.width,h:r.height};}
-function drawStars(ctx,w,h,s){for(const p of s){ctx.beginPath();ctx.fillStyle=`rgba(255,255,255,${p.a})`;ctx.arc(p.x*w,p.y*h,p.r,0,Math.PI*2);ctx.fill();}}
-function drawSun2D(ctx,x,y,r){const glow=ctx.createRadialGradient(x,y,r*.3,x,y,r*2.3);glow.addColorStop(0,"rgba(255,186,57,.55)");glow.addColorStop(.45,"rgba(255,117,18,.18)");glow.addColorStop(1,"rgba(255,80,0,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,r*2.3,0,Math.PI*2);ctx.fill();const g=ctx.createRadialGradient(x-r*.28,y-r*.30,r*.05,x,y,r);g.addColorStop(0,"#fff7ba");g.addColorStop(.3,"#ffd35a");g.addColorStop(.72,"#ff8a24");g.addColorStop(1,"#f35b0c");ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();for(let i=0;i<16;i++){const a=i/16*Math.PI*2,rr=r*(.2+.6*Math.random());ctx.fillStyle=`rgba(255,245,170,${.05+Math.random()*.10})`;ctx.beginPath();ctx.arc(x+Math.cos(a)*rr*.55,y+Math.sin(a)*rr*.55,r*(.05+Math.random()*.08),0,Math.PI*2);ctx.fill();}}
-function drawEarth2D(ctx,x,y,r){const glow=ctx.createRadialGradient(x,y,r,x,y,r*1.8);glow.addColorStop(0,"rgba(77,164,255,.42)");glow.addColorStop(1,"rgba(30,100,255,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,r*1.8,0,Math.PI*2);ctx.fill();const g=ctx.createRadialGradient(x-r*.25,y-r*.3,1,x,y,r);g.addColorStop(0,"#9fe6ff");g.addColorStop(.4,"#2d9cff");g.addColorStop(1,"#0b357d");ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.clip();ctx.fillStyle="#4db76a";ctx.beginPath();ctx.ellipse(x-r*.17,y-r*.1,r*.28,r*.14,.45,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(x+r*.13,y+r*.14,r*.23,r*.12,-.3,0,Math.PI*2);ctx.fill();ctx.strokeStyle="rgba(255,255,255,.75)";ctx.lineWidth=1.2;for(let i=-1;i<2;i++){ctx.beginPath();ctx.arc(x,y+i*r*.25,r*.75,0,Math.PI*1.6);ctx.stroke();}ctx.restore();ctx.strokeStyle="#aee8ff";ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();}
-function progression(c,time){const total=c.arrival.date-c.t0;if(total<=0)return null;const elapsed=time-c.t0,post=POST_PASS_HOURS*3600e3;if(elapsed<0||elapsed>total+post)return null;if(elapsed<=total)return{f:elapsed/total,alpha:1,passed:false,postFrac:0};const q=(elapsed-total)/post;return{f:1+q*.45,alpha:1-q*.78,passed:true,postFrac:q};}
-function drawTop(time){const{ctx,w,h}=setupCanvas("topCanvas");ctx.fillStyle="#020817";ctx.fillRect(0,0,w,h);drawStars(ctx,w,h,STATE.starsTop);const sx=w*.18,sy=h*.53,ex=w*.80,ey=h*.53,len=ex-sx;ctx.strokeStyle="rgba(89,155,228,.18)";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.stroke();for(let i=1;i<6;i++){const x=sx+len*i/5;ctx.beginPath();ctx.moveTo(x,sy-9);ctx.lineTo(x,sy+9);ctx.stroke();}drawSun2D(ctx,sx,sy,Math.min(w,h)*.085);drawEarth2D(ctx,ex,ey,Math.min(w,h)*.038);ctx.fillStyle="#dfeaff";ctx.font="bold 13px system-ui";ctx.fillText("SUN",sx-17,sy+62);ctx.fillText("EARTH",ex-24,ey+44);ctx.fillStyle="#99b1cd";ctx.font="12px system-ui";ctx.fillText("Top View / hit angle visible",16,25);const showMiss=document.getElementById("showMissTop")?.checked??true;let labelCount=0;for(const c of STATE.cmes.filter(x=>showMiss||x.earthCandidate).slice(0,22)){const p=progression(c,time);if(!p)continue;let ang=0;if(c.coordType==="heliographic")ang=-num(c.lon)*Math.PI/180;else if(c.coordType==="pa")ang=(90-num(c.pa))*Math.PI/180;const color=classColor(c.impactClass),x=sx+Math.cos(ang)*len*p.f,y=sy+Math.sin(ang)*len*.48*p.f,rr=18+num(c.halfAngle,25)*.65;ctx.save();ctx.globalAlpha=p.alpha*(c.earthCandidate?1:.34);ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=c.earthCandidate?2.4:1.2;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(x,y);ctx.stroke();ctx.globalAlpha*=.18;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(x,y-rr*.55);ctx.arc(x,y,rr,ang-.65,ang+.65);ctx.closePath();ctx.fill();ctx.globalAlpha=p.alpha;ctx.beginPath();ctx.arc(x,y,5.5,0,Math.PI*2);ctx.fill();if(c.earthCandidate&&Math.hypot(x-ex,y-ey)<35){ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=3;ctx.arc(ex,ey,28,0,Math.PI*2);ctx.stroke();}if(labelCount<8&&!p.passed){ctx.fillStyle="#dfe9f8";ctx.font="11px system-ui";ctx.fillText(`${shortId(c.id)} ${c.impactClass}`,x+8,y-7);labelCount++;}ctx.restore();}}
-function drawSide(time){const{ctx,w,h}=setupCanvas("sideCanvas");ctx.fillStyle="#020817";ctx.fillRect(0,0,w,h);drawStars(ctx,w,h,STATE.starsSide);const sx=w*.12,ex=w*.73,y=h*.54,len=ex-sx;ctx.strokeStyle="rgba(89,155,228,.20)";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(sx,y);ctx.lineTo(w*.94,y);ctx.stroke();drawSun2D(ctx,sx,y,Math.min(w,h)*.075);drawEarth2D(ctx,ex,y,Math.min(w,h)*.034);ctx.fillStyle="#dfeaff";ctx.font="bold 13px system-ui";ctx.fillText("SUN",sx-17,y+58);ctx.fillText("EARTH",ex-25,y+40);ctx.fillStyle="#99b1cd";ctx.font="12px system-ui";ctx.fillText("Side View / CME passes beyond Earth",16,25);let idx=0;for(const c of STATE.cmes.filter(x=>x.earthCandidate).slice(0,14)){const p=progression(c,time);if(!p)continue;const lane=y-115+(idx%8)*29,drawX=sx+len*p.f,col=classColor(c.impactClass),rr=15+num(c.halfAngle,25)*.50;ctx.save();ctx.globalAlpha=p.alpha;ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(sx,lane);ctx.lineTo(drawX,lane);ctx.stroke();ctx.lineWidth=Math.min(14,Math.max(3,num(c.halfAngle,25)/4));ctx.beginPath();ctx.arc(drawX,lane,rr,-.95,.95);ctx.stroke();ctx.globalAlpha*=.25;ctx.lineWidth=2;ctx.beginPath();ctx.arc(drawX,lane,rr+10,-.95,.95);ctx.stroke();ctx.globalAlpha=p.alpha;ctx.fillStyle=col;ctx.beginPath();ctx.arc(drawX,lane,5,0,Math.PI*2);ctx.fill();if(!p.passed){ctx.fillStyle="#dfe9f8";ctx.font="11px system-ui";ctx.fillText(`${shortId(c.id)} ${Math.round(p.f*100)}%`,drawX+9,lane-6);}else{ctx.fillStyle="#8ea7c7";ctx.font="10px system-ui";ctx.fillText(`passed +${Math.round(p.postFrac*POST_PASS_HOURS)}h`,drawX+8,lane-5);}ctx.restore();idx++;}}
-function updateTimeline(){const h=Number(document.getElementById("timeSlider").value),t=new Date(STATE.timelineStart.getTime()+h*3600e3);STATE.selectedTime=t;const off=h-72,w=getBackgroundWindSpeedFromWSA(t);document.getElementById("timeLabel").innerHTML=`<b>${formatTime(t)}</b> / now ${off>=0?"+":""}${off}h / background ${Math.round(w??STATE.env.speed)} km/s`;drawTop(t);drawSide(t);update3D(t);}
-function playTimeline(){stopTimeline();STATE.timer=setInterval(()=>{const s=document.getElementById("timeSlider");let v=Number(s.value)+1;if(v>Number(s.max))v=0;s.value=v;updateTimeline();},260);}
-function stopTimeline(){if(STATE.timer)clearInterval(STATE.timer);STATE.timer=null;}
-function stepTimeline(d){const s=document.getElementById("timeSlider");s.value=clamp(Number(s.value)+d,Number(s.min),Number(s.max));updateTimeline();}
-function toggleFullscreen(id){const el=document.getElementById(id);if(document.fullscreenElement)document.exitFullscreen();else el?.requestFullscreen?.();}
-function switchMode(m){STATE.mode=m;document.getElementById("mode2d").style.display=m==="2d"?"block":"none";document.getElementById("mode3d").style.display=m==="3d"?"block":"none";document.getElementById("btnMode2d").classList.toggle("active",m==="2d");document.getElementById("btnMode3d").classList.toggle("active",m==="3d");if(m==="3d"){init3D();setTimeout(()=>{resize3D();update3D(STATE.selectedTime);},60);}else updateTimeline();}
-
-/* ============================== 3D ============================== */
-function makeCanvasTexture(kind){const c=document.createElement("canvas");c.width=512;c.height=256;const x=c.getContext("2d");if(kind==="sun"){const g=x.createRadialGradient(220,90,10,256,128,250);g.addColorStop(0,"#fffbd0");g.addColorStop(.18,"#ffd95e");g.addColorStop(.62,"#ff8c1b");g.addColorStop(1,"#b53000");x.fillStyle=g;x.fillRect(0,0,c.width,c.height);for(let i=0;i<650;i++){x.fillStyle=`rgba(255,${130+Math.floor(Math.random()*110)},20,${.05+Math.random()*.18})`;x.beginPath();x.arc(Math.random()*512,Math.random()*256,1+Math.random()*9,0,Math.PI*2);x.fill();}}else{const g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,"#1f76cb");g.addColorStop(.5,"#0d5faf");g.addColorStop(1,"#083e7e");x.fillStyle=g;x.fillRect(0,0,512,256);x.fillStyle="#3fa95d";for(let i=0;i<18;i++){x.beginPath();x.ellipse(Math.random()*512,40+Math.random()*180,18+Math.random()*45,8+Math.random()*26,Math.random()*Math.PI,0,Math.PI*2);x.fill();}x.strokeStyle="rgba(255,255,255,.50)";x.lineWidth=2;for(let i=0;i<14;i++){x.beginPath();x.moveTo(0,Math.random()*256);for(let px=0;px<=512;px+=32)x.lineTo(px,80+Math.random()*120);x.stroke();}}return new THREE.CanvasTexture(c);}
-function glowSprite(color){const c=document.createElement("canvas");c.width=c.height=128;const x=c.getContext("2d"),g=x.createRadialGradient(64,64,4,64,64,64);g.addColorStop(0,color);g.addColorStop(.2,color);g.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=g;x.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c),m=new THREE.SpriteMaterial({map:t,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}),s=new THREE.Sprite(m);return s;}
-function init3D(){if(STATE.three.ready)return;if(!window.THREE){document.getElementById("error3d").style.display="flex";return;}const box=document.getElementById("threeContainer"),scene=new THREE.Scene();scene.background=new THREE.Color(0x020713);scene.fog=new THREE.FogExp2(0x020713,.0035);const camera=new THREE.PerspectiveCamera(46,box.clientWidth/box.clientHeight,.1,1000);camera.position.set(28,36,86);const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setSize(box.clientWidth,box.clientHeight);renderer.outputEncoding=THREE.sRGBEncoding;renderer.shadowMap.enabled=true;box.insertBefore(renderer.domElement,box.firstChild);const controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.06;controls.target.set(27,0,0);controls.minDistance=28;controls.maxDistance=170;
-const ambient=new THREE.AmbientLight(0x2d5d95,.65);scene.add(ambient);const sunLight=new THREE.PointLight(0xffb347,3.4,240,1.25);sunLight.position.set(-34,0,0);scene.add(sunLight);
-const sunTex=makeCanvasTexture("sun"),sunMat=new THREE.MeshBasicMaterial({map:sunTex}),sun=new THREE.Mesh(new THREE.SphereGeometry(8.5,64,64),sunMat);sun.position.set(-34,0,0);scene.add(sun);const sg=glowSprite("rgba(255,145,20,1)");sg.position.copy(sun.position);sg.scale.set(29,29,1);scene.add(sg);
-const earthTex=makeCanvasTexture("earth"),earthMat=new THREE.MeshPhongMaterial({map:earthTex,shininess:14,specular:0x2255aa}),earth=new THREE.Mesh(new THREE.SphereGeometry(3.1,64,64),earthMat);earth.position.set(34,0,0);scene.add(earth);const eg=glowSprite("rgba(62,157,255,.75)");eg.position.copy(earth.position);eg.scale.set(10,10,1);scene.add(eg);
-const atmosphere=new THREE.Mesh(new THREE.SphereGeometry(3.35,48,48),new THREE.MeshBasicMaterial({color:0x7ec8ff,transparent:true,opacity:.10,side:THREE.BackSide,blending:THREE.AdditiveBlending}));atmosphere.position.copy(earth.position);scene.add(atmosphere);
-const points=[];for(let i=0;i<1700;i++){const r=80+Math.random()*260,th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);points.push(r*Math.sin(ph)*Math.cos(th),r*Math.cos(ph),r*Math.sin(ph)*Math.sin(th));}const geom=new THREE.BufferGeometry();geom.setAttribute("position",new THREE.Float32BufferAttribute(points,3));const stars=new THREE.Points(geom,new THREE.PointsMaterial({color:0xddeeff,size:.38,sizeAttenuation:true,transparent:true,opacity:.9}));scene.add(stars);
-const orbitMat=new THREE.LineDashedMaterial({color:0x23598e,dashSize:1,gapSize:1,transparent:true,opacity:.45}),orbitGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-34,0,0),new THREE.Vector3(34,0,0),new THREE.Vector3(65,0,0)]),orbit=new THREE.Line(orbitGeo,orbitMat);orbit.computeLineDistances();scene.add(orbit);
-const cmeGroup=new THREE.Group();scene.add(cmeGroup);STATE.three={ready:true,scene,camera,renderer,controls,sun,earth,cmeGroup,starPoints:stars,clock:new THREE.Clock()};animate3D();update3D(STATE.selectedTime);}
-function make3DCME(c,p,index){const col=new THREE.Color(classColor(c.impactClass)),group=new THREE.Group(),angle=c.coordType==="heliographic"?-num(c.lon)*Math.PI/180:(90-num(c.pa))*Math.PI/180,dist=68*p.f,x=-34+Math.cos(angle)*dist,z=Math.sin(angle)*dist*.65,y=c.coordType==="heliographic"?num(c.lat)*.10:0;group.position.set(x,y,z);const shellR=2.2+num(c.halfAngle,25)*.10,geo=new THREE.SphereGeometry(shellR,24,14,0,Math.PI*2,0,Math.PI*.52),mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.20*p.alpha,wireframe:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}),shell=new THREE.Mesh(geo,mat);shell.rotation.z=Math.PI/2;shell.rotation.y=-angle;group.add(shell);const ring=new THREE.Mesh(new THREE.TorusGeometry(shellR*.72,.08,8,36),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.72*p.alpha,blending:THREE.AdditiveBlending}));ring.rotation.y=Math.PI/2-angle;group.add(ring);const core=new THREE.Mesh(new THREE.SphereGeometry(.55,18,18),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.95*p.alpha}));group.add(core);group.userData={id:c.id,passed:p.passed};return group;}
-function update3D(time){if(!STATE.three.ready)return;const g=STATE.three.cmeGroup;while(g.children.length)g.remove(g.children[0]);let active=0,passed=0;for(const [i,c] of STATE.cmes.filter(x=>x.earthCandidate).slice(0,18).entries()){const p=progression(c,time);if(!p)continue;g.add(make3DCME(c,p,i));active++;if(p.passed)passed++;}STATE.three.earth.rotation.y+=.02;STATE.three.sun.rotation.y+=.006;document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Earth-directed total: ${STATE.cmes.filter(c=>c.earthCandidate).length}<br>Solar wind: ${Math.round(STATE.env.speed)} km/s`;}
-function animate3D(){if(!STATE.three.ready)return;requestAnimationFrame(animate3D);const t=STATE.three;const dt=t.clock.getDelta();t.sun.rotation.y+=dt*.035;t.earth.rotation.y+=dt*.14;t.starPoints.rotation.y+=dt*.002;t.controls.update();t.renderer.render(t.scene,t.camera);}
-function resize3D(){if(!STATE.three.ready)return;const box=document.getElementById("threeContainer"),t=STATE.three;t.camera.aspect=box.clientWidth/box.clientHeight;t.camera.updateProjectionMatrix();t.renderer.setSize(box.clientWidth,box.clientHeight);}
-function set3DCamera(mode){if(!STATE.three.ready)init3D();if(!STATE.three.ready)return;const c=STATE.three.camera,k=STATE.three.controls;if(mode==="top")c.position.set(0,96,0.1);else if(mode==="side")c.position.set(27,4,90);else c.position.set(42,36,82);k.target.set(15,0,0);k.update();}
-window.addEventListener("resize",()=>{if(STATE.mode==="2d")updateTimeline();else resize3D();});
-document.addEventListener("fullscreenchange",()=>setTimeout(()=>{if(STATE.mode==="3d")resize3D();else updateTimeline();},100));
-setInterval(()=>{document.getElementById("utcClock").textContent=new Date().toISOString().replace("T"," ").slice(0,19)+" UTC";},1000);
-
-STATE.starsTop=generateStars(260);STATE.starsSide=generateStars(300);renderSourcePanel();initTimeline();renderSummary();renderEvents();updateTimeline();
+function onResize3D(){
+  const container = document.getElementById("view3d");
+  if(!container || !renderer || !camera) return;
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  renderer.setSize(w,h);
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+}
 </script>
-</body>
-</html>
