@@ -3,20 +3,25 @@ name: Update SWIFT Excel Report
 on:
   workflow_dispatch:
   schedule:
-    # 3時間ごと。NOAA/Swift各データ更新後に回す想定。
     - cron: "23 */3 * * *"
 
 permissions:
   contents: write
 
+concurrency:
+  group: update-swift-excel-report
+  cancel-in-progress: false
+
 jobs:
   build-report:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -26,7 +31,21 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-report.txt
+          # requirements-report.txt がなくても必ず動く
+          if [ -f requirements-report.txt ]; then
+            pip install -r requirements-report.txt
+          else
+            pip install "requests>=2.31.0" "xlsxwriter>=3.2.0"
+          fi
+
+      - name: Check required scripts
+        run: |
+          test -f scripts/update_noaa_space_weather_history.py
+          test -f scripts/learn_cme_wind_boost.py
+          test -f scripts/build_swift_wind_ai.py
+          test -f scripts/build_swift_bz_ai.py
+          test -f scripts/build_swift_excel_report.py
+          echo "All required scripts found."
 
       - name: Update NOAA history
         run: python scripts/update_noaa_space_weather_history.py
@@ -34,20 +53,55 @@ jobs:
       - name: Learn CME wind boost
         run: python scripts/learn_cme_wind_boost.py
 
+      - name: Build SWIFT Wind AI
+        run: python scripts/build_swift_wind_ai.py
+
+      - name: Validate SWIFT Wind AI
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("docs/data/swift-wind/latest.json")
+          if not p.exists():
+              raise SystemExit("docs/data/swift-wind/latest.json was not created")
+
+          x = json.loads(p.read_text(encoding="utf-8"))
+          records = x.get("records") or []
+          forecast = x.get("forecast") or []
+
+          if not records:
+              raise SystemExit("SWIFT Wind AI latest.json.records is empty")
+          if not forecast:
+              raise SystemExit("SWIFT Wind AI latest.json.forecast is empty")
+
+          print("SWIFT Wind model:", x.get("model"))
+          print("records:", len(records))
+          print("forecast:", len(forecast))
+          print("NOAA age min:", x.get("health", {}).get("noaa_age_minutes"))
+          print("24h ±50 hit rate:", x.get("verification", {}).get("last_24h", {}).get("enhanced", {}).get("hit_rate_50kms"))
+          PY
+
       - name: Build SWIFT Bz AI
         run: python scripts/build_swift_bz_ai.py
 
       - name: Build Excel report
         run: python scripts/build_swift_excel_report.py
 
-      - name: Commit generated report
+      - name: Validate Excel report
+        run: |
+          test -f docs/reports/swift_space_weather_report_latest.xlsx
+          ls -lh docs/reports/swift_space_weather_report_latest.xlsx
+
+      - name: Commit generated data and report
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase || true
           git add docs/data docs/reports reports || true
           if git diff --cached --quiet; then
             echo "No generated changes."
           else
-            git commit -m "Update SWIFT Excel report"
+            git commit -m "Update SWIFT AI data and Excel report"
             git push
           fi
