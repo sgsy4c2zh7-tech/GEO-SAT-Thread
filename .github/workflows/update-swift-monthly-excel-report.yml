@@ -8,8 +8,10 @@ on:
 permissions:
   contents: write
 
+# All workflows that write SWIFT generated data/reports should use this same group.
+# This prevents two SWIFT writer jobs from pushing to main at the same time.
 concurrency:
-  group: update-swift-monthly-excel-report
+  group: swift-space-weather-writer
   cancel-in-progress: false
 
 jobs:
@@ -21,6 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Setup Python
@@ -58,15 +61,42 @@ jobs:
           echo "UI feed: docs/reports/ui_forecast_latest.json"
           cat docs/reports/index.json
 
-      - name: Commit generated data and monthly report
+      - name: Commit and push generated data safely
+        shell: bash
         run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # First commit the generated files locally.
+          # This keeps the worktree clean before rebase.
           git add docs/data docs/reports || true
+
           if git diff --cached --quiet; then
             echo "No generated changes."
-          else
-            git commit -m "Update SWIFT monthly Excel report"
-            git pull --rebase
-            git push
+            exit 0
           fi
+
+          git commit -m "Update SWIFT monthly Excel report"
+
+          # Remote main may have changed while Python was running.
+          # Rebase the already-created local commit onto the newest main,
+          # then retry push up to 3 times in case another commit lands.
+          for attempt in 1 2 3; do
+            echo "Push attempt ${attempt}/3"
+
+            git fetch origin main
+            git rebase origin/main
+
+            if git push origin HEAD:main; then
+              echo "Push succeeded."
+              exit 0
+            fi
+
+            echo "Remote changed again before push. Retrying..."
+            sleep 5
+          done
+
+          echo "Push failed after 3 attempts."
+          exit 1
