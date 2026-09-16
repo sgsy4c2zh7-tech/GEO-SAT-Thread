@@ -53,7 +53,9 @@ jobs:
           MONTH="$(date -u +%Y-%m)"
           test -f "docs/reports/swift_space_weather_${MONTH}.xlsx"
           test -f "docs/reports/index.json"
+          test -f "docs/reports/ui_forecast_latest.json"
           echo "Monthly Excel: docs/reports/swift_space_weather_${MONTH}.xlsx"
+          echo "UI feed: docs/reports/ui_forecast_latest.json"
           cat docs/reports/index.json
 
       - name: Commit generated data and monthly report
