@@ -1,28 +1,34 @@
 {
-  "updated_at": "2026-09-16T13:42:05Z",
+  "updated_at": "2026-09-16T17:08:25Z",
   "kind": "wind",
-  "retention_days": 45,
+  "retention_days": 31,
   "status": {
     "ok": true,
-    "new_records": 3641,
-    "merged_records": 2635,
+    "new_records": 3428,
+    "existing_records": 2635,
+    "merged_records": 2844,
     "used_urls": [
       {
         "url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json",
-        "records": 3641
+        "records": 3428
       }
     ],
-    "errors": [],
-    "legacy_sources_merged": [
-      "docs/data/noaa-wind/history.json",
-      "docs/data/noaa_wind_history.json"
+    "errors": [
+      {
+        "url": "https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json",
+        "error": "404 Client Error: Not Found for url: https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json"
+      },
+      {
+        "url": "https://services.swpc.noaa.gov/products/solar-wind/plasma-3-day.json",
+        "error": "404 Client Error: Not Found for url: https://services.swpc.noaa.gov/products/solar-wind/plasma-3-day.json"
+      }
     ]
   },
   "coverage": {
-    "count": 2635,
-    "days": 1.104,
+    "count": 2844,
+    "days": 1.249,
     "start": "2026-09-15T11:04:00Z",
-    "end": "2026-09-16T13:34:00Z"
+    "end": "2026-09-16T17:03:00Z"
   },
   "records": [
     {
@@ -5811,8 +5817,8 @@
     },
     {
       "time": "2026-09-15T17:06:00Z",
-      "speed": 367.46,
-      "density": 0.23,
+      "speed": 366.6,
+      "density": 0.49,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -5827,8 +5833,8 @@
     },
     {
       "time": "2026-09-15T17:07:00Z",
-      "speed": 377.4,
-      "density": 0.66,
+      "speed": 379.39,
+      "density": 0.26,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -5907,8 +5913,8 @@
     },
     {
       "time": "2026-09-15T17:12:00Z",
-      "speed": 369.2,
-      "density": 0.78,
+      "speed": 367.02,
+      "density": 0.25,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -5955,8 +5961,8 @@
     },
     {
       "time": "2026-09-15T17:15:00Z",
-      "speed": 365.88,
-      "density": 0.33,
+      "speed": 394.8,
+      "density": 1.14,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -5971,8 +5977,8 @@
     },
     {
       "time": "2026-09-15T17:16:00Z",
-      "speed": 366.51,
-      "density": 0.33,
+      "speed": 409.6,
+      "density": 0.97,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6003,8 +6009,8 @@
     },
     {
       "time": "2026-09-15T17:18:00Z",
-      "speed": 363.71,
-      "density": 0.14,
+      "speed": 421.7,
+      "density": 1.16,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6035,8 +6041,8 @@
     },
     {
       "time": "2026-09-15T17:20:00Z",
-      "speed": 432.9,
-      "density": 1.19,
+      "speed": 372.28,
+      "density": 0.11,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6147,8 +6153,8 @@
     },
     {
       "time": "2026-09-15T17:27:00Z",
-      "speed": 423.2,
-      "density": 1.07,
+      "speed": 407.07,
+      "density": 0.22,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6179,8 +6185,8 @@
     },
     {
       "time": "2026-09-15T17:29:00Z",
-      "speed": 458.0,
-      "density": 1.41,
+      "speed": 416.85,
+      "density": 0.44,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6195,8 +6201,8 @@
     },
     {
       "time": "2026-09-15T17:30:00Z",
-      "speed": 425.04,
-      "density": 0.75,
+      "speed": 457.9,
+      "density": 1.81,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6211,8 +6217,8 @@
     },
     {
       "time": "2026-09-15T17:31:00Z",
-      "speed": 427.11,
-      "density": 0.74,
+      "speed": 407.0,
+      "density": 0.98,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6227,8 +6233,8 @@
     },
     {
       "time": "2026-09-15T17:32:00Z",
-      "speed": 349.6,
-      "density": 0.28,
+      "speed": 420.16,
+      "density": 0.55,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6259,24 +6265,24 @@
     },
     {
       "time": "2026-09-15T17:34:00Z",
-      "speed": 412.7,
-      "density": 0.22,
+      "speed": 383.5,
+      "density": 0.59,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T17:35:00Z",
-      "speed": 427.27,
-      "density": 0.22,
+      "speed": 379.6,
+      "density": 0.52,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T17:36:00Z",
-      "speed": 477.89,
-      "density": 1.05,
+      "speed": 423.1,
+      "density": 1.4,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6339,16 +6345,16 @@
     },
     {
       "time": "2026-09-15T17:44:00Z",
-      "speed": 395.2,
-      "density": 0.73,
+      "speed": 400.77,
+      "density": 0.42,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T17:45:00Z",
-      "speed": 400.06,
-      "density": 0.42,
+      "speed": 417.6,
+      "density": 0.98,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6363,16 +6369,16 @@
     },
     {
       "time": "2026-09-15T17:47:00Z",
-      "speed": 389.98,
-      "density": 0.3,
+      "speed": 472.2,
+      "density": 1.24,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T17:48:00Z",
-      "speed": 421.1,
-      "density": 0.71,
+      "speed": 402.46,
+      "density": 0.39,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6419,8 +6425,8 @@
     },
     {
       "time": "2026-09-15T17:54:00Z",
-      "speed": 471.7,
-      "density": 1.37,
+      "speed": 412.4,
+      "density": 0.13,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6435,16 +6441,16 @@
     },
     {
       "time": "2026-09-15T17:56:00Z",
-      "speed": 488.8,
-      "density": 1.08,
+      "speed": 442.02,
+      "density": 0.12,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T17:57:00Z",
-      "speed": 430.78,
-      "density": 0.14,
+      "speed": 474.8,
+      "density": 1.04,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6459,8 +6465,8 @@
     },
     {
       "time": "2026-09-15T17:59:00Z",
-      "speed": 458.03,
-      "density": 0.32,
+      "speed": 476.3,
+      "density": 1.05,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6483,8 +6489,8 @@
     },
     {
       "time": "2026-09-15T18:02:00Z",
-      "speed": 446.4,
-      "density": 0.79,
+      "speed": 459.11,
+      "density": 0.27,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6539,32 +6545,32 @@
     },
     {
       "time": "2026-09-15T18:09:00Z",
-      "speed": 401.6,
-      "density": 0.75,
+      "speed": 408.66,
+      "density": 0.04,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T18:10:00Z",
-      "speed": 454.9,
-      "density": 1.6,
+      "speed": 422.77,
+      "density": 0.03,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T18:11:00Z",
-      "speed": 415.7,
-      "density": 1.45,
+      "speed": 402.09,
+      "density": 0.03,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T18:12:00Z",
-      "speed": 399.28,
-      "density": 0.03,
+      "speed": 426.0,
+      "density": 1.77,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6595,8 +6601,8 @@
     },
     {
       "time": "2026-09-15T18:16:00Z",
-      "speed": 419.01,
-      "density": 0.05,
+      "speed": 529.9,
+      "density": 3.13,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6611,8 +6617,8 @@
     },
     {
       "time": "2026-09-15T18:18:00Z",
-      "speed": 504.14,
-      "density": 0.07,
+      "speed": 568.1,
+      "density": 2.77,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6667,8 +6673,8 @@
     },
     {
       "time": "2026-09-15T18:25:00Z",
-      "speed": 575.76,
-      "density": 0.15,
+      "speed": 705.6,
+      "density": 2.64,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6699,8 +6705,8 @@
     },
     {
       "time": "2026-09-15T18:29:00Z",
-      "speed": 760.2,
-      "density": 3.05,
+      "speed": 632.27,
+      "density": 0.05,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6723,8 +6729,8 @@
     },
     {
       "time": "2026-09-15T18:32:00Z",
-      "speed": 846.25,
-      "density": 0.24,
+      "speed": 788.8,
+      "density": 3.41,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6763,8 +6769,8 @@
     },
     {
       "time": "2026-09-15T18:37:00Z",
-      "speed": 717.0,
-      "density": 3.36,
+      "speed": 695.36,
+      "density": 0.31,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6779,8 +6785,8 @@
     },
     {
       "time": "2026-09-15T18:39:00Z",
-      "speed": 588.57,
-      "density": 0.1,
+      "speed": 744.9,
+      "density": 3.71,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6803,16 +6809,16 @@
     },
     {
       "time": "2026-09-15T18:42:00Z",
-      "speed": 721.48,
-      "density": 0.21,
+      "speed": 761.3,
+      "density": 3.64,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T18:43:00Z",
-      "speed": 644.09,
-      "density": 0.16,
+      "speed": 755.0,
+      "density": 3.52,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6915,8 +6921,8 @@
     },
     {
       "time": "2026-09-15T18:56:00Z",
-      "speed": 680.0,
-      "density": 3.6,
+      "speed": 704.06,
+      "density": 0.26,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6931,8 +6937,8 @@
     },
     {
       "time": "2026-09-15T18:58:00Z",
-      "speed": 733.88,
-      "density": 0.35,
+      "speed": 691.9,
+      "density": 3.89,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6947,16 +6953,16 @@
     },
     {
       "time": "2026-09-15T19:00:00Z",
-      "speed": 649.1,
-      "density": 3.3,
+      "speed": 730.92,
+      "density": 0.42,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T19:01:00Z",
-      "speed": 761.41,
-      "density": 0.38,
+      "speed": 696.4,
+      "density": 2.33,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -6995,8 +7001,8 @@
     },
     {
       "time": "2026-09-15T19:06:00Z",
-      "speed": 737.26,
-      "density": 0.39,
+      "speed": 716.3,
+      "density": 3.55,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7043,8 +7049,8 @@
     },
     {
       "time": "2026-09-15T19:12:00Z",
-      "speed": 710.0,
-      "density": 3.43,
+      "speed": 639.46,
+      "density": 0.22,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7067,8 +7073,8 @@
     },
     {
       "time": "2026-09-15T19:15:00Z",
-      "speed": 656.3,
-      "density": 0.41,
+      "speed": 694.7,
+      "density": 2.17,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7083,16 +7089,16 @@
     },
     {
       "time": "2026-09-15T19:17:00Z",
-      "speed": 588.85,
-      "density": 0.22,
+      "speed": 637.1,
+      "density": 1.58,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T19:18:00Z",
-      "speed": 621.6,
-      "density": 1.75,
+      "speed": 621.62,
+      "density": 0.27,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7123,8 +7129,8 @@
     },
     {
       "time": "2026-09-15T19:22:00Z",
-      "speed": 734.4,
-      "density": 0.2,
+      "speed": 644.1,
+      "density": 1.93,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7139,24 +7145,24 @@
     },
     {
       "time": "2026-09-15T19:24:00Z",
-      "speed": 756.04,
-      "density": 0.12,
+      "speed": 653.5,
+      "density": 1.77,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T19:25:00Z",
-      "speed": 621.9,
-      "density": 1.01,
+      "speed": 609.76,
+      "density": 0.09,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T19:26:00Z",
-      "speed": 622.3,
-      "density": 1.6,
+      "speed": 641.1,
+      "density": 0.13,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7187,40 +7193,40 @@
     },
     {
       "time": "2026-09-15T19:30:00Z",
-      "speed": 666.5,
-      "density": 0.16,
+      "speed": 583.0,
+      "density": 0.82,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T19:31:00Z",
-      "speed": 614.77,
-      "density": 0.1,
+      "speed": 574.6,
+      "density": 0.82,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T19:32:00Z",
-      "speed": 563.5,
-      "density": 0.86,
+      "speed": 571.12,
+      "density": 0.06,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T19:33:00Z",
-      "speed": 569.1,
-      "density": 0.84,
+      "speed": 562.1,
+      "density": 0.05,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T19:34:00Z",
-      "speed": 552.6,
-      "density": 0.8,
+      "speed": 592.67,
+      "density": 0.03,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7243,24 +7249,24 @@
     },
     {
       "time": "2026-09-15T19:37:00Z",
-      "speed": 694.39,
-      "density": 0.08,
+      "speed": 546.3,
+      "density": 0.84,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T19:38:00Z",
-      "speed": 636.81,
-      "density": 0.06,
+      "speed": 575.0,
+      "density": 0.81,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T19:39:00Z",
-      "speed": 548.3,
-      "density": 0.73,
+      "speed": 585.71,
+      "density": 0.06,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7307,16 +7313,16 @@
     },
     {
       "time": "2026-09-15T19:45:00Z",
-      "speed": 625.81,
-      "density": 0.07,
+      "speed": 446.8,
+      "density": 0.94,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T19:46:00Z",
-      "speed": 603.2,
-      "density": 0.1,
+      "speed": 458.3,
+      "density": 0.83,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7331,8 +7337,8 @@
     },
     {
       "time": "2026-09-15T19:48:00Z",
-      "speed": 522.3,
-      "density": 0.87,
+      "speed": 620.87,
+      "density": 0.12,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7355,24 +7361,24 @@
     },
     {
       "time": "2026-09-15T19:51:00Z",
-      "speed": 560.62,
-      "density": 0.08,
+      "speed": 476.3,
+      "density": 0.87,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T19:52:00Z",
-      "speed": 609.47,
-      "density": 0.12,
+      "speed": 492.0,
+      "density": 0.88,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T19:53:00Z",
-      "speed": 598.81,
-      "density": 0.1,
+      "speed": 474.0,
+      "density": 0.87,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7395,8 +7401,8 @@
     },
     {
       "time": "2026-09-15T19:56:00Z",
-      "speed": 483.2,
-      "density": 0.75,
+      "speed": 622.25,
+      "density": 0.08,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7411,8 +7417,8 @@
     },
     {
       "time": "2026-09-15T19:58:00Z",
-      "speed": 453.64,
-      "density": 0.02,
+      "speed": 468.0,
+      "density": 0.88,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7435,48 +7441,48 @@
     },
     {
       "time": "2026-09-15T20:01:00Z",
-      "speed": 585.68,
-      "density": 0.03,
-      "temperature": null,
-      "source": "NOAA_SWPC",
-      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
-    },
-    {
-      "time": "2026-09-15T20:02:00Z",
-      "speed": 501.6,
+      "speed": 489.0,
       "density": 0.89,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
+      "time": "2026-09-15T20:02:00Z",
+      "speed": 688.3,
+      "density": 0.07,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
       "time": "2026-09-15T20:03:00Z",
-      "speed": 504.8,
-      "density": 0.79,
+      "speed": 582.55,
+      "density": 0.04,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T20:04:00Z",
-      "speed": 533.6,
-      "density": 0.84,
-      "temperature": null,
-      "source": "NOAA_SWPC",
-      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
-    },
-    {
-      "time": "2026-09-15T20:05:00Z",
-      "speed": 485.87,
+      "speed": 476.11,
       "density": 0.02,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
+      "time": "2026-09-15T20:05:00Z",
+      "speed": 527.6,
+      "density": 0.8,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
       "time": "2026-09-15T20:06:00Z",
-      "speed": 513.7,
-      "density": 0.76,
+      "speed": 497.51,
+      "density": 0.02,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7539,8 +7545,8 @@
     },
     {
       "time": "2026-09-15T20:14:00Z",
-      "speed": 545.68,
-      "density": 0.06,
+      "speed": 493.9,
+      "density": 1.63,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7563,8 +7569,8 @@
     },
     {
       "time": "2026-09-15T20:17:00Z",
-      "speed": 494.6,
-      "density": 1.38,
+      "speed": 578.9,
+      "density": 0.04,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7595,8 +7601,8 @@
     },
     {
       "time": "2026-09-15T20:21:00Z",
-      "speed": 496.74,
-      "density": 0.04,
+      "speed": 509.2,
+      "density": 1.43,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7643,16 +7649,16 @@
     },
     {
       "time": "2026-09-15T20:27:00Z",
-      "speed": 476.29,
-      "density": 0.06,
+      "speed": 490.0,
+      "density": 2.45,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T20:28:00Z",
-      "speed": 534.69,
-      "density": 0.1,
+      "speed": 497.3,
+      "density": 2.17,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7667,8 +7673,8 @@
     },
     {
       "time": "2026-09-15T20:30:00Z",
-      "speed": 499.2,
-      "density": 2.78,
+      "speed": 430.09,
+      "density": 0.04,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7683,40 +7689,40 @@
     },
     {
       "time": "2026-09-15T20:32:00Z",
-      "speed": 503.0,
-      "density": 2.29,
+      "speed": 468.28,
+      "density": 0.05,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T20:33:00Z",
-      "speed": 490.4,
-      "density": 2.06,
+      "speed": 476.68,
+      "density": 0.08,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T20:34:00Z",
-      "speed": 566.05,
-      "density": 0.18,
+      "speed": 505.6,
+      "density": 1.88,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T20:35:00Z",
-      "speed": 515.95,
-      "density": 0.12,
+      "speed": 481.4,
+      "density": 1.92,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T20:36:00Z",
-      "speed": 504.41,
-      "density": 0.37,
+      "speed": 504.9,
+      "density": 1.96,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7739,8 +7745,8 @@
     },
     {
       "time": "2026-09-15T20:39:00Z",
-      "speed": 508.04,
-      "density": 0.51,
+      "speed": 506.6,
+      "density": 2.2,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7795,8 +7801,8 @@
     },
     {
       "time": "2026-09-15T20:46:00Z",
-      "speed": 529.4,
-      "density": 2.53,
+      "speed": 526.08,
+      "density": 0.7,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7819,8 +7825,8 @@
     },
     {
       "time": "2026-09-15T20:49:00Z",
-      "speed": 508.1,
-      "density": 2.6,
+      "speed": 485.62,
+      "density": 0.18,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7851,16 +7857,16 @@
     },
     {
       "time": "2026-09-15T20:53:00Z",
-      "speed": 507.0,
-      "density": 2.66,
+      "speed": 534.46,
+      "density": 0.65,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T20:54:00Z",
-      "speed": 541.03,
-      "density": 0.75,
+      "speed": 528.2,
+      "density": 3.18,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7899,8 +7905,8 @@
     },
     {
       "time": "2026-09-15T20:59:00Z",
-      "speed": 534.27,
-      "density": 0.11,
+      "speed": 529.5,
+      "density": 4.33,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7923,16 +7929,16 @@
     },
     {
       "time": "2026-09-15T21:02:00Z",
-      "speed": 459.3,
-      "density": 7.11,
+      "speed": 520.1,
+      "density": 3.86,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T21:03:00Z",
-      "speed": 536.69,
-      "density": 0.48,
+      "speed": 510.2,
+      "density": 3.92,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7963,8 +7969,8 @@
     },
     {
       "time": "2026-09-15T21:07:00Z",
-      "speed": 506.18,
-      "density": 0.76,
+      "speed": 514.1,
+      "density": 4.83,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -7987,32 +7993,32 @@
     },
     {
       "time": "2026-09-15T21:10:00Z",
-      "speed": 488.3,
-      "density": 4.37,
+      "speed": 521.34,
+      "density": 0.92,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T21:11:00Z",
-      "speed": 492.4,
-      "density": 4.38,
+      "speed": 536.99,
+      "density": 0.81,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T21:12:00Z",
-      "speed": 470.7,
-      "density": 3.62,
+      "speed": 546.84,
+      "density": 0.83,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T21:13:00Z",
-      "speed": 452.2,
-      "density": 3.59,
+      "speed": 554.97,
+      "density": 1.1,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8027,16 +8033,16 @@
     },
     {
       "time": "2026-09-15T21:15:00Z",
-      "speed": 465.54,
-      "density": 0.55,
+      "speed": 459.1,
+      "density": 3.46,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T21:16:00Z",
-      "speed": 494.09,
-      "density": 0.61,
+      "speed": 451.3,
+      "density": 3.32,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8051,8 +8057,8 @@
     },
     {
       "time": "2026-09-15T21:18:00Z",
-      "speed": 436.5,
-      "density": 3.5,
+      "speed": 532.79,
+      "density": 0.92,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8067,8 +8073,8 @@
     },
     {
       "time": "2026-09-15T21:20:00Z",
-      "speed": 542.42,
-      "density": 1.16,
+      "speed": 437.8,
+      "density": 4.03,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8107,16 +8113,16 @@
     },
     {
       "time": "2026-09-15T21:25:00Z",
-      "speed": 453.0,
-      "density": 3.52,
+      "speed": 531.31,
+      "density": 1.12,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T21:26:00Z",
-      "speed": 450.7,
-      "density": 4.08,
+      "speed": 514.94,
+      "density": 0.96,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8131,16 +8137,16 @@
     },
     {
       "time": "2026-09-15T21:28:00Z",
-      "speed": 414.4,
-      "density": 3.79,
+      "speed": 521.68,
+      "density": 1.06,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-15T21:29:00Z",
-      "speed": 492.6,
-      "density": 0.89,
+      "speed": 424.9,
+      "density": 3.95,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8155,8 +8161,8 @@
     },
     {
       "time": "2026-09-15T21:31:00Z",
-      "speed": 495.44,
-      "density": 1.35,
+      "speed": 420.0,
+      "density": 3.9,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8179,8 +8185,8 @@
     },
     {
       "time": "2026-09-15T21:33:00Z",
-      "speed": 426.8,
-      "density": 3.68,
+      "speed": 441.33,
+      "density": 0.58,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8243,8 +8249,8 @@
     },
     {
       "time": "2026-09-15T21:37:00Z",
-      "speed": 441.7,
-      "density": 0.59,
+      "speed": 446.3,
+      "density": 4.97,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8259,8 +8265,8 @@
     },
     {
       "time": "2026-09-15T21:38:00Z",
-      "speed": 388.8,
-      "density": 3.74,
+      "speed": 464.3,
+      "density": 0.97,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8291,8 +8297,8 @@
     },
     {
       "time": "2026-09-15T21:40:00Z",
-      "speed": 444.82,
-      "density": 0.62,
+      "speed": 463.7,
+      "density": 6.11,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8339,8 +8345,8 @@
     },
     {
       "time": "2026-09-15T21:43:00Z",
-      "speed": 470.1,
-      "density": 5.32,
+      "speed": 464.4,
+      "density": 0.82,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8387,8 +8393,8 @@
     },
     {
       "time": "2026-09-15T21:46:00Z",
-      "speed": 475.6,
-      "density": 5.38,
+      "speed": 402.22,
+      "density": 0.78,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8403,8 +8409,8 @@
     },
     {
       "time": "2026-09-15T21:47:00Z",
-      "speed": 457.6,
-      "density": 6.72,
+      "speed": 421.32,
+      "density": 0.8,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8419,8 +8425,8 @@
     },
     {
       "time": "2026-09-15T21:48:00Z",
-      "speed": 461.7,
-      "density": 5.5,
+      "speed": 456.89,
+      "density": 0.85,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8435,8 +8441,8 @@
     },
     {
       "time": "2026-09-15T21:49:00Z",
-      "speed": 452.83,
-      "density": 0.84,
+      "speed": 491.4,
+      "density": 7.45,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8451,8 +8457,8 @@
     },
     {
       "time": "2026-09-15T21:50:00Z",
-      "speed": 466.65,
-      "density": 0.9,
+      "speed": 449.4,
+      "density": 5.27,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8515,8 +8521,8 @@
     },
     {
       "time": "2026-09-15T21:54:00Z",
-      "speed": 448.1,
-      "density": 4.48,
+      "speed": 472.58,
+      "density": 0.84,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8531,8 +8537,8 @@
     },
     {
       "time": "2026-09-15T21:55:00Z",
-      "speed": 414.39,
-      "density": 0.39,
+      "speed": 438.2,
+      "density": 4.23,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8547,8 +8553,8 @@
     },
     {
       "time": "2026-09-15T21:56:00Z",
-      "speed": 454.47,
-      "density": 1.05,
+      "speed": 438.6,
+      "density": 4.51,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8627,8 +8633,8 @@
     },
     {
       "time": "2026-09-15T22:01:00Z",
-      "speed": 448.4,
-      "density": 4.47,
+      "speed": 468.42,
+      "density": 1.61,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8643,8 +8649,8 @@
     },
     {
       "time": "2026-09-15T22:02:00Z",
-      "speed": 445.9,
-      "density": 5.01,
+      "speed": 468.96,
+      "density": 1.72,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8787,8 +8793,8 @@
     },
     {
       "time": "2026-09-15T22:11:00Z",
-      "speed": 457.1,
-      "density": 8.53,
+      "speed": 445.73,
+      "density": 1.72,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8819,8 +8825,8 @@
     },
     {
       "time": "2026-09-15T22:13:00Z",
-      "speed": 459.3,
-      "density": 11.82,
+      "speed": 465.03,
+      "density": 1.79,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8835,8 +8841,8 @@
     },
     {
       "time": "2026-09-15T22:14:00Z",
-      "speed": 450.9,
-      "density": 9.47,
+      "speed": 475.7,
+      "density": 2.33,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8851,8 +8857,8 @@
     },
     {
       "time": "2026-09-15T22:15:00Z",
-      "speed": 456.9,
-      "density": 9.16,
+      "speed": 446.95,
+      "density": 3.65,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8867,8 +8873,8 @@
     },
     {
       "time": "2026-09-15T22:16:00Z",
-      "speed": 440.06,
-      "density": 3.25,
+      "speed": 461.2,
+      "density": 10.53,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8915,8 +8921,8 @@
     },
     {
       "time": "2026-09-15T22:19:00Z",
-      "speed": 474.7,
-      "density": 9.8,
+      "speed": 404.63,
+      "density": 2.05,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8947,8 +8953,8 @@
     },
     {
       "time": "2026-09-15T22:21:00Z",
-      "speed": 454.75,
-      "density": 2.86,
+      "speed": 467.7,
+      "density": 8.8,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -8963,8 +8969,8 @@
     },
     {
       "time": "2026-09-15T22:22:00Z",
-      "speed": 457.45,
-      "density": 5.33,
+      "speed": 437.4,
+      "density": 6.7,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9075,8 +9081,8 @@
     },
     {
       "time": "2026-09-15T22:29:00Z",
-      "speed": 405.44,
-      "density": 1.18,
+      "speed": 436.0,
+      "density": 5.43,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9123,8 +9129,8 @@
     },
     {
       "time": "2026-09-15T22:32:00Z",
-      "speed": 476.8,
-      "density": 7.93,
+      "speed": 485.84,
+      "density": 0.97,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9171,8 +9177,8 @@
     },
     {
       "time": "2026-09-15T22:35:00Z",
-      "speed": 479.54,
-      "density": 0.4,
+      "speed": 439.7,
+      "density": 6.99,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9187,8 +9193,8 @@
     },
     {
       "time": "2026-09-15T22:36:00Z",
-      "speed": 474.22,
-      "density": 1.01,
+      "speed": 454.7,
+      "density": 8.35,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9203,8 +9209,8 @@
     },
     {
       "time": "2026-09-15T22:37:00Z",
-      "speed": 509.45,
-      "density": 1.67,
+      "speed": 484.0,
+      "density": 9.88,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9251,8 +9257,8 @@
     },
     {
       "time": "2026-09-15T22:40:00Z",
-      "speed": 478.8,
-      "density": 9.71,
+      "speed": 401.88,
+      "density": 0.43,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9283,8 +9289,8 @@
     },
     {
       "time": "2026-09-15T22:42:00Z",
-      "speed": 432.9,
-      "density": 1.84,
+      "speed": 472.7,
+      "density": 9.92,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9395,8 +9401,8 @@
     },
     {
       "time": "2026-09-15T22:49:00Z",
-      "speed": 492.1,
-      "density": 9.18,
+      "speed": 473.74,
+      "density": 1.62,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9443,8 +9449,8 @@
     },
     {
       "time": "2026-09-15T22:52:00Z",
-      "speed": 483.8,
-      "density": 10.04,
+      "speed": 518.06,
+      "density": 0.68,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9459,8 +9465,8 @@
     },
     {
       "time": "2026-09-15T22:53:00Z",
-      "speed": 509.37,
-      "density": 0.67,
+      "speed": 459.5,
+      "density": 8.72,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9491,8 +9497,8 @@
     },
     {
       "time": "2026-09-15T22:55:00Z",
-      "speed": 455.8,
-      "density": 7.48,
+      "speed": 408.06,
+      "density": 0.05,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9523,8 +9529,8 @@
     },
     {
       "time": "2026-09-15T22:57:00Z",
-      "speed": 514.0,
-      "density": 0.59,
+      "speed": 465.3,
+      "density": 8.18,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9555,8 +9561,8 @@
     },
     {
       "time": "2026-09-15T22:59:00Z",
-      "speed": 452.8,
-      "density": 7.11,
+      "speed": 468.61,
+      "density": 0.47,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9715,8 +9721,8 @@
     },
     {
       "time": "2026-09-15T23:09:00Z",
-      "speed": 456.2,
-      "density": 7.32,
+      "speed": 455.13,
+      "density": 1.21,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9731,8 +9737,8 @@
     },
     {
       "time": "2026-09-15T23:10:00Z",
-      "speed": 449.5,
-      "density": 7.15,
+      "speed": 456.82,
+      "density": 1.39,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9763,8 +9769,8 @@
     },
     {
       "time": "2026-09-15T23:12:00Z",
-      "speed": 448.0,
-      "density": 7.13,
+      "speed": 456.67,
+      "density": 1.89,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9795,8 +9801,8 @@
     },
     {
       "time": "2026-09-15T23:14:00Z",
-      "speed": 458.7,
-      "density": 7.66,
+      "speed": 462.73,
+      "density": 1.78,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9875,8 +9881,8 @@
     },
     {
       "time": "2026-09-15T23:19:00Z",
-      "speed": 461.6,
-      "density": 7.06,
+      "speed": 461.32,
+      "density": 1.72,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9891,8 +9897,8 @@
     },
     {
       "time": "2026-09-15T23:20:00Z",
-      "speed": 445.65,
-      "density": 1.34,
+      "speed": 464.9,
+      "density": 7.84,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -9955,8 +9961,8 @@
     },
     {
       "time": "2026-09-15T23:24:00Z",
-      "speed": 429.85,
-      "density": 1.37,
+      "speed": 470.1,
+      "density": 13.17,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10019,8 +10025,8 @@
     },
     {
       "time": "2026-09-15T23:28:00Z",
-      "speed": 422.03,
-      "density": 1.31,
+      "speed": 467.2,
+      "density": 13.16,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10051,8 +10057,8 @@
     },
     {
       "time": "2026-09-15T23:30:00Z",
-      "speed": 471.0,
-      "density": 13.86,
+      "speed": 468.13,
+      "density": 1.5,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10115,8 +10121,8 @@
     },
     {
       "time": "2026-09-15T23:34:00Z",
-      "speed": 464.16,
-      "density": 2.24,
+      "speed": 451.4,
+      "density": 14.06,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10211,8 +10217,8 @@
     },
     {
       "time": "2026-09-15T23:40:00Z",
-      "speed": 538.9,
-      "density": 20.71,
+      "speed": 488.57,
+      "density": 2.49,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10227,8 +10233,8 @@
     },
     {
       "time": "2026-09-15T23:41:00Z",
-      "speed": 525.5,
-      "density": 18.7,
+      "speed": 506.62,
+      "density": 2.08,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10259,8 +10265,8 @@
     },
     {
       "time": "2026-09-15T23:43:00Z",
-      "speed": 539.5,
-      "density": 18.97,
+      "speed": 519.11,
+      "density": 3.15,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10355,8 +10361,8 @@
     },
     {
       "time": "2026-09-15T23:49:00Z",
-      "speed": 521.7,
-      "density": 18.66,
+      "speed": 590.65,
+      "density": 0.76,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10387,8 +10393,8 @@
     },
     {
       "time": "2026-09-15T23:51:00Z",
-      "speed": 526.1,
-      "density": 22.51,
+      "speed": 550.16,
+      "density": 0.83,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10451,8 +10457,8 @@
     },
     {
       "time": "2026-09-15T23:55:00Z",
-      "speed": 544.85,
-      "density": 1.57,
+      "speed": 517.1,
+      "density": 19.94,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10467,8 +10473,8 @@
     },
     {
       "time": "2026-09-15T23:56:00Z",
-      "speed": 509.1,
-      "density": 22.91,
+      "speed": 543.46,
+      "density": 2.72,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10483,8 +10489,8 @@
     },
     {
       "time": "2026-09-15T23:57:00Z",
-      "speed": 562.83,
-      "density": 2.16,
+      "speed": 516.2,
+      "density": 27.98,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10531,8 +10537,8 @@
     },
     {
       "time": "2026-09-16T00:00:00Z",
-      "speed": 536.78,
-      "density": 2.99,
+      "speed": 491.2,
+      "density": 23.35,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10547,8 +10553,8 @@
     },
     {
       "time": "2026-09-16T00:01:00Z",
-      "speed": 569.08,
-      "density": 2.78,
+      "speed": 502.0,
+      "density": 26.32,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10579,8 +10585,8 @@
     },
     {
       "time": "2026-09-16T00:03:00Z",
-      "speed": 507.1,
-      "density": 27.13,
+      "speed": 530.6,
+      "density": 3.46,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10595,8 +10601,8 @@
     },
     {
       "time": "2026-09-16T00:04:00Z",
-      "speed": 522.7,
-      "density": 28.78,
+      "speed": 577.06,
+      "density": 3.13,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10643,8 +10649,8 @@
     },
     {
       "time": "2026-09-16T00:07:00Z",
-      "speed": 527.82,
-      "density": 3.29,
+      "speed": 534.0,
+      "density": 27.45,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10659,8 +10665,8 @@
     },
     {
       "time": "2026-09-16T00:08:00Z",
-      "speed": 540.5,
-      "density": 23.74,
+      "speed": 543.37,
+      "density": 3.14,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10691,8 +10697,8 @@
     },
     {
       "time": "2026-09-16T00:10:00Z",
-      "speed": 537.46,
-      "density": 4.24,
+      "speed": 532.1,
+      "density": 27.73,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10723,8 +10729,8 @@
     },
     {
       "time": "2026-09-16T00:12:00Z",
-      "speed": 529.0,
-      "density": 20.85,
+      "speed": 555.04,
+      "density": 3.68,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10739,8 +10745,8 @@
     },
     {
       "time": "2026-09-16T00:13:00Z",
-      "speed": 535.1,
-      "density": 24.47,
+      "speed": 515.19,
+      "density": 2.82,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10787,8 +10793,8 @@
     },
     {
       "time": "2026-09-16T00:16:00Z",
-      "speed": 520.1,
-      "density": 25.01,
+      "speed": 592.17,
+      "density": 4.32,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10819,8 +10825,8 @@
     },
     {
       "time": "2026-09-16T00:18:00Z",
-      "speed": 559.67,
-      "density": 5.0,
+      "speed": 540.8,
+      "density": 23.88,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10883,8 +10889,8 @@
     },
     {
       "time": "2026-09-16T00:22:00Z",
-      "speed": 549.2,
-      "density": 25.99,
+      "speed": 531.04,
+      "density": 4.59,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10899,8 +10905,8 @@
     },
     {
       "time": "2026-09-16T00:23:00Z",
-      "speed": 541.1,
-      "density": 25.89,
+      "speed": 462.78,
+      "density": 1.88,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10915,8 +10921,8 @@
     },
     {
       "time": "2026-09-16T00:24:00Z",
-      "speed": 479.57,
-      "density": 1.46,
+      "speed": 554.1,
+      "density": 29.21,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10947,8 +10953,8 @@
     },
     {
       "time": "2026-09-16T00:26:00Z",
-      "speed": 514.8,
-      "density": 3.47,
+      "speed": 531.8,
+      "density": 25.69,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10963,8 +10969,8 @@
     },
     {
       "time": "2026-09-16T00:27:00Z",
-      "speed": 531.7,
-      "density": 24.65,
+      "speed": 555.02,
+      "density": 5.53,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10979,8 +10985,8 @@
     },
     {
       "time": "2026-09-16T00:28:00Z",
-      "speed": 542.3,
-      "density": 25.12,
+      "speed": 564.25,
+      "density": 5.73,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -10995,8 +11001,8 @@
     },
     {
       "time": "2026-09-16T00:29:00Z",
-      "speed": 547.59,
-      "density": 4.87,
+      "speed": 545.2,
+      "density": 25.5,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11043,8 +11049,8 @@
     },
     {
       "time": "2026-09-16T00:32:00Z",
-      "speed": 530.2,
-      "density": 23.83,
+      "speed": 449.54,
+      "density": 0.68,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11059,8 +11065,8 @@
     },
     {
       "time": "2026-09-16T00:33:00Z",
-      "speed": 532.6,
-      "density": 23.22,
+      "speed": 493.38,
+      "density": 4.11,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11091,8 +11097,8 @@
     },
     {
       "time": "2026-09-16T00:35:00Z",
-      "speed": 564.61,
-      "density": 4.37,
+      "speed": 525.3,
+      "density": 22.26,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11171,8 +11177,8 @@
     },
     {
       "time": "2026-09-16T00:40:00Z",
-      "speed": 536.6,
-      "density": 20.03,
+      "speed": 554.08,
+      "density": 3.8,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11235,8 +11241,8 @@
     },
     {
       "time": "2026-09-16T00:44:00Z",
-      "speed": 544.9,
-      "density": 20.69,
+      "speed": 553.91,
+      "density": 4.59,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11251,8 +11257,8 @@
     },
     {
       "time": "2026-09-16T00:45:00Z",
-      "speed": 545.4,
-      "density": 22.97,
+      "speed": 526.75,
+      "density": 4.32,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11299,8 +11305,8 @@
     },
     {
       "time": "2026-09-16T00:48:00Z",
-      "speed": 543.9,
-      "density": 22.23,
+      "speed": 570.72,
+      "density": 4.01,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11331,8 +11337,8 @@
     },
     {
       "time": "2026-09-16T00:50:00Z",
-      "speed": 413.86,
-      "density": 0.34,
+      "speed": 524.0,
+      "density": 22.28,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11347,8 +11353,8 @@
     },
     {
       "time": "2026-09-16T00:51:00Z",
-      "speed": 556.79,
-      "density": 3.82,
+      "speed": 544.6,
+      "density": 21.64,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11363,8 +11369,8 @@
     },
     {
       "time": "2026-09-16T00:52:00Z",
-      "speed": 543.4,
-      "density": 22.25,
+      "speed": 567.07,
+      "density": 4.19,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11379,8 +11385,8 @@
     },
     {
       "time": "2026-09-16T00:53:00Z",
-      "speed": 588.11,
-      "density": 4.31,
+      "speed": 539.9,
+      "density": 23.16,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11411,8 +11417,8 @@
     },
     {
       "time": "2026-09-16T00:55:00Z",
-      "speed": 561.09,
-      "density": 3.99,
+      "speed": 546.5,
+      "density": 20.35,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11427,8 +11433,8 @@
     },
     {
       "time": "2026-09-16T00:56:00Z",
-      "speed": 546.7,
-      "density": 18.5,
+      "speed": 561.56,
+      "density": 3.93,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11443,8 +11449,8 @@
     },
     {
       "time": "2026-09-16T00:57:00Z",
-      "speed": 555.4,
-      "density": 18.94,
+      "speed": 584.03,
+      "density": 3.69,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11475,8 +11481,8 @@
     },
     {
       "time": "2026-09-16T00:59:00Z",
-      "speed": 575.63,
-      "density": 3.13,
+      "speed": 544.5,
+      "density": 21.35,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11523,8 +11529,8 @@
     },
     {
       "time": "2026-09-16T01:02:00Z",
-      "speed": 542.0,
-      "density": 19.62,
+      "speed": 597.75,
+      "density": 2.38,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11539,8 +11545,8 @@
     },
     {
       "time": "2026-09-16T01:03:00Z",
-      "speed": 544.94,
-      "density": 2.15,
+      "speed": 525.2,
+      "density": 17.03,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11571,8 +11577,8 @@
     },
     {
       "time": "2026-09-16T01:05:00Z",
-      "speed": 426.33,
-      "density": 0.15,
+      "speed": 551.3,
+      "density": 19.11,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11587,8 +11593,8 @@
     },
     {
       "time": "2026-09-16T01:06:00Z",
-      "speed": 542.47,
-      "density": 2.92,
+      "speed": 552.4,
+      "density": 19.21,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11635,8 +11641,8 @@
     },
     {
       "time": "2026-09-16T01:09:00Z",
-      "speed": 556.75,
-      "density": 2.1,
+      "speed": 533.3,
+      "density": 21.35,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11651,8 +11657,8 @@
     },
     {
       "time": "2026-09-16T01:10:00Z",
-      "speed": 522.2,
-      "density": 18.59,
+      "speed": 547.28,
+      "density": 2.35,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11747,8 +11753,8 @@
     },
     {
       "time": "2026-09-16T01:16:00Z",
-      "speed": 539.2,
-      "density": 17.89,
+      "speed": 505.88,
+      "density": 1.95,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11827,8 +11833,8 @@
     },
     {
       "time": "2026-09-16T01:21:00Z",
-      "speed": 534.7,
-      "density": 15.02,
+      "speed": 549.53,
+      "density": 1.55,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11891,8 +11897,8 @@
     },
     {
       "time": "2026-09-16T01:25:00Z",
-      "speed": 535.7,
-      "density": 16.74,
+      "speed": 590.94,
+      "density": 3.06,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -11939,8 +11945,8 @@
     },
     {
       "time": "2026-09-16T01:28:00Z",
-      "speed": 552.8,
-      "density": 15.49,
+      "speed": 560.74,
+      "density": 2.11,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12035,8 +12041,8 @@
     },
     {
       "time": "2026-09-16T01:34:00Z",
-      "speed": 525.24,
-      "density": 1.89,
+      "speed": 556.7,
+      "density": 15.39,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12067,8 +12073,8 @@
     },
     {
       "time": "2026-09-16T01:36:00Z",
-      "speed": 556.4,
-      "density": 20.25,
+      "speed": 591.75,
+      "density": 3.62,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12115,8 +12121,8 @@
     },
     {
       "time": "2026-09-16T01:39:00Z",
-      "speed": 518.3,
-      "density": 16.61,
+      "speed": 462.44,
+      "density": 0.59,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12131,8 +12137,8 @@
     },
     {
       "time": "2026-09-16T01:40:00Z",
-      "speed": 533.1,
-      "density": 12.26,
+      "speed": 526.84,
+      "density": 3.48,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12211,8 +12217,8 @@
     },
     {
       "time": "2026-09-16T01:45:00Z",
-      "speed": 562.98,
-      "density": 1.58,
+      "speed": 540.4,
+      "density": 16.28,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12227,8 +12233,8 @@
     },
     {
       "time": "2026-09-16T01:46:00Z",
-      "speed": 529.5,
-      "density": 15.97,
+      "speed": 559.93,
+      "density": 2.01,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12243,8 +12249,8 @@
     },
     {
       "time": "2026-09-16T01:47:00Z",
-      "speed": 571.47,
-      "density": 1.44,
+      "speed": 542.6,
+      "density": 13.74,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12275,8 +12281,8 @@
     },
     {
       "time": "2026-09-16T01:49:00Z",
-      "speed": 541.1,
-      "density": 13.4,
+      "speed": 571.98,
+      "density": 1.12,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12323,8 +12329,8 @@
     },
     {
       "time": "2026-09-16T01:52:00Z",
-      "speed": 530.6,
-      "density": 12.02,
+      "speed": 556.15,
+      "density": 1.65,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12339,8 +12345,8 @@
     },
     {
       "time": "2026-09-16T01:53:00Z",
-      "speed": 526.0,
-      "density": 12.19,
+      "speed": 507.8,
+      "density": 2.5,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12355,8 +12361,8 @@
     },
     {
       "time": "2026-09-16T01:54:00Z",
-      "speed": 535.9,
-      "density": 12.6,
+      "speed": 580.9,
+      "density": 1.75,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12371,8 +12377,8 @@
     },
     {
       "time": "2026-09-16T01:55:00Z",
-      "speed": 447.5,
-      "density": 0.32,
+      "speed": 532.0,
+      "density": 12.68,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12387,8 +12393,8 @@
     },
     {
       "time": "2026-09-16T01:56:00Z",
-      "speed": 532.8,
-      "density": 14.31,
+      "speed": 532.84,
+      "density": 1.74,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12419,8 +12425,8 @@
     },
     {
       "time": "2026-09-16T01:58:00Z",
-      "speed": 529.3,
-      "density": 14.99,
+      "speed": 543.77,
+      "density": 2.69,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12451,8 +12457,8 @@
     },
     {
       "time": "2026-09-16T02:00:00Z",
-      "speed": 523.3,
-      "density": 15.39,
+      "speed": 561.44,
+      "density": 3.17,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12467,8 +12473,8 @@
     },
     {
       "time": "2026-09-16T02:01:00Z",
-      "speed": 533.0,
-      "density": 14.78,
+      "speed": 561.8,
+      "density": 3.27,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12515,8 +12521,8 @@
     },
     {
       "time": "2026-09-16T02:04:00Z",
-      "speed": 522.5,
-      "density": 14.18,
+      "speed": 472.66,
+      "density": 1.07,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12531,8 +12537,8 @@
     },
     {
       "time": "2026-09-16T02:05:00Z",
-      "speed": 516.4,
-      "density": 14.63,
+      "speed": 548.34,
+      "density": 3.17,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12595,8 +12601,8 @@
     },
     {
       "time": "2026-09-16T02:09:00Z",
-      "speed": 532.6,
-      "density": 10.61,
+      "speed": 529.31,
+      "density": 2.39,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12627,8 +12633,8 @@
     },
     {
       "time": "2026-09-16T02:11:00Z",
-      "speed": 530.0,
-      "density": 13.89,
+      "speed": 451.29,
+      "density": 0.5,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12659,8 +12665,8 @@
     },
     {
       "time": "2026-09-16T02:13:00Z",
-      "speed": 531.3,
-      "density": 13.33,
+      "speed": 546.13,
+      "density": 3.6,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12691,8 +12697,8 @@
     },
     {
       "time": "2026-09-16T02:15:00Z",
-      "speed": 526.3,
-      "density": 13.65,
+      "speed": 518.76,
+      "density": 3.08,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12707,8 +12713,8 @@
     },
     {
       "time": "2026-09-16T02:16:00Z",
-      "speed": 528.5,
-      "density": 13.09,
+      "speed": 528.2,
+      "density": 3.06,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12723,8 +12729,8 @@
     },
     {
       "time": "2026-09-16T02:17:00Z",
-      "speed": 531.0,
-      "density": 12.04,
+      "speed": 549.67,
+      "density": 3.12,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12755,8 +12761,8 @@
     },
     {
       "time": "2026-09-16T02:19:00Z",
-      "speed": 526.6,
-      "density": 12.52,
+      "speed": 549.84,
+      "density": 3.27,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12867,8 +12873,8 @@
     },
     {
       "time": "2026-09-16T02:26:00Z",
-      "speed": 531.83,
-      "density": 2.44,
+      "speed": 529.9,
+      "density": 12.69,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12931,8 +12937,8 @@
     },
     {
       "time": "2026-09-16T02:30:00Z",
-      "speed": 541.48,
-      "density": 2.37,
+      "speed": 540.2,
+      "density": 11.41,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -12995,8 +13001,8 @@
     },
     {
       "time": "2026-09-16T02:34:00Z",
-      "speed": 553.54,
-      "density": 2.43,
+      "speed": 535.2,
+      "density": 11.05,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13011,8 +13017,8 @@
     },
     {
       "time": "2026-09-16T02:35:00Z",
-      "speed": 521.47,
-      "density": 2.48,
+      "speed": 539.2,
+      "density": 11.01,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13043,8 +13049,8 @@
     },
     {
       "time": "2026-09-16T02:37:00Z",
-      "speed": 542.2,
-      "density": 10.67,
+      "speed": 552.51,
+      "density": 2.18,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13059,8 +13065,8 @@
     },
     {
       "time": "2026-09-16T02:38:00Z",
-      "speed": 558.81,
-      "density": 2.16,
+      "speed": 536.5,
+      "density": 11.5,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13075,8 +13081,8 @@
     },
     {
       "time": "2026-09-16T02:39:00Z",
-      "speed": 539.9,
-      "density": 10.75,
+      "speed": 489.62,
+      "density": 1.88,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13203,8 +13209,8 @@
     },
     {
       "time": "2026-09-16T02:47:00Z",
-      "speed": 539.87,
-      "density": 1.55,
+      "speed": 541.0,
+      "density": 12.02,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13235,8 +13241,8 @@
     },
     {
       "time": "2026-09-16T02:49:00Z",
-      "speed": 561.48,
-      "density": 0.81,
+      "speed": 543.6,
+      "density": 12.1,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13267,8 +13273,8 @@
     },
     {
       "time": "2026-09-16T02:51:00Z",
-      "speed": 546.2,
-      "density": 11.33,
+      "speed": 561.55,
+      "density": 0.76,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13315,8 +13321,8 @@
     },
     {
       "time": "2026-09-16T02:54:00Z",
-      "speed": 544.1,
-      "density": 12.03,
+      "speed": 455.11,
+      "density": 0.44,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13443,8 +13449,8 @@
     },
     {
       "time": "2026-09-16T03:02:00Z",
-      "speed": 535.1,
-      "density": 11.58,
+      "speed": 546.34,
+      "density": 1.93,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13459,8 +13465,8 @@
     },
     {
       "time": "2026-09-16T03:03:00Z",
-      "speed": 539.2,
-      "density": 12.01,
+      "speed": 553.21,
+      "density": 2.0,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13475,8 +13481,8 @@
     },
     {
       "time": "2026-09-16T03:04:00Z",
-      "speed": 556.71,
-      "density": 2.61,
+      "speed": 524.2,
+      "density": 11.47,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13491,8 +13497,8 @@
     },
     {
       "time": "2026-09-16T03:05:00Z",
-      "speed": 532.7,
-      "density": 3.07,
+      "speed": 527.0,
+      "density": 10.79,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13507,8 +13513,8 @@
     },
     {
       "time": "2026-09-16T03:06:00Z",
-      "speed": 515.8,
-      "density": 2.36,
+      "speed": 523.6,
+      "density": 9.57,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13523,8 +13529,8 @@
     },
     {
       "time": "2026-09-16T03:07:00Z",
-      "speed": 517.52,
-      "density": 1.48,
+      "speed": 518.2,
+      "density": 9.21,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13555,8 +13561,8 @@
     },
     {
       "time": "2026-09-16T03:09:00Z",
-      "speed": 533.4,
-      "density": 11.57,
+      "speed": 528.07,
+      "density": 1.44,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13571,8 +13577,8 @@
     },
     {
       "time": "2026-09-16T03:10:00Z",
-      "speed": 502.44,
-      "density": 1.86,
+      "speed": 541.0,
+      "density": 11.92,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13619,8 +13625,8 @@
     },
     {
       "time": "2026-09-16T03:13:00Z",
-      "speed": 532.67,
-      "density": 2.37,
+      "speed": 545.0,
+      "density": 11.29,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13667,8 +13673,8 @@
     },
     {
       "time": "2026-09-16T03:16:00Z",
-      "speed": 532.6,
-      "density": 10.97,
+      "speed": 447.48,
+      "density": 0.17,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13699,8 +13705,8 @@
     },
     {
       "time": "2026-09-16T03:18:00Z",
-      "speed": 550.7,
-      "density": 11.03,
+      "speed": 559.03,
+      "density": 2.48,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13747,8 +13753,8 @@
     },
     {
       "time": "2026-09-16T03:21:00Z",
-      "speed": 555.1,
-      "density": 9.2,
+      "speed": 555.23,
+      "density": 1.85,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13763,8 +13769,8 @@
     },
     {
       "time": "2026-09-16T03:22:00Z",
-      "speed": 550.69,
-      "density": 1.68,
+      "speed": 554.1,
+      "density": 9.75,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -13971,8 +13977,8 @@
     },
     {
       "time": "2026-09-16T03:35:00Z",
-      "speed": 537.9,
-      "density": 2.22,
+      "speed": 529.7,
+      "density": 11.3,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14307,8 +14313,8 @@
     },
     {
       "time": "2026-09-16T03:56:00Z",
-      "speed": 534.7,
-      "density": 8.93,
+      "speed": 524.8,
+      "density": 2.27,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14387,8 +14393,8 @@
     },
     {
       "time": "2026-09-16T04:01:00Z",
-      "speed": 548.8,
-      "density": 2.48,
+      "speed": 536.9,
+      "density": 9.34,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14419,8 +14425,8 @@
     },
     {
       "time": "2026-09-16T04:03:00Z",
-      "speed": 527.1,
-      "density": 9.44,
+      "speed": 511.57,
+      "density": 2.57,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14467,8 +14473,8 @@
     },
     {
       "time": "2026-09-16T04:06:00Z",
-      "speed": 541.7,
-      "density": 9.65,
+      "speed": 544.43,
+      "density": 2.34,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14483,8 +14489,8 @@
     },
     {
       "time": "2026-09-16T04:07:00Z",
-      "speed": 542.3,
-      "density": 10.2,
+      "speed": 545.37,
+      "density": 2.37,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14547,8 +14553,8 @@
     },
     {
       "time": "2026-09-16T04:11:00Z",
-      "speed": 552.36,
-      "density": 2.1,
+      "speed": 542.8,
+      "density": 9.46,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14595,8 +14601,8 @@
     },
     {
       "time": "2026-09-16T04:14:00Z",
-      "speed": 576.9,
-      "density": 2.21,
+      "speed": 539.0,
+      "density": 9.41,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14611,8 +14617,8 @@
     },
     {
       "time": "2026-09-16T04:15:00Z",
-      "speed": 558.62,
-      "density": 2.23,
+      "speed": 540.1,
+      "density": 9.13,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14627,8 +14633,8 @@
     },
     {
       "time": "2026-09-16T04:16:00Z",
-      "speed": 539.6,
-      "density": 9.29,
+      "speed": 559.57,
+      "density": 2.3,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14643,8 +14649,8 @@
     },
     {
       "time": "2026-09-16T04:17:00Z",
-      "speed": 536.2,
-      "density": 9.2,
+      "speed": 561.95,
+      "density": 1.53,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14723,8 +14729,8 @@
     },
     {
       "time": "2026-09-16T04:22:00Z",
-      "speed": 567.55,
-      "density": 1.92,
+      "speed": 533.4,
+      "density": 9.0,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14739,8 +14745,8 @@
     },
     {
       "time": "2026-09-16T04:23:00Z",
-      "speed": 558.3,
-      "density": 2.32,
+      "speed": 538.5,
+      "density": 8.06,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14787,8 +14793,8 @@
     },
     {
       "time": "2026-09-16T04:26:00Z",
-      "speed": 539.87,
-      "density": 1.71,
+      "speed": 537.1,
+      "density": 9.85,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14835,8 +14841,8 @@
     },
     {
       "time": "2026-09-16T04:29:00Z",
-      "speed": 533.8,
-      "density": 10.24,
+      "speed": 535.45,
+      "density": 1.27,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14899,8 +14905,8 @@
     },
     {
       "time": "2026-09-16T04:33:00Z",
-      "speed": 541.07,
-      "density": 1.14,
+      "speed": 539.8,
+      "density": 9.27,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -14931,8 +14937,8 @@
     },
     {
       "time": "2026-09-16T04:35:00Z",
-      "speed": 537.3,
-      "density": 9.62,
+      "speed": 571.3,
+      "density": 1.65,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15075,8 +15081,8 @@
     },
     {
       "time": "2026-09-16T04:44:00Z",
-      "speed": 551.04,
-      "density": 1.68,
+      "speed": 533.1,
+      "density": 8.87,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15091,8 +15097,8 @@
     },
     {
       "time": "2026-09-16T04:45:00Z",
-      "speed": 541.09,
-      "density": 1.01,
+      "speed": 533.3,
+      "density": 9.24,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15139,8 +15145,8 @@
     },
     {
       "time": "2026-09-16T04:48:00Z",
-      "speed": 527.82,
-      "density": 1.86,
+      "speed": 531.0,
+      "density": 9.15,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15219,8 +15225,8 @@
     },
     {
       "time": "2026-09-16T04:53:00Z",
-      "speed": 534.8,
-      "density": 8.59,
+      "speed": 541.47,
+      "density": 1.7,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15235,8 +15241,8 @@
     },
     {
       "time": "2026-09-16T04:54:00Z",
-      "speed": 554.76,
-      "density": 1.54,
+      "speed": 535.5,
+      "density": 8.99,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15251,8 +15257,8 @@
     },
     {
       "time": "2026-09-16T04:55:00Z",
-      "speed": 560.74,
-      "density": 1.51,
+      "speed": 535.2,
+      "density": 9.19,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15283,8 +15289,8 @@
     },
     {
       "time": "2026-09-16T04:57:00Z",
-      "speed": 554.38,
-      "density": 0.78,
+      "speed": 537.4,
+      "density": 9.74,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15299,8 +15305,8 @@
     },
     {
       "time": "2026-09-16T04:58:00Z",
-      "speed": 539.72,
-      "density": 1.36,
+      "speed": 529.6,
+      "density": 9.41,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15411,8 +15417,8 @@
     },
     {
       "time": "2026-09-16T05:05:00Z",
-      "speed": 560.54,
-      "density": 1.24,
+      "speed": 543.7,
+      "density": 8.61,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15427,8 +15433,8 @@
     },
     {
       "time": "2026-09-16T05:06:00Z",
-      "speed": 559.56,
-      "density": 1.62,
+      "speed": 534.6,
+      "density": 8.08,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15475,8 +15481,8 @@
     },
     {
       "time": "2026-09-16T05:09:00Z",
-      "speed": 540.1,
-      "density": 9.1,
+      "speed": 544.61,
+      "density": 1.93,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15507,8 +15513,8 @@
     },
     {
       "time": "2026-09-16T05:11:00Z",
-      "speed": 544.67,
-      "density": 2.34,
+      "speed": 537.4,
+      "density": 9.47,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15571,8 +15577,8 @@
     },
     {
       "time": "2026-09-16T05:15:00Z",
-      "speed": 530.2,
-      "density": 9.23,
+      "speed": 538.89,
+      "density": 2.07,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15619,8 +15625,8 @@
     },
     {
       "time": "2026-09-16T05:18:00Z",
-      "speed": 556.08,
-      "density": 1.87,
+      "speed": 524.3,
+      "density": 9.13,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15635,8 +15641,8 @@
     },
     {
       "time": "2026-09-16T05:19:00Z",
-      "speed": 545.17,
-      "density": 1.47,
+      "speed": 530.8,
+      "density": 9.6,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15667,8 +15673,8 @@
     },
     {
       "time": "2026-09-16T05:21:00Z",
-      "speed": 555.55,
-      "density": 1.52,
+      "speed": 528.1,
+      "density": 8.88,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15699,8 +15705,8 @@
     },
     {
       "time": "2026-09-16T05:23:00Z",
-      "speed": 545.23,
-      "density": 1.03,
+      "speed": 533.1,
+      "density": 8.91,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15731,8 +15737,8 @@
     },
     {
       "time": "2026-09-16T05:25:00Z",
-      "speed": 531.0,
-      "density": 9.54,
+      "speed": 546.78,
+      "density": 0.89,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15747,8 +15753,8 @@
     },
     {
       "time": "2026-09-16T05:26:00Z",
-      "speed": 558.72,
-      "density": 0.77,
+      "speed": 540.0,
+      "density": 9.88,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15763,8 +15769,8 @@
     },
     {
       "time": "2026-09-16T05:27:00Z",
-      "speed": 553.09,
-      "density": 1.34,
+      "speed": 544.9,
+      "density": 8.95,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15891,8 +15897,8 @@
     },
     {
       "time": "2026-09-16T05:35:00Z",
-      "speed": 539.3,
-      "density": 9.06,
+      "speed": 558.36,
+      "density": 1.04,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15907,8 +15913,8 @@
     },
     {
       "time": "2026-09-16T05:36:00Z",
-      "speed": 552.22,
-      "density": 1.24,
+      "speed": 535.4,
+      "density": 9.15,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -15987,8 +15993,8 @@
     },
     {
       "time": "2026-09-16T05:41:00Z",
-      "speed": 548.19,
-      "density": 1.11,
+      "speed": 539.8,
+      "density": 9.86,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16003,8 +16009,8 @@
     },
     {
       "time": "2026-09-16T05:42:00Z",
-      "speed": 525.77,
-      "density": 1.1,
+      "speed": 541.2,
+      "density": 8.75,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16067,8 +16073,8 @@
     },
     {
       "time": "2026-09-16T05:46:00Z",
-      "speed": 538.0,
-      "density": 9.42,
+      "speed": 536.07,
+      "density": 1.09,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16083,8 +16089,8 @@
     },
     {
       "time": "2026-09-16T05:47:00Z",
-      "speed": 537.7,
-      "density": 9.39,
+      "speed": 522.44,
+      "density": 1.75,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16195,8 +16201,8 @@
     },
     {
       "time": "2026-09-16T05:54:00Z",
-      "speed": 539.7,
-      "density": 9.07,
+      "speed": 555.63,
+      "density": 0.39,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16243,8 +16249,8 @@
     },
     {
       "time": "2026-09-16T05:57:00Z",
-      "speed": 536.7,
-      "density": 9.64,
+      "speed": 544.0,
+      "density": 1.16,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16259,8 +16265,8 @@
     },
     {
       "time": "2026-09-16T05:58:00Z",
-      "speed": 537.1,
-      "density": 9.39,
+      "speed": 480.65,
+      "density": 0.42,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16323,8 +16329,8 @@
     },
     {
       "time": "2026-09-16T06:02:00Z",
-      "speed": 540.8,
-      "density": 9.51,
+      "speed": 555.75,
+      "density": 1.15,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16339,8 +16345,8 @@
     },
     {
       "time": "2026-09-16T06:03:00Z",
-      "speed": 541.7,
-      "density": 8.01,
+      "speed": 543.88,
+      "density": 1.09,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16387,8 +16393,8 @@
     },
     {
       "time": "2026-09-16T06:06:00Z",
-      "speed": 535.9,
-      "density": 9.27,
+      "speed": 552.41,
+      "density": 0.77,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16403,8 +16409,8 @@
     },
     {
       "time": "2026-09-16T06:07:00Z",
-      "speed": 534.0,
-      "density": 9.03,
+      "speed": 547.37,
+      "density": 1.51,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16435,8 +16441,8 @@
     },
     {
       "time": "2026-09-16T06:09:00Z",
-      "speed": 504.46,
-      "density": 1.58,
+      "speed": 532.9,
+      "density": 8.6,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16467,8 +16473,8 @@
     },
     {
       "time": "2026-09-16T06:11:00Z",
-      "speed": 533.6,
-      "density": 8.83,
+      "speed": 571.09,
+      "density": 2.25,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16483,8 +16489,8 @@
     },
     {
       "time": "2026-09-16T06:12:00Z",
-      "speed": 535.3,
-      "density": 9.09,
+      "speed": 533.16,
+      "density": 1.72,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16499,8 +16505,8 @@
     },
     {
       "time": "2026-09-16T06:13:00Z",
-      "speed": 554.27,
-      "density": 2.02,
+      "speed": 536.1,
+      "density": 8.77,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16547,8 +16553,8 @@
     },
     {
       "time": "2026-09-16T06:16:00Z",
-      "speed": 530.8,
-      "density": 8.47,
+      "speed": 540.74,
+      "density": 1.43,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16563,8 +16569,8 @@
     },
     {
       "time": "2026-09-16T06:17:00Z",
-      "speed": 559.15,
-      "density": 1.45,
+      "speed": 531.4,
+      "density": 8.22,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16947,8 +16953,8 @@
     },
     {
       "time": "2026-09-16T06:41:00Z",
-      "speed": 535.31,
-      "density": 0.55,
+      "speed": 528.3,
+      "density": 8.68,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -16963,8 +16969,8 @@
     },
     {
       "time": "2026-09-16T06:42:00Z",
-      "speed": 538.44,
-      "density": 0.61,
+      "speed": 522.9,
+      "density": 8.36,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17043,8 +17049,8 @@
     },
     {
       "time": "2026-09-16T06:47:00Z",
-      "speed": 548.49,
-      "density": 0.63,
+      "speed": 526.2,
+      "density": 8.27,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17059,8 +17065,8 @@
     },
     {
       "time": "2026-09-16T06:48:00Z",
-      "speed": 526.2,
-      "density": 8.29,
+      "speed": 538.59,
+      "density": 0.47,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17075,8 +17081,8 @@
     },
     {
       "time": "2026-09-16T06:49:00Z",
-      "speed": 523.1,
-      "density": 8.31,
+      "speed": 521.73,
+      "density": 0.38,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17107,8 +17113,8 @@
     },
     {
       "time": "2026-09-16T06:51:00Z",
-      "speed": 527.2,
-      "density": 8.65,
+      "speed": 570.09,
+      "density": 0.53,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17123,8 +17129,8 @@
     },
     {
       "time": "2026-09-16T06:52:00Z",
-      "speed": 524.0,
-      "density": 8.08,
+      "speed": 568.27,
+      "density": 0.54,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17171,8 +17177,8 @@
     },
     {
       "time": "2026-09-16T06:55:00Z",
-      "speed": 524.2,
-      "density": 0.48,
+      "speed": 531.5,
+      "density": 8.33,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17187,8 +17193,8 @@
     },
     {
       "time": "2026-09-16T06:56:00Z",
-      "speed": 539.2,
-      "density": 0.51,
+      "speed": 532.5,
+      "density": 8.07,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17219,8 +17225,8 @@
     },
     {
       "time": "2026-09-16T06:58:00Z",
-      "speed": 531.8,
-      "density": 7.9,
+      "speed": 519.35,
+      "density": 0.39,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17235,8 +17241,8 @@
     },
     {
       "time": "2026-09-16T06:59:00Z",
-      "speed": 546.84,
-      "density": 0.48,
+      "speed": 532.5,
+      "density": 8.42,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17283,8 +17289,8 @@
     },
     {
       "time": "2026-09-16T07:02:00Z",
-      "speed": 534.3,
-      "density": 7.93,
+      "speed": 513.87,
+      "density": 0.56,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17347,8 +17353,8 @@
     },
     {
       "time": "2026-09-16T07:06:00Z",
-      "speed": 532.7,
-      "density": 7.87,
+      "speed": 518.69,
+      "density": 0.49,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17379,8 +17385,8 @@
     },
     {
       "time": "2026-09-16T07:08:00Z",
-      "speed": 519.6,
-      "density": 7.61,
+      "speed": 454.59,
+      "density": 0.16,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17555,8 +17561,8 @@
     },
     {
       "time": "2026-09-16T07:19:00Z",
-      "speed": 523.8,
-      "density": 8.19,
+      "speed": 521.79,
+      "density": 0.48,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17587,8 +17593,8 @@
     },
     {
       "time": "2026-09-16T07:21:00Z",
-      "speed": 525.7,
-      "density": 7.67,
+      "speed": 527.93,
+      "density": 0.56,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17603,8 +17609,8 @@
     },
     {
       "time": "2026-09-16T07:22:00Z",
-      "speed": 527.0,
-      "density": 8.56,
+      "speed": 527.15,
+      "density": 0.58,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17667,8 +17673,8 @@
     },
     {
       "time": "2026-09-16T07:26:00Z",
-      "speed": 535.72,
-      "density": 0.75,
+      "speed": 516.9,
+      "density": 7.59,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17715,8 +17721,8 @@
     },
     {
       "time": "2026-09-16T07:29:00Z",
-      "speed": 499.28,
-      "density": 0.55,
+      "speed": 516.3,
+      "density": 7.42,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17731,8 +17737,8 @@
     },
     {
       "time": "2026-09-16T07:30:00Z",
-      "speed": 541.44,
-      "density": 1.42,
+      "speed": 525.5,
+      "density": 7.74,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17763,8 +17769,8 @@
     },
     {
       "time": "2026-09-16T07:32:00Z",
-      "speed": 524.8,
-      "density": 7.55,
+      "speed": 547.29,
+      "density": 1.51,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17795,8 +17801,8 @@
     },
     {
       "time": "2026-09-16T07:34:00Z",
-      "speed": 523.7,
-      "density": 7.48,
+      "speed": 558.87,
+      "density": 1.69,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17811,8 +17817,8 @@
     },
     {
       "time": "2026-09-16T07:35:00Z",
-      "speed": 557.33,
-      "density": 1.59,
+      "speed": 522.1,
+      "density": 7.62,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17891,8 +17897,8 @@
     },
     {
       "time": "2026-09-16T07:40:00Z",
-      "speed": 530.0,
-      "density": 7.47,
+      "speed": 511.54,
+      "density": 0.91,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17939,8 +17945,8 @@
     },
     {
       "time": "2026-09-16T07:43:00Z",
-      "speed": 504.53,
-      "density": 0.89,
+      "speed": 524.9,
+      "density": 7.0,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -17971,8 +17977,8 @@
     },
     {
       "time": "2026-09-16T07:45:00Z",
-      "speed": 531.8,
-      "density": 7.56,
+      "speed": 541.07,
+      "density": 1.08,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18131,8 +18137,8 @@
     },
     {
       "time": "2026-09-16T07:55:00Z",
-      "speed": 504.61,
-      "density": 0.86,
+      "speed": 540.8,
+      "density": 8.4,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18147,8 +18153,8 @@
     },
     {
       "time": "2026-09-16T07:56:00Z",
-      "speed": 545.6,
-      "density": 8.3,
+      "speed": 495.22,
+      "density": 0.83,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18211,8 +18217,8 @@
     },
     {
       "time": "2026-09-16T08:00:00Z",
-      "speed": 541.49,
-      "density": 1.17,
+      "speed": 536.7,
+      "density": 7.97,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18227,8 +18233,8 @@
     },
     {
       "time": "2026-09-16T08:01:00Z",
-      "speed": 542.6,
-      "density": 8.08,
+      "speed": 527.16,
+      "density": 1.17,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18243,8 +18249,8 @@
     },
     {
       "time": "2026-09-16T08:02:00Z",
-      "speed": 513.06,
-      "density": 0.95,
+      "speed": 538.8,
+      "density": 7.88,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18275,8 +18281,8 @@
     },
     {
       "time": "2026-09-16T08:04:00Z",
-      "speed": 464.14,
-      "density": 0.09,
+      "speed": 538.7,
+      "density": 7.68,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18291,8 +18297,8 @@
     },
     {
       "time": "2026-09-16T08:05:00Z",
-      "speed": 538.3,
-      "density": 7.75,
+      "speed": 503.04,
+      "density": 1.3,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18307,8 +18313,8 @@
     },
     {
       "time": "2026-09-16T08:06:00Z",
-      "speed": 541.7,
-      "density": 7.81,
+      "speed": 521.37,
+      "density": 1.25,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18371,8 +18377,8 @@
     },
     {
       "time": "2026-09-16T08:10:00Z",
-      "speed": 533.33,
-      "density": 1.36,
+      "speed": 542.7,
+      "density": 7.7,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18403,8 +18409,8 @@
     },
     {
       "time": "2026-09-16T08:12:00Z",
-      "speed": 539.3,
-      "density": 7.87,
+      "speed": 564.99,
+      "density": 1.54,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18499,8 +18505,8 @@
     },
     {
       "time": "2026-09-16T08:18:00Z",
-      "speed": 547.9,
-      "density": 7.76,
+      "speed": 554.77,
+      "density": 0.87,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18595,8 +18601,8 @@
     },
     {
       "time": "2026-09-16T08:24:00Z",
-      "speed": 554.87,
-      "density": 0.39,
+      "speed": 544.1,
+      "density": 7.8,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18611,8 +18617,8 @@
     },
     {
       "time": "2026-09-16T08:25:00Z",
-      "speed": 553.29,
-      "density": 0.37,
+      "speed": 545.6,
+      "density": 7.5,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18683,8 +18689,8 @@
     },
     {
       "time": "2026-09-16T08:32:00Z",
-      "speed": 533.6,
-      "density": 6.82,
+      "speed": 543.22,
+      "density": 0.31,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18715,16 +18721,16 @@
     },
     {
       "time": "2026-09-16T08:36:00Z",
-      "speed": 531.33,
-      "density": 0.35,
+      "speed": 547.8,
+      "density": 7.62,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T08:37:00Z",
-      "speed": 543.5,
-      "density": 7.48,
+      "speed": 525.36,
+      "density": 0.35,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18787,16 +18793,16 @@
     },
     {
       "time": "2026-09-16T08:45:00Z",
-      "speed": 545.29,
-      "density": 0.32,
+      "speed": 544.1,
+      "density": 7.6,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T08:46:00Z",
-      "speed": 543.2,
-      "density": 7.81,
+      "speed": 550.15,
+      "density": 0.37,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18851,8 +18857,8 @@
     },
     {
       "time": "2026-09-16T08:53:00Z",
-      "speed": 549.1,
-      "density": 6.56,
+      "speed": 541.42,
+      "density": 0.46,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18875,24 +18881,24 @@
     },
     {
       "time": "2026-09-16T08:56:00Z",
-      "speed": 545.14,
-      "density": 0.3,
+      "speed": 541.4,
+      "density": 7.23,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T08:57:00Z",
-      "speed": 541.23,
-      "density": 0.5,
+      "speed": 540.9,
+      "density": 7.04,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T08:58:00Z",
-      "speed": 538.7,
-      "density": 7.1,
+      "speed": 536.03,
+      "density": 0.67,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18915,32 +18921,32 @@
     },
     {
       "time": "2026-09-16T09:01:00Z",
-      "speed": 541.66,
-      "density": 1.0,
+      "speed": 551.4,
+      "density": 7.26,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T09:02:00Z",
-      "speed": 546.86,
-      "density": 0.97,
+      "speed": 537.0,
+      "density": 7.32,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T09:03:00Z",
-      "speed": 546.33,
-      "density": 1.0,
+      "speed": 538.1,
+      "density": 7.33,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T09:04:00Z",
-      "speed": 539.5,
-      "density": 7.56,
+      "speed": 543.02,
+      "density": 1.03,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -18971,32 +18977,32 @@
     },
     {
       "time": "2026-09-16T09:08:00Z",
-      "speed": 543.2,
-      "density": 7.19,
+      "speed": 539.8,
+      "density": 0.69,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T09:09:00Z",
-      "speed": 535.2,
-      "density": 7.32,
+      "speed": 538.18,
+      "density": 0.67,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T09:10:00Z",
-      "speed": 548.23,
-      "density": 0.39,
+      "speed": 538.0,
+      "density": 7.41,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T09:11:00Z",
-      "speed": 559.45,
-      "density": 0.37,
+      "speed": 538.0,
+      "density": 7.39,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19059,8 +19065,8 @@
     },
     {
       "time": "2026-09-16T09:19:00Z",
-      "speed": 539.0,
-      "density": 7.02,
+      "speed": 552.04,
+      "density": 0.4,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19083,8 +19089,8 @@
     },
     {
       "time": "2026-09-16T09:22:00Z",
-      "speed": 540.0,
-      "density": 7.26,
+      "speed": 539.28,
+      "density": 0.56,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19099,8 +19105,8 @@
     },
     {
       "time": "2026-09-16T09:24:00Z",
-      "speed": 536.4,
-      "density": 6.82,
+      "speed": 559.0,
+      "density": 0.38,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19139,16 +19145,16 @@
     },
     {
       "time": "2026-09-16T09:29:00Z",
-      "speed": 542.2,
-      "density": 7.05,
+      "speed": 551.02,
+      "density": 0.34,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T09:30:00Z",
-      "speed": 542.7,
-      "density": 7.27,
+      "speed": 546.75,
+      "density": 0.33,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19187,8 +19193,8 @@
     },
     {
       "time": "2026-09-16T09:35:00Z",
-      "speed": 541.6,
-      "density": 7.37,
+      "speed": 534.94,
+      "density": 0.28,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19219,8 +19225,8 @@
     },
     {
       "time": "2026-09-16T09:39:00Z",
-      "speed": 541.4,
-      "density": 7.28,
+      "speed": 528.26,
+      "density": 0.29,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19283,8 +19289,8 @@
     },
     {
       "time": "2026-09-16T09:47:00Z",
-      "speed": 527.67,
-      "density": 0.65,
+      "speed": 544.2,
+      "density": 6.95,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19307,8 +19313,8 @@
     },
     {
       "time": "2026-09-16T09:50:00Z",
-      "speed": 535.4,
-      "density": 7.14,
+      "speed": 539.21,
+      "density": 0.38,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19323,8 +19329,8 @@
     },
     {
       "time": "2026-09-16T09:52:00Z",
-      "speed": 548.07,
-      "density": 0.33,
+      "speed": 538.9,
+      "density": 7.36,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19339,40 +19345,40 @@
     },
     {
       "time": "2026-09-16T09:54:00Z",
-      "speed": 537.2,
-      "density": 7.25,
+      "speed": 541.88,
+      "density": 0.51,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T09:55:00Z",
-      "speed": 541.3,
-      "density": 6.93,
+      "speed": 542.75,
+      "density": 0.42,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T09:56:00Z",
-      "speed": 541.3,
-      "density": 7.02,
+      "speed": 543.71,
+      "density": 0.52,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T09:57:00Z",
-      "speed": 540.0,
-      "density": 6.93,
+      "speed": 549.57,
+      "density": 0.35,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T09:58:00Z",
-      "speed": 537.7,
-      "density": 7.25,
+      "speed": 550.81,
+      "density": 0.29,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19403,16 +19409,16 @@
     },
     {
       "time": "2026-09-16T10:02:00Z",
-      "speed": 528.4,
-      "density": 6.66,
+      "speed": 546.56,
+      "density": 0.37,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T10:03:00Z",
-      "speed": 545.58,
-      "density": 0.5,
+      "speed": 528.7,
+      "density": 6.12,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19443,8 +19449,8 @@
     },
     {
       "time": "2026-09-16T10:07:00Z",
-      "speed": 553.56,
-      "density": 0.33,
+      "speed": 532.0,
+      "density": 5.59,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19459,32 +19465,32 @@
     },
     {
       "time": "2026-09-16T10:09:00Z",
-      "speed": 531.1,
-      "density": 5.89,
+      "speed": 546.99,
+      "density": 0.41,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T10:10:00Z",
-      "speed": 528.7,
-      "density": 5.89,
+      "speed": 545.02,
+      "density": 0.44,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T10:11:00Z",
-      "speed": 551.18,
-      "density": 0.34,
+      "speed": 530.6,
+      "density": 5.7,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T10:12:00Z",
-      "speed": 542.77,
-      "density": 0.68,
+      "speed": 529.1,
+      "density": 5.78,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19507,8 +19513,8 @@
     },
     {
       "time": "2026-09-16T10:15:00Z",
-      "speed": 543.14,
-      "density": 1.25,
+      "speed": 530.7,
+      "density": 6.37,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19523,24 +19529,24 @@
     },
     {
       "time": "2026-09-16T10:17:00Z",
-      "speed": 530.3,
-      "density": 6.09,
+      "speed": 547.19,
+      "density": 1.19,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T10:18:00Z",
-      "speed": 542.74,
-      "density": 1.18,
+      "speed": 528.3,
+      "density": 6.1,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T10:19:00Z",
-      "speed": 545.44,
-      "density": 1.18,
+      "speed": 530.5,
+      "density": 5.79,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19571,16 +19577,16 @@
     },
     {
       "time": "2026-09-16T10:23:00Z",
-      "speed": 533.1,
-      "density": 6.2,
+      "speed": 542.66,
+      "density": 1.28,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T10:24:00Z",
-      "speed": 533.3,
-      "density": 6.14,
+      "speed": 545.83,
+      "density": 0.54,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19635,24 +19641,24 @@
     },
     {
       "time": "2026-09-16T10:31:00Z",
-      "speed": 529.7,
-      "density": 6.38,
+      "speed": 542.9,
+      "density": 1.01,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T10:32:00Z",
-      "speed": 537.1,
-      "density": 6.52,
+      "speed": 544.2,
+      "density": 1.07,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T10:33:00Z",
-      "speed": 542.28,
-      "density": 0.98,
+      "speed": 534.5,
+      "density": 6.5,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19667,8 +19673,8 @@
     },
     {
       "time": "2026-09-16T10:35:00Z",
-      "speed": 541.97,
-      "density": 0.64,
+      "speed": 549.8,
+      "density": 6.43,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19691,16 +19697,16 @@
     },
     {
       "time": "2026-09-16T10:38:00Z",
-      "speed": 550.2,
-      "density": 5.96,
+      "speed": 546.58,
+      "density": 0.15,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T10:39:00Z",
-      "speed": 542.32,
-      "density": 0.17,
+      "speed": 551.9,
+      "density": 5.75,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19739,16 +19745,16 @@
     },
     {
       "time": "2026-09-16T10:44:00Z",
-      "speed": 550.12,
-      "density": 0.16,
+      "speed": 534.7,
+      "density": 5.29,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T10:45:00Z",
-      "speed": 548.14,
-      "density": 0.17,
+      "speed": 531.2,
+      "density": 4.95,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19763,16 +19769,16 @@
     },
     {
       "time": "2026-09-16T10:47:00Z",
-      "speed": 542.95,
-      "density": 0.38,
+      "speed": 521.3,
+      "density": 4.98,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T10:48:00Z",
-      "speed": 524.0,
-      "density": 4.85,
+      "speed": 548.86,
+      "density": 0.35,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19803,8 +19809,8 @@
     },
     {
       "time": "2026-09-16T10:52:00Z",
-      "speed": 545.93,
-      "density": 0.29,
+      "speed": 529.7,
+      "density": 4.89,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19819,8 +19825,8 @@
     },
     {
       "time": "2026-09-16T10:54:00Z",
-      "speed": 525.6,
-      "density": 5.03,
+      "speed": 548.62,
+      "density": 0.28,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19883,8 +19889,8 @@
     },
     {
       "time": "2026-09-16T11:02:00Z",
-      "speed": 535.4,
-      "density": 5.46,
+      "speed": 534.56,
+      "density": 0.47,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19899,16 +19905,16 @@
     },
     {
       "time": "2026-09-16T11:04:00Z",
-      "speed": 529.76,
-      "density": 0.24,
+      "speed": 542.4,
+      "density": 6.27,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T11:05:00Z",
-      "speed": 537.9,
-      "density": 5.69,
+      "speed": 532.34,
+      "density": 0.23,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19923,8 +19929,8 @@
     },
     {
       "time": "2026-09-16T11:07:00Z",
-      "speed": 529.3,
-      "density": 5.26,
+      "speed": 541.73,
+      "density": 0.27,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19947,8 +19953,8 @@
     },
     {
       "time": "2026-09-16T11:10:00Z",
-      "speed": 536.4,
-      "density": 5.92,
+      "speed": 537.0,
+      "density": 0.29,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -19971,8 +19977,8 @@
     },
     {
       "time": "2026-09-16T11:13:00Z",
-      "speed": 553.57,
-      "density": 0.2,
+      "speed": 534.7,
+      "density": 5.69,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20003,8 +20009,8 @@
     },
     {
       "time": "2026-09-16T11:17:00Z",
-      "speed": 540.8,
-      "density": 6.04,
+      "speed": 532.71,
+      "density": 0.22,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20027,24 +20033,24 @@
     },
     {
       "time": "2026-09-16T11:20:00Z",
-      "speed": 547.72,
-      "density": 0.14,
+      "speed": 537.6,
+      "density": 6.04,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T11:21:00Z",
-      "speed": 536.68,
-      "density": 0.09,
+      "speed": 539.8,
+      "density": 6.11,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T11:22:00Z",
-      "speed": 538.5,
-      "density": 6.15,
+      "speed": 534.74,
+      "density": 0.07,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20059,48 +20065,48 @@
     },
     {
       "time": "2026-09-16T11:24:00Z",
-      "speed": 543.4,
-      "density": 6.16,
+      "speed": 531.36,
+      "density": 0.08,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T11:25:00Z",
-      "speed": 540.3,
-      "density": 5.77,
+      "speed": 539.33,
+      "density": 0.11,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T11:26:00Z",
-      "speed": 539.5,
-      "density": 6.28,
+      "speed": 551.33,
+      "density": 0.15,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T11:27:00Z",
-      "speed": 529.76,
-      "density": 0.13,
+      "speed": 540.4,
+      "density": 5.54,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T11:28:00Z",
-      "speed": 534.18,
-      "density": 0.14,
+      "speed": 536.8,
+      "density": 5.46,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T11:29:00Z",
-      "speed": 533.1,
-      "density": 5.51,
+      "speed": 541.47,
+      "density": 0.18,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20115,16 +20121,16 @@
     },
     {
       "time": "2026-09-16T11:31:00Z",
-      "speed": 531.6,
-      "density": 5.11,
+      "speed": 550.78,
+      "density": 0.14,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T11:32:00Z",
-      "speed": 550.66,
-      "density": 0.14,
+      "speed": 532.0,
+      "density": 4.96,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20139,8 +20145,8 @@
     },
     {
       "time": "2026-09-16T11:34:00Z",
-      "speed": 540.48,
-      "density": 0.13,
+      "speed": 537.7,
+      "density": 5.5,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20163,24 +20169,24 @@
     },
     {
       "time": "2026-09-16T11:37:00Z",
-      "speed": 530.7,
-      "density": 5.39,
+      "speed": 561.44,
+      "density": 0.17,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T11:38:00Z",
-      "speed": 527.53,
-      "density": 0.11,
+      "speed": 536.9,
+      "density": 5.23,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T11:39:00Z",
-      "speed": 489.11,
-      "density": 0.07,
+      "speed": 535.4,
+      "density": 5.71,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20195,8 +20201,8 @@
     },
     {
       "time": "2026-09-16T11:41:00Z",
-      "speed": 555.38,
-      "density": 0.11,
+      "speed": 535.6,
+      "density": 5.24,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20211,8 +20217,8 @@
     },
     {
       "time": "2026-09-16T11:43:00Z",
-      "speed": 471.1,
-      "density": 0.03,
+      "speed": 534.4,
+      "density": 5.34,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20251,8 +20257,8 @@
     },
     {
       "time": "2026-09-16T11:48:00Z",
-      "speed": 538.0,
-      "density": 5.17,
+      "speed": 580.56,
+      "density": 0.24,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20291,24 +20297,24 @@
     },
     {
       "time": "2026-09-16T11:53:00Z",
-      "speed": 537.3,
-      "density": 4.9,
+      "speed": 540.55,
+      "density": 0.26,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T11:54:00Z",
-      "speed": 540.63,
-      "density": 0.25,
+      "speed": 540.5,
+      "density": 5.25,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T11:55:00Z",
-      "speed": 528.24,
-      "density": 0.18,
+      "speed": 537.4,
+      "density": 4.53,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20355,8 +20361,8 @@
     },
     {
       "time": "2026-09-16T12:01:00Z",
-      "speed": 536.1,
-      "density": 4.92,
+      "speed": 528.67,
+      "density": 0.11,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20411,8 +20417,8 @@
     },
     {
       "time": "2026-09-16T12:08:00Z",
-      "speed": 517.2,
-      "density": 0.08,
+      "speed": 525.9,
+      "density": 4.78,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20427,40 +20433,40 @@
     },
     {
       "time": "2026-09-16T12:10:00Z",
-      "speed": 534.4,
-      "density": 5.28,
+      "speed": 518.18,
+      "density": 0.08,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T12:11:00Z",
-      "speed": 516.06,
-      "density": 0.11,
+      "speed": 568.8,
+      "density": 5.55,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T12:12:00Z",
-      "speed": 518.4,
-      "density": 0.1,
+      "speed": 566.6,
+      "density": 5.58,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T12:13:00Z",
-      "speed": 565.1,
-      "density": 5.84,
+      "speed": 510.5,
+      "density": 0.09,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T12:14:00Z",
-      "speed": 570.5,
-      "density": 5.53,
+      "speed": 539.76,
+      "density": 0.09,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20491,8 +20497,8 @@
     },
     {
       "time": "2026-09-16T12:18:00Z",
-      "speed": 529.05,
-      "density": 0.14,
+      "speed": 560.7,
+      "density": 5.51,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20523,8 +20529,8 @@
     },
     {
       "time": "2026-09-16T12:22:00Z",
-      "speed": 550.5,
-      "density": 4.99,
+      "speed": 534.91,
+      "density": 0.13,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20619,8 +20625,8 @@
     },
     {
       "time": "2026-09-16T12:34:00Z",
-      "speed": 549.54,
-      "density": 0.06,
+      "speed": 545.6,
+      "density": 5.12,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20675,16 +20681,16 @@
     },
     {
       "time": "2026-09-16T12:41:00Z",
-      "speed": 546.35,
-      "density": 0.09,
+      "speed": 550.5,
+      "density": 5.36,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T12:42:00Z",
-      "speed": 567.3,
-      "density": 0.1,
+      "speed": 554.5,
+      "density": 5.65,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20715,56 +20721,56 @@
     },
     {
       "time": "2026-09-16T12:46:00Z",
-      "speed": 571.4,
-      "density": 5.72,
-      "temperature": null,
-      "source": "NOAA_SWPC",
-      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
-    },
-    {
-      "time": "2026-09-16T12:47:00Z",
-      "speed": 566.6,
-      "density": 5.75,
-      "temperature": null,
-      "source": "NOAA_SWPC",
-      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
-    },
-    {
-      "time": "2026-09-16T12:48:00Z",
-      "speed": 563.9,
-      "density": 5.77,
-      "temperature": null,
-      "source": "NOAA_SWPC",
-      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
-    },
-    {
-      "time": "2026-09-16T12:49:00Z",
-      "speed": 568.68,
-      "density": 0.08,
-      "temperature": null,
-      "source": "NOAA_SWPC",
-      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
-    },
-    {
-      "time": "2026-09-16T12:50:00Z",
-      "speed": 557.28,
+      "speed": 560.33,
       "density": 0.04,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
+      "time": "2026-09-16T12:47:00Z",
+      "speed": 563.77,
+      "density": 0.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T12:48:00Z",
+      "speed": 565.33,
+      "density": 0.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T12:49:00Z",
+      "speed": 565.8,
+      "density": 5.92,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T12:50:00Z",
+      "speed": 565.7,
+      "density": 5.97,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
       "time": "2026-09-16T12:51:00Z",
-      "speed": 542.01,
-      "density": 0.03,
+      "speed": 564.8,
+      "density": 5.93,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T12:52:00Z",
-      "speed": 562.5,
-      "density": 5.51,
+      "speed": 558.04,
+      "density": 0.04,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20795,32 +20801,32 @@
     },
     {
       "time": "2026-09-16T12:56:00Z",
-      "speed": 562.8,
-      "density": 5.79,
+      "speed": 559.22,
+      "density": 0.05,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T12:57:00Z",
-      "speed": 564.5,
-      "density": 5.82,
+      "speed": 564.96,
+      "density": 0.05,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T12:58:00Z",
-      "speed": 556.3,
-      "density": 5.88,
+      "speed": 576.6,
+      "density": 0.04,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T12:59:00Z",
-      "speed": 552.7,
-      "density": 5.54,
+      "speed": 582.94,
+      "density": 0.03,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20835,8 +20841,8 @@
     },
     {
       "time": "2026-09-16T13:01:00Z",
-      "speed": 551.6,
-      "density": 5.69,
+      "speed": 572.26,
+      "density": 0.05,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20851,8 +20857,8 @@
     },
     {
       "time": "2026-09-16T13:03:00Z",
-      "speed": 577.44,
-      "density": 0.05,
+      "speed": 550.1,
+      "density": 5.45,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20883,8 +20889,8 @@
     },
     {
       "time": "2026-09-16T13:07:00Z",
-      "speed": 565.6,
-      "density": 6.11,
+      "speed": 540.54,
+      "density": 0.04,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20899,8 +20905,8 @@
     },
     {
       "time": "2026-09-16T13:09:00Z",
-      "speed": 561.4,
-      "density": 6.03,
+      "speed": 553.81,
+      "density": 0.05,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20915,8 +20921,8 @@
     },
     {
       "time": "2026-09-16T13:11:00Z",
-      "speed": 555.3,
-      "density": 0.04,
+      "speed": 562.4,
+      "density": 5.49,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -20947,32 +20953,32 @@
     },
     {
       "time": "2026-09-16T13:15:00Z",
-      "speed": 550.8,
-      "density": 5.35,
-      "temperature": null,
-      "source": "NOAA_SWPC",
-      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
-    },
-    {
-      "time": "2026-09-16T13:16:00Z",
-      "speed": 558.1,
-      "density": 5.51,
-      "temperature": null,
-      "source": "NOAA_SWPC",
-      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
-    },
-    {
-      "time": "2026-09-16T13:17:00Z",
-      "speed": 563.63,
+      "speed": 568.21,
       "density": 0.04,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
+      "time": "2026-09-16T13:16:00Z",
+      "speed": 555.75,
+      "density": 0.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:17:00Z",
+      "speed": 562.5,
+      "density": 6.1,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
       "time": "2026-09-16T13:18:00Z",
-      "speed": 592.82,
-      "density": 0.06,
+      "speed": 561.9,
+      "density": 5.64,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -21027,8 +21033,8 @@
     },
     {
       "time": "2026-09-16T13:25:00Z",
-      "speed": 564.87,
-      "density": 0.05,
+      "speed": 555.6,
+      "density": 5.79,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -21043,16 +21049,16 @@
     },
     {
       "time": "2026-09-16T13:27:00Z",
-      "speed": 557.0,
-      "density": 5.41,
+      "speed": 574.6,
+      "density": 0.03,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T13:28:00Z",
-      "speed": 559.4,
-      "density": 6.08,
+      "speed": 574.96,
+      "density": 0.03,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -21083,16 +21089,16 @@
     },
     {
       "time": "2026-09-16T13:32:00Z",
-      "speed": 564.92,
-      "density": 0.04,
+      "speed": 559.2,
+      "density": 5.69,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
     },
     {
       "time": "2026-09-16T13:33:00Z",
-      "speed": 577.11,
-      "density": 0.03,
+      "speed": 565.5,
+      "density": 6.53,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
@@ -21101,6 +21107,1678 @@
       "time": "2026-09-16T13:34:00Z",
       "speed": 583.72,
       "density": 0.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:35:00Z",
+      "speed": 569.3,
+      "density": 0.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:36:00Z",
+      "speed": 559.13,
+      "density": 0.02,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:37:00Z",
+      "speed": 570.7,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:38:00Z",
+      "speed": 564.55,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:39:00Z",
+      "speed": 545.93,
+      "density": 0.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:40:00Z",
+      "speed": 575.0,
+      "density": 6.18,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:41:00Z",
+      "speed": 586.38,
+      "density": 0.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:42:00Z",
+      "speed": 584.65,
+      "density": 0.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:43:00Z",
+      "speed": 572.31,
+      "density": 0.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:44:00Z",
+      "speed": 564.8,
+      "density": 0.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:45:00Z",
+      "speed": 560.6,
+      "density": 6.55,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:46:00Z",
+      "speed": 553.7,
+      "density": 5.18,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:47:00Z",
+      "speed": 553.8,
+      "density": 5.34,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:48:00Z",
+      "speed": 576.52,
+      "density": 0.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:49:00Z",
+      "speed": 544.1,
+      "density": 6.19,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:50:00Z",
+      "speed": 578.63,
+      "density": 0.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:51:00Z",
+      "speed": 553.4,
+      "density": 5.46,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:52:00Z",
+      "speed": 549.2,
+      "density": 5.59,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:53:00Z",
+      "speed": 561.63,
+      "density": 0.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:54:00Z",
+      "speed": 578.58,
+      "density": 0.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:55:00Z",
+      "speed": 576.68,
+      "density": 0.02,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:56:00Z",
+      "speed": 565.77,
+      "density": 0.02,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:57:00Z",
+      "speed": 571.48,
+      "density": 0.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:58:00Z",
+      "speed": 580.93,
+      "density": 0.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T13:59:00Z",
+      "speed": 580.35,
+      "density": 0.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:00:00Z",
+      "speed": 543.7,
+      "density": 6.91,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:01:00Z",
+      "speed": 574.39,
+      "density": 0.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:02:00Z",
+      "speed": 577.46,
+      "density": 0.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:03:00Z",
+      "speed": 579.61,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:04:00Z",
+      "speed": 572.32,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:05:00Z",
+      "speed": 568.42,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:06:00Z",
+      "speed": 575.61,
+      "density": 0.07,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:07:00Z",
+      "speed": 554.86,
+      "density": 0.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:08:00Z",
+      "speed": 583.72,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:09:00Z",
+      "speed": 562.6,
+      "density": 0.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:10:00Z",
+      "speed": 562.6,
+      "density": 0.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:11:00Z",
+      "speed": 567.06,
+      "density": 0.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:12:00Z",
+      "speed": 564.98,
+      "density": 0.07,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:13:00Z",
+      "speed": 561.2,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:14:00Z",
+      "speed": 549.5,
+      "density": 5.92,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:15:00Z",
+      "speed": 536.6,
+      "density": 5.43,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:16:00Z",
+      "speed": 526.2,
+      "density": 5.43,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:17:00Z",
+      "speed": 559.8,
+      "density": 6.75,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:18:00Z",
+      "speed": 557.53,
+      "density": 0.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:19:00Z",
+      "speed": 557.31,
+      "density": 0.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:20:00Z",
+      "speed": 552.52,
+      "density": 0.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:21:00Z",
+      "speed": 537.9,
+      "density": 6.18,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:22:00Z",
+      "speed": 546.44,
+      "density": 0.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:23:00Z",
+      "speed": 544.91,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:24:00Z",
+      "speed": 559.13,
+      "density": 0.12,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:25:00Z",
+      "speed": 554.98,
+      "density": 0.08,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:26:00Z",
+      "speed": 552.28,
+      "density": 0.1,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:27:00Z",
+      "speed": 538.5,
+      "density": 6.85,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:28:00Z",
+      "speed": 559.27,
+      "density": 0.07,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:29:00Z",
+      "speed": 558.82,
+      "density": 0.09,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:30:00Z",
+      "speed": 555.17,
+      "density": 0.11,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:31:00Z",
+      "speed": 549.17,
+      "density": 0.09,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:32:00Z",
+      "speed": 545.38,
+      "density": 0.08,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:33:00Z",
+      "speed": 534.6,
+      "density": 6.64,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:34:00Z",
+      "speed": 545.78,
+      "density": 0.11,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:35:00Z",
+      "speed": 547.7,
+      "density": 0.1,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:36:00Z",
+      "speed": 536.16,
+      "density": 0.12,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:37:00Z",
+      "speed": 503.45,
+      "density": 0.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:38:00Z",
+      "speed": 550.27,
+      "density": 0.1,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:39:00Z",
+      "speed": 532.3,
+      "density": 6.45,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:40:00Z",
+      "speed": 529.4,
+      "density": 6.75,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:41:00Z",
+      "speed": 542.99,
+      "density": 0.14,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:42:00Z",
+      "speed": 537.73,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:43:00Z",
+      "speed": 544.3,
+      "density": 6.33,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:44:00Z",
+      "speed": 535.9,
+      "density": 6.9,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:45:00Z",
+      "speed": 533.46,
+      "density": 0.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:46:00Z",
+      "speed": 527.26,
+      "density": 0.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:47:00Z",
+      "speed": 524.54,
+      "density": 0.08,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:48:00Z",
+      "speed": 529.5,
+      "density": 6.32,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:49:00Z",
+      "speed": 527.41,
+      "density": 0.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:50:00Z",
+      "speed": 548.0,
+      "density": 6.55,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:51:00Z",
+      "speed": 526.65,
+      "density": 0.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:52:00Z",
+      "speed": 525.1,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:53:00Z",
+      "speed": 521.56,
+      "density": 0.07,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:54:00Z",
+      "speed": 524.65,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:55:00Z",
+      "speed": 518.6,
+      "density": 6.99,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:56:00Z",
+      "speed": 520.9,
+      "density": 6.53,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:57:00Z",
+      "speed": 523.71,
+      "density": 0.07,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:58:00Z",
+      "speed": 526.04,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T14:59:00Z",
+      "speed": 537.12,
+      "density": 0.08,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:00:00Z",
+      "speed": 534.37,
+      "density": 0.07,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:01:00Z",
+      "speed": 543.51,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:02:00Z",
+      "speed": 542.35,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:03:00Z",
+      "speed": 523.2,
+      "density": 7.45,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:04:00Z",
+      "speed": 542.58,
+      "density": 0.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:05:00Z",
+      "speed": 540.4,
+      "density": 0.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:06:00Z",
+      "speed": 540.34,
+      "density": 0.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:07:00Z",
+      "speed": 543.47,
+      "density": 0.08,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:08:00Z",
+      "speed": 536.42,
+      "density": 0.11,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:09:00Z",
+      "speed": 530.24,
+      "density": 0.13,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:10:00Z",
+      "speed": 532.78,
+      "density": 0.13,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:11:00Z",
+      "speed": 543.58,
+      "density": 0.13,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:12:00Z",
+      "speed": 533.71,
+      "density": 0.07,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:13:00Z",
+      "speed": 534.07,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:14:00Z",
+      "speed": 518.3,
+      "density": 6.15,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:15:00Z",
+      "speed": 525.7,
+      "density": 5.64,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:16:00Z",
+      "speed": 531.1,
+      "density": 5.28,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:17:00Z",
+      "speed": 530.0,
+      "density": 5.82,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:18:00Z",
+      "speed": 529.07,
+      "density": 0.1,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:19:00Z",
+      "speed": 528.2,
+      "density": 5.11,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:20:00Z",
+      "speed": 536.05,
+      "density": 0.12,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:21:00Z",
+      "speed": 531.0,
+      "density": 5.15,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:22:00Z",
+      "speed": 536.63,
+      "density": 0.1,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:23:00Z",
+      "speed": 531.6,
+      "density": 5.12,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:24:00Z",
+      "speed": 525.81,
+      "density": 0.11,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:25:00Z",
+      "speed": 526.76,
+      "density": 0.11,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:26:00Z",
+      "speed": 531.0,
+      "density": 0.12,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:27:00Z",
+      "speed": 533.72,
+      "density": 0.14,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:28:00Z",
+      "speed": 531.5,
+      "density": 0.12,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:29:00Z",
+      "speed": 530.2,
+      "density": 5.39,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:30:00Z",
+      "speed": 534.56,
+      "density": 0.15,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:31:00Z",
+      "speed": 526.2,
+      "density": 5.4,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:32:00Z",
+      "speed": 541.84,
+      "density": 0.16,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:33:00Z",
+      "speed": 561.97,
+      "density": 0.09,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:34:00Z",
+      "speed": 548.88,
+      "density": 0.08,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:35:00Z",
+      "speed": 546.55,
+      "density": 0.15,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:36:00Z",
+      "speed": 524.8,
+      "density": 6.37,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:37:00Z",
+      "speed": 545.69,
+      "density": 0.13,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:38:00Z",
+      "speed": 545.58,
+      "density": 0.14,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:39:00Z",
+      "speed": 546.4,
+      "density": 0.16,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:40:00Z",
+      "speed": 539.07,
+      "density": 0.12,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:41:00Z",
+      "speed": 552.93,
+      "density": 0.18,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:42:00Z",
+      "speed": 520.5,
+      "density": 5.8,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:43:00Z",
+      "speed": 525.9,
+      "density": 6.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:44:00Z",
+      "speed": 521.5,
+      "density": 5.74,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:45:00Z",
+      "speed": 519.1,
+      "density": 5.89,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:46:00Z",
+      "speed": 544.4,
+      "density": 0.13,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:47:00Z",
+      "speed": 544.52,
+      "density": 0.16,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:48:00Z",
+      "speed": 520.0,
+      "density": 5.71,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:49:00Z",
+      "speed": 546.25,
+      "density": 0.15,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:50:00Z",
+      "speed": 518.5,
+      "density": 5.97,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:51:00Z",
+      "speed": 533.32,
+      "density": 0.12,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:52:00Z",
+      "speed": 543.87,
+      "density": 0.16,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:53:00Z",
+      "speed": 543.72,
+      "density": 0.18,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:54:00Z",
+      "speed": 518.2,
+      "density": 5.6,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:55:00Z",
+      "speed": 528.2,
+      "density": 6.02,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:56:00Z",
+      "speed": 525.2,
+      "density": 5.74,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:57:00Z",
+      "speed": 549.76,
+      "density": 0.19,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:58:00Z",
+      "speed": 550.51,
+      "density": 0.18,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T15:59:00Z",
+      "speed": 522.2,
+      "density": 5.58,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:00:00Z",
+      "speed": 520.8,
+      "density": 5.62,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:01:00Z",
+      "speed": 518.9,
+      "density": 5.52,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:02:00Z",
+      "speed": 508.9,
+      "density": 4.75,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:03:00Z",
+      "speed": 519.4,
+      "density": 4.88,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:04:00Z",
+      "speed": 531.17,
+      "density": 0.19,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:05:00Z",
+      "speed": 527.89,
+      "density": 0.18,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:06:00Z",
+      "speed": 532.73,
+      "density": 0.13,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:07:00Z",
+      "speed": 533.62,
+      "density": 0.1,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:08:00Z",
+      "speed": 526.81,
+      "density": 0.13,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:09:00Z",
+      "speed": 531.8,
+      "density": 5.54,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:10:00Z",
+      "speed": 522.17,
+      "density": 0.09,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:11:00Z",
+      "speed": 523.3,
+      "density": 5.26,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:12:00Z",
+      "speed": 529.89,
+      "density": 0.15,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:13:00Z",
+      "speed": 523.26,
+      "density": 0.07,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:14:00Z",
+      "speed": 524.11,
+      "density": 0.11,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:15:00Z",
+      "speed": 532.7,
+      "density": 5.23,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:16:00Z",
+      "speed": 474.05,
+      "density": 0.02,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:17:00Z",
+      "speed": 528.14,
+      "density": 0.08,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:18:00Z",
+      "speed": 524.4,
+      "density": 5.36,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:19:00Z",
+      "speed": 521.63,
+      "density": 0.07,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:20:00Z",
+      "speed": 524.8,
+      "density": 5.18,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:21:00Z",
+      "speed": 480.86,
+      "density": 0.02,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:22:00Z",
+      "speed": 517.0,
+      "density": 4.98,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:23:00Z",
+      "speed": 517.2,
+      "density": 4.88,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:24:00Z",
+      "speed": 521.4,
+      "density": 4.88,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:25:00Z",
+      "speed": 524.6,
+      "density": 4.81,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:26:00Z",
+      "speed": 522.2,
+      "density": 5.03,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:27:00Z",
+      "speed": 525.35,
+      "density": 0.15,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:28:00Z",
+      "speed": 521.12,
+      "density": 0.1,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:29:00Z",
+      "speed": 524.6,
+      "density": 5.23,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:30:00Z",
+      "speed": 526.8,
+      "density": 5.1,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:31:00Z",
+      "speed": 524.0,
+      "density": 5.2,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:32:00Z",
+      "speed": 522.27,
+      "density": 0.32,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:33:00Z",
+      "speed": 536.1,
+      "density": 4.82,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:34:00Z",
+      "speed": 522.36,
+      "density": 0.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:35:00Z",
+      "speed": 495.03,
+      "density": 0.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:36:00Z",
+      "speed": 477.5,
+      "density": 0.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:37:00Z",
+      "speed": 534.8,
+      "density": 4.68,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:38:00Z",
+      "speed": 502.98,
+      "density": 0.06,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:39:00Z",
+      "speed": 494.69,
+      "density": 0.12,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:40:00Z",
+      "speed": 530.5,
+      "density": 4.91,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:41:00Z",
+      "speed": 530.1,
+      "density": 5.14,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:42:00Z",
+      "speed": 498.9,
+      "density": 0.16,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:43:00Z",
+      "speed": 535.5,
+      "density": 4.75,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:44:00Z",
+      "speed": 531.2,
+      "density": 4.77,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:45:00Z",
+      "speed": 531.3,
+      "density": 4.58,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:46:00Z",
+      "speed": 532.1,
+      "density": 4.91,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:47:00Z",
+      "speed": 512.1,
+      "density": 0.37,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:48:00Z",
+      "speed": 518.35,
+      "density": 0.1,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:49:00Z",
+      "speed": 531.1,
+      "density": 5.04,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:50:00Z",
+      "speed": 543.1,
+      "density": 4.6,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:51:00Z",
+      "speed": 512.27,
+      "density": 0.09,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:52:00Z",
+      "speed": 527.92,
+      "density": 0.08,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:53:00Z",
+      "speed": 540.27,
+      "density": 0.19,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:54:00Z",
+      "speed": 542.79,
+      "density": 0.18,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:55:00Z",
+      "speed": 543.54,
+      "density": 0.16,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:56:00Z",
+      "speed": 528.6,
+      "density": 4.74,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:57:00Z",
+      "speed": 530.7,
+      "density": 4.59,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:58:00Z",
+      "speed": 536.82,
+      "density": 0.13,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T16:59:00Z",
+      "speed": 527.75,
+      "density": 0.12,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T17:00:00Z",
+      "speed": 529.0,
+      "density": 4.99,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T17:01:00Z",
+      "speed": 513.04,
+      "density": 0.05,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T17:02:00Z",
+      "speed": 527.3,
+      "density": 4.72,
+      "temperature": null,
+      "source": "NOAA_SWPC",
+      "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    },
+    {
+      "time": "2026-09-16T17:03:00Z",
+      "speed": 527.8,
+      "density": 4.92,
       "temperature": null,
       "source": "NOAA_SWPC",
       "source_url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
