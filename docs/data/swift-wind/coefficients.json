@@ -1,42 +1,22 @@
 {
-  "version": "SWIFT-Wind-AI-v0.6-python-records",
-  "updated_at": "2026-09-16T21:26:12Z",
+  "updated_at": "2026-09-16T21:29:46Z",
+  "model": "SWIFT-Wind-AI-v0.7-standalone",
+  "calibration": {
+    "gain": 0.7,
+    "offset": 140
+  },
+  "rotation_shift_hours": 0,
   "weights": {
     "recent": 0.56,
     "rotation27": 0.39,
     "hss_nonlinear": 0.05,
-    "wsa": 0.1,
-    "cme": 1.0
-  },
-  "calibration": {
-    "gain": 0.75803,
-    "offset": -21.12
+    "cme": "separate learned boost"
   },
   "limits": {
-    "min_speed": 260.0,
-    "max_speed": 980.0,
-    "max_delta_per_hour": 32.0,
+    "min_speed": 260,
+    "max_speed": 980,
+    "max_delta_per_3h": 48,
     "ema_alpha": 0.38
   },
-  "notes": [
-    "records and forecast are both emitted for dashboard compatibility.",
-    "Historical fit uses context available before each target time (walk-forward), not current-time leakage.",
-    "CME speed increase is learned separately in cme-boost-model.json and added as an independent pulse.",
-    "Primary wind accuracy is the hit rate within ±50 km/s."
-  ],
-  "model": "SWIFT-Wind-AI-v0.7-standalone",
-  "rotation_shift_hours": 0,
-  "training_points": 2033,
-  "last_fit": {
-    "time": "2026-09-16T21:26:12Z",
-    "fit_count": 226,
-    "gain_candidate": 0.78,
-    "offset_candidate": -81.896,
-    "gain_applied": 0.75803,
-    "offset_applied": -21.12,
-    "mae": 62.37,
-    "bias": 43.48
-  },
-  "rotation27_shift_hours": 0,
-  "cme_boost_sample_count": 13
+  "training_points": 2128
 }
