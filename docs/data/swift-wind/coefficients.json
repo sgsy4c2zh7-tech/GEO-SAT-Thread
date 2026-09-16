@@ -1,47 +1,22 @@
 {
-  "version": "SWIFT-Wind-AI-v0.4-nonlinear-fit",
-  "updated_at": "2026-08-14T10:19:00.339158+00:00",
+  "updated_at": "2026-09-16T11:06:40Z",
+  "model": "SWIFT-Wind-AI-v0.7-standalone",
   "calibration": {
-    "gain": 0.7747,
-    "offset": -112.252
+    "gain": 0.7,
+    "offset": 140
+  },
+  "rotation_shift_hours": 0,
+  "weights": {
+    "recent": 0.56,
+    "rotation27": 0.39,
+    "hss_nonlinear": 0.05,
+    "cme": "separate learned boost"
   },
   "limits": {
-    "min_speed": 280.0,
-    "max_speed": 850.0,
-    "max_delta_per_3h": 38.0,
-    "ema_alpha": 0.5
+    "min_speed": 260,
+    "max_speed": 980,
+    "max_delta_per_3h": 48,
+    "ema_alpha": 0.38
   },
-  "weights": {
-    "recent": 0.38,
-    "rotation27": 0.29850000000000004,
-    "hss_nonlinear": 0.13,
-    "cme": 1.0,
-    "persistence": 0.5029999999999999,
-    "wsa": 0.1985
-  },
-  "note": "Nonlinear sigmoid HSS/CIR model + 27-day phase fitting + smooth/slew limiter + observed-wind calibration.",
-  "model": "SWIFT Wind AI v0.2",
-  "learning_rate": 0.03,
-  "bias": {
-    "speed": -2.747
-  },
-  "notes": [
-    "Phase 1: coefficient-learning model.",
-    "Background = persistence + 27-day recurrence + WSA blend.",
-    "Enhanced = background + Earth-directed DONKI CME pulse.",
-    "NOAA RTSW observed solar wind is used for verification and coefficient tuning."
-  ],
-  "last_training": {
-    "time": "2026-06-24T23:11:36.074171+00:00",
-    "enhanced_bias_24h": 26.126,
-    "delta_bias": 0.784,
-    "points": 24
-  },
-  "last_fit": {
-    "gain": 0.7747,
-    "offset": -112.252,
-    "fit_count": 16851,
-    "fit_mae": 87.62,
-    "fit_bias": 83.19
-  }
+  "training_points": 2397
 }
