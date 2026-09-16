@@ -680,6 +680,36 @@ def main() -> None:
     daily_rows = daily_summary_rows(month_start, now, wind_hourly_all, kp_hist, wind_acc_rows, cmes)
     month_metrics = month_metric_rows(month_start, month_end, wind_hist, mag_hist, kp_hist, wind_acc_rows, cmes, current_acc)
 
+    # Companion JSON for the browser UI.  It is built from the exact same
+    # arrays used below for the monthly Excel sheets, so Kp/Bz/Wind remain in sync.
+    wind_hist_27d = [r for r in wind_hourly_all if r.get("_t") and r["_t"] >= now - timedelta(days=27)]
+    ui_payload = {
+        "updated_at": iso_z(now),
+        "month": month,
+        "wind_history": [
+            {"time": r["time"], "speed": r.get("speed"), "density": r.get("density"), "source": "NOAA/SWIFT history"}
+            for r in wind_hist_27d
+        ],
+        "wind_forecast": [
+            {"time": r["time"], "predicted_speed": r.get("predicted_speed"), "background_speed": r.get("background_speed"),
+             "observed_speed": r.get("observed_speed"), "cme_boost": r.get("cme_boost"), "cme_id": r.get("cme_id"), "source": r.get("source")}
+            for r in wind_fc
+        ],
+        "kp_forecast": [
+            {"time": r["time"], "kp": r.get("kp"), "g_scale": r.get("g_scale"), "confidence": r.get("confidence"), "source": r.get("source")}
+            for r in kp_fc
+        ],
+        "bz_forecast": [
+            {"time": r["time"], "bz_forecast": r.get("bz_forecast"), "bz_min_forecast": r.get("bz_min_forecast"),
+             "bt_forecast": r.get("bt_forecast"), "southward_bz_probability": r.get("southward_bz_probability"),
+             "bz_risk": r.get("bz_risk"), "cme_id": r.get("cme_id"), "source": "SWIFT Bz AI"}
+            for r in bz_fc
+        ],
+        "wind_accuracy_current": current_acc,
+        "excel_file": monthly_name,
+    }
+    (OUT_DOCS / "ui_forecast_latest.json").write_text(json.dumps(ui_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
     wb = xlsxwriter.Workbook(str(tmp_path), {"nan_inf_to_errors": True})
     fmt = {
         "title": wb.add_format({"bold": True, "font_size": 16, "font_color": "#FFFFFF", "bg_color": "#1F4E78", "align": "center", "valign": "vcenter"}),
@@ -805,6 +835,7 @@ def main() -> None:
         "current_month_file": monthly_name,
         "current_month_url": f"./reports/{monthly_name}",
         "monthly_latest_url": f"./reports/{monthly_name}",
+        "ui_feed_url": "./reports/ui_forecast_latest.json",
         "monthly_files": [{"month": p.stem[-7:], "file": p.name, "url": f"./reports/{p.name}"} for p in monthly_files],
         "primary_wind_accuracy": {"definition": "|predicted - observed| <= 50 km/s", "window": "last_24h", **current_acc},
         "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Sources"],
