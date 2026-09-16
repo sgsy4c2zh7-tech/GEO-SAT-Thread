@@ -1,0 +1,109 @@
+name: Update SWIFT AI Pipeline
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */3 * * *"
+
+permissions:
+  contents: write
+
+# One writer for NOAA history -> Wind -> Bz -> Kp -> monthly report.
+# This avoids one workflow overwriting another model's output.
+concurrency:
+  group: swift-space-weather-writer
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "requests>=2.31.0" "xlsxwriter>=3.2.0"
+
+      - name: Update NOAA accumulated history
+        run: python scripts/update_noaa_space_weather_history.py
+
+      - name: Learn CME wind boost
+        run: python scripts/learn_cme_wind_boost.py
+
+      - name: Build SWIFT Wind AI
+        run: python scripts/build_swift_wind_ai.py
+
+      - name: Build SWIFT Bz AI v2
+        run: python scripts/build_swift_bz_ai.py
+
+      - name: Build SWIFT Kp AI v0.6
+        run: python scripts/build_swift_kp_ai.py
+
+      - name: Build monthly Excel and UI feed
+        run: python scripts/build_swift_monthly_excel_report.py
+
+      - name: Verify outputs
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          required = [
+              Path("docs/data/noaa/wind_history.json"),
+              Path("docs/data/noaa/mag_history.json"),
+              Path("docs/data/noaa/kp_history.json"),
+              Path("docs/data/swift-wind/latest.json"),
+              Path("docs/data/swift-bz/latest.json"),
+              Path("docs/data/swift-kp/latest.json"),
+              Path("docs/reports/index.json"),
+              Path("docs/reports/ui_forecast_latest.json"),
+          ]
+          for p in required:
+              assert p.exists() and p.stat().st_size > 0, f"missing: {p}"
+
+          bz=json.loads(Path("docs/data/swift-bz/latest.json").read_text(encoding="utf-8"))
+          kp=json.loads(Path("docs/data/swift-kp/latest.json").read_text(encoding="utf-8"))
+          print("Bz readiness:", bz.get("readiness"))
+          print("Kp Bz gate:", kp.get("bz_model_gate"))
+          print("Kp lead skill:", (kp.get("leadtime_skill") or {}).get("overall"))
+          PY
+
+      - name: Commit and push safely
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add docs/data docs/reports scripts || true
+          if git diff --cached --quiet; then
+            echo "No generated changes."
+            exit 0
+          fi
+
+          git commit -m "Update calibrated SWIFT Wind Bz Kp and monthly report"
+
+          for attempt in 1 2 3; do
+            echo "Push attempt ${attempt}/3"
+            git fetch origin main
+            git rebase origin/main
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            sleep 5
+          done
+
+          exit 1
