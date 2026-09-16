@@ -1,60 +1,58 @@
 #!/usr/bin/env python3
-"""Build a lightweight SWIFT Bz forecast AI product.
+"""SWIFT Bz probabilistic forecast v2 with real forecast-archive verification.
 
-Output:
+This is a calibrated probabilistic model, not a deterministic prediction of ICME Bz.
+It learns two online calibration terms from scored past forecasts:
+- southward-probability bias
+- Bz-min bias
+
+Outputs:
 - docs/data/swift-bz/latest.json
-
-Forecast design:
-- Uses recent NOAA IMF Bz persistence.
-- Uses 27.27-day recurrence when archived IMF exists.
-- Adds CME-arrival risk windows from docs/data/cme-arrivals/latest.json.
-- Produces 3-hour bins for five days. The Excel report charts the first three days.
-
-This is intentionally simple and transparent. It is not meant to declare the CME
-internal field direction; CME contribution is represented as increased probability
-of southward Bz and a wider negative-tail Bz-min forecast.
+- docs/data/swift-bz/forecast.json
+- docs/data/swift-bz/verification.json
+- docs/data/swift-bz/forecast-archive.json
+- docs/data/swift-bz/coefficients.json
 """
 from __future__ import annotations
 
-import json
-import math
-import statistics
+import json, math, statistics
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "docs" / "data"
-OUT = DATA / "swift-bz" / "latest.json"
-OUT.parent.mkdir(parents=True, exist_ok=True)
+OUT = DATA / "swift-bz"
+OUT.mkdir(parents=True, exist_ok=True)
 
-BIN_HOURS = 3
+LATEST = OUT / "latest.json"
+FORECAST = OUT / "forecast.json"
+VERIF = OUT / "verification.json"
+ARCHIVE = OUT / "forecast-archive.json"
+COEF = OUT / "coefficients.json"
+INDEX = OUT / "index.json"
+
+BIN_H = 3
 FORECAST_DAYS = 5
 RECURRENCE_DAYS = 27.27
 
 
-def utcnow() -> datetime:
+def utcnow():
     return datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
 
 
-def iso_z(dt: datetime) -> str:
+def iso_z(dt):
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def parse_time(v: Any) -> datetime | None:
-    if v is None:
+def parse_time(v):
+    if not v:
         return None
-    if isinstance(v, datetime):
-        return v.astimezone(timezone.utc) if v.tzinfo else v.replace(tzinfo=timezone.utc)
     s = str(v).strip()
-    if not s:
-        return None
     if s.endswith("Z"):
         s = s[:-1] + "+00:00"
-    if len(s) == 16 and s[10] == "T":
-        s += ":00+00:00"
     if len(s) == 19 and s[10] == " ":
         s = s.replace(" ", "T") + "+00:00"
     try:
@@ -66,237 +64,323 @@ def parse_time(v: Any) -> datetime | None:
         return None
 
 
-def num(v: Any, default: float | None = None) -> float | None:
+def num(v, default=None):
     try:
         x = float(v)
-        if math.isfinite(x):
-            return x
+        return x if math.isfinite(x) else default
     except Exception:
-        pass
-    return default
+        return default
 
 
-def load_json(path: Path) -> Any:
+def clamp(x, lo, hi):
+    return max(lo, min(hi, x))
+
+
+def load(path, default=None):
     if not path.exists():
-        return None
+        return default
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
-        return None
+        return default
 
 
-def records(obj: Any) -> list[dict[str, Any]]:
+def save(path, obj):
+    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def rows(obj):
     if isinstance(obj, list):
         return [x for x in obj if isinstance(x, dict)]
     if isinstance(obj, dict):
-        for key in ("records", "items", "history", "data", "forecast", "arrivals"):
-            if isinstance(obj.get(key), list):
-                return [x for x in obj[key] if isinstance(x, dict)]
+        for k in ("records", "items", "data", "history", "forecast", "arrivals"):
+            if isinstance(obj.get(k), list):
+                return [x for x in obj[k] if isinstance(x, dict)]
     return []
 
 
-def load_mag_history() -> list[dict[str, Any]]:
+def load_mag():
     paths = [
         DATA / "noaa" / "mag_history.json",
+        DATA / "noaa-imf" / "history.json",
         DATA / "noaa_imf_history.json",
     ]
-    out = []
+    by = {}
     for p in paths:
-        for r in records(load_json(p)):
-            t = parse_time(r.get("time") or r.get("time_tag") or r.get("timestamp"))
-            bz = num(r.get("bz") or r.get("bz_gsm") or r.get("imf_bz"))
-            bt = num(r.get("bt") or r.get("total_field"))
-            by = num(r.get("by") or r.get("by_gsm"))
+        for r in rows(load(p, {})):
+            t = parse_time(r.get("time") or r.get("time_tag"))
+            bz = num(r.get("bz") if r.get("bz") is not None else r.get("bz_gsm"))
+            bt = num(r.get("bt"))
             if t and bz is not None:
-                out.append({"time": iso_z(t), "_t": t, "bz": bz, "bt": bt, "by": by})
-    dedup = {}
-    for r in out:
-        dedup[r["time"]] = r
-    return sorted(dedup.values(), key=lambda x: x["_t"])
+                by[iso_z(t)] = {"time": iso_z(t), "_dt": t, "bz": bz, "bt": bt}
+    return sorted(by.values(), key=lambda x: x["_dt"])
 
 
-def load_cme_arrivals() -> list[dict[str, Any]]:
+def load_wind_forecast():
+    obj = load(DATA / "swift-wind" / "latest.json", {}) or {}
     out = []
-    for r in records(load_json(DATA / "cme-arrivals" / "latest.json")):
-        at = parse_time(r.get("arrival_time") or r.get("arrival") or r.get("estimatedShockArrivalTime"))
-        if at:
-            x = dict(r)
-            x["_arrival"] = at
-            out.append(x)
-    return sorted(out, key=lambda x: x["_arrival"])
+    for r in obj.get("forecast") or obj.get("records") or []:
+        t = parse_time(r.get("time") or r.get("target_time") or r.get("start_time"))
+        sp = num(r.get("speed") or r.get("swift_cme_enhanced_speed") or r.get("predicted_speed"))
+        if t and sp is not None:
+            out.append({"time": t, "speed": sp})
+    return sorted(out, key=lambda x: x["time"])
 
 
-def median(vals: list[float], default: float = 0.0) -> float:
-    vals = [v for v in vals if math.isfinite(v)]
+def load_cmes():
+    obj = load(DATA / "cme-arrivals" / "latest.json", {}) or {}
+    out = []
+    for r in rows(obj):
+        t = parse_time(r.get("arrival_time") or r.get("arrival") or r.get("estimatedShockArrivalTime"))
+        if t:
+            q = dict(r); q["_arrival"] = t; out.append(q)
+    return out
+
+
+def nearest(series, t, hours=4):
+    if not series:
+        return None
+    r = min(series, key=lambda x: abs((x["time"] - t).total_seconds()))
+    return r if abs((r["time"] - t).total_seconds()) <= hours * 3600 else None
+
+
+def window(hist, center, hours):
+    lo, hi = center - timedelta(hours=hours), center + timedelta(hours=hours)
+    return [r for r in hist if lo <= r["_dt"] <= hi]
+
+
+def med(vals, default=0.0):
+    vals = [x for x in vals if x is not None and math.isfinite(x)]
     return statistics.median(vals) if vals else default
 
 
-def quantile(vals: list[float], q: float, default: float = 0.0) -> float:
-    vals = sorted(v for v in vals if math.isfinite(v))
+def quantile(vals, q, default=0.0):
+    vals = sorted(x for x in vals if x is not None and math.isfinite(x))
     if not vals:
         return default
-    idx = max(0, min(len(vals) - 1, int(round((len(vals) - 1) * q))))
-    return vals[idx]
+    i = int(round((len(vals)-1)*q))
+    return vals[max(0, min(len(vals)-1, i))]
 
 
-def near_records(hist: list[dict[str, Any]], center: datetime, hours: float) -> list[dict[str, Any]]:
-    start = center - timedelta(hours=hours)
-    end = center + timedelta(hours=hours)
-    return [r for r in hist if start <= r["_t"] <= end]
-
-
-def cme_risk_for_time(cmes: list[dict[str, Any]], t: datetime) -> tuple[float, dict[str, Any] | None]:
-    best_score = 0.0
-    best = None
+def cme_score(cmes, t):
+    best_score, best = 0.0, None
     for c in cmes:
-        arrival = c["_arrival"]
-        dt_h = abs((t - arrival).total_seconds() / 3600.0)
-        if dt_h > 24:
+        dh = abs((t - c["_arrival"]).total_seconds()) / 3600
+        if dh > 24:
             continue
-        impact = str(c.get("impact_class") or "").upper()
-        if "ENLIL" in impact or "CORE" in impact:
-            base = 1.0
-        elif "BODY" in impact:
-            base = 0.75
-        elif "FLANK" in impact:
-            base = 0.45
-        else:
-            base = 0.25
-        conf = num(c.get("confidence"), 0.5) or 0.5
-        geom = num(c.get("geometry_multiplier"), 0.5) or 0.5
-        # Bell-shaped influence around arrival.
-        shape = math.exp(-(dt_h / 10.0) ** 2)
+        cls = str(c.get("impact_class") or "").upper()
+        base = 1.0 if ("CORE" in cls or "ENLIL" in cls) else 0.75 if "BODY" in cls else 0.45 if "FLANK" in cls else 0.25
+        conf = num(c.get("confidence"), 0.5)
+        geom = num(c.get("geometry_multiplier"), 0.5)
+        shape = math.exp(-(dh/10.0)**2)
         score = base * conf * max(0.1, geom) * shape
         if score > best_score:
-            best_score = score
-            best = c
-    return max(0.0, min(1.0, best_score)), best
+            best_score, best = score, c
+    return clamp(best_score, 0, 1), best
 
 
-def g_scale_from_kp(kp: float | None) -> str:
-    if kp is None:
-        return "G?"
-    if kp >= 9:
-        return "G5"
-    if kp >= 8:
-        return "G4"
-    if kp >= 7:
-        return "G3"
-    if kp >= 6:
-        return "G2"
-    if kp >= 5:
-        return "G1"
-    return "G0"
+def score_archive(hist, archive_items, now):
+    out = []
+    for a in archive_items:
+        if a.get("scored"):
+            out.append(a); continue
+        tt = parse_time(a.get("target_time"))
+        if not tt or tt > now - timedelta(hours=2):
+            out.append(a); continue
+        obs = window(hist, tt, 1.5)
+        bz = [r["bz"] for r in obs if r.get("bz") is not None]
+        if not bz:
+            out.append(a); continue
+        obs_min = min(bz)
+        actual_south = any(x < 0 for x in bz)
+        p = clamp(num(a.get("southward_bz_probability"), 50)/100, 0, 1)
+        pred_min = num(a.get("bz_min_forecast"), 0)
+        q = dict(a)
+        q.update({
+            "scored": True,
+            "observed_bz_min": round(obs_min, 3),
+            "observed_southward": actual_south,
+            "brier": round((p - (1 if actual_south else 0))**2, 5),
+            "error_bz_min": round(pred_min - obs_min, 3),
+        })
+        out.append(q)
+    return out
 
 
-def build_forecast(hist: list[dict[str, Any]], cmes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    now = utcnow()
-    recent = [r for r in hist if r["_t"] >= now - timedelta(hours=6)]
-    recent_bz = median([r["bz"] for r in recent], 0.0)
-    recent_bt = median([r["bt"] for r in recent if r.get("bt") is not None], 6.0)
-    recent_sigma = max(1.5, statistics.pstdev([r["bz"] for r in recent]) if len(recent) >= 3 else 2.5)
-    climatology_neg_q = quantile([r["bz"] for r in hist[-4000:]], 0.10, -5.0)
-    forecast = []
-    steps = int(FORECAST_DAYS * 24 / BIN_HOURS)
-    for i in range(steps):
-        start = now + timedelta(hours=i * BIN_HOURS)
-        end = start + timedelta(hours=BIN_HOURS)
-        lead_h = i * BIN_HOURS
-        rec_center = start - timedelta(days=RECURRENCE_DAYS)
-        rec_rows = near_records(hist, rec_center, 2.0)
-        rec_bz = median([r["bz"] for r in rec_rows], None) if rec_rows else None
-        rec_bt = median([r["bt"] for r in rec_rows if r.get("bt") is not None], None) if rec_rows else None
-        w_recent = max(0.15, 0.75 * math.exp(-lead_h / 36.0))
+def metrics(scored, now, days):
+    r = [x for x in scored if x.get("scored") and parse_time(x.get("target_time")) and parse_time(x["target_time"]) >= now-timedelta(days=days)]
+    if not r:
+        return {"count": 0, "status": "learning"}
+    brier = sum(num(x.get("brier"), 0) for x in r) / len(r)
+    mae = sum(abs(num(x.get("error_bz_min"), 0)) for x in r) / len(r)
+    pred_rate = sum(num(x.get("southward_bz_probability"), 50)/100 for x in r) / len(r)
+    obs_rate = sum(1 if x.get("observed_southward") else 0 for x in r) / len(r)
+    hit60 = sum(((num(x.get("southward_bz_probability"), 50) >= 60) == bool(x.get("observed_southward"))) for x in r)/len(r)*100
+    return {
+        "count": len(r),
+        "brier_score": round(brier, 4),
+        "direction_hit_rate_threshold60": round(hit60, 1),
+        "bz_min_mae": round(mae, 2),
+        "predicted_southward_rate": round(pred_rate*100, 1),
+        "observed_southward_rate": round(obs_rate*100, 1),
+    }
+
+
+def readiness(ver30):
+    n = int(ver30.get("count", 0) or 0)
+    if n < 32:
+        state = "learning"
+    elif n < 100:
+        state = "provisional"
+    else:
+        state = "calibrated"
+    brier = num(ver30.get("brier_score"), 0.30)
+    sample_factor = clamp(n/150, 0, 1)
+    skill_factor = clamp((0.36-brier)/0.20, 0.2, 1.0)
+    conf = 0.20 + 0.70*sample_factor*skill_factor
+    if n < 32:
+        conf = min(conf, 0.35)
+    return {"state": state, "scored_forecasts": n, "kp_input_confidence": round(clamp(conf, 0.2, 0.9), 3)}
+
+
+def update_calibration(coef, scored, now):
+    recent = [x for x in scored if x.get("scored") and parse_time(x.get("target_time")) and parse_time(x["target_time"]) >= now-timedelta(days=30)]
+    if len(recent) < 16:
+        return coef
+    pred_rate = sum(num(x.get("southward_bz_probability"), 50)/100 for x in recent)/len(recent)
+    obs_rate = sum(1 if x.get("observed_southward") else 0 for x in recent)/len(recent)
+    probability_bias_pp = clamp((obs_rate-pred_rate)*100, -20, 20)
+    bz_bias = clamp(sum(-num(x.get("error_bz_min"), 0) for x in recent)/len(recent), -8, 8)
+    old_p = num(coef.get("probability_bias_pp"), 0)
+    old_b = num(coef.get("bz_min_bias_nt"), 0)
+    coef["probability_bias_pp"] = round(0.8*old_p + 0.2*probability_bias_pp, 3)
+    coef["bz_min_bias_nt"] = round(0.8*old_b + 0.2*bz_bias, 3)
+    coef["calibration_count"] = len(recent)
+    coef["updated_at"] = iso_z(now)
+    return coef
+
+
+def build(hist, wind_fc, cmes, coef, now):
+    recent = [r for r in hist if r["_dt"] >= now-timedelta(hours=6)]
+    recent_bz = med([r["bz"] for r in recent], 0.0)
+    recent_bt = med([r.get("bt") for r in recent], 6.0)
+    sigma = max(1.5, statistics.pstdev([r["bz"] for r in recent]) if len(recent) >= 3 else 2.5)
+    clim_q10 = quantile([r["bz"] for r in hist[-6000:]], 0.10, -5.0)
+
+    fc = []
+    for i in range(FORECAST_DAYS*8):
+        t = now + timedelta(hours=i*BIN_H)
+        lead = i*BIN_H
+        rec = window(hist, t-timedelta(days=RECURRENCE_DAYS), 2.0)
+        rec_bz = med([r["bz"] for r in rec], None) if rec else None
+        rec_bt = med([r.get("bt") for r in rec], None) if rec else None
+        w_recent = max(0.15, 0.75*math.exp(-lead/36))
         w_rec = 0.35 if rec_bz is not None else 0.0
-        w_clim = max(0.0, 1.0 - w_recent - w_rec)
-        base_bz = w_recent * recent_bz + w_clim * 0.0 + (w_rec * rec_bz if rec_bz is not None else 0.0)
-        base_bt = max(2.0, w_recent * recent_bt + w_clim * 5.0 + (w_rec * (rec_bt or 5.0) if rec_bt is not None else 0.0))
-        cme_score, cme = cme_risk_for_time(cmes, start)
-        # CME score increases Bt and negative-tail risk, not a deterministic negative Bz assertion.
-        bt_forecast = base_bt + 10.0 * cme_score
-        bz_min = min(base_bz - 1.65 * recent_sigma - 10.0 * cme_score, climatology_neg_q - 5.0 * cme_score)
-        south_prob = 100.0 / (1.0 + math.exp((base_bz + 1.0) / 2.4))
-        south_prob += 38.0 * cme_score
-        south_prob = max(2.0, min(98.0, south_prob))
-        if south_prob >= 75:
-            risk = "HIGH"
-        elif south_prob >= 55:
-            risk = "MODERATE"
-        else:
-            risk = "LOW"
-        forecast.append({
-            "time": iso_z(start),
-            "end_time": iso_z(end),
-            "lead_hours": lead_h,
+        w_clim = max(0.0, 1-w_recent-w_rec)
+        base_bz = w_recent*recent_bz + (w_rec*rec_bz if rec_bz is not None else 0)
+        base_bt = w_recent*recent_bt + w_clim*5.0 + (w_rec*(rec_bt or 5) if rec_bt is not None else 0)
+
+        wr = nearest(wind_fc, t)
+        vsw = wr["speed"] if wr else 400
+        cscore, cme = cme_score(cmes, t)
+
+        p = 0.32
+        if rec:
+            south = sum(1 for r in rec if r["bz"] < 0)/len(rec)
+            strong = sum(1 for r in rec if r["bz"] <= -5)/len(rec)
+            p += 0.32*(south-0.45) + 0.70*strong
+        p += clamp((vsw-450)/700, 0, 0.16)
+        if recent:
+            recent_south = sum(1 for r in recent if r["bz"] < 0)/len(recent)
+            p += w_recent*0.22*(recent_south-0.45)
+        p += 0.35*cscore
+        p += num(coef.get("probability_bias_pp"), 0)/100
+        p = clamp(p, 0.05, 0.92)
+
+        bz_min = min(base_bz - 1.65*sigma - 8*cscore, clim_q10 - 4*cscore)
+        bz_min += num(coef.get("bz_min_bias_nt"), 0)
+        bt = clamp(base_bt + clamp((vsw-450)/350, 0, 4) + 7*cscore, 2, 40)
+
+        conf = 0.28 + (0.20 if rec else 0) + 0.12 + (0.08 if cme else 0)
+        conf -= min(0.18, lead/600)
+        fc.append({
+            "time": iso_z(t), "end_time": iso_z(t+timedelta(hours=BIN_H)), "lead_hours": lead,
             "bz_forecast": round(base_bz, 2),
-            "bz_min_forecast": round(bz_min, 2),
-            "bt_forecast": round(bt_forecast, 2),
-            "southward_bz_probability": round(south_prob, 1),
-            "bz_risk": risk,
-            "confidence": round(max(0.2, min(0.9, 0.75 - lead_h / 240.0 + (0.1 if rec_bz is not None else 0.0))), 2),
-            "cme_risk_score": round(cme_score, 3),
+            "bz_min_forecast": round(clamp(bz_min, -30, 5), 2),
+            "bt_forecast": round(bt, 2),
+            "southward_bz_probability": round(p*100, 1),
+            "bz_risk": "HIGH" if p >= .75 else "MODERATE" if p >= .55 else "LOW-MODERATE" if p >= .35 else "LOW",
+            "confidence": round(clamp(conf, .20, .82), 2),
+            "cme_risk_score": round(cscore, 3),
             "cme_id": cme.get("id") if cme else None,
             "model_components": {
                 "recent_bz": round(recent_bz, 2),
                 "rotation27_bz": round(rec_bz, 2) if rec_bz is not None else None,
-                "recent_weight": round(w_recent, 3),
-                "rotation27_weight": round(w_rec, 3),
+                "solar_wind_speed": round(vsw, 1),
+                "probability_bias_pp": num(coef.get("probability_bias_pp"), 0),
+                "bz_min_bias_nt": num(coef.get("bz_min_bias_nt"), 0),
             },
         })
-    return forecast
+    return fc
 
 
-def verification(hist: list[dict[str, Any]]) -> dict[str, Any]:
-    # A transparent persistence baseline verification for current model readiness.
+def main():
     now = utcnow()
-    rows = [r for r in hist if now - timedelta(days=7) <= r["_t"] <= now]
-    pairs = []
-    by_time = {r["_t"].replace(minute=0, second=0, microsecond=0): r for r in hist}
-    for r in rows:
-        prev_t = r["_t"].replace(minute=0, second=0, microsecond=0) - timedelta(hours=3)
-        prev = by_time.get(prev_t)
-        if prev:
-            pairs.append((prev["bz"], r["bz"]))
-    if not pairs:
-        return {"count": 0, "direction_hit_rate_threshold60": None, "bz_min_mae": None, "note": "Not enough history yet"}
-    direction_hit = 0
-    abs_err = []
-    for pred, obs in pairs:
-        prob = 100.0 / (1.0 + math.exp((pred + 1.0) / 2.4))
-        pred_south = prob >= 60
-        obs_south = obs < 0
-        direction_hit += int(pred_south == obs_south)
-        abs_err.append(abs(pred - obs))
-    return {
-        "count": len(pairs),
-        "direction_hit_rate_threshold60": round(100.0 * direction_hit / len(pairs), 1),
-        "bz_min_mae": round(sum(abs_err) / len(abs_err), 2),
-        "method": "3h persistence baseline until enough trained hindcasts are available",
-    }
+    hist = load_mag()
+    wind_fc = load_wind_forecast()
+    cmes = load_cmes()
+    coef = load(COEF, {}) or {}
+    coef.setdefault("version", "SWIFT-Bz-v2-online-calibration")
+    coef.setdefault("probability_bias_pp", 0.0)
+    coef.setdefault("bz_min_bias_nt", 0.0)
 
+    old_archive = (load(ARCHIVE, {}) or {}).get("items", [])
+    scored = score_archive(hist, old_archive[-12000:], now)
+    coef = update_calibration(coef, scored, now)
 
-def main() -> None:
-    hist = load_mag_history()
-    cmes = load_cme_arrivals()
-    forecast = build_forecast(hist, cmes) if hist else []
-    max_risk = max(forecast, key=lambda r: r.get("southward_bz_probability", 0), default=None)
-    payload = {
-        "updated_at": iso_z(utcnow()),
-        "model": "SWIFT Bz AI v1 browser/report compatible",
+    forecast = build(hist, wind_fc, cmes, coef, now) if hist else []
+    issued = iso_z(now)
+    for r in forecast:
+        scored.append({
+            "issued_at": issued,
+            "target_time": r["time"],
+            "lead_hours": r["lead_hours"],
+            "southward_bz_probability": r["southward_bz_probability"],
+            "bz_min_forecast": r["bz_min_forecast"],
+            "bt_forecast": r["bt_forecast"],
+            "scored": False,
+        })
+    scored = scored[-12000:]
+
+    v7 = metrics(scored, now, 7)
+    v30 = metrics(scored, now, 30)
+    ready = readiness(v30)
+    ver = {"updated_at": iso_z(now), "last_7d": v7, "last_30d": v30, "readiness": ready}
+    latest = {
+        "updated_at": iso_z(now),
+        "model": "SWIFT-Bz-v2-online-calibration",
+        "description": "Probabilistic southward-Bz model with forecast archive scoring and online calibration.",
         "forecast_days": FORECAST_DAYS,
-        "cadence_hours": BIN_HOURS,
-        "inputs": {
-            "imf_history_records": len(hist),
-            "cme_arrivals": len(cmes),
-            "uses_rotation27_days": RECURRENCE_DAYS,
-        },
+        "cadence_hours": BIN_H,
+        "inputs": {"imf_history_records": len(hist), "cme_arrivals": len(cmes), "uses_rotation27_days": RECURRENCE_DAYS},
+        "readiness": ready,
         "current": forecast[0] if forecast else None,
-        "max_risk": max_risk,
-        "verification": {"last_7d": verification(hist)},
+        "max_risk": max(forecast, key=lambda r:r["southward_bz_probability"], default=None),
         "forecast": forecast,
+        "verification": ver,
+        "coefficients": coef,
     }
-    OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Bz forecast rows={len(forecast)} mag_history={len(hist)} cmes={len(cmes)}")
+    save(FORECAST, {"updated_at": iso_z(now), "items": forecast})
+    save(LATEST, latest)
+    save(VERIF, ver)
+    save(ARCHIVE, {"updated_at": iso_z(now), "items": scored})
+    save(COEF, coef)
+    save(INDEX, {
+        "updated_at": iso_z(now), "latest": "latest.json", "forecast": "forecast.json",
+        "verification": "verification.json", "archive": "forecast-archive.json",
+        "coefficients": "coefficients.json",
+    })
+    print(json.dumps({"readiness": ready, "verification_7d": v7, "forecast_count": len(forecast)}, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
