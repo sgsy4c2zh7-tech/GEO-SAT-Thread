@@ -249,7 +249,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 
   <div class="forecastGrid">
     <section class="card forecastPanel">
-      <div class="panelHeader"><div><div class="panelTitle">Kp Forecast <span class="chip">Excel linked</span></div><div class="panelSub">月次Excelの Kp_Forecast と同じPython生成データ。シミュレーション時刻の縦線が同期します。</div></div></div>
+      <div class="panelHeader"><div><div class="panelTitle">Kp Forecast <span class="chip">Excel linked</span></div><div class="panelSub">月次Excelの Kp_Forecast と同じPython生成データ。予報は+72時間（3日）まで。シミュレーション時刻の縦線が同期します。</div></div></div>
       <div class="forecastGraphWrap"><canvas id="kpGraph"></canvas></div>
       <div class="forecastStats" id="kpStats"></div>
     </section>
@@ -447,7 +447,8 @@ function normalizeKpForecast(payload){
     const kp=firstFinite(r,["kp","predicted_kp","forecast_kp","Kp"]);if(!Number.isFinite(kp))continue;
     out.push({_t:t,time:new Date(t).toISOString(),kp:Number(kp),gScale:r.g_scale||r.G_Scale||"",confidence:firstFinite(r,["confidence"]),source:r.source||"SWIFT Kp AI",raw:r});
   }
-  return out.sort((a,b)=>a._t-b._t);
+  const now=Date.now(),limit=now+72*3600e3;
+  return out.filter(r=>r._t<=limit).sort((a,b)=>a._t-b._t);
 }
 function normalizeBzForecast(payload){
   const out=[];
@@ -491,23 +492,23 @@ function nearestForecast(series,time,key,maxGapHours=6){
 }
 function kpStateAt(time){const f=nearestForecast(STATE.kpForecast,time,"kp",5);return f?{kp:f.value,source:f.row.source||"SWIFT Kp AI",row:f.row}:{kp:num(STATE.env.kp,0),source:"NOAA current",row:null};}
 function bzStateAt(time){const f=nearestForecast(STATE.bzForecast,time,"bz",5);if(f)return{bz:f.value,bzMin:Number.isFinite(Number(f.row.bzMin))?Number(f.row.bzMin):f.value,bt:Number.isFinite(Number(f.row.bt))?Number(f.row.bt):num(STATE.env.bt,0),source:f.row.source||"SWIFT Bz AI",row:f.row};return{bz:num(STATE.env.bz,0),bzMin:num(STATE.env.bz,0),bt:num(STATE.env.bt,0),source:"NOAA current",row:null};}
-function drawForecastChart(canvasId,series,defs,yTitle,statsId){
+function drawForecastChart(canvasId,series,defs,yTitle,statsId,horizonDays=5){
   const canvas=document.getElementById(canvasId);if(!canvas)return;const{ctx,w,h}=setupCanvas(canvasId);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
-  const pad={l:52,r:18,t:24,b:38},now=Date.now(),x0=now-3*3600e3,x1=STATE.timelineEnd?.getTime?.()||now+5*86400e3,vals=[];
+  const pad={l:52,r:18,t:24,b:38},now=Date.now(),x0=now-3*3600e3,x1=now+horizonDays*86400e3,vals=[];
   for(const r of series)for(const d of defs){const v=Number(r[d.key]);if(Number.isFinite(v))vals.push(v);}
   let ymin=yTitle==="Kp"?0:(vals.length?Math.floor((Math.min(...vals)-2)/5)*5:-20),ymax=yTitle==="Kp"?9:(vals.length?Math.ceil((Math.max(...vals)+2)/5)*5:20);if(ymax<=ymin)ymax=ymin+10;
   const X=t=>pad.l+(t-x0)/(x1-x0)*(w-pad.l-pad.r),Y=v=>pad.t+(ymax-v)/(ymax-ymin)*(h-pad.t-pad.b);
   ctx.strokeStyle="#e5ecf3";ctx.fillStyle="#6c8298";ctx.font="10px system-ui";const step=yTitle==="Kp"?1:5;for(let v=Math.ceil(ymin/step)*step;v<=ymax;v+=step){const y=Y(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillText(String(v),10,y+3);}
-  for(let d=0;d<=5;d++){const x=X(now+d*86400e3);ctx.strokeStyle=d===0?"#8aa0b5":"#eff3f7";ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();ctx.fillStyle="#6f879e";ctx.fillText(d===0?"NOW":`+${d}d`,x-12,h-14);}
+  for(let d=0;d<=horizonDays;d++){const x=X(now+d*86400e3);ctx.strokeStyle=d===0?"#8aa0b5":"#eff3f7";ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();ctx.fillStyle="#6f879e";ctx.fillText(d===0?"NOW":`+${d}d`,x-12,h-14);}
   defs.forEach(def=>{const rows=series.filter(r=>Number.isFinite(Number(r[def.key]))&&r._t>=x0&&r._t<=x1);if(rows.length<1)return;ctx.save();ctx.strokeStyle=def.color;ctx.lineWidth=1.9;ctx.setLineDash(def.dash||[]);ctx.beginPath();rows.forEach((r,i)=>{const x=X(r._t),y=Y(Number(r[def.key]));i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=def.color;for(const r of rows){ctx.beginPath();ctx.arc(X(r._t),Y(Number(r[def.key])),2,0,Math.PI*2);ctx.fill();}ctx.restore();});
   const st=STATE.selectedTime?.getTime?.()||now;if(st>=x0&&st<=x1){const x=X(st);ctx.strokeStyle="#7b48cc";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();}
   ctx.fillStyle="#24415d";ctx.font="bold 11px system-ui";ctx.fillText(yTitle,pad.l,pad.t-7);
 }
 function drawSpaceWeatherGraphs(){
-  drawForecastChart("kpGraph",STATE.kpForecast,[{key:"kp",color:"#2d7fb8"}],"Kp","kpStats");
-  drawForecastChart("bzGraph",STATE.bzForecast,[{key:"bz",color:"#2d7fb8"},{key:"bzMin",color:"#d9505f",dash:[5,3]},{key:"bt",color:"#7b48cc",dash:[2,3]}],"Bz / Bt [nT]","bzStats");
-  const t=STATE.selectedTime||new Date(),k=kpStateAt(t),b=bzStateAt(t),kmax=STATE.kpForecast.length?Math.max(...STATE.kpForecast.map(r=>r.kp).filter(Number.isFinite)):null,bmin=STATE.bzForecast.length?Math.min(...STATE.bzForecast.map(r=>Number.isFinite(Number(r.bzMin))?Number(r.bzMin):Number(r.bz)).filter(Number.isFinite)):null;
-  const ks=document.getElementById("kpStats");if(ks)ks.innerHTML=`<div class="forecastStat"><div class="k">Kp @ sim time</div><div class="v">${k.kp.toFixed(1)}</div></div><div class="forecastStat"><div class="k">Source</div><div class="v" style="font-size:13px">${esc(k.source)}</div></div><div class="forecastStat"><div class="k">Forecast max</div><div class="v">${Number.isFinite(kmax)?kmax.toFixed(1):"--"}</div></div>`;
+  drawForecastChart("kpGraph",STATE.kpForecast,[{key:"kp",color:"#2d7fb8"}],"Kp","kpStats",3);
+  drawForecastChart("bzGraph",STATE.bzForecast,[{key:"bz",color:"#2d7fb8"},{key:"bzMin",color:"#d9505f",dash:[5,3]},{key:"bt",color:"#7b48cc",dash:[2,3]}],"Bz / Bt [nT]","bzStats",5);
+  const t=STATE.selectedTime||new Date(),k=kpStateAt(t),b=bzStateAt(t),now=Date.now(),kp72=STATE.kpForecast.filter(r=>r._t>=now-3*3600e3&&r._t<=now+3*86400e3),kmax=kp72.length?Math.max(...kp72.map(r=>r.kp).filter(Number.isFinite)):null,bmin=STATE.bzForecast.length?Math.min(...STATE.bzForecast.map(r=>Number.isFinite(Number(r.bzMin))?Number(r.bzMin):Number(r.bz)).filter(Number.isFinite)):null;
+  const ks=document.getElementById("kpStats");if(ks)ks.innerHTML=`<div class="forecastStat"><div class="k">Kp @ sim time</div><div class="v">${k.kp.toFixed(1)}</div></div><div class="forecastStat"><div class="k">Source</div><div class="v" style="font-size:13px">${esc(k.source)}</div></div><div class="forecastStat"><div class="k">Forecast max</div><div class="v">${Number.isFinite(kmax)?kmax.toFixed(1):"--"}</div></div><div class="forecastStat"><div class="k">Horizon</div><div class="v">72 h</div></div>`;
   const bs=document.getElementById("bzStats");if(bs)bs.innerHTML=`<div class="forecastStat"><div class="k">Bz @ sim time</div><div class="v">${b.bz.toFixed(1)} nT</div></div><div class="forecastStat"><div class="k">Bz minimum</div><div class="v">${Number.isFinite(bmin)?bmin.toFixed(1):"--"} nT</div></div><div class="forecastStat"><div class="k">Source</div><div class="v" style="font-size:13px">${esc(b.source)}</div></div>`;
 }
 
