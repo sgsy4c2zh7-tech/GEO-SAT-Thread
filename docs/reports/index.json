@@ -1,12 +1,30 @@
 {
-  "updated_at": "2026-09-16T13:06:59Z",
-  "latest": "swift_space_weather_report_latest.xlsx",
-  "latest_root_url": "./reports/swift_space_weather_report_latest.xlsx",
-  "latest_docs_url": "./docs/reports/swift_space_weather_report_latest.xlsx",
-  "timestamped_docs_url": "./docs/reports/swift_space_weather_report_20260916_1306.xlsx",
+  "updated_at": "2026-09-16T13:24:59Z",
+  "current_month": "2026-09",
+  "current_month_file": "swift_space_weather_2026-09.xlsx",
+  "current_month_url": "./reports/swift_space_weather_2026-09.xlsx",
+  "monthly_latest_url": "./reports/swift_space_weather_2026-09.xlsx",
+  "ui_feed_url": "./reports/ui_forecast_latest.json",
+  "monthly_files": [
+    {
+      "month": "2026-09",
+      "file": "swift_space_weather_2026-09.xlsx",
+      "url": "./reports/swift_space_weather_2026-09.xlsx"
+    }
+  ],
+  "primary_wind_accuracy": {
+    "definition": "|predicted - observed| <= 50 km/s",
+    "window": "last_24h",
+    "count": 24,
+    "hit_rate_50kms": 62.5,
+    "hit_rate_100kms": 70.8,
+    "mae": 54.42,
+    "bias": 42.55,
+    "rmse": 80.92
+  },
   "sheets": [
-    "Dashboard",
-    "SolarWind_27d",
+    "Monthly_Summary",
+    "SolarWind_Month",
     "Wind_Forecast_3d",
     "Kp_Forecast",
     "Accuracy",
@@ -14,14 +32,5 @@
     "CME_Arrivals",
     "CME_Wind_Boost",
     "Sources"
-  ],
-  "counts": {
-    "solar_wind_27d_rows": 27,
-    "wind_forecast_rows": 76,
-    "kp_forecast_rows": 40,
-    "wind_accuracy_pairs": 27,
-    "kp_accuracy_pairs": 0,
-    "bz_forecast_rows": 25,
-    "cme_arrivals": 174
-  }
+  ]
 }
