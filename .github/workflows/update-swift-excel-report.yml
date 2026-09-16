@@ -1,0 +1,53 @@
+name: Update SWIFT Excel Report
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 3時間ごと。NOAA/Swift各データ更新後に回す想定。
+    - cron: "23 */3 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  build-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-report.txt
+
+      - name: Update NOAA history
+        run: python scripts/update_noaa_space_weather_history.py
+
+      - name: Learn CME wind boost
+        run: python scripts/learn_cme_wind_boost.py
+
+      - name: Build SWIFT Bz AI
+        run: python scripts/build_swift_bz_ai.py
+
+      - name: Build Excel report
+        run: python scripts/build_swift_excel_report.py
+
+      - name: Commit generated report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data docs/reports reports || true
+          if git diff --cached --quiet; then
+            echo "No generated changes."
+          else
+            git commit -m "Update SWIFT Excel report"
+            git push
+          fi
