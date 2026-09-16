@@ -200,7 +200,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
     <div class="panelHeader">
       <div>
         <div class="panelTitle">3D CME Propagation Model <span class="chip">DBM + Parker Spiral</span></div>
-        <div class="panelSub">DBMでCME速度を積分。太陽自転はParker spiralとして背景磁場に反映。雲付きEarth・動的磁気圏・太陽風粒子を同期表示。</div>
+        <div class="panelSub">DBMでCME速度を積分。Parker spiralは25.38日sidereal回転、太陽表面は27.2753日Carrington synodic回転でタイムライン同期。雲付きEarth・動的磁気圏・太陽風粒子を同期表示。</div>
       </div>
       <div class="viewTools">
         <button onclick="set3DCamera('top')">Top</button>
@@ -220,7 +220,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
     <div class="modelStrip">
       <span class="modelChip">CME propagation: Drag-Based Model</span>
       <span class="modelChip">Solar rotation: 27.27 d</span>
-      <span class="modelChip">Background field: Parker spiral</span>
+      <span class="modelChip">Parker: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
       <span class="modelChip">Solar wind: NOAA observed → SWIFT AI forecast → WSA fallback</span>
       <span class="modelChip">Magnetosphere: Pdyn / Bz / CME impact response</span>
     </div>
@@ -259,8 +259,13 @@ const NOAA={
   kpAlt:"https://services.swpc.noaa.gov/products/noaa-estimated-planetary-k-index-1-minute.json"
 };
 const AU_KM=149597870,R_SUN_KM=695700;
-const SOLAR_ROTATION_DAYS=27.27;
-const OMEGA_SUN=2*Math.PI/(SOLAR_ROTATION_DAYS*86400);
+// Separate the two rotation periods on purpose:
+// - Carrington synodic: apparent solar-surface rotation as seen from Earth.
+// - Carrington sidereal: inertial rotation rate used for Parker-spiral winding.
+const SOLAR_CARRINGTON_SYNODIC_DAYS=27.2753;
+const SOLAR_CARRINGTON_SIDEREAL_DAYS=25.38;
+const OMEGA_SOLAR_SYNODIC=2*Math.PI/(SOLAR_CARRINGTON_SYNODIC_DAYS*86400);
+const OMEGA_PARKER=2*Math.PI/(SOLAR_CARRINGTON_SIDEREAL_DAYS*86400);
 const DBM={gamma:.3e-7,r0Km:21.5*R_SUN_KM,targetKm:AU_KM,visualTargetKm:1.45*AU_KM,dtSec:600,maxDays:10};
 const SCENE={sunX:-78,earthX:78,span:156};
 const POST_PASS_HOURS=36;
@@ -278,6 +283,10 @@ function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 function num(v,d=0){const n=Number(v);return Number.isFinite(n)?n:d;}
 function formatTime(v){const d=v instanceof Date?v:new Date(v);return Number.isFinite(d.getTime())?d.toISOString().slice(0,16).replace("T"," ")+" UTC":"-";}
 function shortId(id){const s=String(id||"CME");const m=s.match(/CME[-:]?(\d+)/i);return m?`CME${m[1].slice(-6)}`:s.slice(-12);}
+function wrap180(deg){let x=((Number(deg)+180)%360+360)%360-180;return x===-180?180:x;}
+function formatHelioLon(lon){if(!Number.isFinite(Number(lon)))return"-";const x=wrap180(Number(lon));return `${x>=0?"W":"E"}${Math.abs(x).toFixed(1)}°`;}
+function solarSynodicRotationRad(time,ref=STATE.timelineCenter){const t=(time instanceof Date?time:new Date(time)).getTime(),r=(ref instanceof Date?ref:new Date(ref)).getTime();if(!Number.isFinite(t)||!Number.isFinite(r))return 0;return OMEGA_SOLAR_SYNODIC*((t-r)/1000);}
+function sourceFootpointLongitude(c,time){if(!c||c.coordType!=="heliographic")return null;const t=(time instanceof Date?time:new Date(time)).getTime(),t0=(c.t0 instanceof Date?c.t0:new Date(c.t0)).getTime();if(!Number.isFinite(t)||!Number.isFinite(t0))return num(c.lon,0);const sign=DONKI_LON_POSITIVE_WEST?1:-1;return wrap180(num(c.lon,0)+sign*OMEGA_SOLAR_SYNODIC*((t-t0)/1000)*180/Math.PI);}
 function classColor(c){if(c==="ENLIL-HIT")return"#ca62ff";if(c==="CORE-HIT")return"#ff526f";if(c==="BODY-HIT")return"#ff9e2c";if(c==="FLANK-HIT")return"#ffd65a";if(String(c).startsWith("CACTUS"))return"#35d7ff";return"#91a6bf";}
 function latest(arr){if(!Array.isArray(arr))return{};for(let i=arr.length-1;i>=0;i--){const r=arr[i];if(Array.isArray(r)){if(String(r[0]).toLowerCase().includes("time"))continue;return r;}if(r&&typeof r==="object")return r;}return{};}
 function pick(obj,names){for(const n of names){if(typeof n==="number"&&Array.isArray(obj)){const v=Number(obj[n]);if(Number.isFinite(v))return v;}if(typeof n==="string"&&obj&&obj[n]!==undefined){const v=Number(obj[n]);if(Number.isFinite(v))return v;}}return 0;}
@@ -486,7 +495,7 @@ function speedColorHex(v){if(v>=850)return 0xff3f33;if(v>=650)return 0xff9f2d;if
 function speedColorCss(v){const n=speedColorHex(v);return`#${n.toString(16).padStart(6,"0")}`;}
 function cmeDirection(c){const lon=(c.coordType==="heliographic"?-num(c.lon):(90-num(c.pa)))*Math.PI/180,lat=(c.coordType==="heliographic"?num(c.lat):0)*Math.PI/180;return new THREE.Vector3(Math.cos(lat)*Math.cos(lon),Math.sin(lat)*.62,Math.cos(lat)*Math.sin(lon)*.72).normalize();}
 function sceneDistanceForR(rKm){return((rKm-DBM.r0Km)/(AU_KM-DBM.r0Km))*SCENE.span;}
-function parkerAngleDeg(v){return OMEGA_SUN*((AU_KM-DBM.r0Km)/Math.max(250,v))*180/Math.PI;}
+function parkerAngleDeg(v){return OMEGA_PARKER*((AU_KM-DBM.r0Km)/Math.max(250,v))*180/Math.PI;}
 
 function downsampleSeries(a,maxN=1300){if(a.length<=maxN)return a;const step=a.length/maxN,out=[];for(let i=0;i<maxN;i++){out.push(a[Math.min(a.length-1,Math.floor(i*step))]);}return out;}
 function drawWindGraph(){
@@ -889,8 +898,8 @@ function init3D(){
 
 function updateParkerSpiral(vsw){
   if(!STATE.three.ready||!STATE.three.parkerGroup)return;const g=STATE.three.parkerGroup,v=clamp(vsw,250,900);if(Number.isFinite(g.userData.lastSpeed)&&Math.abs(g.userData.lastSpeed-v)<5)return;g.userData.lastSpeed=v;
-  const lines=g.userData.lines||[],r0=DBM.r0Km,maxR=1.42*AU_KM,offsets=[-60,-40,-20,0,20,40,60].map(x=>x*Math.PI/180),connectPhi=-OMEGA_SUN*((AU_KM-r0)/v);
-  lines.forEach((line,i)=>{const pts=[],phi0=connectPhi+offsets[i];for(let k=0;k<=150;k++){const r=r0+(maxR-r0)*k/150,phi=phi0+OMEGA_SUN*((r-r0)/v),dist=sceneDistanceForR(r);pts.push(new THREE.Vector3(SCENE.sunX+Math.cos(phi)*dist,0,Math.sin(phi)*dist));}line.geometry.dispose();line.geometry=new THREE.BufferGeometry().setFromPoints(pts);});
+  const lines=g.userData.lines||[],r0=DBM.r0Km,maxR=1.42*AU_KM,offsets=[-60,-40,-20,0,20,40,60].map(x=>x*Math.PI/180),connectPhi=-OMEGA_PARKER*((AU_KM-r0)/v);
+  lines.forEach((line,i)=>{const pts=[],phi0=connectPhi+offsets[i];for(let k=0;k<=150;k++){const r=r0+(maxR-r0)*k/150,phi=phi0+OMEGA_PARKER*((r-r0)/v),dist=sceneDistanceForR(r);pts.push(new THREE.Vector3(SCENE.sunX+Math.cos(phi)*dist,0,Math.sin(phi)*dist));}line.geometry.dispose();line.geometry=new THREE.BufferGeometry().setFromPoints(pts);});
 }
 function animateWindParticles(dt){
   const t=STATE.three;if(!t.ready||!t.windParticles)return;const ws=windStateAt(STATE.selectedTime||new Date()).speed;t.windSpeed=ws;t.windParticles.material.color.setHex(speedColorHex(ws));t.windParticles.material.opacity=.38+clamp((ws-300)/900,0,.32);
@@ -900,9 +909,9 @@ function animateWindParticles(dt){
 }
 function updateSpeedHud(info){
   const el=document.getElementById("speedHud");if(!el)return;const ws=windStateAt(STATE.selectedTime||new Date());
-  if(!info){el.innerHTML=`<div class="model">Drag-Based Model</div><div class="big wind">${Math.round(ws.speed)} km/s</div><div>Solar wind (${esc(ws.source)})</div><div>Parker spiral @ 1 AU: ${parkerAngleDeg(ws.speed).toFixed(1)}°</div><div>No active Earth-directed CME at this simulation time.</div>`;return;}
-  const{c,s,m}=info,dv=s.v-s.w,acc=s.a*1000,eta=m.earthArrival?formatTime(m.earthArrival.time):"-";
-  el.innerHTML=`<div class="model">DBM • ${esc(shortId(c.id))} • ${esc(c.impactClass)}</div><div class="big cme">${Math.round(s.v)} km/s</div><div>CME speed</div><div class="wind">Solar wind: <b>${Math.round(s.w)} km/s</b></div><div class="delta">ΔV: <b>${dv>=0?"+":""}${Math.round(dv)} km/s</b></div><div>Acceleration: <b>${acc.toFixed(2)} m/s²</b></div><div>Distance: <b>${s.rAU.toFixed(3)} AU</b></div><div>DBM ETA Earth: <b>${eta}</b></div><div>DBM speed @ Earth: <b>${m.earthArrival?Math.round(m.earthArrival.v):0} km/s</b></div><div>Parker angle @ 1 AU: ${parkerAngleDeg(ws.speed).toFixed(1)}°</div>`;
+  if(!info){el.innerHTML=`<div class="model">Drag-Based Model</div><div class="big wind">${Math.round(ws.speed)} km/s</div><div>Solar wind (${esc(ws.source)})</div><div>Parker spiral @ 1 AU: ${parkerAngleDeg(ws.speed).toFixed(1)}°</div><div>Solar surface rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic</div><div>Parker rotation: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal</div><div>No active Earth-directed CME at this simulation time.</div>`;return;}
+  const{c,s,m}=info,dv=s.v-s.w,acc=s.a*1000,eta=m.earthArrival?formatTime(m.earthArrival.time):"-",footLon=sourceFootpointLongitude(c,STATE.selectedTime||new Date());
+  el.innerHTML=`<div class="model">DBM • ${esc(shortId(c.id))} • ${esc(c.impactClass)}</div><div class="big cme">${Math.round(s.v)} km/s</div><div>CME speed</div><div class="wind">Solar wind: <b>${Math.round(s.w)} km/s</b></div><div class="delta">ΔV: <b>${dv>=0?"+":""}${Math.round(dv)} km/s</b></div><div>Acceleration: <b>${acc.toFixed(2)} m/s²</b></div><div>Distance: <b>${s.rAU.toFixed(3)} AU</b></div><div>DBM ETA Earth: <b>${eta}</b></div><div>DBM speed @ Earth: <b>${m.earthArrival?Math.round(m.earthArrival.v):0} km/s</b></div><div>Parker angle @ 1 AU: ${parkerAngleDeg(ws.speed).toFixed(1)}°</div>${footLon===null?"":`<div>Launch longitude: <b>${formatHelioLon(c.lon)}</b></div><div>Rotating source footpoint: <b>${formatHelioLon(footLon)}</b></div>`}<div>Solar surface: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic</div><div>Parker Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal</div>`;
 }
 
 function make3DCME(c,s,index){
@@ -923,16 +932,18 @@ function update3D(time){
     const geom=clamp(num(c.geometryMultiplier,c.earthConfidence||.55),.15,1),near=clamp(1-Math.abs(s.rAU-1)/.085,0,1),speedN=clamp((s.v-350)/900,.15,1),hit=near*geom*(.45+.55*speedN);impactStrength=Math.max(impactStrength,hit);
     const d=Math.abs(s.rAU-1);if(d<bestDist){bestDist=d;bestInfo={c,s,m};}
   }
-  const ws=windStateAt(time);updateParkerSpiral(ws.speed);updateMagnetosphere(impactStrength);updateSpeedHud(bestInfo);
+  const ws=windStateAt(time);
+  // Solar photosphere follows the simulation timeline using Carrington synodic rotation.
+  if(STATE.three.sun)STATE.three.sun.rotation.y=solarSynodicRotationRad(time);
+  updateParkerSpiral(ws.speed);updateMagnetosphere(impactStrength);updateSpeedHud(bestInfo);
   const pd=num(STATE.env.dynamicPressure,0),bz=num(STATE.env.bz,0),magState=impactStrength>.72?"STRONG IMPACT":impactStrength>.35?"IMPACT":impactStrength>.05?"CONTACT":"QUIET";
-  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Solar wind: ${Math.round(ws.speed)} km/s (${esc(ws.source)})<br>Bz: ${bz.toFixed(1)} nT / Pdyn: ${pd.toFixed(2)} nPa<br>Parker spiral: ${parkerAngleDeg(ws.speed).toFixed(1)}° @ 1 AU<br>Magnetosphere: <b>${magState}</b>`;
+  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Solar wind: ${Math.round(ws.speed)} km/s (${esc(ws.source)})<br>Bz: ${bz.toFixed(1)} nT / Pdyn: ${pd.toFixed(2)} nPa<br>Parker spiral: ${parkerAngleDeg(ws.speed).toFixed(1)}° @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / Parker Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal<br>Magnetosphere: <b>${magState}</b>`;
 }
 
 function animate3D(){
   if(!STATE.three.ready)return;
   requestAnimationFrame(animate3D);
   const t=STATE.three,dt=t.clock.getDelta(),elapsed=t.clock.elapsedTime;
-  t.sun.rotation.y+=dt*.026;
   if(t.sunMaterial?.uniforms?.uTime)t.sunMaterial.uniforms.uTime.value=elapsed;
   if(t.sunAtmos){t.sunAtmos.rotation.y-=dt*.010;if(t.sunAtmos.material?.uniforms?.uTime)t.sunAtmos.material.uniforms.uTime.value=elapsed;}
   if(t.coronaShells)t.coronaShells.forEach((sh,i)=>{sh.rotation.y+=dt*(.003+i*.0015);if(sh.material?.uniforms?.uTime)sh.material.uniforms.uTime.value=elapsed+i*.8;});
