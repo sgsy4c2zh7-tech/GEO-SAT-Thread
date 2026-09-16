@@ -23,7 +23,7 @@ ARCHIVE=OUT/"forecast-archive.json"; LEAD=OUT/"leadtime-skill.json"; HISTORY=OUT
 TXT=OUT/"forecast.txt"; INDEX=OUT/"index.json"
 
 NOW=datetime.now(timezone.utc)
-FORECAST_DAYS=5
+FORECAST_DAYS=3
 STEP_H=3
 
 
@@ -333,6 +333,6 @@ hist=(load(HISTORY,{"items":[]}) or {}).get("items",[])[-720:]
 hist.append({"time":iso(NOW),"leadtime_overall":lead_skill["overall"],"max_kp":latest["max_kp"],"bz_gate":latest["bz_model_gate"]})
 save(HISTORY,{"updated_at":iso(NOW),"items":hist})
 save(INDEX,{"updated_at":iso(NOW),"latest":"latest.json","verification":"verification.json","leadtime_skill":"leadtime-skill.json","history":"history.json"})
-TXT.write_text("\n".join([":Product: SWIFT 5-Day Kp Forecast",f":Issued: {NOW.strftime('%Y %b %d %H%M UTC')}"]+
+TXT.write_text("\n".join([":Product: SWIFT 3-Day Kp Forecast",f":Issued: {NOW.strftime('%Y %b %d %H%M UTC')}"]+
                          [f"{r['time']}  Kp={r['kp']}  {r['g_scale']}" for r in forecast])+"\n",encoding="utf-8")
 print(json.dumps({"max_kp":latest["max_kp"],"leadtime_skill":lead_skill["overall"],"bz_gate":latest["bz_model_gate"]},ensure_ascii=False,indent=2))

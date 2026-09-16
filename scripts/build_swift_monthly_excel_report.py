@@ -360,7 +360,7 @@ def kp_forecast_rows(swift_kp: dict[str, Any] | None, wind_fc: list[dict[str, An
     if swift_kp:
         for r in records(swift_kp, keys=("forecast", "records", "items")):
             t = parse_time(pick(r, ["start_time", "time", "timestamp"]))
-            if not t or t < now - timedelta(hours=3) or t > now + timedelta(days=5):
+            if not t or t < now - timedelta(hours=3) or t > now + timedelta(days=FORECAST_DAYS):
                 continue
             kp = num(pick(r, ["kp", "predicted_kp", "forecast_kp"]))
             if kp is None:
@@ -763,7 +763,7 @@ def main() -> None:
     kpf_rows = prepare_rows_for_excel(kp_fc, [("UTC", "_t"), ("Kp", "kp"), ("G_Scale", "g_scale"), ("Confidence", "confidence"), ("Source", "source")])
     write_table(ws, 0, 0, ["UTC", "Kp", "G_Scale", "Confidence", "Source"], kpf_rows, fmt)
     ws.set_column("A:A", 19); ws.set_column("B:D", 14); ws.set_column("E:E", 28)
-    add_line_chart(wb, ws, "Kp forecast", "Kp_Forecast", 0, len(kpf_rows), 0, [(1, "Kp")], "G2", "Kp")
+    add_line_chart(wb, ws, "Kp forecast — next 72 hours", "Kp_Forecast", 0, len(kpf_rows), 0, [(1, "Kp")], "G2", "Kp")
 
     ws = wb.add_worksheet("Accuracy")
     ws.merge_range("A1:H1", "Wind accuracy — primary target ±50 km/s", fmt["title"])
