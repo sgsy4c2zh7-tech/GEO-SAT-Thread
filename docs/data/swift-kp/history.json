@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-09-17T05:30:42.797054+00:00",
+  "updated_at": "2026-09-17T11:45:30.327633+00:00",
   "items": [
     {
       "time": "2026-06-25T01:14:21.099565+00:00",
@@ -297414,6 +297414,58 @@
           0.9388,
           0
         ]
+      }
+    },
+    {
+      "time": "2026-09-17T11:45:30.327633+00:00",
+      "leadtime_overall": {
+        "count": 6957,
+        "mae": 2.059,
+        "bias": 1.805,
+        "rmse": 2.398,
+        "hit_rate_within_1kp": 27.4,
+        "hit_rate_within_067kp": 18.8,
+        "g_scale_hit_rate": 88.1
+      },
+      "max_kp": {
+        "time": "2026-09-17T12:00:00+00:00",
+        "start_time": "2026-09-17T12:00:00+00:00",
+        "end_time": "2026-09-17T15:00:00+00:00",
+        "lead_hours": 0.2,
+        "kp": 1.33,
+        "kp_raw": 1.43,
+        "g_scale": "G0",
+        "speed": 532.4,
+        "bz_min_effective": -2.08,
+        "southward_bz_probability_effective": 46.6,
+        "feature_vector": [
+          1.0,
+          2.3937,
+          0.6429,
+          2.0008,
+          0.4657,
+          2.0791,
+          0.631,
+          0.897,
+          0.8986,
+          0.0
+        ],
+        "diagnostics": {
+          "bz_gate": 0.203,
+          "lead_day": 1,
+          "previous_bias": 1.684,
+          "bias_correction": 1.095,
+          "bias_sample_count": 1353
+        }
+      },
+      "bz_gate": {
+        "model": "SWIFT-Bz-v2-online-calibration",
+        "readiness": {
+          "state": "calibrated",
+          "scored_forecasts": 410,
+          "kp_input_confidence": 0.423
+        },
+        "kp_input_confidence": 0.423
       }
     }
   ]
