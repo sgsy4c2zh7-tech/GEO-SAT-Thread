@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-09-18T06:03:44Z",
+  "updated_at": "2026-09-18T11:38:03Z",
   "current_month": "2026-09",
   "current_month_file": "swift_space_weather_2026-09.xlsx",
   "current_month_url": "./reports/swift_space_weather_2026-09.xlsx",
@@ -16,12 +16,14 @@
     "definition": "|predicted - observed| <= 50 km/s",
     "window": "last_24h",
     "count": 24,
-    "hit_rate_50kms": 16.7,
-    "hit_rate_100kms": 50.0,
-    "mae": 130.12,
-    "bias": 130.12,
-    "rmse": 151.81
+    "hit_rate_50kms": 70.8,
+    "hit_rate_100kms": 79.2,
+    "mae": 47.73,
+    "bias": 45.61,
+    "rmse": 71.19
   },
+  "retention_months": 24,
+  "validation_feed_url": "./data/validation/ui_validation_latest.json",
   "sheets": [
     "Monthly_Summary",
     "SolarWind_Month",
@@ -32,6 +34,17 @@
     "Bz_AI",
     "CME_Arrivals",
     "CME_Wind_Boost",
+    "Coronal_Holes",
+    "Research_Metrics",
+    "Wind_Verification",
+    "ENLIL_Verification",
+    "Kp_Verification",
+    "Bz_Verification",
+    "CME_Verification",
+    "Uncertainty",
+    "Kp_Observed",
+    "ENLIL_Earth",
+    "Methods",
     "Sources"
   ]
 }

@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-09-18T06:03:31Z",
+  "updated_at": "2026-09-18T11:37:10Z",
   "model": "SWIFT CME Wind Boost Learner",
   "definition": "observed_delta_v = max(0, post_arrival_peak_speed - pre_arrival_median_speed)",
   "windows": {
     "pre_baseline": "arrival-12h to arrival-3h median",
     "post_peak": "arrival to arrival+18h max"
   },
-  "sample_count": 21,
+  "sample_count": 22,
   "global": {
-    "intercept": 119.0377,
-    "speed_geometry_slope": -0.085266,
+    "intercept": 113.5207,
+    "speed_geometry_slope": -0.079287,
     "formula": "delta_v = class_median*0.55 + max(0, intercept + slope*(speed-500)*geometry)*0.45"
   },
   "by_impact_class": {
@@ -467,7 +467,7 @@
       "post_peak_speed": 588.07,
       "observed_delta_v": 97.77,
       "pre_count": 741,
-      "post_count": 1699
+      "post_count": 1706
     },
     {
       "id": "2026-09-12T01:26:00-CME-001",
@@ -485,11 +485,11 @@
       "longitude": 0.0,
       "latitude": 66.0,
       "angular_separation": 66.0,
-      "baseline_speed": 469.0,
+      "baseline_speed": 469.07,
       "post_peak_speed": 588.07,
-      "observed_delta_v": 119.07,
+      "observed_delta_v": 119.0,
       "pre_count": 827,
-      "post_count": 1043
+      "post_count": 1706
     },
     {
       "id": "2026-09-14T17:24:00-CME-001",
@@ -507,11 +507,33 @@
       "longitude": 115.0,
       "latitude": 39.0,
       "angular_separation": 109.17,
-      "baseline_speed": 465.89,
+      "baseline_speed": 466.2,
       "post_peak_speed": 588.07,
-      "observed_delta_v": 122.18,
+      "observed_delta_v": 121.87,
       "pre_count": 779,
-      "post_count": 408
+      "post_count": 1071
+    },
+    {
+      "id": "2026-09-13T07:48:00-CME-001",
+      "source": "DONKI",
+      "impact_class": "MISS",
+      "earth_candidate": false,
+      "confidence": 0.02,
+      "geometry_multiplier": 0.0,
+      "t0": "2026-09-13T07:48:00Z",
+      "arrival_time": "2026-09-18T05:02:29Z",
+      "transit_hours": 117.24,
+      "speed": 319.0,
+      "effective_speed": 79.8,
+      "half_angle": 10.0,
+      "longitude": 0.0,
+      "latitude": -28.0,
+      "angular_separation": 28.0,
+      "baseline_speed": 464.94,
+      "post_peak_speed": 476.55,
+      "observed_delta_v": 11.61,
+      "pre_count": 838,
+      "post_count": 771
     }
   ]
 }
