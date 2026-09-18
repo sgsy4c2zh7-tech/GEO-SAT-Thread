@@ -1,0 +1,137 @@
+name: Cleanup Obsolete Workflows for SWIFT v1.4
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Remove obsolete workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # v1.4 now owns:
+          # - NOAA wind / IMF / Kp accumulation
+          # - WSA-ENLIL fetch
+          # - Wind AI / Bz AI / Kp AI
+          # - forecast verification / wind accuracy
+          # - monthly Excel / research reports
+          #
+          # Keep:
+          # - update-swift-ai-pipeline-v14.yml
+          # - update-donki.yml
+          # - update-cactus.yml
+          # - update-helioviewer-images.yml
+
+          obsolete=(
+            ".github/workflows/update-swift-ai-pipeline.yml"
+            ".github/workflows/update-swift-bz-ai.yml"
+            ".github/workflows/update-swift-kp-ai.yml"
+            ".github/workflows/update-swift-wind-ai.yml"
+            ".github/workflows/update-swift-excel-report.yml"
+            ".github/workflows/update-swift-monthly-excel-report.yml"
+            ".github/workflows/update-swift-wind-accuracy.yml"
+            ".github/workflows/update-noaa-imf-history.yml"
+            ".github/workflows/update-noaa-kp-history.yml"
+            ".github/workflows/update-noaa-wind-history.yml"
+            ".github/workflows/update-wsa.yml"
+          )
+
+          echo "=== Removing obsolete workflows ==="
+          for f in "${obsolete[@]}"; do
+            if [[ -f "$f" ]]; then
+              echo "DELETE: $f"
+              git rm "$f"
+            else
+              echo "SKIP (already absent): $f"
+            fi
+          done
+
+          echo
+          echo "=== Workflows that will remain ==="
+          find .github/workflows -maxdepth 1 -type f -name "*.yml" -printf "%f\n" | sort || true
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git diff --cached --quiet; then
+            echo "Nothing to delete."
+          else
+            git commit -m "Remove obsolete workflows after SWIFT v1.4 migration"
+
+            for attempt in 1 2 3; do
+              git fetch origin main
+
+              if git rebase origin/main; then
+                if git push origin HEAD:main; then
+                  echo "Cleanup push succeeded."
+                  break
+                fi
+              else
+                echo "Rebase failed. Aborting before retry."
+                git rebase --abort || true
+              fi
+
+              if [[ "$attempt" -eq 3 ]]; then
+                echo "Cleanup failed after 3 attempts."
+                exit 1
+              fi
+
+              sleep 5
+            done
+          fi
+
+      - name: Delete this cleanup workflow too
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Remove this one-shot workflow from the repository after it has done its job.
+          git fetch origin main
+          git reset --hard origin/main
+
+          SELF=".github/workflows/cleanup-obsolete-workflows-v14.yml"
+
+          if [[ ! -f "$SELF" ]]; then
+            echo "Cleanup workflow already absent."
+            exit 0
+          fi
+
+          git rm "$SELF"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Remove one-shot workflow cleanup job"
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+
+            if git rebase origin/main; then
+              if git push origin HEAD:main; then
+                echo "Self-delete succeeded."
+                exit 0
+              fi
+            else
+              git rebase --abort || true
+            fi
+
+            sleep 5
+          done
+
+          echo "Self-delete failed after 3 attempts."
+          exit 1
