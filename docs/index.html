@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CME Animation</title>
+<title>SWIFT CME 3D Space Weather</title>
 
 <!-- Three.js: 3D表示用。CDNが読めない場合でも2Dモードは動作します -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -193,14 +193,14 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
     </section>
 
     <section class="card">
-      <div class="panelHeader"><div><div class="panelTitle">Simulation Timeline</div><div class="panelSub">現在 -3日 → +5日 / 3D・DBM・太陽風グラフを同期</div></div></div>
+      <div class="panelHeader"><div><div class="panelTitle">Simulation Timeline</div><div class="panelSub">現在 -3日 → +3日 / 3D・DBM・Wind/Kp/Bzを同期</div></div></div>
       <div class="panelBody">
         <div class="timelineRow">
           <button onclick="stepTimeline(-1)">◀</button>
           <button class="active" onclick="playTimeline()">▶</button>
           <button class="stop" onclick="stopTimeline()">■</button>
           <button onclick="stepTimeline(1)">▶|</button>
-          <input id="timeSlider" type="range" min="0" max="192" value="72" step="1" oninput="updateTimeline()">
+          <input id="timeSlider" type="range" min="0" max="144" value="72" step="1" oninput="updateTimeline()">
         </div>
         <div id="timeLabel" class="timeLabel" style="margin-top:8px"></div>
         <div class="metricGrid" id="summaryCards"></div>
@@ -212,7 +212,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
     <div class="panelHeader">
       <div>
         <div class="panelTitle">3D CME Propagation Model <span class="chip">DBM + Parker Spiral</span></div>
-        <div class="panelSub">DBMでCME速度を積分。Parker spiralは25.38日sidereal回転、太陽表面は27.2753日Carrington synodic回転でタイムライン同期。雲付きEarth・動的磁気圏・太陽風粒子を同期表示。</div>
+        <div class="panelSub">DBMでCME速度を積分。Parker spiralは25.38日sidereal回転、太陽表面は27.2753日Carrington synodic回転でタイムライン同期。昼夜境界・雲・都市光を持つEarth、動的磁気圏、Parker磁力線に沿う速度依存太陽風粒子を同期表示。</div>
       </div>
       <div class="viewTools">
         <button onclick="set3DCamera('top')">Top</button>
@@ -273,6 +273,7 @@ const DONKI_INDEX=dataCandidates("donki/index.json");
 const WSA_INDEX=dataCandidates("wsa/index.json");
 const CACTUS_INDEX=dataCandidates("cactus/index.json");
 const SWIFT_WIND_LATEST=dataCandidates("swift-wind/latest.json");
+const SWIFT_WIND_ARCHIVE=dataCandidates("swift-wind/forecast-archive.json");
 const REPORT_INDEX_CANDIDATES=["./reports/index.json","./docs/reports/index.json"];
 const REPORT_UI_CANDIDATES=["./reports/ui_forecast_latest.json","./docs/reports/ui_forecast_latest.json"];
 const SWIFT_KP_LATEST=dataCandidates("swift-kp/latest.json");
@@ -302,7 +303,7 @@ const POST_PASS_HOURS=36;
 const STATE={
   sources:{donkiCache:src("DONKI Cache","未取得"),donkiAnalysis:src("DONKI CMEAnalysis","未取得"),donkiCME:src("DONKI CME","未取得"),wsa:src("WSA Wind","未取得"),cactus:src("CACTus","未取得"),noaaWind:src("NOAA Wind","未取得"),noaaMag:src("NOAA IMF","未取得"),noaaKp:src("NOAA Kp","未取得"),swiftWind:src("SWIFT Wind AI","未取得"),reportUi:src("Report UI Feed","未取得")},
   donkiPayloads:[],wsaModel:null,cactusEvents:[],env:defaultEnv(),cmes:[],timelineCenter:new Date(),timelineStart:new Date(),timelineEnd:new Date(),selectedTime:new Date(),timer:null,
-  windObserved:[],windForecast:[],kpForecast:[],bzForecast:[],windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,propagationCache:new Map(),mode:"3d",
+  windObserved:[],windForecast:[],windPastForecast:[],kpObserved:[],kpForecast:[],bzForecast:[],kpModel:null,windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,propagationCache:new Map(),mode:"3d",
   three:{ready:false,scene:null,camera:null,renderer:null,controls:null,sun:null,earth:null,cmeGroup:null,starPoints:null,clock:null,parkerGroup:null,windParticles:null,windSpeed:425,impactStrength:0}
 };
 function src(label,status){return{label,status,data:null,time:null,error:null};}
@@ -320,7 +321,7 @@ function classColor(c){if(c==="ENLIL-HIT")return"#ca62ff";if(c==="CORE-HIT")retu
 function latest(arr){if(!Array.isArray(arr))return{};for(let i=arr.length-1;i>=0;i--){const r=arr[i];if(Array.isArray(r)){if(String(r[0]).toLowerCase().includes("time"))continue;return r;}if(r&&typeof r==="object")return r;}return{};}
 function pick(obj,names){for(const n of names){if(typeof n==="number"&&Array.isArray(obj)){const v=Number(obj[n]);if(Number.isFinite(v))return v;}if(typeof n==="string"&&obj&&obj[n]!==undefined){const v=Number(obj[n]);if(Number.isFinite(v))return v;}}return 0;}
 function defaultEnv(){return{speed:425,density:0,bt:0,by:0,bz:0,kp:0,dynamicPressure:0};}
-function initTimeline(){STATE.timelineCenter=new Date();STATE.timelineStart=new Date(STATE.timelineCenter.getTime()-72*3600e3);STATE.timelineEnd=new Date(STATE.timelineCenter.getTime()+120*3600e3);STATE.selectedTime=new Date(STATE.timelineCenter);const s=document.getElementById("timeSlider");s.value=72;}
+function initTimeline(){STATE.timelineCenter=new Date();STATE.timelineStart=new Date(STATE.timelineCenter.getTime()-72*3600e3);STATE.timelineEnd=new Date(STATE.timelineCenter.getTime()+72*3600e3);STATE.selectedTime=new Date(STATE.timelineCenter);const s=document.getElementById("timeSlider");s.value=72;}
 async function fetchJson(url){const sep=url.includes("?")?"&":"?";const r=await fetch(url+sep+"t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error(`HTTP ${r.status}: ${url}`);return await r.json();}
 async function fetchJsonAny(urls){let last="";for(const u of urls){try{return{data:await fetchJson(u),url:u};}catch(e){last=e.message;}}throw new Error(last);}
 function sibling(base,file){return base.replace(/[^/]+$/,String(file));}
@@ -398,11 +399,35 @@ async function downloadMonthlyExcel(){
   }catch(e){alert(`Excelを開けませんでした: ${e.message}`);}finally{if(btn)btn.textContent=old||"Excel（月次）";}
 }
 
+function normalizeWindArchive(payload){
+  const rows=genericRows(payload,["items","records","data"]),out=[];
+  for(const r of rows){
+    const it=new Date(r.issued_at||r.issuedAt||0).getTime(),tt=new Date(r.target_time||r.time||0).getTime(),sp=firstFinite(r,["predicted_speed","speed","swift_cme_enhanced_speed"]);
+    if(Number.isFinite(it)&&Number.isFinite(tt)&&Number.isFinite(sp))out.push({_issued:it,issued_at:new Date(it).toISOString(),_t:tt,time:new Date(tt).toISOString(),speed:sp,leadHours:firstFinite(r,["lead_hours"])});
+  }
+  return out.sort((a,b)=>a._issued-b._issued||a._t-b._t);
+}
+function selectedPastWindSnapshots(){
+  const rows=STATE.windPastForecast||[],targets=[24,48,72],now=Date.now(),groups=new Map();
+  for(const r of rows){const k=r.issued_at;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r);}
+  const issues=[...groups.keys()].map(k=>({k,t:new Date(k).getTime()})).filter(x=>Number.isFinite(x.t));
+  return targets.map((h,idx)=>{if(!issues.length)return null;const want=now-h*3600e3;let best=issues[0];for(const q of issues)if(Math.abs(q.t-want)<Math.abs(best.t-want))best=q;if(Math.abs(best.t-want)>9*3600e3)return null;return{hours:h,rows:groups.get(best.k),issued:best.t,index:idx};}).filter(Boolean);
+}
+function nearestObservedWind(t,maxGapH=1.5){
+  if(!STATE.windObserved.length)return null;let best=null,bd=Infinity;for(const r of STATE.windObserved){const d=Math.abs(r._t-t);if(d<bd){bd=d;best=r;}}return best&&bd<=maxGapH*3600e3?best:null;
+}
+function pastSnapshotSkill(snapshot){
+  let n=0,hit=0,sum=0,bias=0;for(const r of snapshot?.rows||[]){if(r._t>Date.now())continue;const o=nearestObservedWind(r._t);if(!o)continue;const e=r.speed-o.speed;n++;sum+=Math.abs(e);bias+=e;if(Math.abs(e)<=50)hit++;}
+  return n?{n,hit:100*hit/n,mae:sum/n,bias:bias/n}:null;
+}
+
 async function loadSwiftWind(){
   setSource("swiftWind","LOADING...");
-  let latestObj=null,latestUrl="",historyObj=null;
+  let latestObj=null,latestUrl="",historyObj=null,archiveObj=null;
   try{const got=await fetchJsonAny(SWIFT_WIND_LATEST);latestObj=got.data;latestUrl=got.url;}catch(_){ }
   try{historyObj=(await fetchJsonAny(NOAA_WIND_HISTORY)).data;}catch(_){ }
+  try{archiveObj=(await fetchJsonAny(SWIFT_WIND_ARCHIVE)).data;}catch(_){ }
+  if(archiveObj)STATE.windPastForecast=normalizeWindArchive(archiveObj);
   if(historyObj)STATE.windObserved=mergeWind(STATE.windObserved,normalizeWindPayload(historyObj,"observed"));
   if(latestObj){
     updateWindAccuracyFromPayload(latestObj);
@@ -414,7 +439,7 @@ async function loadSwiftWind(){
   const cutoff=Date.now()-35*86400e3;STATE.windObserved=STATE.windObserved.filter(x=>x._t>=cutoff);
   STATE.windForecast=STATE.windForecast.filter(x=>x._t>=Date.now()-3*3600e3&&x._t<=Date.now()+6*86400e3);
   STATE.windVersion++;STATE.propagationCache.clear();
-  if(latestObj||historyObj)setSource("swiftWind",`OK: obs ${STATE.windObserved.length} / forecast ${STATE.windForecast.length}`,{latest:latestObj,url:latestUrl});
+  if(latestObj||historyObj)setSource("swiftWind",`OK: obs ${STATE.windObserved.length} / forecast ${STATE.windForecast.length} / archive ${STATE.windPastForecast.length}`,{latest:latestObj,url:latestUrl});
   else setSource("swiftWind","FAILED",null,"SWIFT Wind / NOAA history not found");
   rebuildAll();drawWindGraph();
 }
@@ -439,6 +464,9 @@ function genericRows(payload,keys=["records","forecast","items","data"]){
   if(Array.isArray(payload))return payload.filter(x=>x&&typeof x==="object");
   if(payload&&typeof payload==="object")for(const k of keys)if(Array.isArray(payload[k]))return payload[k].filter(x=>x&&typeof x==="object");
   return[];
+}
+function normalizeKpObserved(payload){
+  const out=[];for(const r of genericRows(payload,["kp_history","records","items","data"])){const t=windTime(r),kp=firstFinite(r,["kp","kp_index","Kp"]);if(Number.isFinite(t)&&Number.isFinite(kp))out.push({_t:t,time:new Date(t).toISOString(),kp:Number(kp),source:r.source||"NOAA observed",raw:r});}return out.sort((a,b)=>a._t-b._t);
 }
 function normalizeKpForecast(payload){
   const out=[];
@@ -470,7 +498,10 @@ async function loadReportUiFeed(){
     const fc=normalizeWindPayload(feed.wind_forecast||[],"forecast");
     STATE.windObserved=mergeWind(STATE.windObserved,hist);
     STATE.windForecast=mergeWind(STATE.windForecast,fc);
+    if(Array.isArray(feed.wind_forecast_history))STATE.windPastForecast=normalizeWindArchive({items:feed.wind_forecast_history});
+    STATE.kpObserved=normalizeKpObserved(feed.kp_history||[]);
     STATE.kpForecast=normalizeKpForecast(feed);
+    STATE.kpModel=feed.kp_model||null;
     STATE.bzForecast=normalizeBzForecast(feed);
     const a=feed.wind_accuracy_current||{};const hit=finiteOrNull(a.hit_rate_50kms);if(hit!==null)STATE.windAccuracy50=hit;const n=finiteOrNull(a.count);if(n!==null)STATE.windAccuracyCount=Math.round(n);
     setSource("reportUi",`OK: wind ${hist.length}/${fc.length}, Kp ${STATE.kpForecast.length}, Bz ${STATE.bzForecast.length}`,feed);
@@ -479,6 +510,7 @@ async function loadReportUiFeed(){
     try{kp=(await fetchJsonAny(SWIFT_KP_LATEST)).data;}catch(_){ }
     try{bz=(await fetchJsonAny(SWIFT_BZ_LATEST)).data;}catch(_){ }
     STATE.kpForecast=normalizeKpForecast(kp);
+    STATE.kpModel=kp||null;
     STATE.bzForecast=normalizeBzForecast(bz);
     if(kp||bz)setSource("reportUi",`OK fallback: Kp ${STATE.kpForecast.length}, Bz ${STATE.bzForecast.length}`,{kp,bz});
     else setSource("reportUi","FAILED",null,"Monthly report UI feed / Kp / Bz forecast not found");
@@ -490,7 +522,7 @@ function nearestForecast(series,time,key,maxGapHours=6){
   for(const r of series){const d=Math.abs(r._t-x);if(d<bd){bd=d;best=r;}}
   if(!best||bd>maxGapHours*3600e3)return null;const v=Number(best[key]);return Number.isFinite(v)?{value:v,row:best}:null;
 }
-function kpStateAt(time){const f=nearestForecast(STATE.kpForecast,time,"kp",5);return f?{kp:f.value,source:f.row.source||"SWIFT Kp AI",row:f.row}:{kp:num(STATE.env.kp,0),source:"NOAA current",row:null};}
+function kpStateAt(time){const x=(time instanceof Date?time:new Date(time)).getTime(),now=Date.now();if(x<=now+20*60e3&&STATE.kpObserved.length){const f=nearestForecast(STATE.kpObserved,time,"kp",4);if(f)return{kp:f.value,source:"NOAA observed",row:f.row};}const f=nearestForecast(STATE.kpForecast,time,"kp",5);return f?{kp:f.value,source:f.row.source||"SWIFT Kp AI",row:f.row}:{kp:num(STATE.env.kp,0),source:"NOAA current",row:null};}
 function bzStateAt(time){const f=nearestForecast(STATE.bzForecast,time,"bz",5);if(f)return{bz:f.value,bzMin:Number.isFinite(Number(f.row.bzMin))?Number(f.row.bzMin):f.value,bt:Number.isFinite(Number(f.row.bt))?Number(f.row.bt):num(STATE.env.bt,0),source:f.row.source||"SWIFT Bz AI",row:f.row};return{bz:num(STATE.env.bz,0),bzMin:num(STATE.env.bz,0),bt:num(STATE.env.bt,0),source:"NOAA current",row:null};}
 function drawForecastChart(canvasId,series,defs,yTitle,statsId,horizonDays=5){
   const canvas=document.getElementById(canvasId);if(!canvas)return;const{ctx,w,h}=setupCanvas(canvasId);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
@@ -504,11 +536,17 @@ function drawForecastChart(canvasId,series,defs,yTitle,statsId,horizonDays=5){
   const st=STATE.selectedTime?.getTime?.()||now;if(st>=x0&&st<=x1){const x=X(st);ctx.strokeStyle="#7b48cc";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();}
   ctx.fillStyle="#24415d";ctx.font="bold 11px system-ui";ctx.fillText(yTitle,pad.l,pad.t-7);
 }
+function drawKpGraph(){
+  const canvas=document.getElementById("kpGraph");if(!canvas)return;const{ctx,w,h}=setupCanvas("kpGraph");ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);const pad={l:52,r:18,t:24,b:38},now=Date.now(),x0=now-7*86400e3,x1=now+3*86400e3,X=t=>pad.l+(t-x0)/(x1-x0)*(w-pad.l-pad.r),Y=v=>pad.t+(9-v)/9*(h-pad.t-pad.b);
+  ctx.strokeStyle="#e5ecf3";ctx.fillStyle="#6c8298";ctx.font="10px system-ui";for(let v=0;v<=9;v++){const y=Y(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillText(String(v),14,y+3);}for(let d=-7;d<=3;d++){const x=X(now+d*86400e3);ctx.strokeStyle=d===0?"#8398ad":"#eff3f7";ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();if(d===0||d===-7||d===-3||d>0){ctx.fillStyle="#6f879e";ctx.fillText(d===0?"NOW":`${d>0?"+":""}${d}d`,x-12,h-14);}}
+  function line(rows,color,dash=[],markers=false){const q=rows.filter(r=>r._t>=x0&&r._t<=x1&&Number.isFinite(r.kp));if(!q.length)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=1.9;ctx.setLineDash(dash);ctx.beginPath();q.forEach((r,i)=>{i?ctx.lineTo(X(r._t),Y(r.kp)):ctx.moveTo(X(r._t),Y(r.kp));});ctx.stroke();ctx.setLineDash([]);if(markers){ctx.fillStyle=color;for(const r of q){ctx.beginPath();ctx.arc(X(r._t),Y(r.kp),2.2,0,Math.PI*2);ctx.fill();}}ctx.restore();}
+  line(STATE.kpObserved,"#176fae",[],true);line(STATE.kpForecast,"#ef8f26",[5,3],true);const st=STATE.selectedTime?.getTime?.()||now;if(st>=x0&&st<=x1){const x=X(st);ctx.strokeStyle="#7b48cc";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();}ctx.fillStyle="#24415d";ctx.font="bold 11px system-ui";ctx.fillText("Kp — NOAA observed → SWIFT 72 h forecast",pad.l,pad.t-7);
+}
 function drawSpaceWeatherGraphs(){
-  drawForecastChart("kpGraph",STATE.kpForecast,[{key:"kp",color:"#2d7fb8"}],"Kp","kpStats",3);
+  drawKpGraph();
   drawForecastChart("bzGraph",STATE.bzForecast,[{key:"bz",color:"#2d7fb8"},{key:"bzMin",color:"#d9505f",dash:[5,3]},{key:"bt",color:"#7b48cc",dash:[2,3]}],"Bz / Bt [nT]","bzStats",5);
   const t=STATE.selectedTime||new Date(),k=kpStateAt(t),b=bzStateAt(t),now=Date.now(),kp72=STATE.kpForecast.filter(r=>r._t>=now-3*3600e3&&r._t<=now+3*86400e3),kmax=kp72.length?Math.max(...kp72.map(r=>r.kp).filter(Number.isFinite)):null,bmin=STATE.bzForecast.length?Math.min(...STATE.bzForecast.map(r=>Number.isFinite(Number(r.bzMin))?Number(r.bzMin):Number(r.bz)).filter(Number.isFinite)):null;
-  const ks=document.getElementById("kpStats");if(ks)ks.innerHTML=`<div class="forecastStat"><div class="k">Kp @ sim time</div><div class="v">${k.kp.toFixed(1)}</div></div><div class="forecastStat"><div class="k">Source</div><div class="v" style="font-size:13px">${esc(k.source)}</div></div><div class="forecastStat"><div class="k">Forecast max</div><div class="v">${Number.isFinite(kmax)?kmax.toFixed(1):"--"}</div></div><div class="forecastStat"><div class="k">Horizon</div><div class="v">72 h</div></div>`;
+  const km=STATE.kpModel||{},skill=km.leadtime_skill?.overall||{},trend=Number(km.recent_trend_3h);const ks=document.getElementById("kpStats");if(ks)ks.innerHTML=`<div class="forecastStat"><div class="k">Kp @ sim time</div><div class="v">${k.kp.toFixed(2)}</div></div><div class="forecastStat"><div class="k">Source</div><div class="v" style="font-size:13px">${esc(k.source)}</div></div><div class="forecastStat"><div class="k">Forecast max</div><div class="v">${Number.isFinite(kmax)?kmax.toFixed(2):"--"}</div></div><div class="forecastStat"><div class="k">Kp model</div><div class="v" style="font-size:12px">${esc(km.model||"SWIFT Kp")}</div><div class="small">floor ${km.kp_floor??0.33} / 72 h</div></div><div class="forecastStat"><div class="k">Recent ΔKp / 3h</div><div class="v">${Number.isFinite(trend)?(trend>=0?"+":"")+trend.toFixed(2):"--"}</div></div><div class="forecastStat"><div class="k">30d forecast bias</div><div class="v">${Number.isFinite(Number(skill.bias))?Number(skill.bias).toFixed(2):"learning"}</div><div class="small">n=${skill.count||0}</div></div>`;
   const bs=document.getElementById("bzStats");if(bs)bs.innerHTML=`<div class="forecastStat"><div class="k">Bz @ sim time</div><div class="v">${b.bz.toFixed(1)} nT</div></div><div class="forecastStat"><div class="k">Bz minimum</div><div class="v">${Number.isFinite(bmin)?bmin.toFixed(1):"--"} nT</div></div><div class="forecastStat"><div class="k">Source</div><div class="v" style="font-size:13px">${esc(b.source)}</div></div>`;
 }
 
@@ -653,30 +691,22 @@ function extremaDownsample(series,maxPoints=2200){
 }
 function drawWindGraph(){
   const canvas=document.getElementById("windGraph");if(!canvas)return;const{ctx,w,h}=setupCanvas("windGraph");
-  ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);const pad={l:58,r:22,t:24,b:42},now=Date.now(),x0=now-27*86400e3,x1=now+3*86400e3;
-  // Keep local minima/maxima instead of uniform thinning so real NOAA variability remains visibly jagged.
-  const obs=extremaDownsample(STATE.windObserved.filter(r=>r._t>=x0&&r._t<=now),2400);
-  const fc=STATE.windForecast.filter(r=>r._t>=now-3600e3&&r._t<=x1);
-  const vals=[...obs,...fc].map(r=>r.speed).filter(Number.isFinite);
-  let ymin=250,ymax=850;if(vals.length){ymin=Math.max(200,Math.floor((Math.min(...vals)-60)/50)*50);ymax=Math.min(1200,Math.ceil((Math.max(...vals)+60)/50)*50);if(ymax-ymin<250)ymax=ymin+250;}
+  ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);const pad={l:58,r:22,t:26,b:44},now=Date.now(),x0=now-27*86400e3,x1=now+3*86400e3;
+  const obs=extremaDownsample(STATE.windObserved.filter(r=>r._t>=x0&&r._t<=now),2400),fc=STATE.windForecast.filter(r=>r._t>=now-3600e3&&r._t<=x1),snaps=selectedPastWindSnapshots();
+  const vals=[...obs,...fc,...snaps.flatMap(s=>s.rows)].map(r=>r.speed).filter(Number.isFinite);let ymin=250,ymax=850;if(vals.length){ymin=Math.max(200,Math.floor((Math.min(...vals)-60)/50)*50);ymax=Math.min(1200,Math.ceil((Math.max(...vals)+60)/50)*50);if(ymax-ymin<250)ymax=ymin+250;}
   const X=t=>pad.l+(t-x0)/(x1-x0)*(w-pad.l-pad.r),Y=v=>pad.t+(ymax-v)/(ymax-ymin)*(h-pad.t-pad.b);
-  ctx.strokeStyle="#e2eaf2";ctx.lineWidth=1;ctx.fillStyle="#668099";ctx.font="11px system-ui";
-  for(let v=Math.ceil(ymin/100)*100;v<=ymax;v+=100){const y=Y(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillText(String(v),10,y+4);}
-  for(let d=-27;d<=3;d+=3){const t=now+d*86400e3,x=X(t);ctx.strokeStyle=d===0?"#8aa0b5":"#eef2f6";ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();ctx.fillStyle="#6f879e";ctx.fillText(d===0?"NOW":`${d>0?"+":""}${d}d`,x-14,h-18);}
-  function line(series,color,dash=[],markers=false){if(series.length<2)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=markers?1.9:1.55;ctx.lineJoin="miter";ctx.lineCap="butt";ctx.setLineDash(dash);ctx.beginPath();series.forEach((r,i)=>{const x=X(r._t),y=Y(r.speed);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.setLineDash([]);if(markers){ctx.fillStyle=color;for(const r of series){const x=X(r._t),y=Y(r.speed);ctx.beginPath();ctx.arc(x,y,2.1,0,Math.PI*2);ctx.fill();}}ctx.restore();}
-  line(obs,"#1d79bd",[],false);line(fc,"#f39a2f",[5,3],true);
+  ctx.strokeStyle="#e2eaf2";ctx.lineWidth=1;ctx.fillStyle="#668099";ctx.font="11px system-ui";for(let v=Math.ceil(ymin/100)*100;v<=ymax;v+=100){const y=Y(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillText(String(v),10,y+4);}for(let d=-27;d<=3;d+=3){const t=now+d*86400e3,x=X(t);ctx.strokeStyle=d===0?"#8aa0b5":"#eef2f6";ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();ctx.fillStyle="#6f879e";ctx.fillText(d===0?"NOW":`${d>0?"+":""}${d}d`,x-14,h-18);}
+  function line(series,color,dash=[],markers=false,width=1.6){const q=series.filter(r=>r._t>=x0&&r._t<=x1);if(q.length<2)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineJoin="miter";ctx.lineCap="butt";ctx.setLineDash(dash);ctx.beginPath();q.forEach((r,i)=>{const x=X(r._t),y=Y(r.speed);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.setLineDash([]);if(markers){ctx.fillStyle=color;for(const r of q){ctx.beginPath();ctx.arc(X(r._t),Y(r.speed),2.0,0,Math.PI*2);ctx.fill();}}ctx.restore();}
+  // Historical issued forecasts: intentionally thin so NOAA observed remains dominant.
+  const snapCols=["#7652b5","#4a9b72","#7c8795"],snapDash=[[7,4],[4,4],[2,4]];snaps.forEach((s,i)=>line(s.rows,snapCols[i],snapDash[i],false,1.15));
+  // Error connectors for the 24 h-old issued forecast. Green=within ±50 km/s, red=miss.
+  if(snaps[0]){let skip=0;for(const r of snaps[0].rows){if(r._t>now||r._t<x0||(++skip%2))continue;const o=nearestObservedWind(r._t);if(!o)continue;const e=r.speed-o.speed;ctx.strokeStyle=Math.abs(e)<=50?"rgba(38,166,91,.42)":"rgba(218,70,70,.42)";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(X(r._t),Y(r.speed));ctx.lineTo(X(o._t),Y(o.speed));ctx.stroke();ctx.fillStyle=Math.abs(e)<=50?"#2da65a":"#d94c4c";ctx.beginPath();ctx.arc(X(r._t),Y(r.speed),2.2,0,Math.PI*2);ctx.fill();}}
+  line(obs,"#176fae",[],false,1.9);line(fc,"#f39a2f",[5,3],true,2.0);
   const st=STATE.selectedTime?.getTime?.()||now;if(st>=x0&&st<=x1){const x=X(st),ws=windStateAt(new Date(st));ctx.strokeStyle="#7b48cc";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();ctx.fillStyle="#7b48cc";ctx.font="bold 11px system-ui";ctx.fillText(`${Math.round(ws.speed)} km/s`,Math.min(w-92,x+6),pad.t+15);}
-  ctx.fillStyle="#24415d";ctx.font="bold 12px system-ui";ctx.fillText("Solar wind speed [km/s] — measured/model points, no curve smoothing",pad.l,pad.t-7);
-  ctx.fillStyle="#1d79bd";ctx.fillRect(w-280,12,18,3);ctx.fillStyle="#506980";ctx.font="11px system-ui";ctx.fillText("NOAA observed",w-257,16);ctx.strokeStyle="#f39a2f";ctx.setLineDash([5,3]);ctx.beginPath();ctx.moveTo(w-155,13);ctx.lineTo(w-137,13);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle="#506980";ctx.fillText("SWIFT forecast",w-132,16);
-  const ws=windStateAt(STATE.selectedTime||new Date()),pangle=parkerAngleDeg(ws.speed);
-  const acc=Number.isFinite(STATE.windAccuracy50)?`${STATE.windAccuracy50.toFixed(1)}%`:"--";
-  document.getElementById("windStats").innerHTML=`
-    <div class="windStat"><div class="k">Simulation wind</div><div class="v">${Math.round(ws.speed)} km/s</div></div>
-    <div class="windStat"><div class="k">Wind source</div><div class="v" style="font-size:14px">${esc(ws.source)}</div></div>
-    <div class="windStat"><div class="k">±50 km/s hit rate</div><div class="v">${acc}</div><div class="small">last 24h / n=${STATE.windAccuracyCount}</div></div>
-    <div class="windStat"><div class="k">Parker angle @ 1 AU</div><div class="v">${pangle.toFixed(1)}°</div></div>
-    <div class="windStat"><div class="k">Observed archive</div><div class="v">${STATE.windObserved.length?((STATE.windObserved.at(-1)._t-STATE.windObserved[0]._t)/86400e3).toFixed(1):"0"} d</div></div>
-    <div class="windStat"><div class="k">Forecast horizon</div><div class="v">${STATE.windForecast.length?((STATE.windForecast.at(-1)._t-now)/3600e3).toFixed(0):"0"} h</div></div>`;
+  ctx.fillStyle="#24415d";ctx.font="bold 12px system-ui";ctx.fillText("Solar wind speed [km/s] — observed + current/past issued forecasts",pad.l,pad.t-9);
+  const ly=14;ctx.fillStyle="#176fae";ctx.fillRect(w-435,ly,17,3);ctx.fillStyle="#506980";ctx.font="10px system-ui";ctx.fillText("NOAA",w-414,ly+4);ctx.strokeStyle="#f39a2f";ctx.setLineDash([5,3]);ctx.beginPath();ctx.moveTo(w-365,ly+1);ctx.lineTo(w-348,ly+1);ctx.stroke();ctx.setLineDash([]);ctx.fillText("latest",w-343,ly+4);snaps.forEach((s,i)=>{const xx=w-285+i*72;ctx.strokeStyle=snapCols[i];ctx.setLineDash(snapDash[i]);ctx.beginPath();ctx.moveTo(xx,ly+1);ctx.lineTo(xx+16,ly+1);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle="#506980";ctx.fillText(`-${s.hours}h`,xx+20,ly+4);});
+  const ws=windStateAt(STATE.selectedTime||new Date()),pangle=parkerAngleDeg(ws.speed),acc=Number.isFinite(STATE.windAccuracy50)?`${STATE.windAccuracy50.toFixed(1)}%`:"--",ps=snaps[0]?pastSnapshotSkill(snaps[0]):null;
+  document.getElementById("windStats").innerHTML=`<div class="windStat"><div class="k">Simulation wind</div><div class="v">${Math.round(ws.speed)} km/s</div></div><div class="windStat"><div class="k">Wind source</div><div class="v" style="font-size:14px">${esc(ws.source)}</div></div><div class="windStat"><div class="k">±50 km/s hit rate</div><div class="v">${acc}</div><div class="small">last 24h / n=${STATE.windAccuracyCount}</div></div><div class="windStat"><div class="k">24h-old forecast check</div><div class="v">${ps?ps.hit.toFixed(1)+"%":"--"}</div><div class="small">n=${ps?ps.n:0} / MAE ${ps?ps.mae.toFixed(0):"--"}</div></div><div class="windStat"><div class="k">Parker angle @ 1 AU</div><div class="v">${pangle.toFixed(1)}°</div></div><div class="windStat"><div class="k">Observed archive</div><div class="v">${STATE.windObserved.length?((STATE.windObserved.at(-1)._t-STATE.windObserved[0]._t)/86400e3).toFixed(1):"0"} d</div></div>`;
 }
 
 /* ============================== 3D ============================== */
@@ -711,34 +741,24 @@ function makeCanvasTexture(kind){
       x.stroke();
     }
   }else if(kind==="earth"){
-    const ocean=x.createLinearGradient(0,0,0,c.height);
-    ocean.addColorStop(0,"#1a7bd4");
-    ocean.addColorStop(.46,"#0c65bd");
-    ocean.addColorStop(1,"#063d83");
-    x.fillStyle=ocean;x.fillRect(0,0,c.width,c.height);
-
-    // pseudo-continent clusters
-    const clusters=[
-      [235,150,1.0],[315,205,.72],[390,330,.62],
-      [595,160,.80],[655,235,1.06],[720,305,.62],
-      [805,180,.50],[165,320,.45]
-    ];
-    for(const [cx,cy,s] of clusters){
-      for(let i=0;i<22;i++){
-        const px=cx+(Math.random()-.5)*145*s;
-        const py=cy+(Math.random()-.5)*110*s;
-        const rx=(12+Math.random()*38)*s;
-        const ry=(7+Math.random()*24)*s;
-        x.fillStyle=Math.random()>.35?"#4a9f56":"#8a9a55";
-        x.beginPath();x.ellipse(px,py,rx,ry,Math.random()*Math.PI,0,Math.PI*2);x.fill();
-      }
-    }
-    // shallow coastal highlight
-    x.globalAlpha=.16;x.strokeStyle="#b6e2a3";x.lineWidth=2;
-    for(let i=0;i<35;i++){
-      x.beginPath();x.ellipse(Math.random()*c.width,80+Math.random()*350,20+Math.random()*65,8+Math.random()*30,Math.random()*Math.PI,0,Math.PI*2);x.stroke();
-    }
-    x.globalAlpha=1;
+    // Equirectangular procedural Earth: recognizable land masses, latitude shading and ice caps.
+    const ocean=x.createLinearGradient(0,0,0,c.height);ocean.addColorStop(0,"#0d4381");ocean.addColorStop(.22,"#126ab0");ocean.addColorStop(.5,"#0b5fa7");ocean.addColorStop(.78,"#10558f");ocean.addColorStop(1,"#082d5b");x.fillStyle=ocean;x.fillRect(0,0,c.width,c.height);
+    for(let i=0;i<4200;i++){const px=Math.random()*c.width,py=Math.random()*c.height,a=.018+Math.random()*.035;x.fillStyle=`rgba(${25+Math.random()*30},${90+Math.random()*55},${145+Math.random()*70},${a})`;x.fillRect(px,py,1+Math.random()*2,1+Math.random()*2);}
+    const P=(lon,lat)=>[(lon+180)/360*c.width,(90-lat)/180*c.height];
+    function poly(coords,fill,stroke="#9fc985"){x.beginPath();coords.forEach((p,i)=>{const q=P(p[0],p[1]);i?x.lineTo(q[0],q[1]):x.moveTo(q[0],q[1]);});x.closePath();x.fillStyle=fill;x.fill();x.strokeStyle=stroke;x.lineWidth=1.4;x.stroke();}
+    const land="#638f4a",dry="#9a8a55",green="#477e42";
+    poly([[-168,71],[-145,72],[-125,60],[-112,53],[-96,50],[-82,26],[-67,24],[-60,45],[-75,58],[-105,70]],green);
+    poly([[-82,13],[-67,10],[-50,-4],[-43,-23],[-54,-38],[-68,-56],[-76,-42],[-80,-15]],land);
+    poly([[-12,72],[20,72],[42,62],[33,46],[17,36],[-5,43]],green);
+    poly([[-18,35],[12,37],[34,29],[43,10],[33,-12],[20,-35],[5,-35],[-10,-18],[-17,5]],dry);
+    poly([[28,70],[65,76],[105,73],[145,63],[170,52],[150,36],[124,22],[104,5],[78,9],[62,25],[45,39]],green);
+    poly([[112,-11],[153,-10],[154,-30],[137,-40],[116,-33]],dry);
+    poly([[-52,82],[-20,80],[-18,62],[-42,58],[-58,68]],"#dbe8df","#eef7f4");
+    // Greenland/Antarctica and mountain/desert tonal variation.
+    x.fillStyle="rgba(232,244,246,.88)";x.fillRect(0,0,c.width,20);x.fillRect(0,c.height-18,c.width,18);
+    for(let i=0;i<540;i++){const lon=-170+Math.random()*340,lat=-55+Math.random()*125,q=P(lon,lat),r=1+Math.random()*5;x.fillStyle=Math.random()>.5?"rgba(180,155,88,.13)":"rgba(35,95,45,.15)";x.beginPath();x.arc(q[0],q[1],r,0,Math.PI*2);x.fill();}
+    // Fine ocean specular streaks.
+    x.strokeStyle="rgba(180,225,255,.075)";x.lineWidth=1;for(let i=0;i<70;i++){x.beginPath();const yy=Math.random()*c.height;x.moveTo(0,yy);for(let xx=0;xx<=c.width;xx+=48)x.lineTo(xx,yy+Math.sin(xx*.018+i)*3);x.stroke();}
   }else if(kind==="cloud"){
     x.clearRect(0,0,c.width,c.height);
     for(let band=0;band<9;band++){
@@ -768,6 +788,17 @@ function makeCanvasTexture(kind){
   t.wrapS=THREE.RepeatWrapping;
   t.needsUpdate=true;
   return t;
+}
+
+function makeEarthNightTexture(){
+  const c=document.createElement("canvas");c.width=1024;c.height=512;const x=c.getContext("2d");x.clearRect(0,0,c.width,c.height);
+  const P=(lon,lat)=>[(lon+180)/360*c.width,(90-lat)/180*c.height];
+  const hubs=[[-74,40,1.0],[-118,34,.8],[-87,42,.65],[-3,52,.85],[10,50,.8],[30,40,.55],[77,28,.7],[121,31,1.0],[139,35,1.0],[127,37,.8],[151,-33,.75],[-46,-23,.65],[28,-26,.45]];
+  for(const [lon,lat,s] of hubs){const q=P(lon,lat),g=x.createRadialGradient(q[0],q[1],0,q[0],q[1],28*s);g.addColorStop(0,"rgba(255,224,130,.95)");g.addColorStop(.18,"rgba(255,180,70,.55)");g.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=g;x.fillRect(q[0]-35*s,q[1]-35*s,70*s,70*s);for(let i=0;i<28*s;i++){const a=Math.random()*Math.PI*2,r=Math.random()*25*s;x.fillStyle=`rgba(255,220,135,${.25+Math.random()*.65})`;x.fillRect(q[0]+Math.cos(a)*r,q[1]+Math.sin(a)*r,1.2,1.2);}}
+  const t=new THREE.CanvasTexture(c);t.wrapS=THREE.RepeatWrapping;t.needsUpdate=true;return t;
+}
+function createEarthNightMaterial(tex){
+  return new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,uniforms:{uMap:{value:tex},uSun:{value:new THREE.Vector3(SCENE.sunX,0,0)},uOpacity:{value:.86}},vertexShader:`varying vec2 vUv;varying vec3 vWorld;varying vec3 vN;void main(){vUv=uv;vec4 w=modelMatrix*vec4(position,1.0);vWorld=w.xyz;vN=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*viewMatrix*w;}`,fragmentShader:`precision highp float;uniform sampler2D uMap;uniform vec3 uSun;uniform float uOpacity;varying vec2 vUv;varying vec3 vWorld;varying vec3 vN;void main(){vec3 ld=normalize(uSun-vWorld);float nd=dot(normalize(vN),ld);float night=1.0-smoothstep(-0.18,0.18,nd);vec4 city=texture2D(uMap,vUv);gl_FragColor=vec4(city.rgb,city.a*night*uOpacity);}`});
 }
 
 function createSolarShaderMaterial(){
@@ -960,9 +991,9 @@ function init3D(){
   const controls=new THREE.OrbitControls(camera,renderer.domElement);
   controls.enableDamping=true;controls.dampingFactor=.055;controls.target.set(8,0,0);controls.minDistance=45;controls.maxDistance=310;
 
-  const ambient=new THREE.AmbientLight(0x244d80,.55);scene.add(ambient);
-  const hemi=new THREE.HemisphereLight(0x5088c7,0x05080e,.34);scene.add(hemi);
-  const sunLight=new THREE.PointLight(0xffc06a,4.2,300,1.1);sunLight.position.set(SCENE.sunX,0,0);sunLight.castShadow=true;scene.add(sunLight);
+  const ambient=new THREE.AmbientLight(0x1d3555,.20);scene.add(ambient);
+  const hemi=new THREE.HemisphereLight(0x557ea8,0x020407,.18);scene.add(hemi);
+  const sunLight=new THREE.PointLight(0xffc66f,5.2,380,1.05);sunLight.position.set(SCENE.sunX,0,0);sunLight.castShadow=true;scene.add(sunLight);
 
   // --- Sun: procedural photosphere + chromosphere + layered corona ---
   const sunMat=createSolarShaderMaterial();
@@ -1005,15 +1036,17 @@ function init3D(){
 
   // --- Earth ---
   const earthTex=makeCanvasTexture("earth");
-  const earthMat=new THREE.MeshPhongMaterial({map:earthTex,shininess:22,specular:0x7fa8cf});
-  const earth=new THREE.Mesh(new THREE.SphereGeometry(3.18,80,64),earthMat);
-  earth.position.set(SCENE.earthX,0,0);earth.castShadow=true;earth.receiveShadow=true;scene.add(earth);
+  const earthMat=new THREE.MeshPhongMaterial({map:earthTex,shininess:34,specular:0x4a88b7,bumpMap:earthTex,bumpScale:.035});
+  const earth=new THREE.Mesh(new THREE.SphereGeometry(3.18,112,80),earthMat);
+  earth.position.set(SCENE.earthX,0,0);earth.rotation.z=23.44*Math.PI/180;earth.castShadow=true;earth.receiveShadow=true;scene.add(earth);
+  const earthNight=new THREE.Mesh(new THREE.SphereGeometry(3.188,112,80),createEarthNightMaterial(makeEarthNightTexture()));
+  earthNight.position.copy(earth.position);earthNight.rotation.z=earth.rotation.z;scene.add(earthNight);
 
   // Clouds are a separate transparent rotating shell.
   const cloudTex=makeCanvasTexture("cloud");
   const cloudMat=new THREE.MeshPhongMaterial({map:cloudTex,transparent:true,opacity:.62,depthWrite:false,side:THREE.DoubleSide});
   const clouds=new THREE.Mesh(new THREE.SphereGeometry(3.245,80,64),cloudMat);
-  clouds.position.copy(earth.position);scene.add(clouds);
+  clouds.position.copy(earth.position);clouds.rotation.z=earth.rotation.z;scene.add(clouds);
 
   const atmosphere=new THREE.Mesh(
     new THREE.SphereGeometry(3.48,64,48),
@@ -1046,14 +1079,14 @@ function init3D(){
   for(let i=0;i<7;i++){const geo=new THREE.BufferGeometry(),mat=new THREE.LineBasicMaterial({color:i===3?0x55c7ff:0x4f7fae,transparent:true,opacity:i===3?.58:.18,blending:THREE.AdditiveBlending,depthWrite:false}),line=new THREE.Line(geo,mat);parkerGroup.add(line);parkerLines.push(line);}
   parkerGroup.userData.lines=parkerLines;parkerGroup.userData.lastSpeed=NaN;
 
-  const pCount=950,pArr=new Float32Array(pCount*3);
-  for(let i=0;i<pCount;i++){pArr[i*3]=SCENE.sunX+Math.random()*(SCENE.span+92);const rr=3+Math.random()*27,aa=Math.random()*Math.PI*2;pArr[i*3+1]=Math.cos(aa)*rr;pArr[i*3+2]=Math.sin(aa)*rr;}
-  const pGeo=new THREE.BufferGeometry();pGeo.setAttribute("position",new THREE.BufferAttribute(pArr,3));
-  const pMat=new THREE.PointsMaterial({color:speedColorHex(425),size:.34,transparent:true,opacity:.56,sizeAttenuation:true,blending:THREE.AdditiveBlending,depthWrite:false});
-  const windParticles=new THREE.Points(pGeo,pMat);scene.add(windParticles);windParticles.userData.count=pCount;
+  const pCount=1700,pArr=new Float32Array(pCount*3),pR=new Float32Array(pCount),pLane=new Float32Array(pCount),pLat=new Float32Array(pCount),pSeed=new Float32Array(pCount);
+  for(let i=0;i<pCount;i++){pR[i]=Math.random()*1.46;pLane[i]=(Math.random()-.5)*1.05;pLat[i]=(Math.random()-.5)*.30;pSeed[i]=Math.random();}
+  const pGeo=new THREE.BufferGeometry();pGeo.setAttribute("position",new THREE.BufferAttribute(pArr,3));pGeo.setDrawRange(0,900);
+  const pMat=new THREE.PointsMaterial({color:speedColorHex(425),size:.30,transparent:true,opacity:.52,sizeAttenuation:true,blending:THREE.AdditiveBlending,depthWrite:false});
+  const windParticles=new THREE.Points(pGeo,pMat);scene.add(windParticles);windParticles.userData={count:pCount,rAU:pR,lane:pLane,lat:pLat,seed:pSeed};
 
   const cmeGroup=new THREE.Group();scene.add(cmeGroup);
-  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,coronaShells,earth,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock(),parkerGroup,windParticles,windSpeed:425,impactStrength:0};
+  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,coronaShells,earth,earthNight,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock(),parkerGroup,windParticles,windSpeed:425,impactStrength:0};
   animate3D();update3D(STATE.selectedTime);
 }
 
@@ -1064,9 +1097,23 @@ function updateParkerSpiral(vsw){
   lines.forEach((line,i)=>{const pts=[],phi0=connectPhi+offsets[i];for(let k=0;k<=150;k++){const r=r0+(maxR-r0)*k/150,phi=phi0+OMEGA_PARKER*((r-r0)/v),dist=sceneDistanceForR(r);pts.push(new THREE.Vector3(SCENE.sunX+Math.cos(phi)*dist,0,Math.sin(phi)*dist));}line.geometry.dispose();line.geometry=new THREE.BufferGeometry().setFromPoints(pts);});
 }
 function animateWindParticles(dt){
-  const t=STATE.three;if(!t.ready||!t.windParticles)return;const ws=windStateAt(STATE.selectedTime||new Date()).speed;t.windSpeed=ws;t.windParticles.material.color.setHex(speedColorHex(ws));t.windParticles.material.opacity=.38+clamp((ws-300)/900,0,.32);
-  const arr=t.windParticles.geometry.attributes.position.array,du=(1.5+(ws-250)/115)*dt;
-  for(let i=0;i<arr.length;i+=3){arr[i]+=du;if(arr[i]>SCENE.earthX+90){arr[i]=SCENE.sunX-Math.random()*8;const rr=3+Math.random()*27,aa=Math.random()*Math.PI*2;arr[i+1]=Math.cos(aa)*rr;arr[i+2]=Math.sin(aa)*rr;}}
+  const t=STATE.three;if(!t.ready||!t.windParticles)return;const sim=STATE.selectedTime||new Date(),wsState=windStateAt(sim),ws=clamp(wsState.speed,250,900),kp=kpStateAt(sim).kp,bz=bzStateAt(sim).bz;t.windSpeed=ws;
+  const norm=clamp((ws-300)/500,0,1),active=Math.round(clamp(520+norm*920+clamp(kp,0,7)*32,420,t.windParticles.userData.count));t.windParticles.geometry.setDrawRange(0,active);t.windParticles.material.color.setHex(speedColorHex(ws));t.windParticles.material.opacity=.36+.34*norm;t.windParticles.material.size=.22+.24*norm+.035*clamp(kp,0,6);
+  const arr=t.windParticles.geometry.attributes.position.array,rr=t.windParticles.userData.rAU,lane=t.windParticles.userData.lane,lat=t.windParticles.userData.lat,seed=t.windParticles.userData.seed;
+  // Visual radial speed is proportional to physical Vsw. Particle paths follow the Parker field geometry.
+  const dr=(.018+.060*norm)*dt,connectPhi=-OMEGA_PARKER*((AU_KM-DBM.r0Km)/ws),south=clamp(Math.max(0,-bz)/12,0,1),activity=clamp(.45*clamp(kp/6,0,1)+.55*south,0,1);
+  for(let i=0;i<active;i++){
+    rr[i]+=dr*(.82+.36*seed[i]);if(rr[i]>1.46){rr[i]=.01+Math.random()*.035;lane[i]=(Math.random()-.5)*1.05;lat[i]=(Math.random()-.5)*.30;seed[i]=Math.random();}
+    const rKm=DBM.r0Km+rr[i]*(1.45*AU_KM-DBM.r0Km),dist=sceneDistanceForR(rKm),phi=connectPhi+lane[i]+OMEGA_PARKER*((rKm-DBM.r0Km)/ws);
+    let x=SCENE.sunX+Math.cos(phi)*dist,z=Math.sin(phi)*dist,y=lat[i]*(4+dist*.065);
+    // Magnetic draping near Earth: divert most particles around the magnetopause.
+    const dx=x-SCENE.earthX,dy=y,dz=z,de=Math.sqrt(dx*dx+dy*dy+dz*dz),f=clamp(1-de/22,0,1);
+    if(f>0){const yz=Math.sqrt(y*y+z*z)+.001,sgnY=Math.abs(y)>.15?Math.sign(y):(seed[i]>.5?1:-1),sgnZ=Math.abs(z)>.15?Math.sign(z):(seed[i]>.5?-1:1),drape=f*(2.5+5.5*(.35+t.impactStrength));y+=sgnY*drape*(.7+activity*.7);z+=sgnZ*drape*.62; // southward Bz/Kp increases polar access
+      if(activity>.15&&dx<2){const pole=f*activity*3.8;y+=sgnY*pole;z*=1-f*activity*.28;}
+      if(dx>0){y*=1-.18*f;z*=1-.18*f;} // tailward focusing
+    }
+    arr[i*3]=x;arr[i*3+1]=y;arr[i*3+2]=z;
+  }
   t.windParticles.geometry.attributes.position.needsUpdate=true;
 }
 function updateSpeedHud(info){
@@ -1117,6 +1164,7 @@ function animate3D(){
   }
   if(t.sunLoops)t.sunLoops.forEach((l,i)=>{l.rotation.z+=dt*(.0025+i*.0007);l.material.opacity=(.20+.18*(.5+.5*Math.sin(elapsed*(.32+i*.05)+i)))*(1-i*.08);});
   t.earth.rotation.y+=dt*.12;
+  if(t.earthNight)t.earthNight.rotation.y=t.earth.rotation.y;
   if(t.clouds)t.clouds.rotation.y+=dt*.155;
   if(t.atmosphere)t.atmosphere.rotation.y-=dt*.015;
   if(t.magnetosphere){
