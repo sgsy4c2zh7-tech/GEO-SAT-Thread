@@ -137,6 +137,12 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 .hudBox{background:rgba(2,10,24,.80);border-color:rgba(87,163,238,.48);color:#dcecff;max-width:330px}
 .speedHud{position:absolute;right:14px;top:14px;z-index:6;width:300px;padding:12px 13px;border:1px solid rgba(98,176,255,.48);border-radius:12px;background:rgba(2,10,24,.82);color:#e9f5ff;font-size:12px;line-height:1.62;backdrop-filter:blur(7px);box-shadow:0 8px 24px rgba(0,0,0,.22)}
 .speedHud .big{font-size:24px;font-weight:900;color:#fff;line-height:1.05}.speedHud .wind{color:#64d7ff}.speedHud .cme{color:#ffbd67}.speedHud .delta{color:#ff7187}.speedHud .model{color:#a9bed3}
+.windMapLegend{position:absolute;left:14px;top:14px;z-index:6;width:250px;padding:10px 11px;border:1px solid rgba(98,176,255,.40);border-radius:11px;background:rgba(2,10,24,.76);color:#dcecff;font-size:10px;line-height:1.45;backdrop-filter:blur(7px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.windMapLegend .title{font-size:11px;font-weight:800;color:#fff;margin-bottom:6px}
+.windMapLegend .bar{height:9px;border-radius:999px;background:linear-gradient(90deg,#3d6fff 0%,#34c9ff 24%,#42e39b 44%,#f3e64f 64%,#ff9d2d 82%,#ff4038 100%);box-shadow:0 0 12px rgba(84,179,255,.30)}
+.windMapLegend .ticks{display:flex;justify-content:space-between;color:#99b5d0;margin-top:3px;font-size:9px}
+.windMapLegend .note{color:#9db7cf;margin-top:5px}
+
 .modelStrip{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;background:#f8fbfe;border-top:1px solid #d5e1ec}
 .modelChip{border:1px solid #c8d8e6;background:#fff;border-radius:999px;padding:6px 10px;font-size:11px;color:#47637e}
 .windPanel{margin-top:14px}.windGraphWrap{height:360px;position:relative;background:#fff}.windGraphWrap canvas{position:absolute;inset:0;width:100%;height:100%}
@@ -212,7 +218,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
     <div class="panelHeader">
       <div>
         <div class="panelTitle">3D CME Propagation Model <span class="chip">DBM + Parker HMF / Luminous Pinwheel</span></div>
-        <div class="panelSub">DBMでCME速度を積分。太陽風・HMFは Parker (1958) の凍結磁場/Archimedean spiral を用い、ENLILの回転する内側境界（典型的に21.5 R☉）を参考にした pinwheel 表示。各セクターのVswで巻き角を変え、タイムラインに合わせて扇風機状に共回転します。これはフル3D MHD ENLILそのものではなく、論文式に基づく軽量HMF可視化です。</div>
+        <div class="panelSub">DBMでCME速度を積分。太陽風・HMFは Parker (1958) の凍結磁場/Archimedean spiral を使用。NOAA WSA-ENLILのような回転する太陽風速度・密度構造を、21.5 R☉ 内側境界からのretarded-time移流として半透明ecliptic sheetに表示します。各セクターのVswで巻き角が変化し、タイムラインに合わせてpinwheel状に共回転します。フル3D MHD ENLILそのものではなく、実測/予報Vswを使う軽量可視化です。</div>
       </div>
       <div class="viewTools">
         <button onclick="set3DCamera('top')">Top</button>
@@ -225,6 +231,12 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
       <div class="error3d" id="error3d">Three.jsを読み込めませんでした。WebGL対応ブラウザで開いてください。</div>
       <div class="threeOverlay">
         <div class="hudBox" id="threeHud">3D初期化待ち</div>
+        <div class="windMapLegend" id="windMapLegend">
+          <div class="title">ENLIL-style Solar Wind</div>
+          <div class="bar"></div>
+          <div class="ticks"><span>250</span><span>400</span><span>550</span><span>700</span><span>900+ km/s</span></div>
+          <div class="note">色 = radial wind speed / 明るさ = relative plasma density・stream compression</div>
+        </div>
         <div class="speedHud" id="speedHud"><div class="model">DBM model waiting for data...</div></div>
         <div class="camHelp">Drag: rotate / Wheel: zoom / Right drag: pan</div>
       </div>
@@ -233,7 +245,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
       <span class="modelChip">CME propagation: Drag-Based Model</span>
       <span class="modelChip">Solar rotation: 27.27 d</span>
       <span class="modelChip">Parker 1958 HMF</span><span class="modelChip">ENLIL-style 21.5 R☉ boundary</span><span class="modelChip">Ω: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
-      <span class="modelChip">Solar wind: NOAA observed → SWIFT AI forecast → WSA fallback</span>
+      <span class="modelChip">Solar wind: NOAA observed → SWIFT AI forecast → WSA fallback</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span>
       <span class="modelChip">Magnetosphere: Pdyn / Bz / CME impact response</span>
     </div>
   </section>
@@ -1045,6 +1057,210 @@ function createSolarStreamer(lat,lon,len=5.0,curveAmt=.7,color=0xffb24f,opacity=
   const mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity,blending:THREE.AdditiveBlending,depthWrite:false});
   const mesh=new THREE.Mesh(geo,mat);mesh.userData.baseOpacity=opacity;return mesh;
 }
+
+// -----------------------------------------------------------------------------
+// ENLIL-style ecliptic solar-wind sheet
+// -----------------------------------------------------------------------------
+// This is a lightweight browser visualization inspired by the rotating inner
+// boundary / pinwheel morphology seen in WSA-ENLIL products.
+//
+// For a point (r,phi,t), solve the retarded source longitude iteratively:
+//   phi_source ~= phi - Omega(t-tref) + Omega (r-r0)/V(phi_source)
+// and use the available observed/forecast solar-wind time series as a
+// corotating longitudinal boundary proxy.
+//
+// Density brightness follows radial mass-flux scaling qualitatively and is
+// enhanced at stream-compression interfaces (fast wind catching slow wind).
+const WIND_SHEET_RADIAL_STEPS=54;
+const WIND_SHEET_AZ_STEPS=128;
+
+function speedColorThree(v){
+  const stops=[
+    [250,0x3d6fff],[380,0x34c9ff],[500,0x42e39b],
+    [620,0xf3e64f],[760,0xff9d2d],[950,0xff4038]
+  ];
+  const x=clamp(v,stops[0][0],stops.at(-1)[0]);
+  for(let i=0;i<stops.length-1;i++){
+    const [a,ca]=stops[i],[b,cb]=stops[i+1];
+    if(x<=b){
+      const f=(x-a)/(b-a);
+      return new THREE.Color(ca).lerp(new THREE.Color(cb),f);
+    }
+  }
+  return new THREE.Color(stops.at(-1)[1]);
+}
+
+function sampleWindBoundary(time,fallbackV,n=96){
+  const a=new Float32Array(n);
+  for(let i=0;i<n;i++){
+    const seed=-Math.PI+(2*Math.PI*i/n);
+    a[i]=parkerSectorWindSpeed(seed,time,fallbackV);
+  }
+  return a;
+}
+function interpCircularBoundary(seed,a){
+  const n=a.length;
+  let u=(wrapPi(seed)+Math.PI)/(2*Math.PI)*n;
+  u=((u%n)+n)%n;
+  const i0=Math.floor(u),i1=(i0+1)%n,f=u-i0;
+  return a[i0]*(1-f)+a[i1]*f;
+}
+function solarWindFieldAt(phi,rKm,time,fallbackV,boundary){
+  const tt=(time instanceof Date?time:new Date(time)).getTime();
+  const tr=STATE.timelineCenter.getTime();
+  const rot=OMEGA_PARKER*((tt-tr)/1000);
+
+  let v=clamp(fallbackV,250,900),seed=phi;
+  for(let k=0;k<3;k++){
+    const tau=Math.max(0,(rKm-DBM.r0Km)/Math.max(250,v));
+    seed=wrapPi(phi-rot+OMEGA_PARKER*tau);
+    v=clamp(interpCircularBoundary(seed,boundary),250,950);
+  }
+
+  const eps=2*Math.PI/boundary.length;
+  const vBehind=interpCircularBoundary(seed-eps*.85,boundary);
+  const vAhead=interpCircularBoundary(seed+eps*.85,boundary);
+
+  // Compression proxy: a faster stream immediately behind a slower stream
+  // brightens the interaction region. This is a visualization proxy, not MHD.
+  const compression=clamp((vBehind-vAhead)/220,0,1);
+
+  // Qualitative continuity relation n*V*r^2 ~= const. We compensate most of the
+  // r^-2 term visually so the outer heliosphere remains readable.
+  const rAU=Math.max(.10,rKm/AU_KM);
+  const density1AU=Math.max(.5,num(STATE.env.density,5));
+  const nPhysical=density1AU*(400/Math.max(250,v))/(rAU*rAU);
+  const radialComp=Math.pow(rAU,.78);
+  const densityVisual=clamp(
+    .16 + .19*Math.log1p(nPhysical*radialComp) + .62*compression,
+    .12,1.0
+  );
+  return{speed:v,densityVisual,compression,seed};
+}
+
+function makeSolarWindSheetMaterial(){
+  return new THREE.ShaderMaterial({
+    transparent:true,
+    depthWrite:false,
+    side:THREE.DoubleSide,
+    blending:THREE.NormalBlending,
+    vertexColors:true,
+    uniforms:{uOpacity:{value:.34},uTime:{value:0}},
+    vertexShader:`
+      attribute float density;
+      varying vec3 vColor2;
+      varying float vDensity;
+      varying vec2 vUv2;
+      void main(){
+        vColor2=color;
+        vDensity=density;
+        vUv2=uv;
+        gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+      }
+    `,
+    fragmentShader:`
+      precision highp float;
+      uniform float uOpacity;
+      uniform float uTime;
+      varying vec3 vColor2;
+      varying float vDensity;
+      varying vec2 vUv2;
+      void main(){
+        float inner=smoothstep(.012,.075,vUv2.x);
+        float outer=1.0-smoothstep(.94,1.0,vUv2.x);
+        float ripple=.94+.06*sin(uTime*.55+vUv2.x*17.0+vUv2.y*12.566);
+        float a=uOpacity*(.20+.80*vDensity)*inner*outer;
+        vec3 c=vColor2*(.72+.44*vDensity)*ripple;
+        gl_FragColor=vec4(c,a);
+      }
+    `
+  });
+}
+
+function createSolarWindSheet(){
+  const nr=WIND_SHEET_RADIAL_STEPS,np=WIND_SHEET_AZ_STEPS;
+  const verts=(nr+1)*(np+1);
+  const pos=new Float32Array(verts*3);
+  const col=new Float32Array(verts*3);
+  const den=new Float32Array(verts);
+  const uv=new Float32Array(verts*2);
+  const rVals=new Float64Array(verts);
+  const phiVals=new Float64Array(verts);
+  const idx=[];
+
+  let q=0;
+  for(let ir=0;ir<=nr;ir++){
+    const fr=ir/nr;
+    const rKm=DBM.r0Km+(PARKER_MAX_AU*AU_KM-DBM.r0Km)*fr;
+    const dist=sceneMagneticDistanceForR(rKm);
+    for(let ip=0;ip<=np;ip++){
+      const fp=ip/np,phi=-Math.PI+2*Math.PI*fp;
+      const x=SCENE.sunX+Math.cos(phi)*dist,z=Math.sin(phi)*dist;
+      pos[q*3]=x;pos[q*3+1]=-.72;pos[q*3+2]=z;
+      col[q*3]=.15;col[q*3+1]=.55;col[q*3+2]=1.0;
+      den[q]=.25;uv[q*2]=fr;uv[q*2+1]=fp;
+      rVals[q]=rKm;phiVals[q]=phi;q++;
+    }
+  }
+  for(let ir=0;ir<nr;ir++){
+    for(let ip=0;ip<np;ip++){
+      const a=ir*(np+1)+ip,b=a+1,c=(ir+1)*(np+1)+ip,d=c+1;
+      idx.push(a,c,b,b,c,d);
+    }
+  }
+
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute("position",new THREE.BufferAttribute(pos,3));
+  geo.setAttribute("color",new THREE.BufferAttribute(col,3));
+  geo.setAttribute("density",new THREE.BufferAttribute(den,1));
+  geo.setAttribute("uv",new THREE.BufferAttribute(uv,2));
+  geo.setIndex(idx);
+  geo.computeBoundingSphere();
+
+  const mesh=new THREE.Mesh(geo,makeSolarWindSheetMaterial());
+  mesh.renderOrder=-1;
+  mesh.userData={rVals,phiVals,lastTime:NaN,lastSpeed:NaN};
+  return mesh;
+}
+
+function updateSolarWindSheet(time,fallbackV){
+  const t3=STATE.three,mesh=t3?.solarWindSheet;
+  if(!mesh)return;
+  const tm=(time instanceof Date?time:new Date(time)).getTime();
+  const fv=clamp(fallbackV,250,900);
+  if(Number.isFinite(mesh.userData.lastTime)&&Math.abs(tm-mesh.userData.lastTime)<15*60e3&&
+     Number.isFinite(mesh.userData.lastSpeed)&&Math.abs(fv-mesh.userData.lastSpeed)<2)return;
+
+  mesh.userData.lastTime=tm;mesh.userData.lastSpeed=fv;
+  const boundary=sampleWindBoundary(time,fv,96);
+  const color=mesh.geometry.attributes.color.array;
+  const density=mesh.geometry.attributes.density.array;
+  const rVals=mesh.userData.rVals,phiVals=mesh.userData.phiVals;
+
+  let speedSum=0,densitySum=0,compressionMax=0;
+  for(let i=0;i<density.length;i++){
+    const f=solarWindFieldAt(phiVals[i],rVals[i],time,fv,boundary);
+    const c=speedColorThree(f.speed);
+    color[i*3]=c.r;color[i*3+1]=c.g;color[i*3+2]=c.b;
+    density[i]=f.densityVisual;
+    speedSum+=f.speed;densitySum+=f.densityVisual;
+    compressionMax=Math.max(compressionMax,f.compression);
+  }
+  mesh.geometry.attributes.color.needsUpdate=true;
+  mesh.geometry.attributes.density.needsUpdate=true;
+  mesh.userData.meanSpeed=speedSum/density.length;
+  mesh.userData.meanDensity=densitySum/density.length;
+  mesh.userData.compressionMax=compressionMax;
+
+  const legend=document.getElementById("windMapLegend");
+  if(legend){
+    legend.querySelector(".note").innerHTML=
+      `色 = radial Vsw / 明るさ = density・compression<br>`+
+      `Earth-line Vsw: <b>${Math.round(fv)} km/s</b> / compression proxy max: <b>${compressionMax.toFixed(2)}</b>`;
+  }
+}
+
+
 function makeParkerCoreMaterial(color){
   return new THREE.ShaderMaterial({
     transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
@@ -1279,6 +1495,10 @@ function init3D(){
   const orbitGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(SCENE.sunX,0,0),new THREE.Vector3(SCENE.earthX,0,0),new THREE.Vector3(SCENE.earthX+82,0,0)]);
   const orbit=new THREE.Line(orbitGeo,orbitMat);orbit.computeLineDistances();scene.add(orbit);
 
+  // ENLIL-style color-coded ecliptic solar-wind sheet.
+  const solarWindSheet=createSolarWindSheet();
+  scene.add(solarWindSheet);
+
   const parkerGroup=new THREE.Group();scene.add(parkerGroup);
   const parkerLines=[];
   // Parker blades: the geometry is physical (sector-specific Vsw controls winding),
@@ -1301,7 +1521,7 @@ function init3D(){
   const windParticles=new THREE.Points(pGeo,pMat);scene.add(windParticles);windParticles.userData={count:pCount,rAU:pR,lane:pLane,lat:pLat,seed:pSeed};
 
   const cmeGroup=new THREE.Group();scene.add(cmeGroup);
-  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,solarStreamers,sunLoopGroup,coronaShells,earth,earthNight,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock(),parkerGroup,windParticles,windSpeed:425,impactStrength:0};
+  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,solarStreamers,sunLoopGroup,coronaShells,earth,earthNight,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock(),solarWindSheet,parkerGroup,windParticles,windSpeed:425,impactStrength:0};
   animate3D();update3D(STATE.selectedTime);
 }
 
@@ -1383,9 +1603,9 @@ function update3D(time){
   const solarSurfacePhase=solarSynodicRotationRad(time);
   if(STATE.three.sun)STATE.three.sun.rotation.y=solarSurfacePhase;
   if(STATE.three.sunLoopGroup)STATE.three.sunLoopGroup.rotation.y=solarSurfacePhase;
-  updateParkerSpiral(time,ws.speed);updateMagnetosphere(impactStrength,bzS.bz);updateSpeedHud(bestInfo);
+  updateSolarWindSheet(time,ws.speed);updateParkerSpiral(time,ws.speed);updateMagnetosphere(impactStrength,bzS.bz);updateSpeedHud(bestInfo);
   const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz,magState=impactStrength>.72?"STRONG IMPACT":impactStrength>.35?"IMPACT":impactStrength>.05?"CONTACT":"QUIET";
-  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Solar wind: ${Math.round(ws.speed)} km/s (${esc(ws.source)})<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(ws.speed).toFixed(1)}° local / ${parkerWindingDeg(ws.speed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + rotating-boundary luminous field<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
+  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Solar wind: ${Math.round(ws.speed)} km/s (${esc(ws.source)})<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(ws.speed).toFixed(1)}° local / ${parkerWindingDeg(ws.speed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + rotating-boundary luminous field<br>Solar-wind sheet: ENLIL-style radial Vsw + density/compression proxy<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
 }
 
 function animate3D(){
@@ -1404,6 +1624,7 @@ function animate3D(){
   if(t.sunLoops)t.sunLoops.forEach((l,i)=>{const b=l.userData.baseOpacity||.30;l.material.opacity=b*(.82+.18*Math.sin(elapsed*(.44+i*.037)+i*.9));});
   if(t.solarStreamers)t.solarStreamers.forEach((l,i)=>{const b=l.userData.baseOpacity||.07;l.material.opacity=b*(.72+.28*(.5+.5*Math.sin(elapsed*(.29+i*.011)+i*.43)));});
   if(t.parkerGroup?.userData?.lines)t.parkerGroup.userData.lines.forEach((blade,i)=>{const m=blade.userData?.coreMat;if(m?.uniforms?.uTime)m.uniforms.uTime.value=elapsed+i*.045;});
+  if(t.solarWindSheet?.material?.uniforms?.uTime)t.solarWindSheet.material.uniforms.uTime.value=elapsed;
   t.earth.rotation.y+=dt*.12;
   if(t.earthNight){t.earthNight.rotation.y=t.earth.rotation.y;t.earthNight.rotation.z=t.earth.rotation.z;}
   if(t.clouds){t.clouds.rotation.y+=dt*.155;t.clouds.rotation.z=t.earth.rotation.z;}
