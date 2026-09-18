@@ -211,7 +211,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
   <section class="card viewCard" id="threeViewCard" style="margin-top:14px">
     <div class="panelHeader">
       <div>
-        <div class="panelTitle">3D CME Propagation Model <span class="chip">DBM + Parker HMF / ENLIL-style Pinwheel</span></div>
+        <div class="panelTitle">3D CME Propagation Model <span class="chip">DBM + Parker HMF / Luminous Pinwheel</span></div>
         <div class="panelSub">DBMでCME速度を積分。太陽風・HMFは Parker (1958) の凍結磁場/Archimedean spiral を用い、ENLILの回転する内側境界（典型的に21.5 R☉）を参考にした pinwheel 表示。各セクターのVswで巻き角を変え、タイムラインに合わせて扇風機状に共回転します。これはフル3D MHD ENLILそのものではなく、論文式に基づく軽量HMF可視化です。</div>
       </div>
       <div class="viewTools">
@@ -853,9 +853,25 @@ function createSolarShaderMaterial(){
       varying vec3 vObj;
       varying vec3 vNormalV;
       varying vec3 vViewDir;
+      varying float vMicro;
+      float h31(vec3 p){
+        p=fract(p*.1031);p+=dot(p,p.yzx+33.33);return fract((p.x+p.y)*p.z);
+      }
+      float n3(vec3 p){
+        vec3 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+        float n000=h31(i),n100=h31(i+vec3(1,0,0)),n010=h31(i+vec3(0,1,0)),n110=h31(i+vec3(1,1,0));
+        float n001=h31(i+vec3(0,0,1)),n101=h31(i+vec3(1,0,1)),n011=h31(i+vec3(0,1,1)),n111=h31(i+vec3(1,1,1));
+        float a=mix(mix(n000,n100,f.x),mix(n010,n110,f.x),f.y);
+        float b=mix(mix(n001,n101,f.x),mix(n011,n111,f.x),f.y);
+        return mix(a,b,f.z);
+      }
       void main(){
         vObj=normalize(position);
-        vec4 mv=modelViewMatrix*vec4(position,1.0);
+        // very small photospheric relief: purely visual, not a physical radius perturbation model
+        float micro=(n3(vObj*46.0)-.5)*.016+(n3(vObj*95.0)-.5)*.007;
+        vMicro=micro;
+        vec3 p=position+normal*micro;
+        vec4 mv=modelViewMatrix*vec4(p,1.0);
         vNormalV=normalize(normalMatrix*normal);
         vViewDir=normalize(-mv.xyz);
         gl_Position=projectionMatrix*mv;
@@ -867,16 +883,15 @@ function createSolarShaderMaterial(){
       varying vec3 vObj;
       varying vec3 vNormalV;
       varying vec3 vViewDir;
+      varying float vMicro;
 
-      float hash31(vec3 p){
-        p=fract(p*.1031);p+=dot(p,p.yzx+33.33);return fract((p.x+p.y)*p.z);
-      }
+      float hash31(vec3 p){p=fract(p*.1031);p+=dot(p,p.yzx+33.33);return fract((p.x+p.y)*p.z);}
       float noise3(vec3 p){
         vec3 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
-        float n000=hash31(i+vec3(0,0,0)),n100=hash31(i+vec3(1,0,0));
+        float n000=hash31(i+vec3(0)),n100=hash31(i+vec3(1,0,0));
         float n010=hash31(i+vec3(0,1,0)),n110=hash31(i+vec3(1,1,0));
         float n001=hash31(i+vec3(0,0,1)),n101=hash31(i+vec3(1,0,1));
-        float n011=hash31(i+vec3(0,1,1)),n111=hash31(i+vec3(1,1,1));
+        float n011=hash31(i+vec3(0,1,1)),n111=hash31(i+vec3(1));
         float x00=mix(n000,n100,f.x),x10=mix(n010,n110,f.x);
         float x01=mix(n001,n101,f.x),x11=mix(n011,n111,f.x);
         return mix(mix(x00,x10,f.y),mix(x01,x11,f.y),f.z);
@@ -886,45 +901,64 @@ function createSolarShaderMaterial(){
         for(int i=0;i<6;i++){v+=a*noise3(p);p=p*2.03+vec3(17.1,9.2,13.7);a*=.49;}
         return v;
       }
+      float spot(vec3 q,vec3 d,float core,float pen){
+        float c=dot(q,normalize(d));
+        float um=smoothstep(core,1.0,c);
+        float pn=smoothstep(pen,1.0,c);
+        return clamp(um*.78+pn*.28,0.0,1.0);
+      }
       void main(){
         vec3 q=normalize(vObj);
         float lat=asin(clamp(q.y,-1.0,1.0));
         float mu=clamp(dot(normalize(vNormalV),normalize(vViewDir)),0.0,1.0);
 
-        // Multi-scale convection.  Fine 3-D noise avoids a visible longitude seam.
-        float macro=fbm3(q*7.0+vec3(0.0,uTime*.004,0.0));
-        float meso=fbm3(q*22.0+vec3(uTime*.006,0.0,-uTime*.004));
-        float fine=fbm3(q*72.0+vec3(0.0,-uTime*.010,uTime*.008));
-        float granule=smoothstep(.40,.72,fine);
-        float intergranular=1.0-smoothstep(.32,.54,meso);
+        // Granulation / supergranulation layers.
+        float macro=fbm3(q*6.5+vec3(0.0,uTime*.0025,0.0));
+        float meso=fbm3(q*20.0+vec3(uTime*.004,0.0,-uTime*.003));
+        float fine=fbm3(q*67.0+vec3(0.0,-uTime*.008,uTime*.006));
+        float micro=fbm3(q*128.0+vec3(uTime*.011,-uTime*.007,0.0));
+        float cell=pow(smoothstep(.34,.73,fine),1.25);
+        float lane=1.0-smoothstep(.29,.55,meso);
+        float network=smoothstep(.55,.82,abs(micro-.5)*2.0);
 
-        // Active-region belt: sunspots/faculae prefer mid-low latitudes.
-        float belt=exp(-pow((abs(lat)-.24)/.23,2.0));
-        float activeNoise=fbm3(q*11.0+vec3(23.7,-4.1,8.3));
-        float active=belt*smoothstep(.64,.84,activeNoise);
-        float spotCore=belt*smoothstep(.83,.93,fbm3(q*28.0+vec3(42.0,7.0,-19.0)))*active;
-        float penumbra=belt*smoothstep(.72,.88,fbm3(q*20.0+vec3(42.0,7.0,-19.0)))*active;
+        // Stable active regions that co-rotate with the solar mesh.
+        float s1=spot(q,vec3(.78,.23,.57),.985,.956);
+        float s2=spot(q,vec3(-.55,-.18,.82),.989,.962);
+        float s3=spot(q,vec3(.12,.31,-.94),.991,.968);
+        float s4=spot(q,vec3(-.86,.09,-.49),.992,.969);
+        float spots=clamp(s1+s2+s3+s4,0.0,1.0);
+        float belt=exp(-pow((abs(lat)-.22)/.28,2.0));
+        float plage=belt*smoothstep(.58,.82,fbm3(q*12.0+vec3(31.0,-8.0,11.0)));
 
-        float brightness=.34+.31*macro+.26*meso+.19*granule-.10*intergranular;
-        vec3 deep=vec3(.72,.035,.001);
-        vec3 orange=vec3(1.00,.20,.003);
-        vec3 gold=vec3(1.00,.52,.020);
-        vec3 hot=vec3(1.00,.88,.33);
-        vec3 col=mix(deep,orange,smoothstep(.18,.56,brightness));
-        col=mix(col,gold,smoothstep(.46,.77,brightness));
-        col=mix(col,hot,smoothstep(.70,.95,brightness)*.72);
+        float brightness=.30+.31*macro+.26*meso+.22*cell-.12*lane+.07*network+.035*vMicro;
+        vec3 deep=vec3(.44,.012,.0006);
+        vec3 red=vec3(.90,.055,.0015);
+        vec3 orange=vec3(1.00,.22,.003);
+        vec3 gold=vec3(1.00,.55,.025);
+        vec3 hot=vec3(1.00,.91,.48);
+        vec3 col=mix(deep,red,smoothstep(.12,.42,brightness));
+        col=mix(col,orange,smoothstep(.30,.60,brightness));
+        col=mix(col,gold,smoothstep(.52,.78,brightness));
+        col=mix(col,hot,smoothstep(.74,.98,brightness)*.82);
 
-        // Umbra + penumbra and limb faculae.
-        col*=1.0-.34*penumbra-.58*spotCore;
-        float facula=active*(1.0-smoothstep(.48,.90,mu));
-        col+=vec3(1.0,.66,.20)*facula*.34;
+        // Sunspots with darker umbra / warmer penumbra.
+        col*=1.0-.68*spots;
+        col+=vec3(.48,.045,.005)*spots*.24;
 
-        // Visible-light limb darkening, with a thin chromospheric hot rim.
-        float limbDark=.38+.62*pow(mu,.62);
+        // Bright plages/faculae become prominent close to the limb.
+        float fac=plage*(.28+.95*pow(1.0-mu,1.7));
+        col+=vec3(1.0,.72,.22)*fac*.52;
+
+        // Limb darkening plus chromospheric limb emission.
+        float limbDark=.32+.68*pow(mu,.54);
         col*=limbDark;
-        float rim=pow(1.0-mu,7.0);
-        col+=vec3(1.0,.15,.006)*rim*.48;
-        col*=.985+.025*sin(uTime*.7+macro*8.0);
+        float innerRim=pow(1.0-mu,5.0);
+        float edgeRim=pow(1.0-mu,12.0);
+        col+=vec3(1.0,.18,.008)*innerRim*.42;
+        col+=vec3(1.0,.58,.08)*edgeRim*.82;
+
+        // subtle thermal flicker, kept small so the Sun does not look like a lamp bulb
+        col*=.985+.022*sin(uTime*.62+macro*8.0)+.012*sin(uTime*1.17+fine*13.0);
         gl_FragColor=vec4(col,1.0);
       }
     `
@@ -954,6 +988,61 @@ function makeMagneticLine(points,color=0x76c8ff,opacity=.40){
   const geo=new THREE.BufferGeometry().setFromPoints(curve.getPoints(96));
   const mat=new THREE.LineBasicMaterial({color,transparent:true,opacity,blending:THREE.AdditiveBlending,depthWrite:false});
   return new THREE.Line(geo,mat);
+}
+
+
+function solarPoint(latDeg,lonDeg,r=8.9){
+  const lat=latDeg*Math.PI/180,lon=lonDeg*Math.PI/180,cl=Math.cos(lat);
+  return new THREE.Vector3(cl*Math.cos(lon)*r,Math.sin(lat)*r,cl*Math.sin(lon)*r);
+}
+function createSolarArc(lat,lon,spanDeg,height,color=0xffa13a,opacity=.38,radius=.045){
+  const p1=solarPoint(lat,lon-spanDeg*.5,8.95),p2=solarPoint(lat,lon+spanDeg*.5,8.95);
+  const mid=p1.clone().add(p2).normalize().multiplyScalar(8.95+height);
+  const c=new THREE.CatmullRomCurve3([p1,p1.clone().lerp(mid,.38),mid,p2.clone().lerp(mid,.38),p2]);
+  const geo=new THREE.TubeGeometry(c,84,radius,5,false);
+  const mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity,blending:THREE.AdditiveBlending,depthWrite:false});
+  const mesh=new THREE.Mesh(geo,mat);mesh.userData.baseOpacity=opacity;return mesh;
+}
+function createSolarStreamer(lat,lon,len=5.0,curveAmt=.7,color=0xffb24f,opacity=.13,radius=.028){
+  const p0=solarPoint(lat,lon,9.0),n=p0.clone().normalize();
+  const tangent=new THREE.Vector3(-n.z,0,n.x).normalize().multiplyScalar(curveAmt);
+  const p1=p0.clone().add(n.clone().multiplyScalar(len*.32)).add(tangent.clone().multiplyScalar(.32));
+  const p2=p0.clone().add(n.clone().multiplyScalar(len*.68)).add(tangent.clone().multiplyScalar(.85));
+  const p3=p0.clone().add(n.clone().multiplyScalar(len)).add(tangent.clone().multiplyScalar(1.45));
+  const c=new THREE.CatmullRomCurve3([p0,p1,p2,p3]);
+  const geo=new THREE.TubeGeometry(c,42,radius,4,false);
+  const mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity,blending:THREE.AdditiveBlending,depthWrite:false});
+  const mesh=new THREE.Mesh(geo,mat);mesh.userData.baseOpacity=opacity;return mesh;
+}
+function makeParkerCoreMaterial(color){
+  return new THREE.ShaderMaterial({
+    transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
+    uniforms:{uColor:{value:new THREE.Color(color)},uTime:{value:0},uOpacity:{value:.68}},
+    vertexShader:`varying vec2 vUv2;varying vec3 vN;varying vec3 vV;void main(){vUv2=uv;vec4 mv=modelViewMatrix*vec4(position,1.0);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`,
+    fragmentShader:`precision highp float;uniform vec3 uColor;uniform float uTime;uniform float uOpacity;varying vec2 vUv2;varying vec3 vN;varying vec3 vV;void main(){float wave=.5+.5*sin((vUv2.x*18.0-uTime*.85)*6.2831853);float streak=pow(wave,18.0);float fres=.28+.72*pow(1.0-abs(dot(normalize(vN),normalize(vV))),1.7);float fade=smoothstep(0.0,.025,vUv2.x)*(1.0-smoothstep(.94,1.0,vUv2.x));vec3 c=mix(uColor,vec3(1.0),.52*streak);float a=(.22+.78*streak)*(.50+.50*fres)*uOpacity*fade;gl_FragColor=vec4(c,a);}`
+  });
+}
+function createParkerBlade(seedPhi,latRad,index){
+  const group=new THREE.Group();
+  const haloMat=new THREE.MeshBasicMaterial({color:0x45aaff,transparent:true,opacity:.055,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
+  const coreMat=makeParkerCoreMaterial(0x71d8ff);
+  group.userData={seedPhi,latRad,sectorSpeed:425,index,haloMat,coreMat,curve:null,halo:null,core:null};
+  return group;
+}
+function rebuildParkerBlade(blade,pts,v){
+  const curve=new THREE.CatmullRomCurve3(pts,false,'centripetal',.25);
+  const radiusCore=.045+(blade.userData.index%3===0?.022:0);
+  const radiusHalo=.145+(blade.userData.index%3===0?.035:0);
+  if(blade.userData.core){blade.userData.core.geometry.dispose();blade.remove(blade.userData.core);}
+  if(blade.userData.halo){blade.userData.halo.geometry.dispose();blade.remove(blade.userData.halo);}
+  const halo=new THREE.Mesh(new THREE.TubeGeometry(curve,190,radiusHalo,4,false),blade.userData.haloMat);
+  const core=new THREE.Mesh(new THREE.TubeGeometry(curve,190,radiusCore,5,false),blade.userData.coreMat);
+  blade.add(halo);blade.add(core);blade.userData.halo=halo;blade.userData.core=core;blade.userData.curve=curve;
+  const c=new THREE.Color(speedColorHex(v));
+  blade.userData.haloMat.color.copy(c);
+  blade.userData.haloMat.opacity=(blade.userData.index%3===0?.075:.042)+.030*clamp((v-300)/500,0,1);
+  blade.userData.coreMat.uniforms.uColor.value.copy(c);
+  blade.userData.coreMat.uniforms.uOpacity.value=(blade.userData.index%3===0?.82:.56)+.10*clamp((v-300)/500,0,1);
 }
 
 function createMagnetosphereGroup(){
@@ -1088,21 +1177,24 @@ function init3D(){
   const sg2=glowSprite("rgba(255,91,14,.55)");sg2.position.copy(sun.position);sg2.scale.set(49,49,1);sg2.material.opacity=.34;scene.add(sg2);
   const sg3=glowSprite("rgba(255,210,105,.35)");sg3.position.copy(sun.position);sg3.scale.set(61,61,1);sg3.material.opacity=.16;scene.add(sg3);
 
-  // Prominence arcs are parented to the Sun so their footpoints co-rotate with the
-  // photosphere instead of spinning independently as a decorative effect.
+  // --- Magnetic arcade + coronal streamers, parented to the Sun ---
+  // These are visual magnetic structures close to the Sun. The heliospheric field farther out
+  // is still computed independently from the Parker equations below.
   const sunLoopGroup=new THREE.Group();sunLoopGroup.position.copy(sun.position);scene.add(sunLoopGroup);
   const sunLoops=[];
-  const promSpecs=[
-    {r:10.0,t:.075,arc:Math.PI*1.02,rot:[.22,.72,.32],op:.42},
-    {r:10.25,t:.060,arc:Math.PI*.82,rot:[1.03,.18,.88],op:.34},
-    {r:9.95,t:.055,arc:Math.PI*.70,rot:[.58,1.62,.12],op:.30},
-    {r:10.35,t:.048,arc:Math.PI*.58,rot:[1.30,.92,1.18],op:.25},
-    {r:10.10,t:.042,arc:Math.PI*.52,rot:[.18,2.30,.76],op:.22}
+  const arcSpecs=[
+    [-12,24,24,3.4,0xffb24f,.46,.055],[-8,51,18,2.5,0xff8d27,.36,.045],[16,128,28,4.0,0xffc66a,.42,.052],
+    [9,204,20,3.0,0xff982f,.34,.043],[-18,286,26,3.8,0xffbd58,.38,.048],[24,336,17,2.3,0xff7f1e,.28,.038],
+    [3,78,13,1.8,0xffd27a,.30,.036],[19,248,15,2.1,0xffa83d,.31,.038]
   ];
-  for(const sp of promSpecs){
-    const mat=new THREE.MeshBasicMaterial({color:0xff9c38,transparent:true,opacity:sp.op,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
-    const loop=new THREE.Mesh(new THREE.TorusGeometry(sp.r,sp.t,10,120,sp.arc),mat);
-    loop.position.set(0,0,0);loop.rotation.set(sp.rot[0],sp.rot[1],sp.rot[2]);sunLoopGroup.add(loop);sunLoops.push(loop);
+  for(const a of arcSpecs){const loop=createSolarArc(...a);sunLoopGroup.add(loop);sunLoops.push(loop);}
+
+  const solarStreamers=[];
+  for(let i=0;i<42;i++){
+    const lat=-58+((i*37)%116),lon=(i*73)%360,len=2.4+((i*29)%100)/100*5.2,curve=.25+((i*47)%100)/100*.95;
+    const op=.035+((i*31)%100)/100*.095,rad=.018+((i*17)%100)/100*.020;
+    const st=createSolarStreamer(lat,lon,len,curve,i%4===0?0xffd891:0xff9f3b,op,rad);
+    sunLoopGroup.add(st);solarStreamers.push(st);
   }
 
   // --- Earth ---
@@ -1147,16 +1239,13 @@ function init3D(){
 
   const parkerGroup=new THREE.Group();scene.add(parkerGroup);
   const parkerLines=[];
-  // Multiple speed sectors produce the ENLIL-like pinwheel.  Each blade is still a
-  // Parker field line; local Vsw changes its pitch rather than inventing a curve.
+  // Parker blades: the geometry is physical (sector-specific Vsw controls winding),
+  // while the layered tube/glow/pulse shader is purely a visual treatment.
   for(let i=0;i<PARKER_SECTOR_COUNT;i++){
     const phase=-Math.PI+(2*Math.PI*i/PARKER_SECTOR_COUNT);
-    const latDeg=((i%3)-1)*3.0;
-    const geo=new THREE.BufferGeometry();
-    const mat=new THREE.LineBasicMaterial({color:0x53b9ff,transparent:true,opacity:(i%3===0?.48:.30),blending:THREE.AdditiveBlending,depthWrite:false});
-    const line=new THREE.Line(geo,mat);
-    line.userData={seedPhi:phase,latRad:latDeg*Math.PI/180,sectorSpeed:425};
-    parkerGroup.add(line);parkerLines.push(line);
+    const latDeg=((i%5)-2)*2.35;
+    const blade=createParkerBlade(phase,latDeg*Math.PI/180,i);
+    parkerGroup.add(blade);parkerLines.push(blade);
   }
   parkerGroup.userData.lines=parkerLines;
   parkerGroup.userData.lastSpeed=NaN;
@@ -1170,7 +1259,7 @@ function init3D(){
   const windParticles=new THREE.Points(pGeo,pMat);scene.add(windParticles);windParticles.userData={count:pCount,rAU:pR,lane:pLane,lat:pLat,seed:pSeed};
 
   const cmeGroup=new THREE.Group();scene.add(cmeGroup);
-  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,sunLoopGroup,coronaShells,earth,earthNight,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock(),parkerGroup,windParticles,windSpeed:425,impactStrength:0};
+  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,solarStreamers,sunLoopGroup,coronaShells,earth,earthNight,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock(),parkerGroup,windParticles,windSpeed:425,impactStrength:0};
   animate3D();update3D(STATE.selectedTime);
 }
 
@@ -1181,20 +1270,17 @@ function updateParkerSpiral(time,vsw){
   if(Number.isFinite(g.userData.lastTime)&&Math.abs(g.userData.lastTime-tm)<20*60e3&&Number.isFinite(g.userData.lastSpeed)&&Math.abs(g.userData.lastSpeed-fallback)<3)return;
   g.userData.lastTime=tm;g.userData.lastSpeed=fallback;
   const lines=g.userData.lines||[],r0=DBM.r0Km,maxR=PARKER_MAX_AU*AU_KM;
-  lines.forEach((line,i)=>{
-    const pts=[],seed=line.userData.seedPhi||0,lat=line.userData.latRad||0;
+  lines.forEach((blade,i)=>{
+    const pts=[],seed=blade.userData.seedPhi||0,lat=blade.userData.latRad||0;
     const v=parkerSectorWindSpeed(seed,t,fallback);
-    line.userData.sectorSpeed=v;
+    blade.userData.sectorSpeed=v;
     if(g.userData.sectorSpeeds)g.userData.sectorSpeeds[i]=v;
-    const color=new THREE.Color(speedColorHex(v));
-    line.material.color.copy(color);
-    line.material.opacity=(i%3===0?.40:.23)+.18*clamp((v-300)/500,0,1);
     for(let k=0;k<=190;k++){
       const r=r0+(maxR-r0)*k/190,phi=parkerRetardedPhi(seed,t,r,v),dist=sceneMagneticDistanceForR(r),cl=Math.cos(lat);
-      // Slight latitude opening keeps the bundle 3-D while preserving constant-latitude Parker geometry.
+      // Constant-latitude Parker geometry. The small sector latitude offsets only keep blades visually separable in 3-D.
       pts.push(new THREE.Vector3(SCENE.sunX+cl*Math.cos(phi)*dist,Math.sin(lat)*dist,cl*Math.sin(phi)*dist));
     }
-    line.geometry.dispose();line.geometry=new THREE.BufferGeometry().setFromPoints(pts);
+    rebuildParkerBlade(blade,pts,v);
   });
 }
 
@@ -1257,7 +1343,7 @@ function update3D(time){
   if(STATE.three.sunLoopGroup)STATE.three.sunLoopGroup.rotation.y=solarSurfacePhase;
   updateParkerSpiral(time,ws.speed);updateMagnetosphere(impactStrength,bzS.bz);updateSpeedHud(bestInfo);
   const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz,magState=impactStrength>.72?"STRONG IMPACT":impactStrength>.35?"IMPACT":impactStrength>.05?"CONTACT":"QUIET";
-  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Solar wind: ${Math.round(ws.speed)} km/s (${esc(ws.source)})<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(ws.speed).toFixed(1)}° local / ${parkerWindingDeg(ws.speed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + ENLIL-style rotating boundary<br>Magnetosphere: <b>${magState}</b>`;
+  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Solar wind: ${Math.round(ws.speed)} km/s (${esc(ws.source)})<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(ws.speed).toFixed(1)}° local / ${parkerWindingDeg(ws.speed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + rotating-boundary luminous field<br>Magnetosphere: <b>${magState}</b>`;
 }
 
 function animate3D(){
@@ -1273,7 +1359,9 @@ function animate3D(){
     const p2=1+Math.sin(elapsed*.83+.7)*.016;t.sunGlows[1].scale.set(49*p2,49*p2,1);
     const p3=1+Math.sin(elapsed*.51+1.4)*.012;t.sunGlows[2].scale.set(61*p3,61*p3,1);
   }
-  if(t.sunLoops)t.sunLoops.forEach((l,i)=>{l.material.opacity=(.20+.18*(.5+.5*Math.sin(elapsed*(.32+i*.05)+i)))*(1-i*.08);});
+  if(t.sunLoops)t.sunLoops.forEach((l,i)=>{const b=l.userData.baseOpacity||.30;l.material.opacity=b*(.82+.18*Math.sin(elapsed*(.44+i*.037)+i*.9));});
+  if(t.solarStreamers)t.solarStreamers.forEach((l,i)=>{const b=l.userData.baseOpacity||.07;l.material.opacity=b*(.72+.28*(.5+.5*Math.sin(elapsed*(.29+i*.011)+i*.43)));});
+  if(t.parkerGroup?.userData?.lines)t.parkerGroup.userData.lines.forEach((blade,i)=>{const m=blade.userData?.coreMat;if(m?.uniforms?.uTime)m.uniforms.uTime.value=elapsed+i*.045;});
   t.earth.rotation.y+=dt*.12;
   if(t.earthNight)t.earthNight.rotation.y=t.earth.rotation.y;
   if(t.clouds)t.clouds.rotation.y+=dt*.155;
