@@ -219,7 +219,6 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
           <label><input id="strictDonkiOnly" type="checkbox" checked onchange="rebuildAll()"> DONKI優先</label>
           <label><input id="mergeSevenDays" type="checkbox" checked onchange="loadDONKICache()"> DONKI保存データ統合</label>
           <label><input id="showCoronalHoles" type="checkbox" checked onchange="toggleCoronalHole3D()"> CH/HSS 3Dモデリング</label>
-          <label><input id="showCoronalHoleHistory" type="checkbox" checked onchange="toggleCoronalHole3D()"> CH 27日保持 / 裏面推定</label>
         </div>
         <div id="sourcePanel" class="sourceGrid"></div>
       </div>
@@ -273,7 +272,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
       <span class="modelChip">CME propagation: Drag-Based Model</span>
       <span class="modelChip">Solar rotation: 27.27 d</span>
       <span class="modelChip">Parker 1958 HMF</span><span class="modelChip">ENLIL-style 21.5 R☉ boundary</span><span class="modelChip">Ω: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
-      <span class="modelChip">Solar wind: NOAA observed → SWIFT AI forecast → WSA fallback</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span><span class="modelChip">CHIMERA-inspired CH → HSS corridor</span><span class="modelChip">30d archive / 27d solar persistence / backside estimate</span>
+      <span class="modelChip">Solar wind: NOAA observed → SWIFT AI forecast → WSA fallback</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span><span class="modelChip">CHIMERA-inspired CH → HSS corridor</span>
       <span class="modelChip">Magnetosphere: Pdyn / Bz / CME impact response</span>
     </div>
   </section>
@@ -336,7 +335,6 @@ const REPORT_UI_CANDIDATES=["./reports/ui_forecast_latest.json","./docs/reports/
 const SWIFT_KP_LATEST=dataCandidates("swift-kp/latest.json");
 const SWIFT_BZ_LATEST=dataCandidates("swift-bz/latest.json");
 const CORONAL_HOLE_LATEST=dataCandidates("coronal-holes/latest.json");
-const CORONAL_HOLE_HISTORY=dataCandidates("coronal-holes/history.json");
 const NOAA_WIND_HISTORY=[...dataCandidates("noaa/wind_history.json"),...dataCandidates("noaa_wind_history.json"),...dataCandidates("noaa-wind/history.json")];
 const DONKI_LON_POSITIVE_WEST=true;
 const NOAA={
@@ -377,8 +375,8 @@ const POST_PASS_HOURS=36;
 const STATE={
   sources:{donkiCache:src("DONKI Cache","未取得"),donkiAnalysis:src("DONKI CMEAnalysis","未取得"),donkiCME:src("DONKI CME","未取得"),wsa:src("WSA Wind","未取得"),cactus:src("CACTus","未取得"),noaaWind:src("NOAA Wind","未取得"),noaaMag:src("NOAA IMF","未取得"),noaaKp:src("NOAA Kp","未取得"),swiftWind:src("SWIFT Wind AI","未取得"),coronalHole:src("Coronal Hole","未取得"),reportUi:src("Report UI Feed","未取得")},
   donkiPayloads:[],wsaModel:null,cactusEvents:[],env:defaultEnv(),cmes:[],timelineCenter:new Date(),timelineStart:new Date(),timelineEnd:new Date(),selectedTime:new Date(),timer:null,
-  windObserved:[],windForecast:[],windPastForecast:[],kpObserved:[],kpForecast:[],bzForecast:[],kpModel:null,coronalHoleModel:null,coronalHoles:[],coronalHoleImpacts:[],coronalHoleHistory:[],windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,propagationCache:new Map(),mode:"3d",
-  three:{ready:false,scene:null,camera:null,renderer:null,controls:null,sun:null,earth:null,cmeGroup:null,starPoints:null,clock:null,parkerGroup:null,windParticles:null,coronalHoleGroup:null,coronalHistoryGroup:null,hssGroup:null,windSpeed:425,impactStrength:0}
+  windObserved:[],windForecast:[],windPastForecast:[],kpObserved:[],kpForecast:[],bzForecast:[],kpModel:null,coronalHoleModel:null,coronalHoles:[],coronalHoleImpacts:[],windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,propagationCache:new Map(),mode:"3d",
+  three:{ready:false,scene:null,camera:null,renderer:null,controls:null,sun:null,earth:null,cmeGroup:null,starPoints:null,clock:null,parkerGroup:null,windParticles:null,coronalHoleGroup:null,hssGroup:null,windSpeed:425,impactStrength:0}
 };
 function src(label,status){return{label,status,data:null,time:null,error:null};}
 function setSource(k,status,data=null,error=null){const s=STATE.sources[k];s.status=status;s.data=data;s.error=error;s.time=new Date();renderSourcePanel();}
@@ -452,18 +450,13 @@ function renderCoronalHolePanel(time=STATE.selectedTime){
   const confidence=focus?chPercent(focus.confidence,0):"-";
   const modelAge=model.updated_at?Math.max(0,(Date.now()-new Date(model.updated_at).getTime())/3600e3):null;
 
-  const persisted=persistentCoronalHoleRecords(time);
-  const cov=estimatePersistenceCoverage(persisted,time);
-  const archiveStart=STATE.coronalHoleHistory.length?STATE.coronalHoleHistory[0].snapshot_time:null;
   grid.innerHTML=[
-    ["Detected CH",holes.length,"current front-side segmentation"],
+    ["Detected CH",holes.length,"current segmentation"],
     ["Earth-facing HSS",impacts.length,"|lat| ≤ 45° candidates"],
     ["Focus source",focus?.source_id||focusHole?.id||"-",focus?chImpactState(focus,time):"largest Earth score"],
     ["HSS ETA",arrival,focus?`window ${formatTime(focus.window_start)} → ${formatTime(focus.window_end)}`:"no candidate"],
     ["Peak Vsw prior",focus?`${Math.round(Number(focus.predicted_peak_speed_km_s_prior||0))} km/s`:"-",focus?`ΔV +${Math.round(Number(focus.predicted_delta_v_km_s_prior||0))} km/s`:""],
     ["Confidence",confidence,focusHole?`unipolarity ${chPercent(focusHole.hmi_unipolarity_proxy,0)}`:""],
-    ["History archive",`${STATE.coronalHoleHistory.length} rec`,archiveStart?`30 d target / oldest ${formatTime(archiveStart)}`:"history pending"],
-    ["27 d persistence",`${persisted.length} CH`,`full-sun cov ${chPercent(cov.full,0)} / back-side ${chPercent(cov.back,0)}`],
   ].map(x=>`<div class="chMetric"><div class="k">${esc(x[0])}</div><div class="v">${esc(x[1])}</div><div class="s">${esc(x[2])}</div></div>`).join("");
 
   const rows=[...holes].sort((a,b)=>Number(b.earth_facing_score||0)-Number(a.earth_facing_score||0)).map(ch=>{
@@ -491,7 +484,7 @@ function renderCoronalHolePanel(time=STATE.selectedTime){
     const meth=model.methodology||{};
     note.innerHTML=`Model: <b>${esc(model.model||"-")}</b> / Updated: <b>${esc(model.updated_at||"-")}</b>${modelAge===null?"":` (${modelAge.toFixed(1)} h ago)`}<br>`+
       `EUV: ${esc(meth.euv||"-")} / Magnetic: ${esc(meth.magnetic||"-")}<br>`+
-      `<b>注意:</b> DCHBとHMI磁場は現段階ではproxy。HSS速度は事前モデルで、Wind AIではENLIL/27日再帰との二重計上を避ける残差特徴量として使用。<br>`+`保存は30日間、3D表示は最新27日を太陽自転で保持して全周へ投影。背面は直接観測ではなく persistence による推定表示。`;
+      `<b>注意:</b> DCHBとHMI磁場は現段階ではproxy。HSS速度は事前モデルで、Wind AIではENLIL/27日再帰との二重計上を避ける残差特徴量として使用。`;
   }
   if(hud){
     if(focus){
@@ -499,109 +492,187 @@ function renderCoronalHolePanel(time=STATE.selectedTime){
         `<div class="hss">HSS ETA: <b>${formatTime(focus.arrival_time)}</b></div>`+
         `<div>Arrival window: ${formatTime(focus.window_start)} → ${formatTime(focus.window_end)}</div>`+
         `<div class="ch">Lat ${num(focus.latitude_deg,0).toFixed(1)}° / CMD ${chSigned(focus.central_meridian_deg,1)}° / Area ${chPercent(focus.area_fraction_disk_deprojected,2)}</div>`+
-        `<div>Confidence ${chPercent(focus.confidence,0)} / HMI unipolarity ${chPercent(focus.hmi_unipolarity_proxy,0)}</div>`+`<div>27d persistence / back-side reconstruction enabled</div>`+
+        `<div>Confidence ${chPercent(focus.confidence,0)} / HMI unipolarity ${chPercent(focus.hmi_unipolarity_proxy,0)}</div>`+
         `<div class="muted">${chImpactState(focus,time)==="active"?"Selected time is inside predicted HSS window.":"Modeled HSS candidate / not direct in-situ confirmation."}</div>`;
     }else{
       hud.innerHTML=`<div class="title">CORONAL HOLE / HSS MODEL</div><div class="hot">${holes.length} CH detected</div><div class="muted">Earth-facing HSS candidate: none</div>`;
     }
   }
 }
-
-function normalizeCHSnapshotTime(v){
-  if(!v)return null;
-  const t=new Date(v);
-  return Number.isFinite(t.getTime()) ? t.toISOString() : null;
-}
-function extractCoronalHoleHistoryItems(payload){
-  const root=Array.isArray(payload)?payload:(payload?.history||payload?.snapshots||payload?.days||payload?.records||[]);
-  const out=[];
-  for(const snap of (Array.isArray(root)?root:[])){
-    const ts=normalizeCHSnapshotTime(snap?.observed_at||snap?.updated_at||snap?.date||snap?.timestamp||snap?.time||snap?.valid_time||snap?.analysis_time||payload?.updated_at);
-    const arr=Array.isArray(snap?.coronal_holes)?snap.coronal_holes:(Array.isArray(snap?.holes)?snap.holes:(Array.isArray(snap)?snap:[]));
-    for(const ch of arr){
-      out.push({...ch, snapshot_time: ts || normalizeCHSnapshotTime(ch?.observed_at||ch?.timestamp||ch?.time||ch?.date)});
-    }
-  }
-  return out.filter(x=>x && x.snapshot_time);
-}
-function wrapDeg180(v){
-  let x=((Number(v)%360)+360)%360;
-  if(x>180)x-=360;
-  return x;
-}
-function chRecordAgeDays(rec,time=STATE.selectedTime){
-  const t=(time instanceof Date?time:new Date(time)).getTime();
-  const r=new Date(rec?.snapshot_time||rec?.observed_at||0).getTime();
-  if(!Number.isFinite(t)||!Number.isFinite(r))return null;
-  return (t-r)/86400000;
-}
-function persistentCoronalHoleRecords(time=STATE.selectedTime){
-  const recs=(STATE.coronalHoleHistory||[]).filter(r=>r?.snapshot_time);
-  const latest=(STATE.coronalHoles||[]).map(ch=>({...ch,snapshot_time:STATE.coronalHoleModel?.updated_at||new Date().toISOString(),_current:true}));
-  const merged=[...latest,...recs];
-  const kept=merged.filter(r=>{
-    const age=chRecordAgeDays(r,time);
-    return Number.isFinite(age) && age>=0 && age<=27.1;
-  });
-  kept.sort((a,b)=>{
-    const sa=(Number(a.area_fraction_disk_deprojected||0)*2.2)+(Number(a.earth_facing_score||0)*60)+(Number(a.source_strength||0)*3)-(chRecordAgeDays(a,time)||0)*0.03;
-    const sb=(Number(b.area_fraction_disk_deprojected||0)*2.2)+(Number(b.earth_facing_score||0)*60)+(Number(b.source_strength||0)*3)-(chRecordAgeDays(b,time)||0)*0.03;
-    return sb-sa;
-  });
-  return kept.slice(0,180);
-}
-function persistedCHLongitudeDeg(rec,time=STATE.selectedTime){
-  const base=Number(rec?.central_meridian_deg||0);
-  const age=chRecordAgeDays(rec,time);
-  if(!Number.isFinite(age))return base;
-  return wrapDeg180(base + age*(360/27.0));
-}
-function estimatePersistenceCoverage(records,time=STATE.selectedTime){
-  const bins=new Array(72).fill(0);
-  const backs=new Array(36).fill(0);
-  for(const r of records){
-    const lon=persistedCHLongitudeDeg(r,time);
-    const width=Math.max(4,Math.min(80,Number(r?.width_deg_proxy||12)));
-    const half=Math.round(width/10);
-    let bin=Math.round((((lon+180)/360)*72))%72;
-    for(let k=-half;k<=half;k++)bins[(bin+k+72)%72]=1;
-    if(Math.abs(lon)>90){
-      let b=Math.round((((lon>0?lon-180:lon+180)+90)/180)*36);
-      b=Math.max(0,Math.min(35,b));
-      const hh=Math.max(1,Math.floor(half/2));
-      for(let k=-hh;k<=hh;k++)backs[(b+k+36)%36]=1;
-    }
-  }
-  const full=bins.reduce((a,b)=>a+b,0)/bins.length;
-  const back=backs.reduce((a,b)=>a+b,0)/backs.length;
-  return {full,back};
-}
-
 async function loadCoronalHoleData(){
   setSource("coronalHole","LOADING...");
   try{
-    const [latestRes,historyRes]=await Promise.allSettled([fetchJsonAny(CORONAL_HOLE_LATEST),fetchJsonAny(CORONAL_HOLE_HISTORY)]);
-    if(latestRes.status!=="fulfilled")throw latestRes.reason;
-    const j=latestRes.value?.data||{};
+    const got=await fetchJsonAny(CORONAL_HOLE_LATEST),j=got.data||{};
     STATE.coronalHoleModel=j;
     STATE.coronalHoles=Array.isArray(j.coronal_holes)?j.coronal_holes:[];
     STATE.coronalHoleImpacts=Array.isArray(j.earth_impacts)?j.earth_impacts:[];
-    let hist=[];
-    if(historyRes.status==="fulfilled")hist=extractCoronalHoleHistoryItems(historyRes.value?.data||{});
-    STATE.coronalHoleHistory=hist.filter(x=>x && x.snapshot_time).slice(-2500);
-    setSource("coronalHole",`OK: ${STATE.coronalHoles.length} CH / ${STATE.coronalHoleImpacts.length} HSS / hist ${STATE.coronalHoleHistory.length}`,j,historyRes.status==="fulfilled"?null:"history unavailable");
-    rebuildCoronalHole3D(STATE.selectedTime);
+    setSource("coronalHole",`OK: ${STATE.coronalHoles.length} CH / ${STATE.coronalHoleImpacts.length} HSS`,j);
+    rebuildCoronalHole3D();
     renderCoronalHolePanel(STATE.selectedTime);
     if(STATE.three.ready)update3D(STATE.selectedTime);
   }catch(e){
     STATE.coronalHoleModel={status:"FAILED",errors:[e.message]};
-    STATE.coronalHoles=[];STATE.coronalHoleImpacts=[];STATE.coronalHoleHistory=[];
+    STATE.coronalHoles=[];STATE.coronalHoleImpacts=[];
     setSource("coronalHole","FAILED",null,e.message);
-    rebuildCoronalHole3D(STATE.selectedTime);
+    rebuildCoronalHole3D();
     renderCoronalHolePanel(STATE.selectedTime);
   }
 }
 
+
+
+function windRows(payload){
+  if(!payload)return[];
+  if(Array.isArray(payload)){
+    if(!payload.length)return[];
+    if(Array.isArray(payload[0])){
+      const hdr=payload[0].map(x=>String(x));
+      return payload.slice(1).filter(Array.isArray).map(row=>Object.fromEntries(row.map((v,i)=>[hdr[i]??String(i),v])));
+    }
+    return payload.filter(x=>x&&typeof x==="object");
+  }
+  if(typeof payload==="object"){
+    for(const k of ["records","data","items","history","forecast"]){if(Array.isArray(payload[k]))return windRows(payload[k]);}
+    return[payload];
+  }
+  return[];
+}
+function windTime(r){for(const k of ["time","time_tag","timestamp","datetime","date","start_time"]){if(r?.[k]){const t=new Date(r[k]).getTime();if(Number.isFinite(t))return t;}}return NaN;}
+function firstFinite(r,keys){for(const k of keys){const v=Number(r?.[k]);if(Number.isFinite(v))return v;}return null;}
+function normalizeWindPayload(payload,mode="auto"){
+  const now=Date.now(),out=[];
+  for(const r of windRows(payload)){
+    const t=windTime(r);if(!Number.isFinite(t))continue;
+    const obs=firstFinite(r,["observed_speed","actual_speed","noaa_speed","actual","speed_observed"]);
+    const pred=firstFinite(r,["swift_cme_enhanced_speed","enhanced_speed","forecast_speed","predicted_speed","swift_speed","speed"]);
+    const plain=firstFinite(r,["speed","proton_speed","bulk_speed","solar_wind_speed","V","v"]);
+    let speed=null,kind=mode;
+    if(mode==="observed")speed=obs??plain??pred;
+    else if(mode==="forecast")speed=pred??plain;
+    else if(String(r.kind||"").toLowerCase()==="forecast"||t>now+30*60e3){kind="forecast";speed=pred??plain;}
+    else{kind="observed";speed=obs??plain??pred;}
+    if(!Number.isFinite(speed)||speed<150||speed>1800)continue;
+    out.push({_t:t,time:new Date(t).toISOString(),speed:Number(speed),kind,raw:r});
+  }
+  return out.sort((a,b)=>a._t-b._t);
+}
+function mergeWind(a,b){const m=new Map();for(const r of [...(a||[]),...(b||[])])m.set(Math.round(r._t/60000),r);return[...m.values()].sort((x,y)=>x._t-y._t);}
+
+function finiteOrNull(v){const n=Number(v);return Number.isFinite(n)?n:null;}
+function updateWindAccuracyFromPayload(obj){
+  if(!obj||typeof obj!=="object")return;
+  const v24=obj.verification?.last_24h?.enhanced || obj.last_24h?.enhanced || obj.accuracy?.last_24h?.enhanced || null;
+  const hit=finiteOrNull(v24?.hit_rate_50kms ?? obj.enhanced_hit_rate_50 ?? obj.enhanced_accuracy_score ?? obj.accuracy?.enhanced_hit_rate_50);
+  const count=finiteOrNull(v24?.count ?? obj.count ?? obj.accuracy?.count);
+  if(hit!==null)STATE.windAccuracy50=hit;
+  if(count!==null)STATE.windAccuracyCount=Math.max(0,Math.round(count));
+  STATE.windAccuracyWindow="24h";
+}
+async function loadReportIndex(){
+  if(STATE.reportIndex)return STATE.reportIndex;
+  try{const got=await fetchJsonAny(REPORT_INDEX_CANDIDATES);STATE.reportIndex=got.data;return STATE.reportIndex;}catch(_){return null;}
+}
+async function downloadMonthlyExcel(){
+  const btn=document.getElementById("excelMonthlyBtn");const old=btn?.textContent;if(btn)btn.textContent="Excel確認中...";
+  try{
+    const idx=await loadReportIndex();
+    const ym=new Date().toISOString().slice(0,7);
+    let url=idx?.current_month_url || idx?.monthly_latest_url || idx?.latest_url || idx?.latest_docs_url || `./reports/swift_space_weather_${ym}.xlsx`;
+    if(url.startsWith("./docs/reports/"))url="./reports/"+url.slice("./docs/reports/".length);
+    const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";a.download="";document.body.appendChild(a);a.click();a.remove();
+  }catch(e){alert(`Excelを開けませんでした: ${e.message}`);}finally{if(btn)btn.textContent=old||"Excel（月次）";}
+}
+
+function normalizeWindArchive(payload){
+  const rows=genericRows(payload,["items","records","data"]),out=[];
+  for(const r of rows){
+    const it=new Date(r.issued_at||r.issuedAt||0).getTime(),tt=new Date(r.target_time||r.time||0).getTime(),sp=firstFinite(r,["predicted_speed","speed","swift_cme_enhanced_speed"]);
+    if(Number.isFinite(it)&&Number.isFinite(tt)&&Number.isFinite(sp))out.push({_issued:it,issued_at:new Date(it).toISOString(),_t:tt,time:new Date(tt).toISOString(),speed:sp,leadHours:firstFinite(r,["lead_hours"])});
+  }
+  return out.sort((a,b)=>a._issued-b._issued||a._t-b._t);
+}
+function selectedPastWindSnapshots(){
+  const rows=STATE.windPastForecast||[],targets=[24,48,72],now=Date.now(),groups=new Map();
+  for(const r of rows){const k=r.issued_at;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r);}
+  const issues=[...groups.keys()].map(k=>({k,t:new Date(k).getTime()})).filter(x=>Number.isFinite(x.t));
+  return targets.map((h,idx)=>{if(!issues.length)return null;const want=now-h*3600e3;let best=issues[0];for(const q of issues)if(Math.abs(q.t-want)<Math.abs(best.t-want))best=q;if(Math.abs(best.t-want)>9*3600e3)return null;return{hours:h,rows:groups.get(best.k),issued:best.t,index:idx};}).filter(Boolean);
+}
+function nearestObservedWind(t,maxGapH=1.5){
+  if(!STATE.windObserved.length)return null;let best=null,bd=Infinity;for(const r of STATE.windObserved){const d=Math.abs(r._t-t);if(d<bd){bd=d;best=r;}}return best&&bd<=maxGapH*3600e3?best:null;
+}
+function pastSnapshotSkill(snapshot){
+  let n=0,hit=0,sum=0,bias=0;for(const r of snapshot?.rows||[]){if(r._t>Date.now())continue;const o=nearestObservedWind(r._t);if(!o)continue;const e=r.speed-o.speed;n++;sum+=Math.abs(e);bias+=e;if(Math.abs(e)<=50)hit++;}
+  return n?{n,hit:100*hit/n,mae:sum/n,bias:bias/n}:null;
+}
+
+async function loadSwiftWind(){
+  setSource("swiftWind","LOADING...");
+  let latestObj=null,latestUrl="",historyObj=null,archiveObj=null;
+  try{const got=await fetchJsonAny(SWIFT_WIND_LATEST);latestObj=got.data;latestUrl=got.url;}catch(_){ }
+  try{historyObj=(await fetchJsonAny(NOAA_WIND_HISTORY)).data;}catch(_){ }
+  try{archiveObj=(await fetchJsonAny(SWIFT_WIND_ARCHIVE)).data;}catch(_){ }
+  if(archiveObj)STATE.windPastForecast=normalizeWindArchive(archiveObj);
+  if(historyObj)STATE.windObserved=mergeWind(STATE.windObserved,normalizeWindPayload(historyObj,"observed"));
+  if(latestObj){
+    updateWindAccuracyFromPayload(latestObj);
+    const recs=Array.isArray(latestObj.records)?latestObj.records:[];
+    const fc=Array.isArray(latestObj.forecast)?latestObj.forecast:[];
+    STATE.windObserved=mergeWind(STATE.windObserved,normalizeWindPayload(recs,"auto").filter(x=>x.kind==="observed"));
+    STATE.windForecast=mergeWind(STATE.windForecast,normalizeWindPayload([...recs,...fc],"auto").filter(x=>x.kind==="forecast"));
+  }
+  const cutoff=Date.now()-35*86400e3;STATE.windObserved=STATE.windObserved.filter(x=>x._t>=cutoff);
+  STATE.windForecast=STATE.windForecast.filter(x=>x._t>=Date.now()-3*3600e3&&x._t<=Date.now()+6*86400e3);
+  STATE.windVersion++;STATE.propagationCache.clear();
+  if(latestObj||historyObj)setSource("swiftWind",`OK: obs ${STATE.windObserved.length} / forecast ${STATE.windForecast.length} / archive ${STATE.windPastForecast.length}`,{latest:latestObj,url:latestUrl});
+  else setSource("swiftWind","FAILED",null,"SWIFT Wind / NOAA history not found");
+  rebuildAll();drawWindGraph();
+}
+function interpolateWind(series,t,maxGapH=6){
+  if(!series?.length)return null;const x=t instanceof Date?t.getTime():Number(t);let lo=0,hi=series.length-1;
+  if(x<=series[0]._t)return Math.abs(series[0]._t-x)<=maxGapH*3600e3?series[0].speed:null;
+  if(x>=series[hi]._t)return Math.abs(x-series[hi]._t)<=maxGapH*3600e3?series[hi].speed:null;
+  while(hi-lo>1){const m=(lo+hi)>>1;if(series[m]._t<=x)lo=m;else hi=m;}
+  const a=series[lo],b=series[hi],gap=b._t-a._t;if(gap>maxGapH*3600e3)return null;const f=(x-a._t)/(gap||1);return a.speed+(b.speed-a.speed)*f;
+}
+function windStateAt(t){
+  const d=t instanceof Date?t:new Date(t),x=d.getTime(),now=Date.now();
+  if(x<=now+30*60e3){const v=interpolateWind(STATE.windObserved,x,4);if(Number.isFinite(v))return{speed:v,source:"NOAA observed"};}
+  const vf=interpolateWind(STATE.windForecast,x,8);if(Number.isFinite(vf))return{speed:vf,source:"SWIFT Wind AI"};
+  const wsa=getBackgroundWindSpeedFromWSA(d);if(Number.isFinite(wsa))return{speed:wsa,source:"WSA"};
+  return{speed:clamp(num(STATE.env.speed,425),250,900),source:"NOAA current/fallback"};
+}
+function getSolarWindAt(t){return windStateAt(t).speed;}
+
+
+function genericRows(payload,keys=["records","forecast","items","data"]){
+  if(Array.isArray(payload))return payload.filter(x=>x&&typeof x==="object");
+  if(payload&&typeof payload==="object")for(const k of keys)if(Array.isArray(payload[k]))return payload[k].filter(x=>x&&typeof x==="object");
+  return[];
+}
+function normalizeKpObserved(payload){
+  const out=[];for(const r of genericRows(payload,["kp_history","records","items","data"])){const t=windTime(r),kp=firstFinite(r,["kp","kp_index","Kp"]);if(Number.isFinite(t)&&Number.isFinite(kp))out.push({_t:t,time:new Date(t).toISOString(),kp:Number(kp),source:r.source||"NOAA observed",raw:r});}return out.sort((a,b)=>a._t-b._t);
+}
+function normalizeKpForecast(payload){
+  const out=[];
+  for(const r of genericRows(payload,["kp_forecast","forecast","records","items","data"])){
+    const t=windTime(r);if(!Number.isFinite(t))continue;
+    const kp=firstFinite(r,["kp","predicted_kp","forecast_kp","Kp"]);if(!Number.isFinite(kp))continue;
+    out.push({_t:t,time:new Date(t).toISOString(),kp:Number(kp),gScale:r.g_scale||r.G_Scale||"",confidence:firstFinite(r,["confidence"]),source:r.source||"SWIFT Kp AI",raw:r});
+  }
+  const now=Date.now(),limit=now+72*3600e3;
+  return out.filter(r=>r._t<=limit).sort((a,b)=>a._t-b._t);
+}
+function normalizeBzForecast(payload){
+  const out=[];
+  for(const r of genericRows(payload,["bz_forecast","forecast","records","items","data"])){
+    const t=windTime(r);if(!Number.isFinite(t))continue;
+    const bz=firstFinite(r,["bz_forecast","Bz_Forecast_nT","bz","predicted_bz"]),bzMin=firstFinite(r,["bz_min_forecast","Bz_Min_Forecast_nT","bz_min"]),bt=firstFinite(r,["bt_forecast","Bt_Forecast_nT","bt"]),prob=firstFinite(r,["southward_bz_probability","Southward_Probability_pct"]);
+    if(!Number.isFinite(bz)&&!Number.isFinite(bzMin)&&!Number.isFinite(bt))continue;
+    out.push({_t:t,time:new Date(t).toISOString(),bz:Number.isFinite(bz)?bz:null,bzMin:Number.isFinite(bzMin)?bzMin:null,bt:Number.isFinite(bt)?bt:null,southProb:Number.isFinite(prob)?prob:null,risk:r.bz_risk||r.Risk||"",source:r.source||"SWIFT Bz AI",raw:r});
+  }
+  return out.sort((a,b)=>a._t-b._t);
+}
+function mergeTimed(a,b,key){const m=new Map();for(const r of [...(a||[]),...(b||[])])if(Number.isFinite(r?._t))m.set(Math.round(r._t/60000),r);return[...m.values()].sort((x,y)=>x._t-y._t);}
 async function loadReportUiFeed(){
   setSource("reportUi","LOADING...");
   let feed=null;
@@ -1537,52 +1608,21 @@ function makeHSSCorridor(im,ch,time){
   root.userData={kind:"hss",sourceId:im.source_id,arrival:im.arrival_time,confidence:conf};
   return root;
 }
-function makeHistoricCoronalHoleMarker(rec,time=STATE.selectedTime){
-  const age=Math.max(0,Math.min(27,chRecordAgeDays(rec,time)||0));
-  const lat=num(rec?.latitude_deg,0)*Math.PI/180;
-  const lon=persistedCHLongitudeDeg(rec,time)*Math.PI/180;
-  const r=8.80;
-  const p=new THREE.Vector3(r*Math.cos(lat)*Math.cos(lon),r*Math.sin(lat),r*Math.cos(lat)*Math.sin(lon));
-  const n=p.clone().normalize();
-  const width=clamp(num(rec.width_deg_proxy,8),4,88)*Math.PI/180;
-  const patchR=clamp(8.55*Math.sin(width*.23),.18,2.5);
-  const fade=1-(age/27);
-  const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),n);
-  const g=new THREE.Group();
-  const disk=new THREE.Mesh(
-    new THREE.CircleGeometry(patchR,28),
-    new THREE.MeshBasicMaterial({color:0x1e2552,transparent:true,opacity:.08+.18*fade,side:THREE.DoubleSide,depthWrite:false})
-  );
-  disk.position.copy(p);disk.quaternion.copy(q);g.add(disk);
-  const ring=new THREE.Mesh(
-    new THREE.RingGeometry(patchR*.88,patchR*1.02,40),
-    new THREE.MeshBasicMaterial({color:0x6b82ff,transparent:true,opacity:.05+.22*fade,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false})
-  );
-  ring.position.copy(n.clone().multiplyScalar(8.92));ring.quaternion.copy(q);g.add(ring);
-  g.userData={kind:"coronalHistory",ageDays:age};
-  return g;
-}
 function toggleCoronalHole3D(){
   const on=document.getElementById("showCoronalHoles")?.checked!==false;
-  const histOn=document.getElementById("showCoronalHoleHistory")?.checked!==false;
   if(STATE.three.coronalHoleGroup)STATE.three.coronalHoleGroup.visible=on;
   if(STATE.three.hssGroup)STATE.three.hssGroup.visible=on;
-  if(STATE.three.coronalHistoryGroup)STATE.three.coronalHistoryGroup.visible=on&&histOn;
 }
 function rebuildCoronalHole3D(time=STATE.selectedTime){
   if(!STATE.three.ready||!STATE.three.coronalHoleGroup||!STATE.three.hssGroup)return;
-  const cg=STATE.three.coronalHoleGroup,hg=STATE.three.hssGroup,pg=STATE.three.coronalHistoryGroup;
+  const cg=STATE.three.coronalHoleGroup,hg=STATE.three.hssGroup;
   while(cg.children.length)cg.remove(cg.children[0]);
   while(hg.children.length)hg.remove(hg.children[0]);
-  if(pg)while(pg.children.length)pg.remove(pg.children[0]);
-  for(const ch of (STATE.coronalHoles||[]).slice(0,16))cg.add(makeCoronalHoleMarker(ch));
-  if(pg){
-    const persisted=persistentCoronalHoleRecords(time);
-    for(const rec of persisted)pg.add(makeHistoricCoronalHoleMarker(rec,time));
-    pg.userData.lastTime=(time instanceof Date?time:new Date(time)).getTime();
-  }
+
+  for(const ch of (STATE.coronalHoles||[]).slice(0,12))cg.add(makeCoronalHoleMarker(ch));
+
   const byId=new Map((STATE.coronalHoles||[]).map(ch=>[String(ch.id),ch]));
-  for(const im of (STATE.coronalHoleImpacts||[]).slice(0,8)){
+  for(const im of (STATE.coronalHoleImpacts||[]).slice(0,6)){
     const ch=byId.get(String(im.source_id))||im;
     hg.add(makeHSSCorridor(im,ch,time));
   }
@@ -1590,25 +1630,17 @@ function rebuildCoronalHole3D(time=STATE.selectedTime){
 }
 function updateCoronalHole3D(time){
   if(!STATE.three.ready)return;
+  // CH markers are tied to the observed solar disk and co-rotate with the photosphere.
   if(STATE.three.coronalHoleGroup)STATE.three.coronalHoleGroup.rotation.y=solarSynodicRotationRad(time);
-  const pg=STATE.three.coronalHistoryGroup;
-  const tm=(time instanceof Date?time:new Date(time)).getTime();
-  if(pg){
-    const last=Number(pg.userData.lastTime);
-    if(!Number.isFinite(last)||Math.abs(tm-last)>2*60*60e3){
-      while(pg.children.length)pg.remove(pg.children[0]);
-      for(const rec of persistentCoronalHoleRecords(time))pg.add(makeHistoricCoronalHoleMarker(rec,time));
-      pg.userData.lastTime=tm;
-    }
-  }
-  const hg=STATE.three.hssGroup;
+  // Rebuild HSS corridors only when timeline shifts materially.
+  const hg=STATE.three.hssGroup,tm=(time instanceof Date?time:new Date(time)).getTime();
   if(hg){
     const last=Number(hg.userData.lastTime);
     if(!Number.isFinite(last)||Math.abs(tm-last)>60*60e3){
       hg.userData.lastTime=tm;
       const byId=new Map((STATE.coronalHoles||[]).map(ch=>[String(ch.id),ch]));
       while(hg.children.length)hg.remove(hg.children[0]);
-      for(const im of (STATE.coronalHoleImpacts||[]).slice(0,8)){
+      for(const im of (STATE.coronalHoleImpacts||[]).slice(0,6)){
         const ch=byId.get(String(im.source_id))||im;
         const corridor=makeHSSCorridor(im,ch,time);
         const state=chImpactState(im,time);
@@ -1770,10 +1802,9 @@ function init3D(){
   const windParticles=new THREE.Points(pGeo,pMat);scene.add(windParticles);windParticles.userData={count:pCount,rAU:pR,lane:pLane,lat:pLat,seed:pSeed};
 
   const coronalHoleGroup=new THREE.Group();coronalHoleGroup.position.copy(sun.position);scene.add(coronalHoleGroup);
-  const coronalHistoryGroup=new THREE.Group();coronalHistoryGroup.position.copy(sun.position);scene.add(coronalHistoryGroup);
   const hssGroup=new THREE.Group();scene.add(hssGroup);
   const cmeGroup=new THREE.Group();scene.add(cmeGroup);
-  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,solarStreamers,sunLoopGroup,coronaShells,earth,earthNight,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock(),solarWindSheet,parkerGroup,windParticles,coronalHoleGroup,coronalHistoryGroup,hssGroup,windSpeed:425,impactStrength:0};
+  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,solarStreamers,sunLoopGroup,coronaShells,earth,earthNight,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock(),solarWindSheet,parkerGroup,windParticles,coronalHoleGroup,hssGroup,windSpeed:425,impactStrength:0};
   rebuildCoronalHole3D(STATE.selectedTime);animate3D();update3D(STATE.selectedTime);
 }
 
