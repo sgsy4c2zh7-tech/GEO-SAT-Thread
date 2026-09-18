@@ -69,7 +69,7 @@ IMAGE_SCALE = 2.5          # arcsec / px
 SIZE = 1024
 SOLAR_RADIUS_ARCSEC = 960.0
 SOLAR_RADIUS_PX = SOLAR_RADIUS_ARCSEC / IMAGE_SCALE
-RETENTION_DAYS = 730
+RETENTION_DAYS = 30
 
 CHANNELS = {
     "aia171": "[SDO,AIA,AIA,171,1,100]",
@@ -362,7 +362,7 @@ def main() -> None:
 
     hist = load(HISTORY, {"items":[]}) or {"items":[]}
     items = [x for x in hist.get("items",[]) if isinstance(x,dict)]
-    # Store one compact snapshot per >= 2 h to keep two years manageable.
+    # Store one compact snapshot per >= 2 h. history.json keeps only the latest 30 days.
     last_t = None
     if items:
         try:
@@ -378,16 +378,37 @@ def main() -> None:
             "coronal_holes": features,
             "earth_impacts": impacts,
         })
-    cutoff = now-timedelta(days=RETENTION_DAYS)
-    kept=[]
+    # Keep only the latest 30 days of coronal-hole history.
+    # A small future-time tolerance protects the file from malformed timestamps.
+    cutoff = now - timedelta(days=RETENTION_DAYS)
+    future_limit = now + timedelta(hours=6)
+
+    kept = []
     for xh in items:
         try:
-            t=datetime.fromisoformat(str(xh.get("time","")).replace("Z","+00:00"))
-            if t.tzinfo is None:t=t.replace(tzinfo=timezone.utc)
-            if t>=cutoff:kept.append(xh)
+            t = datetime.fromisoformat(str(xh.get("time", "")).replace("Z", "+00:00"))
+            if t.tzinfo is None:
+                t = t.replace(tzinfo=timezone.utc)
+            t = t.astimezone(timezone.utc)
+
+            if cutoff <= t <= future_limit:
+                kept.append(xh)
         except Exception:
             continue
-    save(HISTORY, {"updated_at": iso(now), "retention_days": RETENTION_DAYS, "items": kept})
+
+    # Ensure chronological order and prevent accidental unlimited growth.
+    kept.sort(key=lambda x: str(x.get("time", "")))
+
+    save(
+        HISTORY,
+        {
+            "updated_at": iso(now),
+            "retention_days": RETENTION_DAYS,
+            "snapshot_interval_hours": 2,
+            "item_count": len(kept),
+            "items": kept,
+        },
+    )
     print(json.dumps({
         "model": payload["model"],
         "regions": len(features),
