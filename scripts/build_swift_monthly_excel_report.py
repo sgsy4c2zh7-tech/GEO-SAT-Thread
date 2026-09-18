@@ -6,7 +6,7 @@ Output example:
 - docs/reports/index.json
 
 The same YYYY-MM workbook is overwritten on each run during the month.
-Past monthly workbooks are retained, so there is exactly one Excel file per month.
+Past monthly workbooks are retained for 24 months, so there is exactly one Excel file per UTC month and two years remain available for research.
 
 Workbook contents:
 - Monthly_Summary: month KPI summary and daily summary table
@@ -36,6 +36,7 @@ MONTHLY_NAME = "swift_space_weather_{month}.xlsx"
 BIN_HOURS = 1
 FORECAST_DAYS = 3
 HISTORY_DAYS = 40  # enough to cover a complete current UTC month
+REPORT_RETENTION_MONTHS = 24
 
 
 def utcnow() -> datetime:
@@ -630,6 +631,60 @@ def month_metric_rows(
 
 
 
+def load_research_validation(month: str) -> dict[str, Any]:
+    month_path = DATA / "validation" / "monthly" / f"{month}.json"
+    obj = load_json(month_path)
+    if isinstance(obj, dict):
+        return obj
+    obj = load_json(DATA / "validation" / "latest.json")
+    return obj if isinstance(obj, dict) else {}
+
+
+def load_enlil_latest() -> dict[str, Any]:
+    obj = load_json(DATA / "enlil" / "latest.json")
+    return obj if isinstance(obj, dict) else {}
+
+
+def load_wsa_boundary() -> dict[str, Any]:
+    obj = load_json(DATA / "enlil" / "wsa_boundary.json")
+    return obj if isinstance(obj, dict) else {}
+
+
+def metric_rows_from_validation(validation: dict[str, Any]) -> list[dict[str, Any]]:
+    out=[]
+    models=validation.get("models") or {}
+    for model_name,block in models.items():
+        if not isinstance(block,dict):
+            continue
+        for period in ("last_7d","last_30d","all_available"):
+            m=block.get(period)
+            if not isinstance(m,dict):
+                continue
+            row={"Model":model_name,"Period":period}
+            row.update({k:v for k,v in m.items() if not isinstance(v,(dict,list))})
+            out.append(row)
+        for m in block.get("by_lead_day_30d") or []:
+            if isinstance(m,dict):
+                row={"Model":model_name,"Period":f"30d_lead_day_{m.get('lead_day')}"}
+                row.update({k:v for k,v in m.items() if k!="lead_day" and not isinstance(v,(dict,list))})
+                out.append(row)
+    return out
+
+
+def prune_monthly_reports(now: datetime) -> None:
+    # Keep current month plus previous 23 UTC months.
+    y,m=now.year,now.month
+    idx=y*12+(m-1)
+    cutoff_idx=idx-(REPORT_RETENTION_MONTHS-1)
+    for path in OUT_DOCS.glob("swift_space_weather_????-??.xlsx"):
+        try:
+            ym=path.stem[-7:]; yy=int(ym[:4]); mm=int(ym[5:7]); pidx=yy*12+(mm-1)
+            if pidx<cutoff_idx:
+                path.unlink()
+        except Exception:
+            continue
+
+
 def load_wind_forecast_archive() -> list[dict[str, Any]]:
     path = DATA / "swift-wind" / "forecast-archive.json"
     obj = load_json(path) or {}
@@ -689,6 +744,11 @@ def main() -> None:
     cmes = load_cme_arrivals()
     cme_model = load_cme_boost_model()
     bz_ai = load_bz_ai()
+    validation = load_research_validation(month)
+    coronal_holes = load_json(DATA / 'coronal-holes' / 'latest.json') or {}
+    coronal_hole_history = load_json(DATA / 'coronal-holes' / 'history.json') or {}
+    enlil_latest = load_enlil_latest()
+    wsa_boundary = load_wsa_boundary()
 
     wind_hourly_all = bin_hourly(wind_hist, ["speed", "density"], HISTORY_DAYS)
     mag_hourly_all = bin_hourly(mag_hist, ["bz", "bt"], HISTORY_DAYS)
@@ -768,6 +828,21 @@ def main() -> None:
             "recent_trend_3h": (swift_kp or {}).get("recent_trend_3h"),
         },
         "wind_accuracy_current": current_acc,
+        "research_validation": {
+            "models": validation.get("models", {}),
+            "uncertainty": validation.get("uncertainty", {}),
+            "methodology": validation.get("methodology", {}),
+        },
+        "enlil": {
+            "updated_at": enlil_latest.get("updated_at"),
+            "model": enlil_latest.get("model"),
+            "forecast": enlil_latest.get("forecast", []),
+            "wsa_boundary": {
+                "updated_at": wsa_boundary.get("updated_at"),
+                "source_file": wsa_boundary.get("source_file"),
+                "stats": wsa_boundary.get("stats"),
+            },
+        },
         "excel_file": monthly_name,
     }
     (OUT_DOCS / "ui_forecast_latest.json").write_text(json.dumps(ui_payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -899,11 +974,124 @@ def main() -> None:
     ws.write(9, 0, "Learning samples", fmt["section"]); write_table(ws, 10, 0, ["ID", "Impact_Class", "Arrival_UTC", "Speed_km_s", "Baseline_Speed", "Post_Peak_Speed", "Observed_Delta_V"], sample_rows, fmt)
     ws.set_column("A:A", 35); ws.set_column("B:G", 18)
 
+
+    # Coronal-hole detections and HSS priors (two-year history retained in JSON).
+    ws = wb.add_worksheet("Coronal_Holes")
+    headers = ["Snapshot UTC","CH ID","Area frac","Latitude deg","CMD deg","Width deg proxy","DCHB deg proxy",
+               "Unipolarity proxy","Earth score","Source strength","Pred peak km/s","Pred deltaV km/s",
+               "Arrival UTC","Confidence","Method"]
+    for c,h in enumerate(headers): ws.write(0,c,h,fmt["head"])
+    rr=1
+    for snap in (coronal_hole_history.get("items") or []):
+        st=snap.get("time")
+        impacts={str(x.get("source_id")):x for x in (snap.get("earth_impacts") or [])}
+        for ch in (snap.get("coronal_holes") or []):
+            im=impacts.get(str(ch.get("id")),{})
+            vals=[st,ch.get("id"),ch.get("area_fraction_disk_deprojected"),ch.get("latitude_deg"),
+                  ch.get("central_meridian_deg"),ch.get("width_deg_proxy"),ch.get("dchb_proxy_deg"),
+                  ch.get("hmi_unipolarity_proxy"),ch.get("earth_facing_score"),ch.get("source_strength"),
+                  ch.get("predicted_peak_speed_km_s_prior"),ch.get("predicted_delta_v_km_s_prior"),
+                  im.get("arrival_time"),im.get("confidence"),im.get("method")]
+            for c,v in enumerate(vals):ws.write(rr,c,v)
+            rr+=1
+    ws.freeze_panes(1,0);ws.autofilter(0,0,max(0,rr-1),len(headers)-1)
+    ws.set_column(0,1,22);ws.set_column(2,13,14);ws.set_column(14,14,48)
+
+    # Research-grade operational verification. These are issued forecasts scored only after observations arrive.
+    pairs = validation.get("pairs") or {}
+    ws = wb.add_worksheet("Research_Metrics")
+    ws.merge_range("A1:L1", f"Operational forecast verification — {month} UTC", fmt["title"])
+    metric_rows = metric_rows_from_validation(validation)
+    metric_headers = ["Model","Period","count","mae","median_ae","rmse","bias","p90_ae","hit_rate_50","hit_rate_067","hit_rate_1","brier_score","direction_hit_rate_threshold60","pearson_r","mae_hours","bias_hours","within_6h","within_12h"]
+    write_table(ws, 2, 0, metric_headers, metric_rows, fmt)
+    ws.set_column("A:B", 22); ws.set_column("C:R", 14)
+    ws.write(1, 0, "Primary metrics are true issued-forecast verification, not hindcast fit.", fmt["section"])
+
+    ws = wb.add_worksheet("Wind_Verification")
+    wv=[]
+    for r in pairs.get("wind",[]):
+        it=parse_time(r.get("issued_at"));tt=parse_time(r.get("target_time"))
+        wv.append({"Issued_UTC":it.replace(tzinfo=None) if it else None,"Target_UTC":tt.replace(tzinfo=None) if tt else None,"Lead_h":r.get("lead_hours"),"Predicted_km_s":r.get("predicted"),"Observed_km_s":r.get("observed"),"Error_km_s":r.get("error"),"Abs_Error_km_s":r.get("abs_error"),"Model":r.get("model")})
+    write_table(ws,0,0,["Issued_UTC","Target_UTC","Lead_h","Predicted_km_s","Observed_km_s","Error_km_s","Abs_Error_km_s","Model"],wv,fmt)
+    ws.set_column("A:B",19);ws.set_column("C:G",16);ws.set_column("H:H",34)
+
+    ws = wb.add_worksheet("ENLIL_Verification")
+    ev=[]
+    for r in pairs.get("enlil_wind",[]):
+        it=parse_time(r.get("issued_at"));tt=parse_time(r.get("target_time"))
+        ev.append({"Issued_UTC":it.replace(tzinfo=None) if it else None,"Target_UTC":tt.replace(tzinfo=None) if tt else None,"Lead_h":r.get("lead_hours"),"ENLIL_km_s":r.get("predicted"),"Observed_km_s":r.get("observed"),"Error_km_s":r.get("error"),"Abs_Error_km_s":r.get("abs_error")})
+    write_table(ws,0,0,["Issued_UTC","Target_UTC","Lead_h","ENLIL_km_s","Observed_km_s","Error_km_s","Abs_Error_km_s"],ev,fmt)
+    ws.set_column("A:B",19);ws.set_column("C:G",16)
+
+    ws = wb.add_worksheet("Kp_Verification")
+    kv=[]
+    for r in pairs.get("kp",[]):
+        it=parse_time(r.get("issued_at"));tt=parse_time(r.get("target_time"))
+        kv.append({"Issued_UTC":it.replace(tzinfo=None) if it else None,"Target_UTC":tt.replace(tzinfo=None) if tt else None,"Lead_h":r.get("lead_hours"),"Predicted_Kp":r.get("predicted"),"Observed_Kp":r.get("observed"),"Error_Kp":r.get("error"),"Abs_Error_Kp":r.get("abs_error"),"Within_0.67":r.get("within_067"),"Within_1.0":r.get("within_1"),"Model":r.get("model")})
+    write_table(ws,0,0,["Issued_UTC","Target_UTC","Lead_h","Predicted_Kp","Observed_Kp","Error_Kp","Abs_Error_Kp","Within_0.67","Within_1.0","Model"],kv,fmt)
+    ws.set_column("A:B",19);ws.set_column("C:I",15);ws.set_column("J:J",34)
+
+    ws = wb.add_worksheet("Bz_Verification")
+    bv=[]
+    for r in pairs.get("bz",[]):
+        it=parse_time(r.get("issued_at"));tt=parse_time(r.get("target_time"))
+        bv.append({"Issued_UTC":it.replace(tzinfo=None) if it else None,"Target_UTC":tt.replace(tzinfo=None) if tt else None,"Lead_h":r.get("lead_hours"),"Forecast_BzMin_nT":r.get("predicted_bz_min"),"Observed_BzMin_nT":r.get("observed_bz_min"),"Error_nT":r.get("error_bz_min"),"Southward_Prob_pct":r.get("southward_probability"),"Observed_Southward":r.get("observed_southward"),"Brier":r.get("brier")})
+    write_table(ws,0,0,["Issued_UTC","Target_UTC","Lead_h","Forecast_BzMin_nT","Observed_BzMin_nT","Error_nT","Southward_Prob_pct","Observed_Southward","Brier"],bv,fmt)
+    ws.set_column("A:B",19);ws.set_column("C:I",18)
+
+    ws = wb.add_worksheet("CME_Verification")
+    cv=[]
+    for r in pairs.get("cme",[]):
+        st=parse_time(r.get("start_time"));pa=parse_time(r.get("predicted_arrival"));oa=parse_time(r.get("observed_arrival_proxy"))
+        cv.append({"Event_ID":r.get("event_id"),"Start_UTC":st.replace(tzinfo=None) if st else None,"Predicted_Arrival_UTC":pa.replace(tzinfo=None) if pa else None,"Observed_Shock_Proxy_UTC":oa.replace(tzinfo=None) if oa else None,"ETA_Error_h":r.get("arrival_error_hours"),"Abs_ETA_Error_h":r.get("abs_arrival_error_hours"),"Shock_Proxy_Score":r.get("shock_proxy_score"),"Initial_Speed_km_s":r.get("initial_speed_km_s"),"Baseline_Wind_km_s":r.get("baseline_speed_km_s"),"Impact_Class":r.get("impact_class"),"Method":r.get("verification_method")})
+    write_table(ws,0,0,["Event_ID","Start_UTC","Predicted_Arrival_UTC","Observed_Shock_Proxy_UTC","ETA_Error_h","Abs_ETA_Error_h","Shock_Proxy_Score","Initial_Speed_km_s","Baseline_Wind_km_s","Impact_Class","Method"],cv,fmt)
+    ws.set_column("A:A",32);ws.set_column("B:D",20);ws.set_column("E:J",17);ws.set_column("K:K",65)
+
+    ws = wb.add_worksheet("Uncertainty")
+    ur=[]
+    for family,vals in (validation.get("uncertainty") or {}).items():
+        if not isinstance(vals,list):continue
+        for x in vals:
+            if isinstance(x,dict):ur.append({"Variable":family,**x})
+    write_table(ws,0,0,["Variable","lead_day","count","status","p10","p50","p90"],ur,fmt)
+    ws.set_column("A:A",26);ws.set_column("B:G",14)
+
+    ws = wb.add_worksheet("Kp_Observed")
+    ko=[]
+    for r in kp_hist:
+        t=r.get("_t")
+        if isinstance(t,datetime) and month_start<=t<month_end:
+            ko.append({"UTC":t.replace(tzinfo=None),"Kp":r.get("kp")})
+    write_table(ws,0,0,["UTC","Kp"],ko,fmt);ws.set_column("A:A",19);ws.set_column("B:B",12)
+
+    ws = wb.add_worksheet("ENLIL_Earth")
+    er=[]
+    for r in enlil_latest.get("records",[]):
+        t=parse_time(r.get("time"))
+        if t and month_start-timedelta(days=2)<=t<month_end+timedelta(days=4):
+            er.append({"UTC":t.replace(tzinfo=None),"Vr_km_s":r.get("v_r"),"Density_cm3":r.get("earth_particles_per_cm3"),"Cloud":r.get("cloud")})
+    write_table(ws,0,0,["UTC","Vr_km_s","Density_cm3","Cloud"],er,fmt);ws.set_column("A:A",19);ws.set_column("B:D",18)
+
+    ws = wb.add_worksheet("Methods")
+    method_rows=[
+        {"Item":"Wind verification","Definition":"Issued SWIFT forecast vs NOAA RTSW; error = forecast - observed; ±50 km/s hit is primary short-lead metric."},
+        {"Item":"Kp verification","Definition":"Issued 3-hour SWIFT Kp vs NOAA planetary K; MAE/bias and ±0.67/±1.0 Kp hit rates."},
+        {"Item":"Bz verification","Definition":"Forecast 3-hour Bz minimum vs observed 3-hour minimum; southward probability scored with Brier score."},
+        {"Item":"CME arrival","Definition":"NOAA speed/density shock proxy near predicted arrival. Keep this distinct from a manually adjudicated ICME boundary in publications."},
+        {"Item":"Uncertainty","Definition":"Empirical p10/p50/p90 forecast-minus-observation residuals from previous 30 days, split by lead day."},
+        {"Item":"DBM gamma","Definition":str(((validation.get("models") or {}).get("cme_arrival") or {}).get("dbm_gamma_fit"))},
+        {"Item":"WSA-ENLIL","Definition":"Official NOAA SWPC L1 time series plus NCEP WSA velocity boundary at 21.5 R_sun. Full 3-D ENLIL grid is not stored in this workbook."},
+        {"Item":"Retention","Definition":"Exactly one workbook per UTC month; current month overwritten each run; only latest 24 monthly workbooks retained."},
+    ]
+    write_table(ws,0,0,["Item","Definition"],method_rows,fmt);ws.set_column("A:A",24);ws.set_column("B:B",110)
+
     ws = wb.add_worksheet("Sources")
     source_rows = [
         {"Data": "NOAA RTSW solar wind", "Path_or_URL": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"},
         {"Data": "NOAA RTSW IMF", "Path_or_URL": "https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json"},
         {"Data": "NOAA Planetary K-index", "Path_or_URL": "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"},
+        {"Data": "NOAA WSA-ENLIL Earth/L1 time series", "Path_or_URL": "https://services.swpc.noaa.gov/json/enlil_time_series.json"},
+        {"Data": "NCEP WSA-Enlil operational model files", "Path_or_URL": "https://nomads.ncep.noaa.gov/pub/data/nccf/com/wsa_enlil/prod/"},
         {"Data": "SWIFT Wind AI", "Path_or_URL": "docs/data/swift-wind/latest.json"},
         {"Data": "SWIFT Wind verification", "Path_or_URL": "docs/data/swift-wind/verification.json"},
         {"Data": "SWIFT Kp AI", "Path_or_URL": "docs/data/swift-kp/latest.json"},
@@ -914,6 +1102,7 @@ def main() -> None:
 
     wb.close()
     tmp_path.replace(final_path)
+    prune_monthly_reports(now)
 
     monthly_files = sorted(OUT_DOCS.glob("swift_space_weather_????-??.xlsx"), reverse=True)
     index_payload = {
@@ -925,7 +1114,9 @@ def main() -> None:
         "ui_feed_url": "./reports/ui_forecast_latest.json",
         "monthly_files": [{"month": p.stem[-7:], "file": p.name, "url": f"./reports/{p.name}"} for p in monthly_files],
         "primary_wind_accuracy": {"definition": "|predicted - observed| <= 50 km/s", "window": "last_24h", **current_acc},
-        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Wind_Fcst_History", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Sources"],
+        "retention_months": REPORT_RETENTION_MONTHS,
+        "validation_feed_url": "./data/validation/ui_validation_latest.json",
+        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Wind_Fcst_History", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Coronal_Holes", "Research_Metrics", "Wind_Verification", "ENLIL_Verification", "Kp_Verification", "Bz_Verification", "CME_Verification", "Uncertainty", "Kp_Observed", "ENLIL_Earth", "Methods", "Sources"],
     }
     (OUT_DOCS / "index.json").write_text(json.dumps(index_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote {final_path}")

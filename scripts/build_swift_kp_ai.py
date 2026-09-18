@@ -51,7 +51,7 @@ COEF = OUT / "coefficients.json"
 TXT = OUT / "forecast.txt"
 INDEX = OUT / "index.json"
 
-MODEL = "SWIFT-Kp-AI-v0.8-adaptive-residual"
+MODEL = "SWIFT-Kp-AI-v0.9-adaptive-residual-CH"
 FORECAST_HOURS = 72
 STEP_HOURS = 3
 Kp_FLOOR = 0.33
@@ -339,6 +339,35 @@ def dvdt(t: datetime, speed_fn) -> float:
         return 0.0
     return (b - a) / 3.0
 
+
+# ---------- Coronal-hole/HSS context ----------
+_ch_obj = load_json(DATA / "coronal-holes" / "latest.json", {}) or {}
+_ch_impacts = [r for r in (_ch_obj.get("earth_impacts") or []) if isinstance(r, dict)]
+
+def ch_hss_context(t: datetime) -> dict[str, float]:
+    best_conf = 0.0
+    best_shape = 0.0
+    best_delta = 0.0
+    for e in _ch_impacts:
+        at = parse_time(e.get("arrival_time"))
+        if not at:
+            continue
+        dh = (t-at).total_seconds()/3600.0
+        if dh < -30 or dh > 42:
+            continue
+        conf = clamp(fnum(e.get("confidence"), 0.0), 0.0, 1.0)
+        shape = math.exp(-((dh/18.0)**2)) if dh < 0 else math.exp(-dh/24.0)
+        strength = conf*shape
+        if strength > best_conf*best_shape:
+            best_conf, best_shape = conf, shape
+            best_delta = max(0.0, fnum(e.get("predicted_delta_v_km_s_prior"),0.0))
+    return {
+        "confidence": best_conf,
+        "shape": best_shape,
+        "strength": best_conf*best_shape,
+        "delta_v_prior": best_delta,
+    }
+
 # ---------- Residual model ----------
 # Features are deliberately modest. The model predicts Delta-Kp relative to a
 # persistence/climatology anchor, not absolute Kp.
@@ -496,7 +525,7 @@ def lead_bias_correction(lead_h: float) -> dict[str, float]:
     else:
         alpha = 0.35
     correction = clamp(alpha * bias, -0.75, 0.75)
-    return {"day": day, "bias": bias, "alpha": alpha, "correction": correction, "n": n, "source": "v0.8-self-only"}
+    return {"day": day, "bias": bias, "alpha": alpha, "correction": correction, "n": n, "source": "v0.9-self-only"}
 
 
 def anchor_for_lead(lead_h: float) -> float:
@@ -514,6 +543,14 @@ def predict_raw(t: datetime) -> tuple[float, dict[str, Any]]:
     dv = dvdt(t, forecast_wind)
     x = feature_vector(v, bz, dv)
     driver = sum(BETA[i] * x[i] for i in range(len(BETA)))
+    ch = ch_hss_context(t)
+    # Coronal holes mainly inform persistence/likelihood of an HSS. They do not
+    # directly imply geomagnetic activity; only a small extra term is allowed,
+    # and it is modulated by southward-IMF probability/coupling.
+    speed_gate = clamp((v-480.0)/220.0, 0.0, 1.0)
+    bz_coupling_gate = clamp((bz["south_prob"]-0.35)/0.45, 0.0, 1.0)
+    ch_delta_kp = clamp(0.10*ch["strength"]*speed_gate + 0.22*ch["strength"]*speed_gate*bz_coupling_gate, 0.0, 0.28)
+    driver += ch_delta_kp
     bc = lead_bias_correction(lead_h)
 
     # Observed-Kp trend matters most in the first 18 h, then rapidly decays.
@@ -527,7 +564,8 @@ def predict_raw(t: datetime) -> tuple[float, dict[str, Any]]:
         0.35 * clamp((v - 500.0) / 250.0, 0.0, 1.0) +
         0.35 * clamp(bz["south_bz"] / 7.0, 0.0, 1.0) +
         0.20 * clamp((bz["south_prob"] - 0.45) / 0.35, 0.0, 1.0) +
-        0.10 * clamp((bz["bt"] - 7.0) / 8.0, 0.0, 1.0)
+        0.08 * clamp((bz["bt"] - 7.0) / 8.0, 0.0, 1.0) +
+        0.02 * ch["strength"]
     )
     if storm_score < 0.30:
         cap = max(anchor + 1.15, 3.0)
@@ -553,6 +591,8 @@ def predict_raw(t: datetime) -> tuple[float, dict[str, Any]]:
         "southward_probability_effective": round(bz["south_prob"]*100, 1),
         "south_bz_effective": round(bz["south_bz"], 2),
         "storm_score": round(storm_score, 3),
+        "coronal_hole_hss_strength": round(ch["strength"],3),
+        "coronal_hole_delta_kp": round(ch_delta_kp,3),
         "storm_cap": round(cap, 2),
         "lead_bias": {k: round(v, 3) if isinstance(v, float) else v for k, v in bc.items()},
     }
@@ -698,7 +738,7 @@ save_json(INDEX, {
 TXT.write_text("\n".join([
     ":Product: SWIFT 72-hour Kp Forecast v0.8",
     f":Issued: {NOW.strftime('%Y %b %d %H%M UTC')}",
-    f"# Kp floor={Kp_FLOOR}; adaptive residual model; self-only robust bias; confidence-gated Wind/Bz",
+    f"# Kp floor={Kp_FLOOR}; adaptive residual model; self-only robust bias; CH/HSS-aware confidence-gated Wind/Bz",
 ] + [f"{r['time']}  Kp={r['kp']:.2f}  {r['g_scale']}" for r in forecast]) + "\n", encoding="utf-8")
 
 print(json.dumps({

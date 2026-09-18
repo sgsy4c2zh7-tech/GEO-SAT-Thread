@@ -58,6 +58,7 @@ ACCURACY_HISTORY = OUT / "accuracy-history.json"
 ACCURACY_HISTORY_ALIAS = OUT / "history.json"
 CME_BOOST_MODEL = OUT / "cme-boost-model.json"
 CME_ARRIVALS = DOCS_DATA / "cme-arrivals" / "latest.json"
+CORONAL_HOLES = DOCS_DATA / "coronal-holes" / "latest.json"
 
 NOAA_HISTORY_PATHS = [
     DOCS_DATA / "noaa" / "wind_history.json",
@@ -70,7 +71,7 @@ NOAA_LIVE_URLS = [
 ]
 
 NOW = datetime.now(timezone.utc)
-FORECAST_HOURS = 120
+FORECAST_HOURS = 72
 PAST_RECORD_HOURS = 72
 STEP_HOURS = 1
 KEEP_ARCHIVE = 12000
@@ -461,7 +462,7 @@ def main() -> None:
         return clamp(total, 0, 450), best
 
     default_coeff = {
-        "version": "SWIFT-Wind-AI-v0.6-python-records",
+        "version": "SWIFT-Wind-AI-v0.8-CH-residual",
         "updated_at": iso_z(NOW),
         "weights": {
             "recent": 0.34,
@@ -469,6 +470,7 @@ def main() -> None:
             "hss_nonlinear": 0.17,
             "wsa": 0.10,
             "cme": 1.00,
+            "coronal_hole": 0.55,
         },
         "calibration": {"gain": 1.0, "offset": 0.0},
         "limits": {
@@ -496,6 +498,7 @@ def main() -> None:
                     ww[k] = float(num(loaded["weights"].get(k)))
         # Force CME weight to a sane range because old v0.4 files used 0.05.
         ww["cme"] = clamp(ww.get("cme", 1.0), 0.65, 1.35)
+        ww["coronal_hole"] = clamp(ww.get("coronal_hole", 0.55), 0.15, 0.85)
         coeff["weights"] = ww
         cc = dict(default_coeff["calibration"])
         if isinstance(loaded.get("calibration"), dict):
@@ -508,6 +511,47 @@ def main() -> None:
                 if num(loaded["limits"].get(k)) is not None:
                     ll[k] = float(num(loaded["limits"].get(k)))
         coeff["limits"] = ll
+
+
+    ch_obj = load_json(CORONAL_HOLES, {}) or {}
+    ch_impacts = [r for r in (ch_obj.get("earth_impacts") or []) if isinstance(r, dict)]
+
+    def ch_residual_at(t: datetime, background_speed: float) -> tuple[float, dict[str, Any] | None]:
+        """Return a conservative CH/HSS residual correction.
+
+        CH information is deliberately used as a *residual feature*.  The
+        background already contains rotation27/WSA information and may later be
+        blended with official WSA-ENLIL, so this term is reduced when the base
+        model already predicts a fast stream.
+        """
+        total = 0.0
+        best = None
+        for e in ch_impacts:
+            at = parse_time(e.get("arrival_time"))
+            if not at:
+                continue
+            dh = (t-at).total_seconds()/3600.0
+            if dh < -30 or dh > 42:
+                continue
+            conf = clamp(float(num(e.get("confidence"), 0.25)), 0.0, 1.0)
+            prior = max(0.0, float(num(e.get("predicted_delta_v_km_s_prior"), 0.0)))
+            # HSS arrival is broad: gradual rise, slower decay.
+            shape = math.exp(-((dh/18.0)**2)) if dh < 0 else math.exp(-dh/24.0)
+            # Avoid double counting when rotation/WSA/background already says fast.
+            duplicate_guard = 1.0 - 0.48*sigmoid((background_speed-515.0)/55.0)
+            add = prior * conf * shape * clamp(duplicate_guard, 0.38, 1.0)
+            total += add
+            if best is None or add > best["boost"]:
+                best = {
+                    "source_id": e.get("source_id"),
+                    "arrival_time": e.get("arrival_time"),
+                    "confidence": round(conf,3),
+                    "earth_facing_score": e.get("earth_facing_score"),
+                    "predicted_peak_speed_km_s_prior": e.get("predicted_peak_speed_km_s_prior"),
+                    "raw_residual_prior": round(prior,1),
+                    "boost": round(add,1),
+                }
+        return clamp(total, 0.0, 150.0), best
 
     def raw_components(t: datetime, calibration: bool = True) -> tuple[float, float, dict[str, Any]]:
         lead_h = max(0.0, (t - NOW).total_seconds() / 3600.0)
@@ -539,6 +583,9 @@ def main() -> None:
         den = sum(max(0.0, wgt) for wgt, _ in bg_sources.values()) or 1.0
         background = sum(max(0.0, wgt) * val for wgt, val in bg_sources.values()) / den
 
+        ch_boost, ch_meta = ch_residual_at(t, background)
+        background = background + coeff["weights"]["coronal_hole"] * ch_boost
+
         cme_boost, cme_meta = cme_boost_at(t)
         enhanced = background + coeff["weights"]["cme"] * cme_boost
 
@@ -562,6 +609,8 @@ def main() -> None:
             "wsa_speed": round(wsa_speed, 2) if wsa_speed is not None else None,
             "cme_effect_weighted": round(cme_boost, 2),
             "nearest_cme": cme_meta,
+            "coronal_hole_effect_weighted": round(ch_boost, 2),
+            "nearest_coronal_hole_hss": ch_meta,
         }
         return background, enhanced, meta
 
@@ -625,6 +674,8 @@ def main() -> None:
             "swift_background_speed": round(bg, 2),
             "swift_cme_enhanced_speed": round(enhanced, 2),
             "cme_effect_weighted": meta["cme_effect_weighted"],
+            "coronal_hole_effect_weighted": meta.get("coronal_hole_effect_weighted"),
+            "nearest_coronal_hole_hss": meta.get("nearest_coronal_hole_hss"),
             "features": meta,
             "kind": "hindcast",
         })
@@ -661,6 +712,8 @@ def main() -> None:
             "swift_background_speed": round(bg, 2),
             "swift_cme_enhanced_speed": round(enh, 2),
             "cme_effect_weighted": meta["cme_effect_weighted"],
+            "coronal_hole_effect_weighted": meta.get("coronal_hole_effect_weighted"),
+            "nearest_coronal_hole_hss": meta.get("nearest_coronal_hole_hss"),
             "speed": round(enh, 2),
             "speed_raw_nonlinear": round(rr["enhanced"], 2),
             "features": meta,
@@ -759,13 +812,13 @@ def main() -> None:
     b24 = verification["last_24h"]["background"]
     latest_payload = {
         "updated_at": iso_z(NOW),
-        "model": "SWIFT-Wind-AI-v0.6-python-records",
+        "model": "SWIFT-Wind-AI-v0.8-CH-residual",
         "source": "NOAA history + live NOAA RTSW + 27.27-day recurrence + optional WSA + learned CME boost",
         "forecast_days": FORECAST_HOURS / 24,
         "history_hours": PAST_RECORD_HOURS,
         "step_hours": STEP_HOURS,
         "target": "±50 km/s",
-        "formula": "Vsw = calibrated(background_recent_rotation27_HSS_WSA) + learned_CME_deltaV; future output is EMA/slew limited",
+        "formula": "Vsw = calibrated(recent + rotation27 + HSS + WSA + confidence-gated CH residual) + learned CME deltaV; future output is EMA/slew limited",
         "current": forecast[0] if forecast else None,
         "records": records,
         "forecast": forecast,
@@ -775,6 +828,7 @@ def main() -> None:
             "noaa_wind": noaa_meta,
             "wsa": wsa_meta,
             "cme_arrivals": cme_meta,
+            "coronal_holes": {"model": ch_obj.get("model"), "status": ch_obj.get("status"), "earth_impacts": len(ch_impacts)},
             "cme_boost_model": {
                 "file": str(CME_BOOST_MODEL.relative_to(ROOT)),
                 "sample_count": int(boost_model.get("sample_count", 0) or 0),
