@@ -31,7 +31,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "requests>=2.31.0" "numpy>=1.26" "scipy>=1.11" "Pillow>=10.0" "xlsxwriter>=3.2.0"
+          pip install "requests>=2.31.0" "numpy>=1.26" "scipy>=1.11" "Pillow>=10.0" "xlsxwriter>=3.2.0" "astropy>=6.0,<8"
+          python - <<'PY'
+          import astropy
+          from astropy.io import fits
+          print("astropy:", astropy.__version__)
+          print("astropy.io.fits: OK")
+          PY
 
       - name: Update NOAA observations
         run: python scripts/update_noaa_space_weather_history.py
