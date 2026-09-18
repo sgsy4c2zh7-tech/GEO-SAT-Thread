@@ -1,60 +1,32 @@
 {
-  "version": "SWIFT-Kp-AI-v0.4-nonlinear-fit",
-  "updated_at": "2026-09-18T05:17:09.623981+00:00",
+  "version": "SWIFT-Kp-AI-v0.8-adaptive-residual",
+  "updated_at": "2026-09-18T06:03:44Z",
   "feature_names": [
     "bias",
     "v_excess",
-    "hss_gate",
+    "v_high",
     "dv_pos",
     "south_prob",
     "south_bz",
-    "bt10",
-    "epsilon",
     "coupling",
-    "cme"
+    "bt_excess"
   ],
   "beta": [
-    0.04718,
-    0.43586,
-    -0.53846,
-    0.32038,
-    0.01652,
-    0.09435,
-    0.02359,
-    1.25555,
-    0.90703,
-    -0.16569
+    -0.15,
+    0.42,
+    0.18,
+    0.2,
+    0.2,
+    0.55,
+    0.28,
+    0.12
   ],
-  "calibration": {
-    "gain": 1.2998,
-    "offset": -0.4895
+  "fit": {
+    "status": "fallback",
+    "fit_count": 21
   },
-  "ridge_lambda": 0.35,
-  "notes": "Nonlinear Kp fitting using observed NOAA Kp, observed wind and IMF. Forecast uses SWIFT Wind AI + SWIFT Bz AI.",
-  "last_fit": {
-    "beta": [
-      0.04718,
-      0.43586,
-      -0.53846,
-      0.32038,
-      0.01652,
-      0.09435,
-      0.02359,
-      1.25555,
-      0.90703,
-      -0.16569
-    ],
-    "fit_count": 232,
-    "fit_mae": 0.765,
-    "fit_bias": -0.013,
-    "sample_start": "2026-08-17T05:21:13.563355+00:00",
-    "sample_end": "2026-09-16T05:21:13.563355+00:00"
-  },
-  "last_calibration_fit": {
-    "gain": 1.2998,
-    "offset": -0.4895,
-    "fit_count": 104,
-    "fit_mae": 0.864,
-    "fit_bias": -0.02
-  }
+  "kp_floor": 0.33,
+  "forecast_hours": 72,
+  "wind_gate": 0.442,
+  "bz_model_gate": 0.472
 }
