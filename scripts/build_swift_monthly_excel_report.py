@@ -980,7 +980,7 @@ def main() -> None:
     headers = ["Snapshot UTC","CH ID","Area frac","Latitude deg","CMD deg","Width deg proxy","DCHB deg proxy",
                "Unipolarity proxy","Earth score","Source strength","Pred peak km/s","Pred deltaV km/s",
                "Arrival UTC","Confidence","Method"]
-    for c,h in enumerate(headers): ws.write(0,c,h,fmt["head"])
+    for c,h in enumerate(headers): ws.write(0,c,h,fmt["header"])
     rr=1
     for snap in (coronal_hole_history.get("items") or []):
         st=snap.get("time")
