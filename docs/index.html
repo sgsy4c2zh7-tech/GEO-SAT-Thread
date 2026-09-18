@@ -211,8 +211,8 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
   <section class="card viewCard" id="threeViewCard" style="margin-top:14px">
     <div class="panelHeader">
       <div>
-        <div class="panelTitle">3D CME Propagation Model <span class="chip">DBM + Parker Spiral</span></div>
-        <div class="panelSub">DBMでCME速度を積分。Parker spiralは25.38日sidereal回転、太陽表面は27.2753日Carrington synodic回転でタイムライン同期。昼夜境界・雲・都市光を持つEarth、動的磁気圏、Parker磁力線に沿う速度依存太陽風粒子を同期表示。</div>
+        <div class="panelTitle">3D CME Propagation Model <span class="chip">DBM + Parker HMF / ENLIL-style Pinwheel</span></div>
+        <div class="panelSub">DBMでCME速度を積分。太陽風・HMFは Parker (1958) の凍結磁場/Archimedean spiral を用い、ENLILの回転する内側境界（典型的に21.5 R☉）を参考にした pinwheel 表示。各セクターのVswで巻き角を変え、タイムラインに合わせて扇風機状に共回転します。これはフル3D MHD ENLILそのものではなく、論文式に基づく軽量HMF可視化です。</div>
       </div>
       <div class="viewTools">
         <button onclick="set3DCamera('top')">Top</button>
@@ -232,7 +232,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
     <div class="modelStrip">
       <span class="modelChip">CME propagation: Drag-Based Model</span>
       <span class="modelChip">Solar rotation: 27.27 d</span>
-      <span class="modelChip">Parker: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
+      <span class="modelChip">Parker 1958 HMF</span><span class="modelChip">ENLIL-style 21.5 R☉ boundary</span><span class="modelChip">Ω: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
       <span class="modelChip">Solar wind: NOAA observed → SWIFT AI forecast → WSA fallback</span>
       <span class="modelChip">Magnetosphere: Pdyn / Bz / CME impact response</span>
     </div>
@@ -296,7 +296,22 @@ const SOLAR_CARRINGTON_SYNODIC_DAYS=27.2753;
 const SOLAR_CARRINGTON_SIDEREAL_DAYS=25.38;
 const OMEGA_SOLAR_SYNODIC=2*Math.PI/(SOLAR_CARRINGTON_SYNODIC_DAYS*86400);
 const OMEGA_PARKER=2*Math.PI/(SOLAR_CARRINGTON_SIDEREAL_DAYS*86400);
-const DBM={gamma:.3e-7,r0Km:21.5*R_SUN_KM,targetKm:AU_KM,visualTargetKm:1.45*AU_KM,dtSec:600,maxDays:10};
+
+// Heliospheric magnetic-field (HMF) visualization basis:
+// Parker, E.N. (1958), ApJ 128, 664, doi:10.1086/146579.
+// In the steady radial-wind approximation, magnetic flux is frozen into Vsw and
+// a field-line footpoint that rotates with Ω produces an Archimedean spiral:
+//   tau(r) = (r-r0)/Vsw
+//   phi(r,t) = phi_seed + Ω(t-t_ref) - Ω tau(r)
+//   Br(r) = Br0 (r0/r)^2
+//   Bphi/Br ≈ -Ω(r-r0) cos(lambda) / Vsw
+// WSA-ENLIL uses a time-dependent rotating inner boundary; ENLIL commonly starts
+// near 0.1 AU ~= 21.5 R_sun.  The browser view below borrows that rotating
+// pinwheel idea, but DOES NOT solve the full 3-D ideal-MHD ENLIL equations.
+const ENLIL_INNER_RSUN=21.5;
+const PARKER_SECTOR_COUNT=18;
+const PARKER_MAX_AU=1.45;
+const DBM={gamma:.3e-7,r0Km:ENLIL_INNER_RSUN*R_SUN_KM,targetKm:AU_KM,visualTargetKm:PARKER_MAX_AU*AU_KM,dtSec:600,maxDays:10};
 const SCENE={sunX:-78,earthX:78,span:156};
 const POST_PASS_HOURS=36;
 
@@ -677,7 +692,37 @@ function speedColorHex(v){if(v>=850)return 0xff3f33;if(v>=650)return 0xff9f2d;if
 function speedColorCss(v){const n=speedColorHex(v);return`#${n.toString(16).padStart(6,"0")}`;}
 function cmeDirection(c){const lon=(c.coordType==="heliographic"?-num(c.lon):(90-num(c.pa)))*Math.PI/180,lat=(c.coordType==="heliographic"?num(c.lat):0)*Math.PI/180;return new THREE.Vector3(Math.cos(lat)*Math.cos(lon),Math.sin(lat)*.62,Math.cos(lat)*Math.sin(lon)*.72).normalize();}
 function sceneDistanceForR(rKm){return((rKm-DBM.r0Km)/(AU_KM-DBM.r0Km))*SCENE.span;}
-function parkerAngleDeg(v){return OMEGA_PARKER*((AU_KM-DBM.r0Km)/Math.max(250,v))*180/Math.PI;}
+// Field lines should visibly emerge from the rendered solar surface, while 1 AU
+// must still coincide with the Earth position.
+function sceneMagneticDistanceForR(rKm){
+  const sunSurface=9.35,f=clamp((rKm-DBM.r0Km)/(AU_KM-DBM.r0Km),0,(PARKER_MAX_AU*AU_KM-DBM.r0Km)/(AU_KM-DBM.r0Km));
+  return sunSurface+f*(SCENE.span-sunSurface);
+}
+function wrapPi(rad){let x=(Number(rad)+Math.PI)%(2*Math.PI);if(x<0)x+=2*Math.PI;return x-Math.PI;}
+// Local tangent angle of the Parker field relative to radial at 1 AU.
+// tan(psi)=|Bphi/Br| ~= Omega (r-r0) cos(lambda) / Vsw.
+function parkerAngleDeg(v,latRad=0){const ratio=OMEGA_PARKER*(AU_KM-DBM.r0Km)*Math.cos(latRad)/Math.max(250,v);return Math.atan(Math.abs(ratio))*180/Math.PI;}
+// Total azimuthal lag of a field line from r0 to 1 AU.
+function parkerWindingDeg(v){return OMEGA_PARKER*((AU_KM-DBM.r0Km)/Math.max(250,v))*180/Math.PI;}
+function parkerRetardedPhi(seedPhi,time,rKm,v){
+  const tt=(time instanceof Date?time:new Date(time)).getTime(),tr=STATE.timelineCenter.getTime();
+  const rot=OMEGA_PARKER*((tt-tr)/1000);
+  const tau=Math.max(0,(rKm-DBM.r0Km)/Math.max(250,v));
+  return seedPhi+rot-OMEGA_PARKER*tau;
+}
+function parkerFieldComponents(rKm,v,latRad=0){
+  const rr=Math.max(DBM.r0Km,rKm),br=Math.pow(DBM.r0Km/rr,2);
+  const bphi=-br*OMEGA_PARKER*(rr-DBM.r0Km)*Math.cos(latRad)/Math.max(250,v);
+  return{br,bphi,ratio:bphi/(br||1e-9),angleDeg:Math.atan2(Math.abs(bphi),Math.abs(br))*180/Math.PI};
+}
+// ENLIL-like rotating-sector approximation: use actual available wind history/forecast
+// as a longitude proxy through solar rotation; if no historical sector sample exists,
+// windStateAt() naturally falls back to the current/WSA wind.
+function parkerSectorWindSpeed(seedPhi,time,fallbackV){
+  const t=time instanceof Date?time:new Date(time),offsetSec=wrapPi(seedPhi)/OMEGA_PARKER;
+  const st=windStateAt(new Date(t.getTime()-offsetSec*1000));
+  return clamp(num(st?.speed,fallbackV),250,900);
+}
 
 function extremaDownsample(series,maxPoints=2200){
   if(series.length<=maxPoints)return series;
@@ -805,11 +850,11 @@ function createSolarShaderMaterial(){
   return new THREE.ShaderMaterial({
     uniforms:{uTime:{value:0}},
     vertexShader:`
-      varying vec2 vUv;
+      varying vec3 vObj;
       varying vec3 vNormalV;
       varying vec3 vViewDir;
       void main(){
-        vUv=uv;
+        vObj=normalize(position);
         vec4 mv=modelViewMatrix*vec4(position,1.0);
         vNormalV=normalize(normalMatrix*normal);
         vViewDir=normalize(-mv.xyz);
@@ -819,43 +864,67 @@ function createSolarShaderMaterial(){
     fragmentShader:`
       precision highp float;
       uniform float uTime;
-      varying vec2 vUv;
+      varying vec3 vObj;
       varying vec3 vNormalV;
       varying vec3 vViewDir;
-      float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);}
-      float noise(vec2 p){
-        vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
-        return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);
+
+      float hash31(vec3 p){
+        p=fract(p*.1031);p+=dot(p,p.yzx+33.33);return fract((p.x+p.y)*p.z);
       }
-      float fbm(vec2 p){float v=0.0,a=.52;mat2 m=mat2(1.6,1.2,-1.2,1.6);for(int i=0;i<6;i++){v+=a*noise(p);p=m*p+.17;a*=.48;}return v;}
+      float noise3(vec3 p){
+        vec3 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+        float n000=hash31(i+vec3(0,0,0)),n100=hash31(i+vec3(1,0,0));
+        float n010=hash31(i+vec3(0,1,0)),n110=hash31(i+vec3(1,1,0));
+        float n001=hash31(i+vec3(0,0,1)),n101=hash31(i+vec3(1,0,1));
+        float n011=hash31(i+vec3(0,1,1)),n111=hash31(i+vec3(1,1,1));
+        float x00=mix(n000,n100,f.x),x10=mix(n010,n110,f.x);
+        float x01=mix(n001,n101,f.x),x11=mix(n011,n111,f.x);
+        return mix(mix(x00,x10,f.y),mix(x01,x11,f.y),f.z);
+      }
+      float fbm3(vec3 p){
+        float v=0.0,a=.52;
+        for(int i=0;i<6;i++){v+=a*noise3(p);p=p*2.03+vec3(17.1,9.2,13.7);a*=.49;}
+        return v;
+      }
       void main(){
-        vec2 uv=vUv;
-        float t=uTime;
-        // Differential rotation / advection gives a slow living photosphere.
-        vec2 p=vec2(uv.x*13.0+t*.013*(.7+uv.y*.5),uv.y*8.0-t*.006);
-        float broad=fbm(p*.62);
-        float fine=fbm(p*2.15+vec2(t*.011,-t*.008));
-        float cells=smoothstep(.34,.82,fine);
-        float lanes=smoothstep(.48,.74,fbm(p*3.7+7.3));
-        float active=pow(smoothstep(.63,.90,fbm(vec2(uv.x*4.8-t*.004,uv.y*3.4)+12.0)),2.0);
-        float micro=noise(p*11.0+t*.035);
-        vec3 deep=vec3(.90,.075,.003);
-        vec3 orange=vec3(1.00,.29,.008);
-        vec3 gold=vec3(1.00,.62,.055);
-        vec3 hot=vec3(1.00,.92,.46);
-        float tex=clamp(.18+.52*broad+.33*cells-.12*lanes+.08*micro,0.0,1.0);
-        vec3 col=mix(deep,orange,smoothstep(.08,.56,tex));
-        col=mix(col,gold,smoothstep(.48,.82,tex));
-        col=mix(col,hot,active*.72);
-        // Sunspot-like dark knots inside some active belts.
-        float spots=smoothstep(.79,.90,fbm(vec2(uv.x*8.0+t*.002,uv.y*5.5)+31.0))*active;
-        col*=1.0-spots*.58;
-        float facing=clamp(dot(normalize(vNormalV),normalize(vViewDir)),0.0,1.0);
-        float limb=pow(facing,.38);
-        col*=.50+.58*limb;
-        // Hot chromosphere at the extreme rim.
-        float rim=pow(1.0-facing,5.0);
-        col+=vec3(1.0,.22,.015)*rim*.35;
+        vec3 q=normalize(vObj);
+        float lat=asin(clamp(q.y,-1.0,1.0));
+        float mu=clamp(dot(normalize(vNormalV),normalize(vViewDir)),0.0,1.0);
+
+        // Multi-scale convection.  Fine 3-D noise avoids a visible longitude seam.
+        float macro=fbm3(q*7.0+vec3(0.0,uTime*.004,0.0));
+        float meso=fbm3(q*22.0+vec3(uTime*.006,0.0,-uTime*.004));
+        float fine=fbm3(q*72.0+vec3(0.0,-uTime*.010,uTime*.008));
+        float granule=smoothstep(.40,.72,fine);
+        float intergranular=1.0-smoothstep(.32,.54,meso);
+
+        // Active-region belt: sunspots/faculae prefer mid-low latitudes.
+        float belt=exp(-pow((abs(lat)-.24)/.23,2.0));
+        float activeNoise=fbm3(q*11.0+vec3(23.7,-4.1,8.3));
+        float active=belt*smoothstep(.64,.84,activeNoise);
+        float spotCore=belt*smoothstep(.83,.93,fbm3(q*28.0+vec3(42.0,7.0,-19.0)))*active;
+        float penumbra=belt*smoothstep(.72,.88,fbm3(q*20.0+vec3(42.0,7.0,-19.0)))*active;
+
+        float brightness=.34+.31*macro+.26*meso+.19*granule-.10*intergranular;
+        vec3 deep=vec3(.72,.035,.001);
+        vec3 orange=vec3(1.00,.20,.003);
+        vec3 gold=vec3(1.00,.52,.020);
+        vec3 hot=vec3(1.00,.88,.33);
+        vec3 col=mix(deep,orange,smoothstep(.18,.56,brightness));
+        col=mix(col,gold,smoothstep(.46,.77,brightness));
+        col=mix(col,hot,smoothstep(.70,.95,brightness)*.72);
+
+        // Umbra + penumbra and limb faculae.
+        col*=1.0-.34*penumbra-.58*spotCore;
+        float facula=active*(1.0-smoothstep(.48,.90,mu));
+        col+=vec3(1.0,.66,.20)*facula*.34;
+
+        // Visible-light limb darkening, with a thin chromospheric hot rim.
+        float limbDark=.38+.62*pow(mu,.62);
+        col*=limbDark;
+        float rim=pow(1.0-mu,7.0);
+        col+=vec3(1.0,.15,.006)*rim*.48;
+        col*=.985+.025*sin(uTime*.7+macro*8.0);
         gl_FragColor=vec4(col,1.0);
       }
     `
@@ -1019,7 +1088,9 @@ function init3D(){
   const sg2=glowSprite("rgba(255,91,14,.55)");sg2.position.copy(sun.position);sg2.scale.set(49,49,1);sg2.material.opacity=.34;scene.add(sg2);
   const sg3=glowSprite("rgba(255,210,105,.35)");sg3.position.copy(sun.position);sg3.scale.set(61,61,1);sg3.material.opacity=.16;scene.add(sg3);
 
-  // Prominence arcs: partial loops attached near the limb, not full decorative rings.
+  // Prominence arcs are parented to the Sun so their footpoints co-rotate with the
+  // photosphere instead of spinning independently as a decorative effect.
+  const sunLoopGroup=new THREE.Group();sunLoopGroup.position.copy(sun.position);scene.add(sunLoopGroup);
   const sunLoops=[];
   const promSpecs=[
     {r:10.0,t:.075,arc:Math.PI*1.02,rot:[.22,.72,.32],op:.42},
@@ -1031,7 +1102,7 @@ function init3D(){
   for(const sp of promSpecs){
     const mat=new THREE.MeshBasicMaterial({color:0xff9c38,transparent:true,opacity:sp.op,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
     const loop=new THREE.Mesh(new THREE.TorusGeometry(sp.r,sp.t,10,120,sp.arc),mat);
-    loop.position.copy(sun.position);loop.rotation.set(sp.rot[0],sp.rot[1],sp.rot[2]);scene.add(loop);sunLoops.push(loop);
+    loop.position.set(0,0,0);loop.rotation.set(sp.rot[0],sp.rot[1],sp.rot[2]);sunLoopGroup.add(loop);sunLoops.push(loop);
   }
 
   // --- Earth ---
@@ -1076,49 +1147,87 @@ function init3D(){
 
   const parkerGroup=new THREE.Group();scene.add(parkerGroup);
   const parkerLines=[];
-  for(let i=0;i<7;i++){const geo=new THREE.BufferGeometry(),mat=new THREE.LineBasicMaterial({color:i===3?0x55c7ff:0x4f7fae,transparent:true,opacity:i===3?.58:.18,blending:THREE.AdditiveBlending,depthWrite:false}),line=new THREE.Line(geo,mat);parkerGroup.add(line);parkerLines.push(line);}
-  parkerGroup.userData.lines=parkerLines;parkerGroup.userData.lastSpeed=NaN;
+  // Multiple speed sectors produce the ENLIL-like pinwheel.  Each blade is still a
+  // Parker field line; local Vsw changes its pitch rather than inventing a curve.
+  for(let i=0;i<PARKER_SECTOR_COUNT;i++){
+    const phase=-Math.PI+(2*Math.PI*i/PARKER_SECTOR_COUNT);
+    const latDeg=((i%3)-1)*3.0;
+    const geo=new THREE.BufferGeometry();
+    const mat=new THREE.LineBasicMaterial({color:0x53b9ff,transparent:true,opacity:(i%3===0?.48:.30),blending:THREE.AdditiveBlending,depthWrite:false});
+    const line=new THREE.Line(geo,mat);
+    line.userData={seedPhi:phase,latRad:latDeg*Math.PI/180,sectorSpeed:425};
+    parkerGroup.add(line);parkerLines.push(line);
+  }
+  parkerGroup.userData.lines=parkerLines;
+  parkerGroup.userData.lastSpeed=NaN;
+  parkerGroup.userData.lastTime=NaN;
+  parkerGroup.userData.sectorSpeeds=new Float32Array(PARKER_SECTOR_COUNT);
 
   const pCount=1700,pArr=new Float32Array(pCount*3),pR=new Float32Array(pCount),pLane=new Float32Array(pCount),pLat=new Float32Array(pCount),pSeed=new Float32Array(pCount);
-  for(let i=0;i<pCount;i++){pR[i]=Math.random()*1.46;pLane[i]=(Math.random()-.5)*1.05;pLat[i]=(Math.random()-.5)*.30;pSeed[i]=Math.random();}
+  for(let i=0;i<pCount;i++){pR[i]=Math.random();pLane[i]=(Math.random()-.5)*1.05;pLat[i]=(Math.random()-.5)*.30;pSeed[i]=Math.random();}
   const pGeo=new THREE.BufferGeometry();pGeo.setAttribute("position",new THREE.BufferAttribute(pArr,3));pGeo.setDrawRange(0,900);
   const pMat=new THREE.PointsMaterial({color:speedColorHex(425),size:.30,transparent:true,opacity:.52,sizeAttenuation:true,blending:THREE.AdditiveBlending,depthWrite:false});
   const windParticles=new THREE.Points(pGeo,pMat);scene.add(windParticles);windParticles.userData={count:pCount,rAU:pR,lane:pLane,lat:pLat,seed:pSeed};
 
   const cmeGroup=new THREE.Group();scene.add(cmeGroup);
-  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,coronaShells,earth,earthNight,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock(),parkerGroup,windParticles,windSpeed:425,impactStrength:0};
+  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,sunLoopGroup,coronaShells,earth,earthNight,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock(),parkerGroup,windParticles,windSpeed:425,impactStrength:0};
   animate3D();update3D(STATE.selectedTime);
 }
 
 
-function updateParkerSpiral(vsw){
-  if(!STATE.three.ready||!STATE.three.parkerGroup)return;const g=STATE.three.parkerGroup,v=clamp(vsw,250,900);if(Number.isFinite(g.userData.lastSpeed)&&Math.abs(g.userData.lastSpeed-v)<5)return;g.userData.lastSpeed=v;
-  const lines=g.userData.lines||[],r0=DBM.r0Km,maxR=1.42*AU_KM,offsets=[-60,-40,-20,0,20,40,60].map(x=>x*Math.PI/180),connectPhi=-OMEGA_PARKER*((AU_KM-r0)/v);
-  lines.forEach((line,i)=>{const pts=[],phi0=connectPhi+offsets[i];for(let k=0;k<=150;k++){const r=r0+(maxR-r0)*k/150,phi=phi0+OMEGA_PARKER*((r-r0)/v),dist=sceneDistanceForR(r);pts.push(new THREE.Vector3(SCENE.sunX+Math.cos(phi)*dist,0,Math.sin(phi)*dist));}line.geometry.dispose();line.geometry=new THREE.BufferGeometry().setFromPoints(pts);});
+function updateParkerSpiral(time,vsw){
+  if(!STATE.three.ready||!STATE.three.parkerGroup)return;
+  const g=STATE.three.parkerGroup,t=time instanceof Date?time:new Date(time),tm=t.getTime(),fallback=clamp(vsw,250,900);
+  if(Number.isFinite(g.userData.lastTime)&&Math.abs(g.userData.lastTime-tm)<20*60e3&&Number.isFinite(g.userData.lastSpeed)&&Math.abs(g.userData.lastSpeed-fallback)<3)return;
+  g.userData.lastTime=tm;g.userData.lastSpeed=fallback;
+  const lines=g.userData.lines||[],r0=DBM.r0Km,maxR=PARKER_MAX_AU*AU_KM;
+  lines.forEach((line,i)=>{
+    const pts=[],seed=line.userData.seedPhi||0,lat=line.userData.latRad||0;
+    const v=parkerSectorWindSpeed(seed,t,fallback);
+    line.userData.sectorSpeed=v;
+    if(g.userData.sectorSpeeds)g.userData.sectorSpeeds[i]=v;
+    const color=new THREE.Color(speedColorHex(v));
+    line.material.color.copy(color);
+    line.material.opacity=(i%3===0?.40:.23)+.18*clamp((v-300)/500,0,1);
+    for(let k=0;k<=190;k++){
+      const r=r0+(maxR-r0)*k/190,phi=parkerRetardedPhi(seed,t,r,v),dist=sceneMagneticDistanceForR(r),cl=Math.cos(lat);
+      // Slight latitude opening keeps the bundle 3-D while preserving constant-latitude Parker geometry.
+      pts.push(new THREE.Vector3(SCENE.sunX+cl*Math.cos(phi)*dist,Math.sin(lat)*dist,cl*Math.sin(phi)*dist));
+    }
+    line.geometry.dispose();line.geometry=new THREE.BufferGeometry().setFromPoints(pts);
+  });
 }
+
 function animateWindParticles(dt){
-  const t=STATE.three;if(!t.ready||!t.windParticles)return;const sim=STATE.selectedTime||new Date(),wsState=windStateAt(sim),ws=clamp(wsState.speed,250,900),kp=kpStateAt(sim).kp,bz=bzStateAt(sim).bz;t.windSpeed=ws;
-  const norm=clamp((ws-300)/500,0,1),active=Math.round(clamp(520+norm*920+clamp(kp,0,7)*32,420,t.windParticles.userData.count));t.windParticles.geometry.setDrawRange(0,active);t.windParticles.material.color.setHex(speedColorHex(ws));t.windParticles.material.opacity=.36+.34*norm;t.windParticles.material.size=.22+.24*norm+.035*clamp(kp,0,6);
+  const t=STATE.three;if(!t.ready||!t.windParticles)return;
+  const sim=STATE.selectedTime||new Date(),wsState=windStateAt(sim),globalWs=clamp(wsState.speed,250,900),kp=kpStateAt(sim).kp,bz=bzStateAt(sim).bz;t.windSpeed=globalWs;
+  const norm=clamp((globalWs-300)/500,0,1),active=Math.round(clamp(520+norm*920+clamp(kp,0,7)*32,420,t.windParticles.userData.count));
+  t.windParticles.geometry.setDrawRange(0,active);t.windParticles.material.color.setHex(speedColorHex(globalWs));t.windParticles.material.opacity=.36+.34*norm;t.windParticles.material.size=.22+.24*norm+.035*clamp(kp,0,6);
   const arr=t.windParticles.geometry.attributes.position.array,rr=t.windParticles.userData.rAU,lane=t.windParticles.userData.lane,lat=t.windParticles.userData.lat,seed=t.windParticles.userData.seed;
-  // Visual radial speed is proportional to physical Vsw. Particle paths follow the Parker field geometry.
-  const dr=(.018+.060*norm)*dt,connectPhi=-OMEGA_PARKER*((AU_KM-DBM.r0Km)/ws),south=clamp(Math.max(0,-bz)/12,0,1),activity=clamp(.45*clamp(kp/6,0,1)+.55*south,0,1);
+  const speeds=t.parkerGroup?.userData?.sectorSpeeds,south=clamp(Math.max(0,-bz)/12,0,1),activity=clamp(.45*clamp(kp/6,0,1)+.55*south,0,1);
   for(let i=0;i<active;i++){
-    rr[i]+=dr*(.82+.36*seed[i]);if(rr[i]>1.46){rr[i]=.01+Math.random()*.035;lane[i]=(Math.random()-.5)*1.05;lat[i]=(Math.random()-.5)*.30;seed[i]=Math.random();}
-    const rKm=DBM.r0Km+rr[i]*(1.45*AU_KM-DBM.r0Km),dist=sceneDistanceForR(rKm),phi=connectPhi+lane[i]+OMEGA_PARKER*((rKm-DBM.r0Km)/ws);
+    const lanePhase=lane[i]*Math.PI; // roughly -189..+189 deg; wrapped below
+    const sectorIdx=speeds?.length?Math.max(0,Math.min(speeds.length-1,Math.floor(((wrapPi(lanePhase)+Math.PI)/(2*Math.PI))*speeds.length))):0;
+    const ws=speeds?.length?clamp(num(speeds[sectorIdx],globalWs),250,900):globalWs;
+    const localNorm=clamp((ws-300)/500,0,1),dr=(.016+.064*localNorm)*dt;
+    rr[i]+=dr*(.82+.36*seed[i]);
+    if(rr[i]>1.0){rr[i]=.008+Math.random()*.024;lane[i]=(Math.random()-.5)*1.05;lat[i]=(Math.random()-.5)*.30;seed[i]=Math.random();}
+    const rKm=DBM.r0Km+rr[i]*(PARKER_MAX_AU*AU_KM-DBM.r0Km),dist=sceneMagneticDistanceForR(rKm),phi=parkerRetardedPhi(wrapPi(lanePhase),sim,rKm,ws);
     let x=SCENE.sunX+Math.cos(phi)*dist,z=Math.sin(phi)*dist,y=lat[i]*(4+dist*.065);
-    // Magnetic draping near Earth: divert most particles around the magnetopause.
+    // Earth-side magnetic draping: a visual guiding approximation, not a particle integrator.
     const dx=x-SCENE.earthX,dy=y,dz=z,de=Math.sqrt(dx*dx+dy*dy+dz*dz),f=clamp(1-de/22,0,1);
-    if(f>0){const yz=Math.sqrt(y*y+z*z)+.001,sgnY=Math.abs(y)>.15?Math.sign(y):(seed[i]>.5?1:-1),sgnZ=Math.abs(z)>.15?Math.sign(z):(seed[i]>.5?-1:1),drape=f*(2.5+5.5*(.35+t.impactStrength));y+=sgnY*drape*(.7+activity*.7);z+=sgnZ*drape*.62; // southward Bz/Kp increases polar access
+    if(f>0){const sgnY=Math.abs(y)>.15?Math.sign(y):(seed[i]>.5?1:-1),sgnZ=Math.abs(z)>.15?Math.sign(z):(seed[i]>.5?-1:1),drape=f*(2.5+5.5*(.35+t.impactStrength));y+=sgnY*drape*(.7+activity*.7);z+=sgnZ*drape*.62;
       if(activity>.15&&dx<2){const pole=f*activity*3.8;y+=sgnY*pole;z*=1-f*activity*.28;}
-      if(dx>0){y*=1-.18*f;z*=1-.18*f;} // tailward focusing
+      if(dx>0){y*=1-.18*f;z*=1-.18*f;}
     }
     arr[i*3]=x;arr[i*3+1]=y;arr[i*3+2]=z;
   }
   t.windParticles.geometry.attributes.position.needsUpdate=true;
 }
+
 function updateSpeedHud(info){
   const el=document.getElementById("speedHud");if(!el)return;const ws=windStateAt(STATE.selectedTime||new Date());
-  if(!info){el.innerHTML=`<div class="model">Drag-Based Model</div><div class="big wind">${Math.round(ws.speed)} km/s</div><div>Solar wind (${esc(ws.source)})</div><div>Parker spiral @ 1 AU: ${parkerAngleDeg(ws.speed).toFixed(1)}°</div><div>Solar surface rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic</div><div>Parker rotation: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal</div><div>No active Earth-directed CME at this simulation time.</div>`;return;}
+  if(!info){el.innerHTML=`<div class="model">Drag-Based Model</div><div class="big wind">${Math.round(ws.speed)} km/s</div><div>Solar wind (${esc(ws.source)})</div><div>Parker HMF angle @ 1 AU: ${parkerAngleDeg(ws.speed).toFixed(1)}° / winding ${parkerWindingDeg(ws.speed).toFixed(1)}°</div><div>Solar surface rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic</div><div>Parker rotation: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal</div><div>No active Earth-directed CME at this simulation time.</div>`;return;}
   const{c,s,m}=info,dv=s.v-s.w,acc=s.a*1000,eta=m.earthArrival?formatTime(m.earthArrival.time):"-",footLon=sourceFootpointLongitude(c,STATE.selectedTime||new Date());
   el.innerHTML=`<div class="model">DBM • ${esc(shortId(c.id))} • ${esc(c.impactClass)}</div><div class="big cme">${Math.round(s.v)} km/s</div><div>CME speed</div><div class="wind">Solar wind: <b>${Math.round(s.w)} km/s</b></div><div class="delta">ΔV: <b>${dv>=0?"+":""}${Math.round(dv)} km/s</b></div><div>Acceleration: <b>${acc.toFixed(2)} m/s²</b></div><div>Distance: <b>${s.rAU.toFixed(3)} AU</b></div><div>DBM ETA Earth: <b>${eta}</b></div><div>DBM speed @ Earth: <b>${m.earthArrival?Math.round(m.earthArrival.v):0} km/s</b></div><div>Parker angle @ 1 AU: ${parkerAngleDeg(ws.speed).toFixed(1)}°</div>${footLon===null?"":`<div>Launch longitude: <b>${formatHelioLon(c.lon)}</b></div><div>Rotating source footpoint: <b>${formatHelioLon(footLon)}</b></div>`}<div>Solar surface: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic</div><div>Parker Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal</div>`;
 }
@@ -1143,10 +1252,12 @@ function update3D(time){
   }
   const ws=windStateAt(time),bzS=bzStateAt(time),kpS=kpStateAt(time);
   // Solar photosphere follows the simulation timeline using Carrington synodic rotation.
-  if(STATE.three.sun)STATE.three.sun.rotation.y=solarSynodicRotationRad(time);
-  updateParkerSpiral(ws.speed);updateMagnetosphere(impactStrength,bzS.bz);updateSpeedHud(bestInfo);
+  const solarSurfacePhase=solarSynodicRotationRad(time);
+  if(STATE.three.sun)STATE.three.sun.rotation.y=solarSurfacePhase;
+  if(STATE.three.sunLoopGroup)STATE.three.sunLoopGroup.rotation.y=solarSurfacePhase;
+  updateParkerSpiral(time,ws.speed);updateMagnetosphere(impactStrength,bzS.bz);updateSpeedHud(bestInfo);
   const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz,magState=impactStrength>.72?"STRONG IMPACT":impactStrength>.35?"IMPACT":impactStrength>.05?"CONTACT":"QUIET";
-  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Solar wind: ${Math.round(ws.speed)} km/s (${esc(ws.source)})<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker spiral: ${parkerAngleDeg(ws.speed).toFixed(1)}° @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / Parker Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal<br>Magnetosphere: <b>${magState}</b>`;
+  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Solar wind: ${Math.round(ws.speed)} km/s (${esc(ws.source)})<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(ws.speed).toFixed(1)}° local / ${parkerWindingDeg(ws.speed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + ENLIL-style rotating boundary<br>Magnetosphere: <b>${magState}</b>`;
 }
 
 function animate3D(){
@@ -1162,7 +1273,7 @@ function animate3D(){
     const p2=1+Math.sin(elapsed*.83+.7)*.016;t.sunGlows[1].scale.set(49*p2,49*p2,1);
     const p3=1+Math.sin(elapsed*.51+1.4)*.012;t.sunGlows[2].scale.set(61*p3,61*p3,1);
   }
-  if(t.sunLoops)t.sunLoops.forEach((l,i)=>{l.rotation.z+=dt*(.0025+i*.0007);l.material.opacity=(.20+.18*(.5+.5*Math.sin(elapsed*(.32+i*.05)+i)))*(1-i*.08);});
+  if(t.sunLoops)t.sunLoops.forEach((l,i)=>{l.material.opacity=(.20+.18*(.5+.5*Math.sin(elapsed*(.32+i*.05)+i)))*(1-i*.08);});
   t.earth.rotation.y+=dt*.12;
   if(t.earthNight)t.earthNight.rotation.y=t.earth.rotation.y;
   if(t.clouds)t.clouds.rotation.y+=dt*.155;
