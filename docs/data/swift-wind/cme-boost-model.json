@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-09-18T16:25:33Z",
+  "updated_at": "2026-09-18T20:55:37Z",
   "model": "SWIFT CME Wind Boost Learner",
   "definition": "observed_delta_v = max(0, post_arrival_peak_speed - pre_arrival_median_speed)",
   "windows": {
     "pre_baseline": "arrival-12h to arrival-3h median",
     "post_peak": "arrival to arrival+18h max"
   },
-  "sample_count": 22,
+  "sample_count": 23,
   "global": {
-    "intercept": 102.4098,
-    "speed_geometry_slope": -0.072297,
+    "intercept": 97.5717,
+    "speed_geometry_slope": -0.059958,
     "formula": "delta_v = class_median*0.55 + max(0, intercept + slope*(speed-500)*geometry)*0.45"
   },
   "by_impact_class": {
@@ -20,9 +20,9 @@
       "default_used": false
     },
     "CORE-HIT": {
-      "count": 2,
-      "median_delta_v": 194.89,
-      "mean_delta_v": 194.89,
+      "count": 3,
+      "median_delta_v": 104.21,
+      "mean_delta_v": 138.43,
       "default_used": false
     },
     "BODY-HIT": {
@@ -507,11 +507,11 @@
       "longitude": 115.0,
       "latitude": 39.0,
       "angular_separation": 109.17,
-      "baseline_speed": 466.4,
+      "baseline_speed": 466.25,
       "post_peak_speed": 503.66,
-      "observed_delta_v": 37.26,
+      "observed_delta_v": 37.41,
       "pre_count": 779,
-      "post_count": 1651
+      "post_count": 1970
     },
     {
       "id": "2026-09-13T07:48:00-CME-001",
@@ -529,11 +529,33 @@
       "longitude": 0.0,
       "latitude": -28.0,
       "angular_separation": 28.0,
-      "baseline_speed": 465.1,
-      "post_peak_speed": 473.94,
-      "observed_delta_v": 8.84,
+      "baseline_speed": 465.12,
+      "post_peak_speed": 476.55,
+      "observed_delta_v": 11.43,
       "pre_count": 838,
-      "post_count": 1351
+      "post_count": 1689
+    },
+    {
+      "id": "2026-09-13T10:23:00-CME-001",
+      "source": "DONKI",
+      "impact_class": "CORE-HIT",
+      "earth_candidate": true,
+      "confidence": 0.95,
+      "geometry_multiplier": 1.0,
+      "t0": "2026-09-13T10:23:00Z",
+      "arrival_time": "2026-09-18T17:09:47Z",
+      "transit_hours": 126.78,
+      "speed": 295.0,
+      "effective_speed": 295.0,
+      "half_angle": 22.0,
+      "longitude": 0.0,
+      "latitude": 0.0,
+      "angular_separation": 0.0,
+      "baseline_speed": 426.33,
+      "post_peak_speed": 451.83,
+      "observed_delta_v": 25.5,
+      "pre_count": 1077,
+      "post_count": 239
     }
   ]
 }

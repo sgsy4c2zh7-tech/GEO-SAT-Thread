@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-09-18T16:25:49Z",
+  "updated_at": "2026-09-18T20:55:54Z",
   "retention_days": 730,
   "history": [
     {
@@ -113,6 +113,66 @@
         "median_ae_hours": 7.63,
         "bias_hours": 4.96,
         "within_6h": 38.1,
+        "within_12h": 100.0
+      },
+      "dbm_gamma": {
+        "gamma_km_inv": 3e-08,
+        "count": 0,
+        "status": "learning",
+        "method": "default DBM gamma until >=5 shock-proxy events"
+      }
+    },
+    {
+      "time": "2026-09-18T20:55:54Z",
+      "swift_wind_30d": {
+        "count": 1145,
+        "mae": 95.72,
+        "median_ae": 76.63,
+        "rmse": 119.52,
+        "bias": 77.72,
+        "p90_ae": 192.41,
+        "hit_rate_50": 31.9,
+        "hit_rate_75": 49.5,
+        "hit_rate_100": 59.0,
+        "pearson_r": 0.591
+      },
+      "enlil_wind_30d": {
+        "count": 756,
+        "mae": 124.27,
+        "median_ae": 123.28,
+        "rmse": 125.48,
+        "bias": 124.27,
+        "p90_ae": 146.47,
+        "hit_rate_50": 0.0,
+        "hit_rate_75": 0.0,
+        "hit_rate_100": 8.3,
+        "pearson_r": -0.181
+      },
+      "kp_30d": {
+        "count": 6879,
+        "mae": 2.131,
+        "median_ae": 2.0,
+        "rmse": 2.464,
+        "bias": 1.916,
+        "p90_ae": 4.0,
+        "hit_rate_067": 17.1,
+        "hit_rate_1": 25.4,
+        "pearson_r": -0.154
+      },
+      "bz_30d": {
+        "count": 866,
+        "bz_min_mae": 3.732,
+        "bz_min_bias": -2.581,
+        "bz_min_rmse": 4.463,
+        "brier_score": 0.2697,
+        "direction_hit_rate_threshold60": 28.4
+      },
+      "cme_all": {
+        "count": 22,
+        "mae_hours": 7.22,
+        "median_ae_hours": 8.3,
+        "bias_hours": 5.19,
+        "within_6h": 36.4,
         "within_12h": 100.0
       },
       "dbm_gamma": {
