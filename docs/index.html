@@ -142,6 +142,30 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 .windMapLegend .bar{height:9px;border-radius:999px;background:linear-gradient(90deg,#3d6fff 0%,#34c9ff 24%,#42e39b 44%,#f3e64f 64%,#ff9d2d 82%,#ff4038 100%);box-shadow:0 0 12px rgba(84,179,255,.30)}
 .windMapLegend .ticks{display:flex;justify-content:space-between;color:#99b5d0;margin-top:3px;font-size:9px}
 .windMapLegend .note{color:#9db7cf;margin-top:5px}
+.chHud{position:absolute;right:14px;bottom:48px;z-index:6;width:300px;padding:11px 12px;border:1px solid rgba(116,116,255,.48);border-radius:12px;background:rgba(4,8,24,.82);color:#e9edff;font-size:11px;line-height:1.55;backdrop-filter:blur(7px);box-shadow:0 8px 24px rgba(0,0,0,.22)}
+.chHud .title{font-size:11px;font-weight:900;letter-spacing:.04em;color:#c9c8ff;margin-bottom:4px}
+.chHud .hot{font-size:19px;font-weight:900;color:#fff;line-height:1.1}
+.chHud .muted{color:#9da9c9}
+.chHud .hss{color:#72ddff}
+.chHud .ch{color:#b1a4ff}
+.chModelCard{margin-top:14px}
+.chSummaryGrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.chMetric{border:1px solid rgba(82,133,190,.28);background:rgba(6,20,38,.62);border-radius:9px;padding:9px 10px;min-height:68px}
+.chMetric .k{font-size:9px;color:#8fa8c4;text-transform:uppercase;letter-spacing:.06em}
+.chMetric .v{font-size:18px;font-weight:850;color:#f2f7ff;margin-top:3px}
+.chMetric .s{font-size:9px;color:#8ca4bd;margin-top:2px}
+.chModelTableWrap{overflow:auto;max-height:330px;border:1px solid rgba(82,133,190,.22);border-radius:10px}
+.chModelTable{width:100%;border-collapse:collapse;font-size:10px;min-width:1050px}
+.chModelTable th{position:sticky;top:0;background:#102943;color:#dcecff;text-align:center;padding:7px 6px;border-bottom:1px solid #335878;z-index:1}
+.chModelTable td{padding:6px;border-bottom:1px solid rgba(72,111,145,.20);text-align:center;color:#c7d8e9}
+.chModelTable tr.active td{background:rgba(88,91,206,.16)}
+.chBadge{display:inline-block;padding:2px 6px;border-radius:999px;border:1px solid rgba(123,154,205,.35);font-size:9px}
+.chBadge.active{color:#fff;background:rgba(60,190,255,.22);border-color:rgba(84,206,255,.58)}
+.chBadge.future{color:#d4c9ff;background:rgba(119,86,220,.17)}
+.chMethodNote{font-size:10px;color:#8ea7c1;margin-top:8px;line-height:1.55}
+@media(max-width:1100px){.chSummaryGrid{grid-template-columns:repeat(3,minmax(0,1fr))}.chHud{width:260px}}
+@media(max-width:720px){.chSummaryGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.chHud{right:8px;bottom:44px;width:220px;font-size:9px}}
+
 
 .modelStrip{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;background:#f8fbfe;border-top:1px solid #d5e1ec}
 .modelChip{border:1px solid #c8d8e6;background:#fff;border-radius:999px;padding:6px 10px;font-size:11px;color:#47637e}
@@ -184,6 +208,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
           <button onclick="loadCACTusCache()">CACTus</button>
           <button onclick="loadNOAAAll()">NOAA</button>
           <button onclick="loadSwiftWind()">SWIFT Wind</button>
+          <button onclick="loadCoronalHoleData()">Coronal Hole</button>
           <button onclick="loadReportUiFeed()">Kp/Bz予報</button>
           <button class="active" onclick="loadAll()">全部取得</button>
           <button class="ghost" onclick="rebuildAll()">再計算</button>
@@ -193,6 +218,8 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
           <label><input id="useCactusHazard" type="checkbox" onchange="rebuildAll()"> CACTus広幅/haloを到達候補化</label>
           <label><input id="strictDonkiOnly" type="checkbox" checked onchange="rebuildAll()"> DONKI優先</label>
           <label><input id="mergeSevenDays" type="checkbox" checked onchange="loadDONKICache()"> DONKI保存データ統合</label>
+          <label><input id="showCoronalHoles" type="checkbox" checked onchange="toggleCoronalHole3D()"> CH/HSS 3Dモデリング</label>
+          <label><input id="showCoronalHoleHistory" type="checkbox" checked onchange="toggleCoronalHole3D()"> CH 27日保持 / 裏面推定</label>
         </div>
         <div id="sourcePanel" class="sourceGrid"></div>
       </div>
@@ -238,6 +265,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
           <div class="note">色 = radial wind speed / 明るさ = relative plasma density・stream compression</div>
         </div>
         <div class="speedHud" id="speedHud"><div class="model">DBM model waiting for data...</div></div>
+        <div class="chHud" id="chHud"><div class="title">CORONAL HOLE / HSS MODEL</div><div class="muted">解析データ待ち...</div></div>
         <div class="camHelp">Drag: rotate / Wheel: zoom / Right drag: pan</div>
       </div>
     </div>
@@ -245,8 +273,25 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
       <span class="modelChip">CME propagation: Drag-Based Model</span>
       <span class="modelChip">Solar rotation: 27.27 d</span>
       <span class="modelChip">Parker 1958 HMF</span><span class="modelChip">ENLIL-style 21.5 R☉ boundary</span><span class="modelChip">Ω: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
-      <span class="modelChip">Solar wind: NOAA observed → SWIFT AI forecast → WSA fallback</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span>
+      <span class="modelChip">Solar wind: NOAA observed → SWIFT AI forecast → WSA fallback</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span><span class="modelChip">CHIMERA-inspired CH → HSS corridor</span><span class="modelChip">30d archive / 27d solar persistence / backside estimate</span>
       <span class="modelChip">Magnetosphere: Pdyn / Bz / CME impact response</span>
+    </div>
+  </section>
+
+  <section class="card chModelCard" id="chModelCard">
+    <div class="panelHeader">
+      <div>
+        <div class="panelTitle">Coronal Hole / HSS Modeling <span class="chip">SWIFT-CH</span></div>
+        <div class="panelSub">AIA 171/193/211 の暗部 + HMI単極性proxyから抽出したコロナホールを表示。HSS到達はballistic/Parker近似の事前モデルで、Wind AIでは二重計上を避けるため残差特徴量として利用。</div>
+      </div>
+      <div class="viewTools">
+        <button onclick="loadCoronalHoleData()">再取得</button>
+      </div>
+    </div>
+    <div class="panelBody">
+      <div class="chSummaryGrid" id="chSummaryGrid"></div>
+      <div class="chModelTableWrap"><table class="chModelTable" id="chModelTable"></table></div>
+      <div class="chMethodNote" id="chMethodNote">Coronal-hole model data waiting...</div>
     </div>
   </section>
 
@@ -290,6 +335,8 @@ const REPORT_INDEX_CANDIDATES=["./reports/index.json","./docs/reports/index.json
 const REPORT_UI_CANDIDATES=["./reports/ui_forecast_latest.json","./docs/reports/ui_forecast_latest.json"];
 const SWIFT_KP_LATEST=dataCandidates("swift-kp/latest.json");
 const SWIFT_BZ_LATEST=dataCandidates("swift-bz/latest.json");
+const CORONAL_HOLE_LATEST=dataCandidates("coronal-holes/latest.json");
+const CORONAL_HOLE_HISTORY=dataCandidates("coronal-holes/history.json");
 const NOAA_WIND_HISTORY=[...dataCandidates("noaa/wind_history.json"),...dataCandidates("noaa_wind_history.json"),...dataCandidates("noaa-wind/history.json")];
 const DONKI_LON_POSITIVE_WEST=true;
 const NOAA={
@@ -328,10 +375,10 @@ const SCENE={sunX:-78,earthX:78,span:156};
 const POST_PASS_HOURS=36;
 
 const STATE={
-  sources:{donkiCache:src("DONKI Cache","未取得"),donkiAnalysis:src("DONKI CMEAnalysis","未取得"),donkiCME:src("DONKI CME","未取得"),wsa:src("WSA Wind","未取得"),cactus:src("CACTus","未取得"),noaaWind:src("NOAA Wind","未取得"),noaaMag:src("NOAA IMF","未取得"),noaaKp:src("NOAA Kp","未取得"),swiftWind:src("SWIFT Wind AI","未取得"),reportUi:src("Report UI Feed","未取得")},
+  sources:{donkiCache:src("DONKI Cache","未取得"),donkiAnalysis:src("DONKI CMEAnalysis","未取得"),donkiCME:src("DONKI CME","未取得"),wsa:src("WSA Wind","未取得"),cactus:src("CACTus","未取得"),noaaWind:src("NOAA Wind","未取得"),noaaMag:src("NOAA IMF","未取得"),noaaKp:src("NOAA Kp","未取得"),swiftWind:src("SWIFT Wind AI","未取得"),coronalHole:src("Coronal Hole","未取得"),reportUi:src("Report UI Feed","未取得")},
   donkiPayloads:[],wsaModel:null,cactusEvents:[],env:defaultEnv(),cmes:[],timelineCenter:new Date(),timelineStart:new Date(),timelineEnd:new Date(),selectedTime:new Date(),timer:null,
-  windObserved:[],windForecast:[],windPastForecast:[],kpObserved:[],kpForecast:[],bzForecast:[],kpModel:null,windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,propagationCache:new Map(),mode:"3d",
-  three:{ready:false,scene:null,camera:null,renderer:null,controls:null,sun:null,earth:null,cmeGroup:null,starPoints:null,clock:null,parkerGroup:null,windParticles:null,windSpeed:425,impactStrength:0}
+  windObserved:[],windForecast:[],windPastForecast:[],kpObserved:[],kpForecast:[],bzForecast:[],kpModel:null,coronalHoleModel:null,coronalHoles:[],coronalHoleImpacts:[],coronalHoleHistory:[],windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,propagationCache:new Map(),mode:"3d",
+  three:{ready:false,scene:null,camera:null,renderer:null,controls:null,sun:null,earth:null,cmeGroup:null,starPoints:null,clock:null,parkerGroup:null,windParticles:null,coronalHoleGroup:null,coronalHistoryGroup:null,hssGroup:null,windSpeed:425,impactStrength:0}
 };
 function src(label,status){return{label,status,data:null,time:null,error:null};}
 function setSource(k,status,data=null,error=null){const s=STATE.sources[k];s.status=status;s.data=data;s.error=error;s.time=new Date();renderSourcePanel();}
@@ -363,159 +410,198 @@ async function loadNOAAKp(){setSource("noaaKp","LOADING...");try{const d=(await 
 async function loadNOAAAll(){await Promise.allSettled([loadNOAAWind(),loadNOAAMag(),loadNOAAKp()]);rebuildAll();}
 
 
+function chPercent(v,d=1){const x=Number(v);return Number.isFinite(x)?`${(x*100).toFixed(d)}%`:"-";}
+function chSigned(v,d=1){const x=Number(v);return Number.isFinite(x)?`${x>=0?"+":""}${x.toFixed(d)}`:"-";}
+function chImpactState(im,time=STATE.selectedTime){
+  const t=(time instanceof Date?time:new Date(time)).getTime();
+  const a=new Date(im?.window_start||0).getTime(),b=new Date(im?.window_end||0).getTime(),m=new Date(im?.arrival_time||0).getTime();
+  if(Number.isFinite(a)&&Number.isFinite(b)&&t>=a&&t<=b)return"active";
+  if(Number.isFinite(m)&&m>t)return"future";
+  return"past";
+}
+function chImpactForSource(id){
+  return (STATE.coronalHoleImpacts||[]).find(x=>String(x.source_id)===String(id))||null;
+}
+function nextOrActiveCHImpact(time=STATE.selectedTime){
+  const t=(time instanceof Date?time:new Date(time)).getTime();
+  const arr=(STATE.coronalHoleImpacts||[]).filter(x=>Number.isFinite(new Date(x.arrival_time).getTime()));
+  const active=arr.filter(x=>{
+    const a=new Date(x.window_start||x.arrival_time).getTime(),b=new Date(x.window_end||x.arrival_time).getTime();
+    return t>=a&&t<=b;
+  }).sort((a,b)=>Number(b.confidence||0)-Number(a.confidence||0));
+  if(active.length)return active[0];
+  const future=arr.filter(x=>new Date(x.arrival_time).getTime()>=t).sort((a,b)=>new Date(a.arrival_time)-new Date(b.arrival_time));
+  if(future.length)return future[0];
+  return arr.sort((a,b)=>Math.abs(new Date(a.arrival_time)-t)-Math.abs(new Date(b.arrival_time)-t))[0]||null;
+}
+function renderCoronalHolePanel(time=STATE.selectedTime){
+  const grid=document.getElementById("chSummaryGrid"),table=document.getElementById("chModelTable"),note=document.getElementById("chMethodNote"),hud=document.getElementById("chHud");
+  if(!grid||!table)return;
+  const model=STATE.coronalHoleModel||{},holes=STATE.coronalHoles||[],impacts=STATE.coronalHoleImpacts||[];
+  if(!holes.length){
+    grid.innerHTML=`<div class="chMetric"><div class="k">STATUS</div><div class="v">${esc(model.status||"NO DATA")}</div><div class="s">${esc(model.updated_at||"-")}</div></div>`;
+    table.innerHTML=`<tr><th>Coronal-hole model</th></tr><tr><td>解析済みコロナホールなし / データ待ち</td></tr>`;
+    if(hud)hud.innerHTML=`<div class="title">CORONAL HOLE / HSS MODEL</div><div class="muted">${esc(model.status||"NO DATA")}</div>`;
+    return;
+  }
 
-function windRows(payload){
-  if(!payload)return[];
-  if(Array.isArray(payload)){
-    if(!payload.length)return[];
-    if(Array.isArray(payload[0])){
-      const hdr=payload[0].map(x=>String(x));
-      return payload.slice(1).filter(Array.isArray).map(row=>Object.fromEntries(row.map((v,i)=>[hdr[i]??String(i),v])));
+  const top=[...holes].sort((a,b)=>Number(b.earth_facing_score||0)-Number(a.earth_facing_score||0))[0];
+  const focus=nextOrActiveCHImpact(time);
+  const focusHole=focus?holes.find(x=>String(x.id)===String(focus.source_id)):top;
+  const arrival=focus?formatTime(focus.arrival_time):"-";
+  const confidence=focus?chPercent(focus.confidence,0):"-";
+  const modelAge=model.updated_at?Math.max(0,(Date.now()-new Date(model.updated_at).getTime())/3600e3):null;
+
+  const persisted=persistentCoronalHoleRecords(time);
+  const cov=estimatePersistenceCoverage(persisted,time);
+  const archiveStart=STATE.coronalHoleHistory.length?STATE.coronalHoleHistory[0].snapshot_time:null;
+  grid.innerHTML=[
+    ["Detected CH",holes.length,"current front-side segmentation"],
+    ["Earth-facing HSS",impacts.length,"|lat| ≤ 45° candidates"],
+    ["Focus source",focus?.source_id||focusHole?.id||"-",focus?chImpactState(focus,time):"largest Earth score"],
+    ["HSS ETA",arrival,focus?`window ${formatTime(focus.window_start)} → ${formatTime(focus.window_end)}`:"no candidate"],
+    ["Peak Vsw prior",focus?`${Math.round(Number(focus.predicted_peak_speed_km_s_prior||0))} km/s`:"-",focus?`ΔV +${Math.round(Number(focus.predicted_delta_v_km_s_prior||0))} km/s`:""],
+    ["Confidence",confidence,focusHole?`unipolarity ${chPercent(focusHole.hmi_unipolarity_proxy,0)}`:""],
+    ["History archive",`${STATE.coronalHoleHistory.length} rec`,archiveStart?`30 d target / oldest ${formatTime(archiveStart)}`:"history pending"],
+    ["27 d persistence",`${persisted.length} CH`,`full-sun cov ${chPercent(cov.full,0)} / back-side ${chPercent(cov.back,0)}`],
+  ].map(x=>`<div class="chMetric"><div class="k">${esc(x[0])}</div><div class="v">${esc(x[1])}</div><div class="s">${esc(x[2])}</div></div>`).join("");
+
+  const rows=[...holes].sort((a,b)=>Number(b.earth_facing_score||0)-Number(a.earth_facing_score||0)).map(ch=>{
+    const im=chImpactForSource(ch.id),st=im?chImpactState(im,time):"";
+    const badge=im?`<span class="chBadge ${st}">${st==="active"?"IN WINDOW":st==="future"?"HSS CANDIDATE":"PAST"}</span>`:"";
+    return `<tr class="${st==="active"?"active":""}">
+      <td><b>${esc(ch.id)}</b><br>${badge}</td>
+      <td>${chPercent(ch.area_fraction_disk_deprojected,2)}</td>
+      <td>${num(ch.latitude_deg,0).toFixed(1)}°</td>
+      <td>${chSigned(ch.central_meridian_deg,1)}°</td>
+      <td>${num(ch.width_deg_proxy,0).toFixed(1)}°</td>
+      <td>${num(ch.dchb_proxy_deg,0).toFixed(1)}°</td>
+      <td>${chPercent(ch.hmi_unipolarity_proxy,0)}</td>
+      <td>${num(ch.earth_facing_score,0).toFixed(5)}</td>
+      <td>${num(ch.source_strength,0).toFixed(3)}</td>
+      <td>${Math.round(num(ch.predicted_peak_speed_km_s_prior,0))}</td>
+      <td>${Math.round(num(ch.predicted_delta_v_km_s_prior,0))}</td>
+      <td>${im?formatTime(im.arrival_time):"-"}</td>
+      <td>${im?chPercent(im.confidence,0):"-"}</td>
+    </tr>`;
+  }).join("");
+  table.innerHTML=`<thead><tr><th>CH</th><th>Area</th><th>Lat</th><th>CMD</th><th>Width</th><th>DCHB proxy</th><th>Unipolarity</th><th>Earth score</th><th>Strength</th><th>Peak Vsw<br>km/s</th><th>ΔV<br>km/s</th><th>HSS ETA</th><th>Conf.</th></tr></thead><tbody>${rows}</tbody>`;
+
+  if(note){
+    const meth=model.methodology||{};
+    note.innerHTML=`Model: <b>${esc(model.model||"-")}</b> / Updated: <b>${esc(model.updated_at||"-")}</b>${modelAge===null?"":` (${modelAge.toFixed(1)} h ago)`}<br>`+
+      `EUV: ${esc(meth.euv||"-")} / Magnetic: ${esc(meth.magnetic||"-")}<br>`+
+      `<b>注意:</b> DCHBとHMI磁場は現段階ではproxy。HSS速度は事前モデルで、Wind AIではENLIL/27日再帰との二重計上を避ける残差特徴量として使用。<br>`+`保存は30日間、3D表示は最新27日を太陽自転で保持して全周へ投影。背面は直接観測ではなく persistence による推定表示。`;
+  }
+  if(hud){
+    if(focus){
+      hud.innerHTML=`<div class="title">CORONAL HOLE / HSS MODEL</div><div class="hot">${esc(focus.source_id)} → ${Math.round(num(focus.predicted_peak_speed_km_s_prior,0))} km/s</div>`+
+        `<div class="hss">HSS ETA: <b>${formatTime(focus.arrival_time)}</b></div>`+
+        `<div>Arrival window: ${formatTime(focus.window_start)} → ${formatTime(focus.window_end)}</div>`+
+        `<div class="ch">Lat ${num(focus.latitude_deg,0).toFixed(1)}° / CMD ${chSigned(focus.central_meridian_deg,1)}° / Area ${chPercent(focus.area_fraction_disk_deprojected,2)}</div>`+
+        `<div>Confidence ${chPercent(focus.confidence,0)} / HMI unipolarity ${chPercent(focus.hmi_unipolarity_proxy,0)}</div>`+`<div>27d persistence / back-side reconstruction enabled</div>`+
+        `<div class="muted">${chImpactState(focus,time)==="active"?"Selected time is inside predicted HSS window.":"Modeled HSS candidate / not direct in-situ confirmation."}</div>`;
+    }else{
+      hud.innerHTML=`<div class="title">CORONAL HOLE / HSS MODEL</div><div class="hot">${holes.length} CH detected</div><div class="muted">Earth-facing HSS candidate: none</div>`;
     }
-    return payload.filter(x=>x&&typeof x==="object");
   }
-  if(typeof payload==="object"){
-    for(const k of ["records","data","items","history","forecast"]){if(Array.isArray(payload[k]))return windRows(payload[k]);}
-    return[payload];
-  }
-  return[];
 }
-function windTime(r){for(const k of ["time","time_tag","timestamp","datetime","date","start_time"]){if(r?.[k]){const t=new Date(r[k]).getTime();if(Number.isFinite(t))return t;}}return NaN;}
-function firstFinite(r,keys){for(const k of keys){const v=Number(r?.[k]);if(Number.isFinite(v))return v;}return null;}
-function normalizeWindPayload(payload,mode="auto"){
-  const now=Date.now(),out=[];
-  for(const r of windRows(payload)){
-    const t=windTime(r);if(!Number.isFinite(t))continue;
-    const obs=firstFinite(r,["observed_speed","actual_speed","noaa_speed","actual","speed_observed"]);
-    const pred=firstFinite(r,["swift_cme_enhanced_speed","enhanced_speed","forecast_speed","predicted_speed","swift_speed","speed"]);
-    const plain=firstFinite(r,["speed","proton_speed","bulk_speed","solar_wind_speed","V","v"]);
-    let speed=null,kind=mode;
-    if(mode==="observed")speed=obs??plain??pred;
-    else if(mode==="forecast")speed=pred??plain;
-    else if(String(r.kind||"").toLowerCase()==="forecast"||t>now+30*60e3){kind="forecast";speed=pred??plain;}
-    else{kind="observed";speed=obs??plain??pred;}
-    if(!Number.isFinite(speed)||speed<150||speed>1800)continue;
-    out.push({_t:t,time:new Date(t).toISOString(),speed:Number(speed),kind,raw:r});
-  }
-  return out.sort((a,b)=>a._t-b._t);
-}
-function mergeWind(a,b){const m=new Map();for(const r of [...(a||[]),...(b||[])])m.set(Math.round(r._t/60000),r);return[...m.values()].sort((x,y)=>x._t-y._t);}
 
-function finiteOrNull(v){const n=Number(v);return Number.isFinite(n)?n:null;}
-function updateWindAccuracyFromPayload(obj){
-  if(!obj||typeof obj!=="object")return;
-  const v24=obj.verification?.last_24h?.enhanced || obj.last_24h?.enhanced || obj.accuracy?.last_24h?.enhanced || null;
-  const hit=finiteOrNull(v24?.hit_rate_50kms ?? obj.enhanced_hit_rate_50 ?? obj.enhanced_accuracy_score ?? obj.accuracy?.enhanced_hit_rate_50);
-  const count=finiteOrNull(v24?.count ?? obj.count ?? obj.accuracy?.count);
-  if(hit!==null)STATE.windAccuracy50=hit;
-  if(count!==null)STATE.windAccuracyCount=Math.max(0,Math.round(count));
-  STATE.windAccuracyWindow="24h";
+function normalizeCHSnapshotTime(v){
+  if(!v)return null;
+  const t=new Date(v);
+  return Number.isFinite(t.getTime()) ? t.toISOString() : null;
 }
-async function loadReportIndex(){
-  if(STATE.reportIndex)return STATE.reportIndex;
-  try{const got=await fetchJsonAny(REPORT_INDEX_CANDIDATES);STATE.reportIndex=got.data;return STATE.reportIndex;}catch(_){return null;}
+function extractCoronalHoleHistoryItems(payload){
+  const root=Array.isArray(payload)?payload:(payload?.history||payload?.snapshots||payload?.days||payload?.records||[]);
+  const out=[];
+  for(const snap of (Array.isArray(root)?root:[])){
+    const ts=normalizeCHSnapshotTime(snap?.observed_at||snap?.updated_at||snap?.date||snap?.timestamp||snap?.time||snap?.valid_time||snap?.analysis_time||payload?.updated_at);
+    const arr=Array.isArray(snap?.coronal_holes)?snap.coronal_holes:(Array.isArray(snap?.holes)?snap.holes:(Array.isArray(snap)?snap:[]));
+    for(const ch of arr){
+      out.push({...ch, snapshot_time: ts || normalizeCHSnapshotTime(ch?.observed_at||ch?.timestamp||ch?.time||ch?.date)});
+    }
+  }
+  return out.filter(x=>x && x.snapshot_time);
 }
-async function downloadMonthlyExcel(){
-  const btn=document.getElementById("excelMonthlyBtn");const old=btn?.textContent;if(btn)btn.textContent="Excel確認中...";
+function wrapDeg180(v){
+  let x=((Number(v)%360)+360)%360;
+  if(x>180)x-=360;
+  return x;
+}
+function chRecordAgeDays(rec,time=STATE.selectedTime){
+  const t=(time instanceof Date?time:new Date(time)).getTime();
+  const r=new Date(rec?.snapshot_time||rec?.observed_at||0).getTime();
+  if(!Number.isFinite(t)||!Number.isFinite(r))return null;
+  return (t-r)/86400000;
+}
+function persistentCoronalHoleRecords(time=STATE.selectedTime){
+  const recs=(STATE.coronalHoleHistory||[]).filter(r=>r?.snapshot_time);
+  const latest=(STATE.coronalHoles||[]).map(ch=>({...ch,snapshot_time:STATE.coronalHoleModel?.updated_at||new Date().toISOString(),_current:true}));
+  const merged=[...latest,...recs];
+  const kept=merged.filter(r=>{
+    const age=chRecordAgeDays(r,time);
+    return Number.isFinite(age) && age>=0 && age<=27.1;
+  });
+  kept.sort((a,b)=>{
+    const sa=(Number(a.area_fraction_disk_deprojected||0)*2.2)+(Number(a.earth_facing_score||0)*60)+(Number(a.source_strength||0)*3)-(chRecordAgeDays(a,time)||0)*0.03;
+    const sb=(Number(b.area_fraction_disk_deprojected||0)*2.2)+(Number(b.earth_facing_score||0)*60)+(Number(b.source_strength||0)*3)-(chRecordAgeDays(b,time)||0)*0.03;
+    return sb-sa;
+  });
+  return kept.slice(0,180);
+}
+function persistedCHLongitudeDeg(rec,time=STATE.selectedTime){
+  const base=Number(rec?.central_meridian_deg||0);
+  const age=chRecordAgeDays(rec,time);
+  if(!Number.isFinite(age))return base;
+  return wrapDeg180(base + age*(360/27.0));
+}
+function estimatePersistenceCoverage(records,time=STATE.selectedTime){
+  const bins=new Array(72).fill(0);
+  const backs=new Array(36).fill(0);
+  for(const r of records){
+    const lon=persistedCHLongitudeDeg(r,time);
+    const width=Math.max(4,Math.min(80,Number(r?.width_deg_proxy||12)));
+    const half=Math.round(width/10);
+    let bin=Math.round((((lon+180)/360)*72))%72;
+    for(let k=-half;k<=half;k++)bins[(bin+k+72)%72]=1;
+    if(Math.abs(lon)>90){
+      let b=Math.round((((lon>0?lon-180:lon+180)+90)/180)*36);
+      b=Math.max(0,Math.min(35,b));
+      const hh=Math.max(1,Math.floor(half/2));
+      for(let k=-hh;k<=hh;k++)backs[(b+k+36)%36]=1;
+    }
+  }
+  const full=bins.reduce((a,b)=>a+b,0)/bins.length;
+  const back=backs.reduce((a,b)=>a+b,0)/backs.length;
+  return {full,back};
+}
+
+async function loadCoronalHoleData(){
+  setSource("coronalHole","LOADING...");
   try{
-    const idx=await loadReportIndex();
-    const ym=new Date().toISOString().slice(0,7);
-    let url=idx?.current_month_url || idx?.monthly_latest_url || idx?.latest_url || idx?.latest_docs_url || `./reports/swift_space_weather_${ym}.xlsx`;
-    if(url.startsWith("./docs/reports/"))url="./reports/"+url.slice("./docs/reports/".length);
-    const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";a.download="";document.body.appendChild(a);a.click();a.remove();
-  }catch(e){alert(`Excelを開けませんでした: ${e.message}`);}finally{if(btn)btn.textContent=old||"Excel（月次）";}
+    const [latestRes,historyRes]=await Promise.allSettled([fetchJsonAny(CORONAL_HOLE_LATEST),fetchJsonAny(CORONAL_HOLE_HISTORY)]);
+    if(latestRes.status!=="fulfilled")throw latestRes.reason;
+    const j=latestRes.value?.data||{};
+    STATE.coronalHoleModel=j;
+    STATE.coronalHoles=Array.isArray(j.coronal_holes)?j.coronal_holes:[];
+    STATE.coronalHoleImpacts=Array.isArray(j.earth_impacts)?j.earth_impacts:[];
+    let hist=[];
+    if(historyRes.status==="fulfilled")hist=extractCoronalHoleHistoryItems(historyRes.value?.data||{});
+    STATE.coronalHoleHistory=hist.filter(x=>x && x.snapshot_time).slice(-2500);
+    setSource("coronalHole",`OK: ${STATE.coronalHoles.length} CH / ${STATE.coronalHoleImpacts.length} HSS / hist ${STATE.coronalHoleHistory.length}`,j,historyRes.status==="fulfilled"?null:"history unavailable");
+    rebuildCoronalHole3D(STATE.selectedTime);
+    renderCoronalHolePanel(STATE.selectedTime);
+    if(STATE.three.ready)update3D(STATE.selectedTime);
+  }catch(e){
+    STATE.coronalHoleModel={status:"FAILED",errors:[e.message]};
+    STATE.coronalHoles=[];STATE.coronalHoleImpacts=[];STATE.coronalHoleHistory=[];
+    setSource("coronalHole","FAILED",null,e.message);
+    rebuildCoronalHole3D(STATE.selectedTime);
+    renderCoronalHolePanel(STATE.selectedTime);
+  }
 }
 
-function normalizeWindArchive(payload){
-  const rows=genericRows(payload,["items","records","data"]),out=[];
-  for(const r of rows){
-    const it=new Date(r.issued_at||r.issuedAt||0).getTime(),tt=new Date(r.target_time||r.time||0).getTime(),sp=firstFinite(r,["predicted_speed","speed","swift_cme_enhanced_speed"]);
-    if(Number.isFinite(it)&&Number.isFinite(tt)&&Number.isFinite(sp))out.push({_issued:it,issued_at:new Date(it).toISOString(),_t:tt,time:new Date(tt).toISOString(),speed:sp,leadHours:firstFinite(r,["lead_hours"])});
-  }
-  return out.sort((a,b)=>a._issued-b._issued||a._t-b._t);
-}
-function selectedPastWindSnapshots(){
-  const rows=STATE.windPastForecast||[],targets=[24,48,72],now=Date.now(),groups=new Map();
-  for(const r of rows){const k=r.issued_at;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r);}
-  const issues=[...groups.keys()].map(k=>({k,t:new Date(k).getTime()})).filter(x=>Number.isFinite(x.t));
-  return targets.map((h,idx)=>{if(!issues.length)return null;const want=now-h*3600e3;let best=issues[0];for(const q of issues)if(Math.abs(q.t-want)<Math.abs(best.t-want))best=q;if(Math.abs(best.t-want)>9*3600e3)return null;return{hours:h,rows:groups.get(best.k),issued:best.t,index:idx};}).filter(Boolean);
-}
-function nearestObservedWind(t,maxGapH=1.5){
-  if(!STATE.windObserved.length)return null;let best=null,bd=Infinity;for(const r of STATE.windObserved){const d=Math.abs(r._t-t);if(d<bd){bd=d;best=r;}}return best&&bd<=maxGapH*3600e3?best:null;
-}
-function pastSnapshotSkill(snapshot){
-  let n=0,hit=0,sum=0,bias=0;for(const r of snapshot?.rows||[]){if(r._t>Date.now())continue;const o=nearestObservedWind(r._t);if(!o)continue;const e=r.speed-o.speed;n++;sum+=Math.abs(e);bias+=e;if(Math.abs(e)<=50)hit++;}
-  return n?{n,hit:100*hit/n,mae:sum/n,bias:bias/n}:null;
-}
-
-async function loadSwiftWind(){
-  setSource("swiftWind","LOADING...");
-  let latestObj=null,latestUrl="",historyObj=null,archiveObj=null;
-  try{const got=await fetchJsonAny(SWIFT_WIND_LATEST);latestObj=got.data;latestUrl=got.url;}catch(_){ }
-  try{historyObj=(await fetchJsonAny(NOAA_WIND_HISTORY)).data;}catch(_){ }
-  try{archiveObj=(await fetchJsonAny(SWIFT_WIND_ARCHIVE)).data;}catch(_){ }
-  if(archiveObj)STATE.windPastForecast=normalizeWindArchive(archiveObj);
-  if(historyObj)STATE.windObserved=mergeWind(STATE.windObserved,normalizeWindPayload(historyObj,"observed"));
-  if(latestObj){
-    updateWindAccuracyFromPayload(latestObj);
-    const recs=Array.isArray(latestObj.records)?latestObj.records:[];
-    const fc=Array.isArray(latestObj.forecast)?latestObj.forecast:[];
-    STATE.windObserved=mergeWind(STATE.windObserved,normalizeWindPayload(recs,"auto").filter(x=>x.kind==="observed"));
-    STATE.windForecast=mergeWind(STATE.windForecast,normalizeWindPayload([...recs,...fc],"auto").filter(x=>x.kind==="forecast"));
-  }
-  const cutoff=Date.now()-35*86400e3;STATE.windObserved=STATE.windObserved.filter(x=>x._t>=cutoff);
-  STATE.windForecast=STATE.windForecast.filter(x=>x._t>=Date.now()-3*3600e3&&x._t<=Date.now()+6*86400e3);
-  STATE.windVersion++;STATE.propagationCache.clear();
-  if(latestObj||historyObj)setSource("swiftWind",`OK: obs ${STATE.windObserved.length} / forecast ${STATE.windForecast.length} / archive ${STATE.windPastForecast.length}`,{latest:latestObj,url:latestUrl});
-  else setSource("swiftWind","FAILED",null,"SWIFT Wind / NOAA history not found");
-  rebuildAll();drawWindGraph();
-}
-function interpolateWind(series,t,maxGapH=6){
-  if(!series?.length)return null;const x=t instanceof Date?t.getTime():Number(t);let lo=0,hi=series.length-1;
-  if(x<=series[0]._t)return Math.abs(series[0]._t-x)<=maxGapH*3600e3?series[0].speed:null;
-  if(x>=series[hi]._t)return Math.abs(x-series[hi]._t)<=maxGapH*3600e3?series[hi].speed:null;
-  while(hi-lo>1){const m=(lo+hi)>>1;if(series[m]._t<=x)lo=m;else hi=m;}
-  const a=series[lo],b=series[hi],gap=b._t-a._t;if(gap>maxGapH*3600e3)return null;const f=(x-a._t)/(gap||1);return a.speed+(b.speed-a.speed)*f;
-}
-function windStateAt(t){
-  const d=t instanceof Date?t:new Date(t),x=d.getTime(),now=Date.now();
-  if(x<=now+30*60e3){const v=interpolateWind(STATE.windObserved,x,4);if(Number.isFinite(v))return{speed:v,source:"NOAA observed"};}
-  const vf=interpolateWind(STATE.windForecast,x,8);if(Number.isFinite(vf))return{speed:vf,source:"SWIFT Wind AI"};
-  const wsa=getBackgroundWindSpeedFromWSA(d);if(Number.isFinite(wsa))return{speed:wsa,source:"WSA"};
-  return{speed:clamp(num(STATE.env.speed,425),250,900),source:"NOAA current/fallback"};
-}
-function getSolarWindAt(t){return windStateAt(t).speed;}
-
-
-function genericRows(payload,keys=["records","forecast","items","data"]){
-  if(Array.isArray(payload))return payload.filter(x=>x&&typeof x==="object");
-  if(payload&&typeof payload==="object")for(const k of keys)if(Array.isArray(payload[k]))return payload[k].filter(x=>x&&typeof x==="object");
-  return[];
-}
-function normalizeKpObserved(payload){
-  const out=[];for(const r of genericRows(payload,["kp_history","records","items","data"])){const t=windTime(r),kp=firstFinite(r,["kp","kp_index","Kp"]);if(Number.isFinite(t)&&Number.isFinite(kp))out.push({_t:t,time:new Date(t).toISOString(),kp:Number(kp),source:r.source||"NOAA observed",raw:r});}return out.sort((a,b)=>a._t-b._t);
-}
-function normalizeKpForecast(payload){
-  const out=[];
-  for(const r of genericRows(payload,["kp_forecast","forecast","records","items","data"])){
-    const t=windTime(r);if(!Number.isFinite(t))continue;
-    const kp=firstFinite(r,["kp","predicted_kp","forecast_kp","Kp"]);if(!Number.isFinite(kp))continue;
-    out.push({_t:t,time:new Date(t).toISOString(),kp:Number(kp),gScale:r.g_scale||r.G_Scale||"",confidence:firstFinite(r,["confidence"]),source:r.source||"SWIFT Kp AI",raw:r});
-  }
-  const now=Date.now(),limit=now+72*3600e3;
-  return out.filter(r=>r._t<=limit).sort((a,b)=>a._t-b._t);
-}
-function normalizeBzForecast(payload){
-  const out=[];
-  for(const r of genericRows(payload,["bz_forecast","forecast","records","items","data"])){
-    const t=windTime(r);if(!Number.isFinite(t))continue;
-    const bz=firstFinite(r,["bz_forecast","Bz_Forecast_nT","bz","predicted_bz"]),bzMin=firstFinite(r,["bz_min_forecast","Bz_Min_Forecast_nT","bz_min"]),bt=firstFinite(r,["bt_forecast","Bt_Forecast_nT","bt"]),prob=firstFinite(r,["southward_bz_probability","Southward_Probability_pct"]);
-    if(!Number.isFinite(bz)&&!Number.isFinite(bzMin)&&!Number.isFinite(bt))continue;
-    out.push({_t:t,time:new Date(t).toISOString(),bz:Number.isFinite(bz)?bz:null,bzMin:Number.isFinite(bzMin)?bzMin:null,bt:Number.isFinite(bt)?bt:null,southProb:Number.isFinite(prob)?prob:null,risk:r.bz_risk||r.Risk||"",source:r.source||"SWIFT Bz AI",raw:r});
-  }
-  return out.sort((a,b)=>a._t-b._t);
-}
-function mergeTimed(a,b,key){const m=new Map();for(const r of [...(a||[]),...(b||[])])if(Number.isFinite(r?._t))m.set(Math.round(r._t/60000),r);return[...m.values()].sort((x,y)=>x._t-y._t);}
 async function loadReportUiFeed(){
   setSource("reportUi","LOADING...");
   let feed=null;
@@ -577,7 +663,7 @@ function drawSpaceWeatherGraphs(){
   const bs=document.getElementById("bzStats");if(bs)bs.innerHTML=`<div class="forecastStat"><div class="k">Bz @ sim time</div><div class="v">${b.bz.toFixed(1)} nT</div></div><div class="forecastStat"><div class="k">Bz minimum</div><div class="v">${Number.isFinite(bmin)?bmin.toFixed(1):"--"} nT</div></div><div class="forecastStat"><div class="k">Source</div><div class="v" style="font-size:13px">${esc(b.source)}</div></div>`;
 }
 
-async function loadAll(){await Promise.allSettled([loadDONKICache(),loadWSA(),loadCACTusCache(),loadNOAAWind(),loadNOAAMag(),loadNOAAKp(),loadSwiftWind(),loadReportUiFeed()]);rebuildAll();drawSpaceWeatherGraphs();}
+async function loadAll(){await Promise.allSettled([loadDONKICache(),loadWSA(),loadCACTusCache(),loadNOAAWind(),loadNOAAMag(),loadNOAAKp(),loadSwiftWind(),loadCoronalHoleData(),loadReportUiFeed()]);rebuildAll();drawSpaceWeatherGraphs();renderCoronalHolePanel(STATE.selectedTime);}
 function renderSourcePanel(){const rows=[["donkiCache","DONKI",loadDONKICache],["wsa","WSA",loadWSA],["cactus","CACTus",loadCACTusCache],["noaaWind","NOAA Wind",loadNOAAWind],["noaaMag","NOAA IMF",loadNOAAMag],["noaaKp","NOAA Kp",loadNOAAKp],["swiftWind","SWIFT Wind AI",loadSwiftWind],["reportUi","Kp/Bz + Report",loadReportUiFeed]];document.getElementById("sourcePanel").innerHTML=rows.map(([k,t,f])=>{const x=STATE.sources[k],cl=x.status.startsWith("OK")?"ok":x.status.startsWith("FAILED")?"bad":x.status.startsWith("LOADING")?"loading":"",tm=x.time?x.time.toISOString().slice(11,19)+" UTC":"-";return`<div class="sourceCard"><div class="sourceTitle">${t}</div><div class="sourceStatus ${cl}">${esc(x.status)}</div><div class="small">${tm}</div>${x.error?`<div class="small bad">${esc(x.error).slice(0,80)}</div>`:""}<button style="margin-top:7px;padding:5px 8px;font-size:10px" onclick="${f.name}()">LOAD</button></div>`;}).join("");}
 function getBackgroundWindSpeedFromWSA(t){const a=STATE.wsaModel?.records||[];if(!a.length)return null;const x=t.getTime();let p=null,n=null;for(const r of a){if(r._t<=x){p=r;continue;}n=r;break;}if(!p&&n)return clamp(n.speed,300,800);if(p&&!n)return clamp(p.speed,300,800);if(!p)return null;const f=(x-p._t)/(n._t-p._t||1);return clamp(p.speed+(n.speed-p.speed)*f,300,800);}
 function angularSeparation(lon,lat){const lo=lon*Math.PI/180,la=lat*Math.PI/180;return Math.acos(clamp(Math.cos(la)*Math.cos(lo),-1,1))*180/Math.PI;}
@@ -1376,6 +1462,169 @@ function updateMagnetosphere(impactStrength=0,bzOverride=null){
   }
 }
 
+
+function coronalHoleLocalPoint(ch,r=8.86){
+  const lat=num(ch?.latitude_deg,0)*Math.PI/180;
+  const lon=num(ch?.central_meridian_deg,0)*Math.PI/180;
+  return new THREE.Vector3(
+    r*Math.cos(lat)*Math.cos(lon),
+    r*Math.sin(lat),
+    r*Math.cos(lat)*Math.sin(lon)
+  );
+}
+function makeCoronalHoleMarker(ch){
+  const g=new THREE.Group();
+  const p=coronalHoleLocalPoint(ch,8.89);
+  const n=p.clone().normalize();
+  const width=clamp(num(ch.width_deg_proxy,8),4,88)*Math.PI/180;
+  const patchR=clamp(8.7*Math.sin(width*.23),.24,3.1);
+  const strength=clamp(num(ch.source_strength,.2),0,1);
+  const earthScore=clamp(num(ch.earth_facing_score,0)/.03,0,1);
+  const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),n);
+
+  const disk=new THREE.Mesh(
+    new THREE.CircleGeometry(patchR,40),
+    new THREE.MeshBasicMaterial({color:0x10183f,transparent:true,opacity:.48+.20*strength,side:THREE.DoubleSide,depthWrite:false})
+  );
+  disk.position.copy(p);disk.quaternion.copy(q);g.add(disk);
+
+  const ring=new THREE.Mesh(
+    new THREE.RingGeometry(patchR*.83,patchR*1.04,48),
+    new THREE.MeshBasicMaterial({color:earthScore>.35?0x69d9ff:0x8f83ff,transparent:true,opacity:.48+.32*strength,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false})
+  );
+  ring.position.copy(n.clone().multiplyScalar(8.94));ring.quaternion.copy(q);g.add(ring);
+
+  const dot=new THREE.Mesh(
+    new THREE.SphereGeometry(.10+.11*earthScore,12,8),
+    new THREE.MeshBasicMaterial({color:0xa8e8ff,transparent:true,opacity:.88,blending:THREE.AdditiveBlending,depthWrite:false})
+  );
+  dot.position.copy(n.clone().multiplyScalar(9.05));g.add(dot);
+  g.userData={kind:"coronalHole",id:ch.id,baseOpacity:ring.material.opacity};
+  return g;
+}
+function makeHSSCorridor(im,ch,time){
+  const root=new THREE.Group();
+  const v=clamp(num(im?.predicted_peak_speed_km_s_prior,450),280,900);
+  const conf=clamp(num(im?.confidence,.25),.1,.95);
+  const lat=num(ch?.latitude_deg,im?.latitude_deg||0)*Math.PI/180;
+  const width=clamp(num(ch?.width_deg_proxy,18),6,80)*Math.PI/180;
+  const seed=num(ch?.central_meridian_deg,im?.central_meridian_deg||0)*Math.PI/180;
+  const offsets=[-.24,0,.24].map(x=>x*width);
+  const color=new THREE.Color(speedColorHex(v));
+  for(const off of offsets){
+    const pts=[];
+    const steps=100;
+    for(let i=0;i<=steps;i++){
+      const f=i/steps;
+      const rKm=DBM.r0Km+f*(1.10*AU_KM-DBM.r0Km);
+      const dist=sceneMagneticDistanceForR(rKm);
+      const phi=parkerRetardedPhi(seed+off,time,rKm,v);
+      const y=Math.sin(lat)*dist*.34;
+      pts.push(new THREE.Vector3(SCENE.sunX+Math.cos(phi)*dist,y,Math.sin(phi)*dist));
+    }
+    const curve=new THREE.CatmullRomCurve3(pts);
+    const halo=new THREE.Mesh(
+      new THREE.TubeGeometry(curve,110,.32+conf*.12,6,false),
+      new THREE.MeshBasicMaterial({color,transparent:true,opacity:.035+.055*conf,blending:THREE.AdditiveBlending,depthWrite:false})
+    );
+    root.add(halo);
+    const core=new THREE.Mesh(
+      new THREE.TubeGeometry(curve,110,.075+conf*.045,6,false),
+      new THREE.MeshBasicMaterial({color,transparent:true,opacity:.25+.38*conf,blending:THREE.AdditiveBlending,depthWrite:false})
+    );
+    root.add(core);
+  }
+  root.userData={kind:"hss",sourceId:im.source_id,arrival:im.arrival_time,confidence:conf};
+  return root;
+}
+function makeHistoricCoronalHoleMarker(rec,time=STATE.selectedTime){
+  const age=Math.max(0,Math.min(27,chRecordAgeDays(rec,time)||0));
+  const lat=num(rec?.latitude_deg,0)*Math.PI/180;
+  const lon=persistedCHLongitudeDeg(rec,time)*Math.PI/180;
+  const r=8.80;
+  const p=new THREE.Vector3(r*Math.cos(lat)*Math.cos(lon),r*Math.sin(lat),r*Math.cos(lat)*Math.sin(lon));
+  const n=p.clone().normalize();
+  const width=clamp(num(rec.width_deg_proxy,8),4,88)*Math.PI/180;
+  const patchR=clamp(8.55*Math.sin(width*.23),.18,2.5);
+  const fade=1-(age/27);
+  const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),n);
+  const g=new THREE.Group();
+  const disk=new THREE.Mesh(
+    new THREE.CircleGeometry(patchR,28),
+    new THREE.MeshBasicMaterial({color:0x1e2552,transparent:true,opacity:.08+.18*fade,side:THREE.DoubleSide,depthWrite:false})
+  );
+  disk.position.copy(p);disk.quaternion.copy(q);g.add(disk);
+  const ring=new THREE.Mesh(
+    new THREE.RingGeometry(patchR*.88,patchR*1.02,40),
+    new THREE.MeshBasicMaterial({color:0x6b82ff,transparent:true,opacity:.05+.22*fade,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false})
+  );
+  ring.position.copy(n.clone().multiplyScalar(8.92));ring.quaternion.copy(q);g.add(ring);
+  g.userData={kind:"coronalHistory",ageDays:age};
+  return g;
+}
+function toggleCoronalHole3D(){
+  const on=document.getElementById("showCoronalHoles")?.checked!==false;
+  const histOn=document.getElementById("showCoronalHoleHistory")?.checked!==false;
+  if(STATE.three.coronalHoleGroup)STATE.three.coronalHoleGroup.visible=on;
+  if(STATE.three.hssGroup)STATE.three.hssGroup.visible=on;
+  if(STATE.three.coronalHistoryGroup)STATE.three.coronalHistoryGroup.visible=on&&histOn;
+}
+function rebuildCoronalHole3D(time=STATE.selectedTime){
+  if(!STATE.three.ready||!STATE.three.coronalHoleGroup||!STATE.three.hssGroup)return;
+  const cg=STATE.three.coronalHoleGroup,hg=STATE.three.hssGroup,pg=STATE.three.coronalHistoryGroup;
+  while(cg.children.length)cg.remove(cg.children[0]);
+  while(hg.children.length)hg.remove(hg.children[0]);
+  if(pg)while(pg.children.length)pg.remove(pg.children[0]);
+  for(const ch of (STATE.coronalHoles||[]).slice(0,16))cg.add(makeCoronalHoleMarker(ch));
+  if(pg){
+    const persisted=persistentCoronalHoleRecords(time);
+    for(const rec of persisted)pg.add(makeHistoricCoronalHoleMarker(rec,time));
+    pg.userData.lastTime=(time instanceof Date?time:new Date(time)).getTime();
+  }
+  const byId=new Map((STATE.coronalHoles||[]).map(ch=>[String(ch.id),ch]));
+  for(const im of (STATE.coronalHoleImpacts||[]).slice(0,8)){
+    const ch=byId.get(String(im.source_id))||im;
+    hg.add(makeHSSCorridor(im,ch,time));
+  }
+  toggleCoronalHole3D();
+}
+function updateCoronalHole3D(time){
+  if(!STATE.three.ready)return;
+  if(STATE.three.coronalHoleGroup)STATE.three.coronalHoleGroup.rotation.y=solarSynodicRotationRad(time);
+  const pg=STATE.three.coronalHistoryGroup;
+  const tm=(time instanceof Date?time:new Date(time)).getTime();
+  if(pg){
+    const last=Number(pg.userData.lastTime);
+    if(!Number.isFinite(last)||Math.abs(tm-last)>2*60*60e3){
+      while(pg.children.length)pg.remove(pg.children[0]);
+      for(const rec of persistentCoronalHoleRecords(time))pg.add(makeHistoricCoronalHoleMarker(rec,time));
+      pg.userData.lastTime=tm;
+    }
+  }
+  const hg=STATE.three.hssGroup;
+  if(hg){
+    const last=Number(hg.userData.lastTime);
+    if(!Number.isFinite(last)||Math.abs(tm-last)>60*60e3){
+      hg.userData.lastTime=tm;
+      const byId=new Map((STATE.coronalHoles||[]).map(ch=>[String(ch.id),ch]));
+      while(hg.children.length)hg.remove(hg.children[0]);
+      for(const im of (STATE.coronalHoleImpacts||[]).slice(0,8)){
+        const ch=byId.get(String(im.source_id))||im;
+        const corridor=makeHSSCorridor(im,ch,time);
+        const state=chImpactState(im,time);
+        corridor.children.forEach(m=>{
+          if(m.material){
+            const scale=state==="active"?1.45:state==="future"?1.0:.45;
+            m.material.opacity*=scale;
+          }
+        });
+        hg.add(corridor);
+      }
+      toggleCoronalHole3D();
+    }
+  }
+}
+
 function init3D(){
   if(STATE.three.ready)return;
   if(!window.THREE){document.getElementById("error3d").style.display="flex";return;}
@@ -1520,9 +1769,12 @@ function init3D(){
   const pMat=new THREE.PointsMaterial({color:speedColorHex(425),size:.30,transparent:true,opacity:.52,sizeAttenuation:true,blending:THREE.AdditiveBlending,depthWrite:false});
   const windParticles=new THREE.Points(pGeo,pMat);scene.add(windParticles);windParticles.userData={count:pCount,rAU:pR,lane:pLane,lat:pLat,seed:pSeed};
 
+  const coronalHoleGroup=new THREE.Group();coronalHoleGroup.position.copy(sun.position);scene.add(coronalHoleGroup);
+  const coronalHistoryGroup=new THREE.Group();coronalHistoryGroup.position.copy(sun.position);scene.add(coronalHistoryGroup);
+  const hssGroup=new THREE.Group();scene.add(hssGroup);
   const cmeGroup=new THREE.Group();scene.add(cmeGroup);
-  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,solarStreamers,sunLoopGroup,coronaShells,earth,earthNight,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock(),solarWindSheet,parkerGroup,windParticles,windSpeed:425,impactStrength:0};
-  animate3D();update3D(STATE.selectedTime);
+  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,solarStreamers,sunLoopGroup,coronaShells,earth,earthNight,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock(),solarWindSheet,parkerGroup,windParticles,coronalHoleGroup,coronalHistoryGroup,hssGroup,windSpeed:425,impactStrength:0};
+  rebuildCoronalHole3D(STATE.selectedTime);animate3D();update3D(STATE.selectedTime);
 }
 
 
@@ -1603,9 +1855,9 @@ function update3D(time){
   const solarSurfacePhase=solarSynodicRotationRad(time);
   if(STATE.three.sun)STATE.three.sun.rotation.y=solarSurfacePhase;
   if(STATE.three.sunLoopGroup)STATE.three.sunLoopGroup.rotation.y=solarSurfacePhase;
-  updateSolarWindSheet(time,ws.speed);updateParkerSpiral(time,ws.speed);updateMagnetosphere(impactStrength,bzS.bz);updateSpeedHud(bestInfo);
+  updateSolarWindSheet(time,ws.speed);updateParkerSpiral(time,ws.speed);updateCoronalHole3D(time);updateMagnetosphere(impactStrength,bzS.bz);updateSpeedHud(bestInfo);renderCoronalHolePanel(time);
   const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz,magState=impactStrength>.72?"STRONG IMPACT":impactStrength>.35?"IMPACT":impactStrength>.05?"CONTACT":"QUIET";
-  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Solar wind: ${Math.round(ws.speed)} km/s (${esc(ws.source)})<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(ws.speed).toFixed(1)}° local / ${parkerWindingDeg(ws.speed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + rotating-boundary luminous field<br>Solar-wind sheet: ENLIL-style radial Vsw + density/compression proxy<br>Coronal holes: <b>${STATE.coronalHoles?.length||0}</b> detected / Earth-facing HSS: <b>${STATE.coronalHoleImpacts?.length||0}</b><br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
+  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Solar wind: ${Math.round(ws.speed)} km/s (${esc(ws.source)})<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(ws.speed).toFixed(1)}° local / ${parkerWindingDeg(ws.speed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + rotating-boundary luminous field<br>Solar-wind sheet: ENLIL-style radial Vsw + density/compression proxy<br>Coronal holes: <b>${STATE.coronalHoles?.length||0}</b> modeled / Earth-facing HSS: <b>${STATE.coronalHoleImpacts?.length||0}</b> / CH→Wind residual enabled<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
 }
 
 function animate3D(){
@@ -1659,7 +1911,7 @@ window.addEventListener("resize",()=>{resize3D();drawWindGraph();});
 document.addEventListener("fullscreenchange",()=>setTimeout(()=>{resize3D();drawWindGraph();},100));
 setInterval(()=>{document.getElementById("utcClock").textContent=new Date().toISOString().replace("T"," ").slice(0,19)+" UTC";},1000);
 
-renderSourcePanel();initTimeline();init3D();renderSummary();renderEvents();updateTimeline();drawWindGraph();loadReportIndex();loadAll();
+renderSourcePanel();initTimeline();init3D();renderSummary();renderEvents();renderCoronalHolePanel();updateTimeline();drawWindGraph();loadReportIndex();loadAll();
 </script>
 </body>
 </html>
