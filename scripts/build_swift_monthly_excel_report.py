@@ -12,6 +12,7 @@ Workbook contents:
 - Monthly_Summary: month KPI summary and daily summary table
 - SolarWind_Month: hourly NOAA solar wind/IMF for the month
 - Wind_Forecast_3d: next 3-day SWIFT Wind forecast
+- Wind_Fcst_History: archived historical forecasts for forecast-vs-observation review
 - Kp_Forecast, Accuracy, Bz_AI, CME_Arrivals, CME_Wind_Boost, Sources
 """
 from __future__ import annotations
@@ -628,6 +629,48 @@ def month_metric_rows(
     ]
 
 
+
+def load_wind_forecast_archive() -> list[dict[str, Any]]:
+    path = DATA / "swift-wind" / "forecast-archive.json"
+    obj = load_json(path) or {}
+    out = []
+    for r in records(obj, keys=("items", "records", "data")):
+        issued = parse_time(r.get("issued_at"))
+        target = parse_time(r.get("target_time") or r.get("time"))
+        pred = num(r.get("predicted_speed"))
+        if issued and target and pred is not None:
+            out.append({
+                "_issued": issued, "issued_at": iso_z(issued),
+                "_t": target, "time": iso_z(target),
+                "predicted_speed": pred,
+                "background_speed": num(r.get("background_speed")),
+                "lead_hours": num(r.get("lead_hours")),
+            })
+    return sorted(out, key=lambda x: (x["_issued"], x["_t"]))
+
+
+def select_forecast_snapshots(rows_in: list[dict[str, Any]], now: datetime, hours_list=(24,48,72)) -> list[dict[str, Any]]:
+    if not rows_in:
+        return []
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for r in rows_in:
+        groups.setdefault(r["issued_at"], []).append(r)
+    issued = [(parse_time(k), k) for k in groups]
+    issued = [(d,k) for d,k in issued if d]
+    out = []
+    for h in hours_list:
+        target_issue = now - timedelta(hours=h)
+        if not issued:
+            continue
+        d,k = min(issued, key=lambda q: abs((q[0]-target_issue).total_seconds()))
+        if abs((d-target_issue).total_seconds()) > 9*3600:
+            continue
+        for r in groups[k]:
+            if now - timedelta(days=3) <= r["_t"] <= now + timedelta(days=3):
+                q=dict(r); q["snapshot_hours_ago"]=h; out.append(q)
+    return out
+
+
 def main() -> None:
     now = utcnow()
     month_start, month_end = month_bounds(now)
@@ -640,6 +683,8 @@ def main() -> None:
     mag_hist = load_mag_history()
     kp_hist = load_kp_history()
     swift_wind = load_swift_wind()
+    wind_archive = load_wind_forecast_archive()
+    wind_snapshots = select_forecast_snapshots(wind_archive, now)
     swift_kp, swift_kp_hist = load_swift_kp()
     cmes = load_cme_arrivals()
     cme_model = load_cme_boost_model()
@@ -695,6 +740,10 @@ def main() -> None:
              "observed_speed": r.get("observed_speed"), "cme_boost": r.get("cme_boost"), "cme_id": r.get("cme_id"), "source": r.get("source")}
             for r in wind_fc
         ],
+        "kp_history": [
+            {"time": r["time"], "kp": r.get("kp"), "source": "NOAA observed"}
+            for r in kp_hist if r.get("_t") and r["_t"] >= now - timedelta(days=7)
+        ],
         "kp_forecast": [
             {"time": r["time"], "kp": r.get("kp"), "g_scale": r.get("g_scale"), "confidence": r.get("confidence"), "source": r.get("source")}
             for r in kp_fc
@@ -705,6 +754,19 @@ def main() -> None:
              "bz_risk": r.get("bz_risk"), "cme_id": r.get("cme_id"), "source": "SWIFT Bz AI"}
             for r in bz_fc
         ],
+        "wind_forecast_history": [
+            {"issued_at": r["issued_at"], "time": r["time"], "predicted_speed": r.get("predicted_speed"),
+             "background_speed": r.get("background_speed"), "lead_hours": r.get("lead_hours"),
+             "snapshot_hours_ago": r.get("snapshot_hours_ago")}
+            for r in wind_snapshots
+        ],
+        "kp_model": {
+            "model": (swift_kp or {}).get("model"),
+            "kp_floor": (swift_kp or {}).get("kp_floor"),
+            "leadtime_skill": (swift_kp or {}).get("leadtime_skill"),
+            "current_observed_anchor": (swift_kp or {}).get("current_observed_anchor"),
+            "recent_trend_3h": (swift_kp or {}).get("recent_trend_3h"),
+        },
         "wind_accuracy_current": current_acc,
         "excel_file": monthly_name,
     }
@@ -758,6 +820,31 @@ def main() -> None:
     write_table(ws, 0, 0, ["UTC", "Predicted_Speed_km_s", "Background_Speed_km_s", "Observed_Speed_km_s", "CME_Boost_km_s", "CME_ID", "Source"], wf_rows, fmt)
     ws.set_column("A:A", 19); ws.set_column("B:E", 18); ws.set_column("F:G", 28)
     add_line_chart(wb, ws, "Next 3 days solar wind forecast — hourly points", "Wind_Forecast_3d", 0, len(wf_rows), 0, [(1, "Predicted"), (2, "Background"), (4, "CME boost")], "I2", "km/s")
+
+    ws = wb.add_worksheet("Wind_Fcst_History")
+    hist_rows = []
+    # Include recent archived forecast points and pair them with nearest observed hourly wind.
+    obs_by_hour = {r["_t"].replace(minute=0, second=0, microsecond=0): r for r in wind_hourly_all if r.get("_t")}
+    for r in wind_archive:
+        if r["_t"] < month_start or r["_t"] >= month_end:
+            continue
+        oh = r["_t"].replace(minute=0, second=0, microsecond=0)
+        obs = obs_by_hour.get(oh, {})
+        observed = obs.get("speed")
+        err = (r["predicted_speed"] - observed) if observed is not None else None
+        hist_rows.append({
+            "Issued_UTC": r["_issued"].replace(tzinfo=None), "Target_UTC": r["_t"].replace(tzinfo=None),
+            "Lead_h": r.get("lead_hours"), "Predicted_km_s": r.get("predicted_speed"),
+            "Observed_km_s": observed, "Error_km_s": err,
+            "Within_50": (abs(err) <= 50) if err is not None else None,
+        })
+    write_table(ws, 0, 0, ["Issued_UTC", "Target_UTC", "Lead_h", "Predicted_km_s", "Observed_km_s", "Error_km_s", "Within_50"], hist_rows, fmt)
+    ws.set_column("A:B", 19); ws.set_column("C:G", 16)
+    if hist_rows:
+        chart = wb.add_chart({"type":"line"})
+        chart.add_series({"name":"Past forecast", "categories":["Wind_Fcst_History",1,1,len(hist_rows),1], "values":["Wind_Fcst_History",1,3,len(hist_rows),3]})
+        chart.add_series({"name":"Observed", "categories":["Wind_Fcst_History",1,1,len(hist_rows),1], "values":["Wind_Fcst_History",1,4,len(hist_rows),4]})
+        chart.set_title({"name":"Archived SWIFT forecast vs observed wind"}); chart.set_y_axis({"name":"km/s"}); chart.set_size({"width":840,"height":340}); ws.insert_chart("I2",chart)
 
     ws = wb.add_worksheet("Kp_Forecast")
     kpf_rows = prepare_rows_for_excel(kp_fc, [("UTC", "_t"), ("Kp", "kp"), ("G_Scale", "g_scale"), ("Confidence", "confidence"), ("Source", "source")])
@@ -838,7 +925,7 @@ def main() -> None:
         "ui_feed_url": "./reports/ui_forecast_latest.json",
         "monthly_files": [{"month": p.stem[-7:], "file": p.name, "url": f"./reports/{p.name}"} for p in monthly_files],
         "primary_wind_accuracy": {"definition": "|predicted - observed| <= 50 km/s", "window": "last_24h", **current_acc},
-        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Sources"],
+        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Wind_Fcst_History", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Sources"],
     }
     (OUT_DOCS / "index.json").write_text(json.dumps(index_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote {final_path}")

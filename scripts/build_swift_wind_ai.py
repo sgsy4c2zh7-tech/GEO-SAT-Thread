@@ -67,8 +67,6 @@ NOAA_HISTORY_PATHS = [
 
 NOAA_LIVE_URLS = [
     "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json",
-    "https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json",
-    "https://services.swpc.noaa.gov/products/solar-wind/plasma-3-day.json",
 ]
 
 NOW = datetime.now(timezone.utc)
