@@ -726,6 +726,92 @@ def select_forecast_snapshots(rows_in: list[dict[str, Any]], now: datetime, hour
     return out
 
 
+
+def bz_min_history_3h(mag_hist: list[dict[str, Any]], now: datetime, days: int = 7) -> list[dict[str, Any]]:
+    cutoff = now - timedelta(days=days)
+    buckets: dict[datetime, list[dict[str, Any]]] = {}
+    for r in mag_hist:
+        t = r.get("_t")
+        bz = num(r.get("bz"))
+        if not isinstance(t, datetime) or t < cutoff or bz is None:
+            continue
+        b = t.replace(hour=(t.hour // 3) * 3, minute=0, second=0, microsecond=0)
+        buckets.setdefault(b, []).append(r)
+    out = []
+    for t in sorted(buckets):
+        rr = buckets[t]
+        bz_vals = [num(x.get("bz")) for x in rr if num(x.get("bz")) is not None]
+        bt_vals = [num(x.get("bt")) for x in rr if num(x.get("bt")) is not None]
+        if not bz_vals:
+            continue
+        out.append({
+            "time": iso_z(t), "_t": t,
+            "bz_min": round(min(bz_vals), 3),
+            "bz_median": round(statistics.median(bz_vals), 3),
+            "bt_median": round(statistics.median(bt_vals), 3) if bt_vals else None,
+        })
+    return out
+
+
+def _validation_lead_pairs(validation: dict[str, Any], family: str) -> dict[str, list[dict[str, Any]]]:
+    obj = (((validation.get("nominal_lead_skill") or {}).get("pairs") or {}).get(family) or {})
+    return {str(k): [x for x in v if isinstance(x, dict)] for k, v in obj.items() if isinstance(v, list)}
+
+
+def _kp_range_label(v: Any) -> str | None:
+    x = num(v)
+    if x is None:
+        return None
+    if 1.0 <= x < 5.0: return "Kp 1-4"
+    if 5.0 <= x < 6.0: return "Kp 5-<6"
+    if 6.0 <= x < 8.0: return "Kp 6-7"
+    if 8.0 <= x <= 9.0: return "Kp 8-9"
+    return None
+
+
+def _kp_pair_metrics(rr: list[dict[str, Any]]) -> dict[str, Any]:
+    if not rr:
+        return {"count": 0, "mae": None, "bias": None, "hit_rate_067": None, "hit_rate_1": None}
+    e = [num(x.get("error")) for x in rr]; e = [x for x in e if x is not None]
+    if not e:
+        return {"count": 0, "mae": None, "bias": None, "hit_rate_067": None, "hit_rate_1": None}
+    return {
+        "count": len(e),
+        "mae": round(sum(abs(x) for x in e) / len(e), 3),
+        "bias": round(sum(e) / len(e), 3),
+        "hit_rate_067": round(100 * sum(abs(x) <= .67 for x in e) / len(e), 1),
+        "hit_rate_1": round(100 * sum(abs(x) <= 1.0 for x in e) / len(e), 1),
+    }
+
+
+def _bz_pair_metrics(rr: list[dict[str, Any]]) -> dict[str, Any]:
+    if not rr:
+        return {"count": 0, "mae": None, "bias": None, "hit_rate_2nt": None, "hit_rate_3nt": None, "direction_hit_rate_threshold60": None, "brier_score": None}
+    e = [num(x.get("error_bz_min")) for x in rr]; e = [x for x in e if x is not None]
+    if not e:
+        return {"count": 0, "mae": None, "bias": None, "hit_rate_2nt": None, "hit_rate_3nt": None, "direction_hit_rate_threshold60": None, "brier_score": None}
+    valid = [x for x in rr if num(x.get("error_bz_min")) is not None]
+    dh = sum((num(x.get("southward_probability"), 0) >= 60) == bool(x.get("observed_southward")) for x in valid)
+    b = [num(x.get("brier")) for x in valid]; b = [x for x in b if x is not None]
+    return {
+        "count": len(valid),
+        "mae": round(sum(abs(x) for x in e) / len(e), 3),
+        "bias": round(sum(e) / len(e), 3),
+        "hit_rate_2nt": round(100 * sum(abs(x) <= 2.0 for x in e) / len(e), 1),
+        "hit_rate_3nt": round(100 * sum(abs(x) <= 3.0 for x in e) / len(e), 1),
+        "direction_hit_rate_threshold60": round(100 * dh / len(valid), 1),
+        "brier_score": round(sum(b) / len(b), 4) if b else None,
+    }
+
+
+def _monthly_pair_subset(rows: list[dict[str, Any]], start: datetime, end: datetime) -> list[dict[str, Any]]:
+    out = []
+    for r in rows:
+        t = parse_time(r.get("target_time"))
+        if t and start <= t < end:
+            out.append(r)
+    return out
+
 def main() -> None:
     now = utcnow()
     month_start, month_end = month_bounds(now)
@@ -788,6 +874,9 @@ def main() -> None:
     # Companion JSON for the browser UI.  It is built from the exact same
     # arrays used below for the monthly Excel sheets, so Kp/Bz/Wind remain in sync.
     wind_hist_27d = [r for r in wind_hourly_all if r.get("_t") and r["_t"] >= now - timedelta(days=27)]
+    bz_hist_3h = bz_min_history_3h(mag_hist, now, 7)
+    nominal_skill = validation.get("nominal_lead_skill") or {}
+    past_snapshots = validation.get("past_forecast_snapshots") or {}
     ui_payload = {
         "updated_at": iso_z(now),
         "month": month,
@@ -807,6 +896,10 @@ def main() -> None:
         "kp_forecast": [
             {"time": r["time"], "kp": r.get("kp"), "g_scale": r.get("g_scale"), "confidence": r.get("confidence"), "source": r.get("source")}
             for r in kp_fc
+        ],
+        "bz_history": [
+            {"time": r["time"], "bz_min": r.get("bz_min"), "bz_median": r.get("bz_median"), "bt_median": r.get("bt_median"), "source": "NOAA IMF observed 3h bin"}
+            for r in bz_hist_3h
         ],
         "bz_forecast": [
             {"time": r["time"], "bz_forecast": r.get("bz_forecast"), "bz_min_forecast": r.get("bz_min_forecast"),
@@ -831,6 +924,8 @@ def main() -> None:
         "research_validation": {
             "models": validation.get("models", {}),
             "uncertainty": validation.get("uncertainty", {}),
+            "nominal_lead_skill": nominal_skill,
+            "past_forecast_snapshots": past_snapshots,
             "methodology": validation.get("methodology", {}),
         },
         "enlil": {
@@ -1039,6 +1134,101 @@ def main() -> None:
     write_table(ws,0,0,["Issued_UTC","Target_UTC","Lead_h","Forecast_BzMin_nT","Observed_BzMin_nT","Error_nT","Southward_Prob_pct","Observed_Southward","Brier"],bv,fmt)
     ws.set_column("A:B",19);ws.set_column("C:I",18)
 
+
+    # Kp/Bz 24 h / 48 h / 72 h operational lead skill and past forecast history.
+    lead_skill = validation.get("nominal_lead_skill") or {}
+    kp_lead_pairs = _validation_lead_pairs(validation, "kp")
+    bz_lead_pairs = _validation_lead_pairs(validation, "bz")
+
+    ws = wb.add_worksheet("Kp_Lead_Skill")
+    kp_lead_rows = []
+    rolling_kp = {int(x.get("nominal_lead_hours")): x for x in (lead_skill.get("kp") or []) if isinstance(x, dict) and str(x.get("nominal_lead_hours", "")).isdigit()}
+    for h in (24, 48, 72):
+        all_rows = kp_lead_pairs.get(f"{h}h", [])
+        mr = _monthly_pair_subset(all_rows, month_start, month_end)
+        mm = _kp_pair_metrics(mr)
+        rm = rolling_kp.get(h, {})
+        kp_lead_rows.append({
+            "Lead_h": h, "Window": "rolling 30d", "Count": rm.get("count"), "MAE_Kp": rm.get("mae"), "Bias_Kp": rm.get("bias"),
+            "Hit_within_0.67_pct": rm.get("hit_rate_067"), "Hit_within_1.0_pct": rm.get("hit_rate_1")
+        })
+        kp_lead_rows.append({
+            "Lead_h": h, "Window": month, "Count": mm.get("count"), "MAE_Kp": mm.get("mae"), "Bias_Kp": mm.get("bias"),
+            "Hit_within_0.67_pct": mm.get("hit_rate_067"), "Hit_within_1.0_pct": mm.get("hit_rate_1")
+        })
+    write_table(ws, 0, 0, ["Lead_h","Window","Count","MAE_Kp","Bias_Kp","Hit_within_0.67_pct","Hit_within_1.0_pct"], kp_lead_rows, fmt)
+    ws.set_column("A:A", 11); ws.set_column("B:B", 16); ws.set_column("C:G", 20)
+
+    ws = wb.add_worksheet("Kp_Range_Skill")
+    kp_range_rows = []
+    requested_bands = ["Kp 1-4", "Kp 5-<6", "Kp 6-7", "Kp 8-9"]
+    rolling_range = {(str(x.get("observed_range")), str(x.get("nominal_lead_hours"))): x for x in (lead_skill.get("kp_by_observed_range") or []) if isinstance(x, dict)}
+    for band in requested_bands:
+        for h in (24,48,72):
+            rr = [x for x in _monthly_pair_subset(kp_lead_pairs.get(f"{h}h", []), month_start, month_end) if _kp_range_label(x.get("observed")) == band]
+            mm = _kp_pair_metrics(rr); rm = rolling_range.get((band, str(h)), {})
+            kp_range_rows.append({
+                "Observed_Kp_Range": band, "Lead_h": h,
+                "Rolling30d_Count": rm.get("count"), "Rolling30d_Hit_1.0_pct": rm.get("hit_rate_1"), "Rolling30d_Hit_0.67_pct": rm.get("hit_rate_067"),
+                "Month_Count": mm.get("count"), "Month_Hit_1.0_pct": mm.get("hit_rate_1"), "Month_Hit_0.67_pct": mm.get("hit_rate_067"),
+                "Month_MAE_Kp": mm.get("mae"), "Month_Bias_Kp": mm.get("bias")
+            })
+    write_table(ws, 0, 0, ["Observed_Kp_Range","Lead_h","Rolling30d_Count","Rolling30d_Hit_1.0_pct","Rolling30d_Hit_0.67_pct","Month_Count","Month_Hit_1.0_pct","Month_Hit_0.67_pct","Month_MAE_Kp","Month_Bias_Kp"], kp_range_rows, fmt)
+    ws.set_column("A:A", 18); ws.set_column("B:J", 19)
+    ws.write(len(kp_range_rows)+2, 0, "Band rule", fmt["section"])
+    ws.write(len(kp_range_rows)+3, 0, "1<=Kp<5; 5<=Kp<6; 6<=Kp<8; 8<=Kp<=9. Kp<1 is excluded from this stratified table to match the requested bands.", fmt["body"])
+    ws.set_column("A:A", 22)
+
+    ws = wb.add_worksheet("Kp_Fcst_History")
+    kh=[]
+    for h in (24,48,72):
+        for r in _monthly_pair_subset(kp_lead_pairs.get(f"{h}h", []), month_start, month_end):
+            it=parse_time(r.get("issued_at"));tt=parse_time(r.get("target_time"))
+            kh.append({"Nominal_Lead_h":h,"Issued_UTC":it.replace(tzinfo=None) if it else None,"Target_UTC":tt.replace(tzinfo=None) if tt else None,"Actual_Lead_h":r.get("lead_hours"),"Predicted_Kp":r.get("predicted"),"Observed_Kp":r.get("observed"),"Observed_Range":_kp_range_label(r.get("observed")),"Error_Kp":r.get("error"),"Within_0.67":r.get("within_067"),"Within_1.0":r.get("within_1"),"Model":r.get("model")})
+    kh.sort(key=lambda x:(x.get("Target_UTC") or datetime.min, x.get("Nominal_Lead_h") or 0))
+    write_table(ws,0,0,["Nominal_Lead_h","Issued_UTC","Target_UTC","Actual_Lead_h","Predicted_Kp","Observed_Kp","Observed_Range","Error_Kp","Within_0.67","Within_1.0","Model"],kh,fmt)
+    ws.set_column("A:A",14);ws.set_column("B:C",19);ws.set_column("D:J",15);ws.set_column("K:K",36)
+    kp_chart_map={}
+    for r in kh:
+        tt=r.get("Target_UTC")
+        if tt is None:continue
+        z=kp_chart_map.setdefault(tt,{"Target_UTC":tt,"Observed_Kp":r.get("Observed_Kp"),"Pred_24h":None,"Pred_48h":None,"Pred_72h":None})
+        z[f"Pred_{int(r.get('Nominal_Lead_h'))}h"]=r.get("Predicted_Kp")
+    kp_chart_rows=[kp_chart_map[k] for k in sorted(kp_chart_map)]
+    write_table(ws,0,12,["Target_UTC","Observed_Kp","Pred_24h","Pred_48h","Pred_72h"],kp_chart_rows,fmt)
+    ws.set_column("M:M",19);ws.set_column("N:Q",13)
+    add_line_chart(wb,ws,"Kp observed vs 24/48/72 h lead forecasts","Kp_Fcst_History",0,len(kp_chart_rows),12,[(13,"Observed Kp"),(14,"24h forecast"),(15,"48h forecast"),(16,"72h forecast")],"S2","Kp")
+
+    ws = wb.add_worksheet("Bz_Lead_Skill")
+    bz_lead_rows=[]
+    rolling_bz = {int(x.get("nominal_lead_hours")): x for x in (lead_skill.get("bz") or []) if isinstance(x, dict) and str(x.get("nominal_lead_hours", "")).isdigit()}
+    for h in (24,48,72):
+        all_rows=bz_lead_pairs.get(f"{h}h",[]);mr=_monthly_pair_subset(all_rows,month_start,month_end);mm=_bz_pair_metrics(mr);rm=rolling_bz.get(h,{})
+        bz_lead_rows.append({"Lead_h":h,"Window":"rolling 30d","Count":rm.get("count"),"BzMin_MAE_nT":rm.get("bz_min_mae"),"BzMin_Bias_nT":rm.get("bz_min_bias"),"Hit_within_2nT_pct":rm.get("hit_rate_2nt"),"Hit_within_3nT_pct":rm.get("hit_rate_3nt"),"Southward_Direction_Hit_pct":rm.get("direction_hit_rate_threshold60"),"Brier":rm.get("brier_score")})
+        bz_lead_rows.append({"Lead_h":h,"Window":month,"Count":mm.get("count"),"BzMin_MAE_nT":mm.get("mae"),"BzMin_Bias_nT":mm.get("bias"),"Hit_within_2nT_pct":mm.get("hit_rate_2nt"),"Hit_within_3nT_pct":mm.get("hit_rate_3nt"),"Southward_Direction_Hit_pct":mm.get("direction_hit_rate_threshold60"),"Brier":mm.get("brier_score")})
+    write_table(ws,0,0,["Lead_h","Window","Count","BzMin_MAE_nT","BzMin_Bias_nT","Hit_within_2nT_pct","Hit_within_3nT_pct","Southward_Direction_Hit_pct","Brier"],bz_lead_rows,fmt)
+    ws.set_column("A:A",11);ws.set_column("B:B",16);ws.set_column("C:I",22)
+
+    ws = wb.add_worksheet("Bz_Fcst_History")
+    bh=[]
+    for h in (24,48,72):
+        for r in _monthly_pair_subset(bz_lead_pairs.get(f"{h}h", []), month_start, month_end):
+            it=parse_time(r.get("issued_at"));tt=parse_time(r.get("target_time"));err=num(r.get("error_bz_min"))
+            bh.append({"Nominal_Lead_h":h,"Issued_UTC":it.replace(tzinfo=None) if it else None,"Target_UTC":tt.replace(tzinfo=None) if tt else None,"Actual_Lead_h":r.get("lead_hours"),"Forecast_BzMin_nT":r.get("predicted_bz_min"),"Observed_BzMin_nT":r.get("observed_bz_min"),"Error_nT":err,"Within_2nT":abs(err)<=2 if err is not None else None,"Within_3nT":abs(err)<=3 if err is not None else None,"Southward_Prob_pct":r.get("southward_probability"),"Observed_Southward":r.get("observed_southward"),"Brier":r.get("brier")})
+    bh.sort(key=lambda x:(x.get("Target_UTC") or datetime.min, x.get("Nominal_Lead_h") or 0))
+    write_table(ws,0,0,["Nominal_Lead_h","Issued_UTC","Target_UTC","Actual_Lead_h","Forecast_BzMin_nT","Observed_BzMin_nT","Error_nT","Within_2nT","Within_3nT","Southward_Prob_pct","Observed_Southward","Brier"],bh,fmt)
+    ws.set_column("A:A",14);ws.set_column("B:C",19);ws.set_column("D:L",18)
+    bz_chart_map={}
+    for r in bh:
+        tt=r.get("Target_UTC")
+        if tt is None:continue
+        z=bz_chart_map.setdefault(tt,{"Target_UTC":tt,"Observed_BzMin_nT":r.get("Observed_BzMin_nT"),"Pred_24h":None,"Pred_48h":None,"Pred_72h":None})
+        z[f"Pred_{int(r.get('Nominal_Lead_h'))}h"]=r.get("Forecast_BzMin_nT")
+    bz_chart_rows=[bz_chart_map[k] for k in sorted(bz_chart_map)]
+    write_table(ws,0,13,["Target_UTC","Observed_BzMin_nT","Pred_24h","Pred_48h","Pred_72h"],bz_chart_rows,fmt)
+    ws.set_column("N:N",19);ws.set_column("O:R",15)
+    add_line_chart(wb,ws,"Bz minimum observed vs 24/48/72 h lead forecasts","Bz_Fcst_History",0,len(bz_chart_rows),13,[(14,"Observed Bz min"),(15,"24h forecast"),(16,"48h forecast"),(17,"72h forecast")],"T2","nT")
+
     ws = wb.add_worksheet("CME_Verification")
     cv=[]
     for r in pairs.get("cme",[]):
@@ -1075,8 +1265,9 @@ def main() -> None:
     ws = wb.add_worksheet("Methods")
     method_rows=[
         {"Item":"Wind verification","Definition":"Issued SWIFT forecast vs NOAA RTSW; error = forecast - observed; ±50 km/s hit is primary short-lead metric."},
-        {"Item":"Kp verification","Definition":"Issued 3-hour SWIFT Kp vs NOAA planetary K; MAE/bias and ±0.67/±1.0 Kp hit rates."},
-        {"Item":"Bz verification","Definition":"Forecast 3-hour Bz minimum vs observed 3-hour minimum; southward probability scored with Brier score."},
+        {"Item":"Kp verification","Definition":"Issued 3-hour SWIFT Kp vs NOAA planetary K; primary hit = ±1.0 Kp, strict hit = ±0.67 Kp. 24/48/72 h skill selects one archived forecast per target nearest the nominal lead within ±4.5 h."},
+        {"Item":"Kp range verification","Definition":"Observed-Kp strata are non-overlapping: 1<=Kp<5, 5<=Kp<6, 6<=Kp<8, 8<=Kp<=9. Kp<1 is excluded from this requested stratification."},
+        {"Item":"Bz verification","Definition":"Forecast 3-hour Bz minimum vs observed 3-hour minimum; primary numeric hit = ±2 nT, secondary = ±3 nT; southward probability is also scored with 60% direction threshold and Brier score. 24/48/72 h skill uses ±4.5 h lead matching."},
         {"Item":"CME arrival","Definition":"NOAA speed/density shock proxy near predicted arrival. Keep this distinct from a manually adjudicated ICME boundary in publications."},
         {"Item":"Uncertainty","Definition":"Empirical p10/p50/p90 forecast-minus-observation residuals from previous 30 days, split by lead day."},
         {"Item":"DBM gamma","Definition":str(((validation.get("models") or {}).get("cme_arrival") or {}).get("dbm_gamma_fit"))},
@@ -1096,6 +1287,9 @@ def main() -> None:
         {"Data": "SWIFT Wind verification", "Path_or_URL": "docs/data/swift-wind/verification.json"},
         {"Data": "SWIFT Kp AI", "Path_or_URL": "docs/data/swift-kp/latest.json"},
         {"Data": "SWIFT Bz AI", "Path_or_URL": "docs/data/swift-bz/latest.json"},
+        {"Data": "SWIFT Kp/Bz lead verification", "Path_or_URL": "docs/data/validation/latest.json"},
+        {"Data": "SWIFT Kp forecast archive", "Path_or_URL": "docs/data/swift-kp/forecast-archive.json"},
+        {"Data": "SWIFT Bz forecast archive", "Path_or_URL": "docs/data/swift-bz/forecast-archive.json"},
         {"Data": "CME arrivals", "Path_or_URL": "docs/data/cme-arrivals/latest.json"},
     ]
     write_table(ws, 0, 0, ["Data", "Path_or_URL"], source_rows, fmt); ws.set_column("A:A", 30); ws.set_column("B:B", 90)
@@ -1116,7 +1310,7 @@ def main() -> None:
         "primary_wind_accuracy": {"definition": "|predicted - observed| <= 50 km/s", "window": "last_24h", **current_acc},
         "retention_months": REPORT_RETENTION_MONTHS,
         "validation_feed_url": "./data/validation/ui_validation_latest.json",
-        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Wind_Fcst_History", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Coronal_Holes", "Research_Metrics", "Wind_Verification", "ENLIL_Verification", "Kp_Verification", "Bz_Verification", "CME_Verification", "Uncertainty", "Kp_Observed", "ENLIL_Earth", "Methods", "Sources"],
+        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Wind_Fcst_History", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Coronal_Holes", "Research_Metrics", "Wind_Verification", "ENLIL_Verification", "Kp_Verification", "Bz_Verification", "Kp_Lead_Skill", "Kp_Range_Skill", "Kp_Fcst_History", "Bz_Lead_Skill", "Bz_Fcst_History", "CME_Verification", "Uncertainty", "Kp_Observed", "ENLIL_Earth", "Methods", "Sources"],
     }
     (OUT_DOCS / "index.json").write_text(json.dumps(index_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote {final_path}")
