@@ -169,6 +169,14 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 @media(max-width:1000px){.forecastGrid{grid-template-columns:1fr}.forecastStats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:620px){.forecastStats{grid-template-columns:1fr}}
 
+.skillDashboard{margin-top:14px}
+.skillDashboardBody{padding:14px}
+.skillBanner{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:11px;padding:9px 11px;border:1px solid #cbdce9;border-radius:11px;background:#f7fafc;color:#36526d;font-size:11px}
+.skillBanner b{color:#17324f}.skillBanner select{padding:6px 9px;border:1px solid #b9cfdf;border-radius:8px;background:#fff;color:#264763;font-weight:800}
+.skillLeadGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.skillBox{border:1px solid #d1dfeb;border-radius:11px;background:#fbfdff;padding:10px;min-height:138px}.skillBox .name{font-size:12px;font-weight:900;color:#17324f;margin-bottom:7px}.skillLeadRow{display:grid;grid-template-columns:44px 1fr 1fr;gap:5px;padding:5px 0;border-top:1px solid #e8eef4;font-size:10px;color:#49657f}.skillLeadRow:first-of-type{border-top:0}.skillLeadRow b{color:#183752}.skillLearning{color:#93a5b5}.calibrationGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.calCard{border:1px solid #d1dfeb;border-radius:11px;background:#f8fbfe;padding:10px}.calCard .title{font-size:12px;font-weight:900;color:#17324f;margin-bottom:6px}.calRow{display:grid;grid-template-columns:52px 1fr 1fr 1fr;gap:5px;font-size:10px;color:#49657f;padding:4px 0;border-top:1px solid #e6edf4}.calRow:first-of-type{border-top:0}.skillTrendWrap{height:250px;position:relative;margin-top:10px;border:1px solid #d7e3ed;border-radius:11px;background:#fff;overflow:hidden}.skillTrendWrap canvas{position:absolute;inset:0;width:100%;height:100%}.skillRangeDash{margin-top:10px;border:1px solid #d7e3ed;border-radius:11px;overflow:auto;background:#fff;padding:10px}.skillRangeDash .title{font-size:12px;font-weight:900;color:#17324f;margin-bottom:7px}
+@media(max-width:1050px){.skillLeadGrid{grid-template-columns:1fr}.calibrationGrid{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -282,6 +290,24 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
     </section>
   </div>
 
+  <section class="card skillDashboard" id="forecastSkillCard">
+    <div class="panelHeader">
+      <div><div class="panelTitle">Forecast Skill / Auto Calibration <span class="chip">current-generation first</span></div><div class="panelSub">Wind / Kp / Bz の予報実績を集約。Kp/Bzはモデル世代を分離し、24/48/72時間リードの残差Biasを次回予報へ自動補正します。</div></div>
+      <div class="viewTools"><button class="ghost" onclick="renderForecastSkillDashboard();drawSkillTrendGraph()">更新</button></div>
+    </div>
+    <div class="skillDashboardBody">
+      <div class="skillBanner" id="skillGenerationBanner">
+        <b>Verification generation</b>
+        <select id="skillGenerationMode" onchange="renderForecastSkillDashboard()"><option value="current">Current model only</option><option value="all">All generations (reference)</option></select>
+        <span id="skillGenerationText">data waiting...</span>
+      </div>
+      <div class="skillLeadGrid" id="skillLeadGrid"></div>
+      <div class="skillTrendWrap"><canvas id="skillTrendGraph"></canvas></div>
+      <div class="calibrationGrid" id="skillCalibrationGrid"></div>
+      <div class="skillRangeDash"><div class="title">Kp observed-range skill — 24 / 48 / 72 h</div><div id="skillKpRangeMatrix"></div></div>
+    </div>
+  </section>
+
   <section class="card" style="margin-top:14px">
     <div class="panelHeader"><div><div class="panelTitle">Earth-directed CME Events</div><div class="panelSub">DONKI/CACTus geometry + DBM model ETA / speed</div></div></div>
     <div class="panelBody"><div id="eventList" class="eventList"></div></div>
@@ -348,7 +374,7 @@ const POST_PASS_HOURS=36;
 const STATE={
   sources:{donkiCache:src("DONKI Cache","未取得"),donkiAnalysis:src("DONKI CMEAnalysis","未取得"),donkiCME:src("DONKI CME","未取得"),wsa:src("WSA Wind","未取得"),cactus:src("CACTus","未取得"),noaaWind:src("NOAA Wind","未取得"),noaaMag:src("NOAA IMF","未取得"),noaaKp:src("NOAA Kp","未取得"),swiftWind:src("SWIFT Wind AI","未取得"),reportUi:src("Report UI Feed","未取得")},
   donkiPayloads:[],wsaModel:null,cactusEvents:[],env:defaultEnv(),cmes:[],timelineCenter:new Date(),timelineStart:new Date(),timelineEnd:new Date(),selectedTime:new Date(),timer:null,
-  windObserved:[],windForecast:[],windPastForecast:[],kpObserved:[],kpForecast:[],kpPastSnapshots:[],bzObserved:[],bzForecast:[],bzPastSnapshots:[],kpLeadSkill:[],bzLeadSkill:[],kpRangeSkill:[],kpModel:null,validationUi:null,windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,propagationCache:new Map(),mode:"3d",
+  windObserved:[],windForecast:[],windPastForecast:[],kpObserved:[],kpForecast:[],kpPastSnapshots:[],bzObserved:[],bzForecast:[],bzPastSnapshots:[],kpLeadSkill:[],bzLeadSkill:[],kpRangeSkill:[],kpModel:null,bzModel:null,validationUi:null,generationInfo:null,calibrationInfo:null,skillHistory:[],windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,propagationCache:new Map(),mode:"3d",
   three:{ready:false,scene:null,camera:null,renderer:null,controls:null,sun:null,earth:null,cmeGroup:null,starPoints:null,clock:null,parkerGroup:null,windParticles:null,windSpeed:425,impactStrength:0}
 };
 function src(label,status){return{label,status,data:null,time:null,error:null};}
@@ -575,6 +601,41 @@ function renderKpRangeSkill(){
   const cell=(band,h)=>{const r=rows.find(x=>String(x.observed_range)===band&&Number(x.nominal_lead_hours)===h);if(!r||!Number(r.count))return '<span class="learning">learning</span>';const hit=Number(r.hit_rate_1);const strict=Number(r.hit_rate_067);return `<b>${Number.isFinite(hit)?hit.toFixed(1):"-"}%</b><br><span class="small">±0.67 ${Number.isFinite(strict)?strict.toFixed(1):"-"}% / n=${r.count}</span>`;};
   box.innerHTML=`<table class="skillMatrix"><thead><tr><th>Observed Kp range</th><th>24 h lead</th><th>48 h lead</th><th>72 h lead</th></tr></thead><tbody>${bands.map(b=>`<tr><td><b>${b}</b></td><td>${cell(b,24)}</td><td>${cell(b,48)}</td><td>${cell(b,72)}</td></tr>`).join("")}</tbody></table><div class="small" style="margin-top:7px">区分は重複防止のため 1≤Kp&lt;5 / 5≤Kp&lt;6 / 6≤Kp&lt;8 / 8≤Kp≤9。Kp&lt;1 はこの区分集計から除外。</div>`;
 }
+function _leadMetricRow(rows,h){return (rows||[]).find(x=>Number(x?.nominal_lead_hours)===Number(h))||null;}
+function _skillVal(v,suffix="%",digits=1){const n=Number(v);return Number.isFinite(n)?`${n.toFixed(digits)}${suffix}`:"learning";}
+function _generationLeadBlock(){
+  const lead=STATE.validationUi?.nominal_lead_skill||{};
+  const mode=document.getElementById("skillGenerationMode")?.value||"current";
+  return mode==="all"?(lead.all_generations||lead):lead;
+}
+function renderForecastSkillDashboard(){
+  const grid=document.getElementById("skillLeadGrid"),banner=document.getElementById("skillGenerationText"),cal=document.getElementById("skillCalibrationGrid"),range=document.getElementById("skillKpRangeMatrix");
+  if(!grid)return;
+  const rv=STATE.validationUi||{},lead=_generationLeadBlock(),models=rv.models||{},gen=STATE.generationInfo||lead.generation||{},mode=document.getElementById("skillGenerationMode")?.value||"current";
+  const kg=gen.kp||{},bg=gen.bz||{};
+  if(banner)banner.innerHTML=`Kp <b>${esc(kg.current_model||"-")}</b> current N=${kg.current_pairs??0} / legacy N=${kg.legacy_pairs??0} &nbsp;•&nbsp; Bz <b>${esc(bg.current_model||"-")}</b> current N=${bg.current_pairs??0} / legacy N=${bg.legacy_pairs??0} &nbsp;•&nbsp; view: <b>${mode==="current"?"current model only":"all generations"}</b>`;
+  const kp=lead.kp||[],bz=lead.bz||[];
+  const wind=models.swift_wind?.by_lead_day_30d||[];
+  const windRows=[24,48,72].map((h,i)=>{const x=wind.find(z=>Number(z.lead_day)===i+1)||{};return `<div class="skillLeadRow"><b>${h}h</b><span>±50: ${_skillVal(x.hit_rate_50)}</span><span>N=${x.count??0}</span></div>`}).join("");
+  const kpRows=[24,48,72].map(h=>{const x=_leadMetricRow(kp,h)||{};return `<div class="skillLeadRow"><b>${h}h</b><span>±1: ${_skillVal(x.hit_rate_1)}</span><span>MAE ${Number.isFinite(Number(x.mae))?Number(x.mae).toFixed(2):"-"} / N=${x.count??0}</span></div>`}).join("");
+  const bzRows=[24,48,72].map(h=>{const x=_leadMetricRow(bz,h)||{};return `<div class="skillLeadRow"><b>${h}h</b><span>±2nT: ${_skillVal(x.hit_rate_2nt)}</span><span>MAE ${Number.isFinite(Number(x.bz_min_mae))?Number(x.bz_min_mae).toFixed(2):"-"} / N=${x.count??0}</span></div>`}).join("");
+  grid.innerHTML=`<div class="skillBox"><div class="name">Wind verification</div>${windRows}<div class="small" style="margin-top:6px">Primary = ±50 km/s</div></div><div class="skillBox"><div class="name">Kp verification</div>${kpRows}<div class="small" style="margin-top:6px">Primary = ±1.0 Kp / strict ±0.67</div></div><div class="skillBox"><div class="name">Bz-min verification</div>${bzRows}<div class="small" style="margin-top:6px">Primary = ±2 nT / direction threshold 60%</div></div>`;
+
+  const ci=STATE.calibrationInfo||rv.calibration||{};
+  function calCard(family,label){const b=ci?.[family]||{},c=b.nominal_lead_bias_calibration||{},ls=c.leads||{};const rows=[24,48,72].map(h=>{const x=ls[String(h)]||{};if(family==="kp")return `<div class="calRow"><b>${h}h</b><span>N=${x.count??0}</span><span>bias ${Number.isFinite(Number(x.bias))?Number(x.bias).toFixed(2):"-"}</span><span>subtract ${Number.isFinite(Number(x.subtract_from_kp))?Number(x.subtract_from_kp).toFixed(2):"0"}</span></div>`;return `<div class="calRow"><b>${h}h</b><span>N=${x.count??0}</span><span>ΔBz ${Number.isFinite(Number(x.add_to_bz_min_nt))?Number(x.add_to_bz_min_nt).toFixed(2):"0"} nT</span><span>ΔP ${Number.isFinite(Number(x.add_to_probability_pp))?Number(x.add_to_probability_pp).toFixed(1):"0"} pp</span></div>`}).join("");return `<div class="calCard"><div class="title">${label} auto-calibration — ${esc(b.model||c.model||"-")}</div>${rows}<div class="small" style="margin-top:6px">Current generation only. Sample不足時は補正=0。</div></div>`;}
+  if(cal)cal.innerHTML=calCard("kp","Kp")+calCard("bz","Bz");
+
+  if(range){const bands=["Kp 1-4","Kp 5-<6","Kp 6-7","Kp 8-9"],rr=lead.kp_by_observed_range||[];const cell=(b,h)=>{const x=rr.find(z=>String(z.observed_range)===b&&Number(z.nominal_lead_hours)===h);if(!x||!x.count)return `<span class="learning">learning</span>`;return `<b>${Number(x.hit_rate_1||0).toFixed(1)}%</b><br><span class="small">N=${x.count} / MAE ${Number(x.mae||0).toFixed(2)}</span>`};range.innerHTML=`<table class="skillMatrix"><thead><tr><th>Observed Kp</th><th>24 h</th><th>48 h</th><th>72 h</th></tr></thead><tbody>${bands.map(b=>`<tr><td><b>${b}</b></td><td>${cell(b,24)}</td><td>${cell(b,48)}</td><td>${cell(b,72)}</td></tr>`).join("")}</tbody></table>`;}
+  drawSkillTrendGraph();
+}
+function drawSkillTrendGraph(){
+  const canvas=document.getElementById("skillTrendGraph");if(!canvas)return;const parent=canvas.parentElement,dpr=window.devicePixelRatio||1,w=Math.max(620,parent.clientWidth||900),h=Math.max(220,parent.clientHeight||250);canvas.width=w*dpr;canvas.height=h*dpr;canvas.style.width=w+"px";canvas.style.height=h+"px";const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
+  const rows=(STATE.skillHistory||[]).map(x=>{const tt=new Date(x.time).getTime(),kw=x.kp_current_30d||{},bw=x.bz_current_30d||{},ww=x.swift_wind_30d||{};return{t:tt,wind:Number(ww.hit_rate_50),kp:Number(kw.hit_rate_1),bz:Number(bw.hit_rate_2nt)}}).filter(x=>Number.isFinite(x.t));
+  const pad={l:48,r:16,t:28,b:34};ctx.strokeStyle="#e8eef4";ctx.fillStyle="#738ba2";ctx.font="10px system-ui";for(let v=0;v<=100;v+=25){const y=pad.t+(100-v)/100*(h-pad.t-pad.b);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillText(v+"%",10,y+3);}if(rows.length<2){ctx.fillStyle="#8aa0b5";ctx.fillText("Current-generation skill history is learning. New records will accumulate every pipeline run.",pad.l,55);return;}const x0=Math.min(...rows.map(r=>r.t)),x1=Math.max(...rows.map(r=>r.t));const X=t=>pad.l+(t-x0)/Math.max(1,x1-x0)*(w-pad.l-pad.r),Y=v=>pad.t+(100-v)/100*(h-pad.t-pad.b);
+  function line(key,color,label){const q=rows.filter(r=>Number.isFinite(r[key]));if(q.length<2)return;ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();q.forEach((r,i)=>i?ctx.lineTo(X(r.t),Y(r[key])):ctx.moveTo(X(r.t),Y(r[key])));ctx.stroke();ctx.fillStyle=color;ctx.fillText(label,pad.l+8+(["wind","kp","bz"].indexOf(key))*120,16);}
+  line("wind","#2c78c4","Wind ±50");line("kp","#ed8a22","Kp ±1.0");line("bz","#7b58c6","Bz ±2 nT");
+  const dates=[rows[0],rows[Math.floor(rows.length/2)],rows[rows.length-1]];ctx.fillStyle="#738ba2";for(const r of dates){const d=new Date(r.t),lab=`${d.getUTCMonth()+1}/${d.getUTCDate()}`;ctx.fillText(lab,X(r.t)-12,h-10);}ctx.fillStyle="#24415d";ctx.font="bold 11px system-ui";ctx.fillText("Rolling 30-day primary hit rate (current generation)",pad.l,pad.t-8);
+}
 async function loadReportUiFeed(){
   setSource("reportUi","LOADING...");
   let feed=null,validation=null;
@@ -591,7 +652,7 @@ async function loadReportUiFeed(){
     STATE.kpModel=feed.kp_model||null;
     STATE.bzObserved=normalizeBzObserved(feed.bz_history||[]);
     STATE.bzForecast=normalizeBzForecast(feed);
-    const rv=validation||feed.research_validation||{};STATE.validationUi=rv;
+    const rv=validation||feed.research_validation||{};STATE.validationUi=rv;STATE.generationInfo=rv.generation||feed.research_validation?.generation||null;STATE.calibrationInfo=rv.calibration||feed.research_validation?.calibration||null;STATE.skillHistory=rv.skill_history_30d||feed.research_validation?.skill_history_30d||[];STATE.bzModel=feed.bz_model||null;
     const lead=rv.nominal_lead_skill||feed.research_validation?.nominal_lead_skill||{};
     const snaps=rv.past_forecast_snapshots||feed.research_validation?.past_forecast_snapshots||{};
     STATE.kpLeadSkill=lead.kp||[];STATE.bzLeadSkill=lead.bz||[];STATE.kpRangeSkill=lead.kp_by_observed_range||[];
@@ -603,11 +664,11 @@ async function loadReportUiFeed(){
     try{kp=(await fetchJsonAny(SWIFT_KP_LATEST)).data;}catch(_){ }
     try{bz=(await fetchJsonAny(SWIFT_BZ_LATEST)).data;}catch(_){ }
     STATE.kpForecast=normalizeKpForecast(kp);STATE.kpModel=kp||null;STATE.bzForecast=normalizeBzForecast(bz);
-    if(validation){STATE.validationUi=validation;const lead=validation.nominal_lead_skill||{},snaps=validation.past_forecast_snapshots||{};STATE.kpLeadSkill=lead.kp||[];STATE.bzLeadSkill=lead.bz||[];STATE.kpRangeSkill=lead.kp_by_observed_range||[];STATE.kpPastSnapshots=normalizeKpPastSnapshots(snaps.kp||[]);STATE.bzPastSnapshots=normalizeBzPastSnapshots(snaps.bz||[]);}
+    if(validation){STATE.validationUi=validation;STATE.generationInfo=validation.generation||null;STATE.calibrationInfo=validation.calibration||null;STATE.skillHistory=validation.skill_history_30d||[];const lead=validation.nominal_lead_skill||{},snaps=validation.past_forecast_snapshots||{};STATE.kpLeadSkill=lead.kp||[];STATE.bzLeadSkill=lead.bz||[];STATE.kpRangeSkill=lead.kp_by_observed_range||[];STATE.kpPastSnapshots=normalizeKpPastSnapshots(snaps.kp||[]);STATE.bzPastSnapshots=normalizeBzPastSnapshots(snaps.bz||[]);}
     if(kp||bz)setSource("reportUi",`OK fallback: Kp ${STATE.kpForecast.length}, Bz ${STATE.bzForecast.length}`,{kp,bz});
     else setSource("reportUi","FAILED",null,"Monthly report UI feed / Kp / Bz forecast not found");
   }
-  STATE.windVersion++;STATE.propagationCache.clear();rebuildAll();drawWindGraph();drawSpaceWeatherGraphs();renderKpRangeSkill();
+  STATE.windVersion++;STATE.propagationCache.clear();rebuildAll();drawWindGraph();drawSpaceWeatherGraphs();renderKpRangeSkill();renderForecastSkillDashboard();drawSkillTrendGraph();
 }
 function nearestForecast(series,time,key,maxGapHours=6){
   if(!series?.length)return null;const x=time instanceof Date?time.getTime():Number(time);let best=null,bd=Infinity;
@@ -1745,7 +1806,7 @@ window.addEventListener("resize",()=>{resize3D();drawWindGraph();});
 document.addEventListener("fullscreenchange",()=>setTimeout(()=>{resize3D();drawWindGraph();},100));
 setInterval(()=>{document.getElementById("utcClock").textContent=new Date().toISOString().replace("T"," ").slice(0,19)+" UTC";},1000);
 
-renderSourcePanel();initTimeline();init3D();renderSummary();renderEvents();updateTimeline();drawWindGraph();loadReportIndex();loadAll();
+renderSourcePanel();initTimeline();init3D();renderSummary();renderEvents();renderForecastSkillDashboard();updateTimeline();drawWindGraph();loadReportIndex();loadAll();
 </script>
 </body>
 </html>
