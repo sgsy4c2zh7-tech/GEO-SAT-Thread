@@ -831,6 +831,8 @@ def main() -> None:
     cme_model = load_cme_boost_model()
     bz_ai = load_bz_ai()
     validation = load_research_validation(month)
+    validation_history_obj = load_json(DATA / 'validation' / 'history.json') or {}
+    validation_history = [x for x in (validation_history_obj.get('history') or []) if isinstance(x, dict)]
     coronal_holes = load_json(DATA / 'coronal-holes' / 'latest.json') or {}
     coronal_hole_history = load_json(DATA / 'coronal-holes' / 'history.json') or {}
     enlil_latest = load_enlil_latest()
@@ -877,6 +879,9 @@ def main() -> None:
     bz_hist_3h = bz_min_history_3h(mag_hist, now, 7)
     nominal_skill = validation.get("nominal_lead_skill") or {}
     past_snapshots = validation.get("past_forecast_snapshots") or {}
+    generation = validation.get("generation") or nominal_skill.get("generation") or {}
+    calibration = validation.get("calibration") or {}
+    skill_history_30d = [x for x in validation_history if parse_time(x.get("time")) and parse_time(x.get("time")) >= now - timedelta(days=30)][-400:]
     ui_payload = {
         "updated_at": iso_z(now),
         "month": month,
@@ -917,15 +922,24 @@ def main() -> None:
             "model": (swift_kp or {}).get("model"),
             "kp_floor": (swift_kp or {}).get("kp_floor"),
             "leadtime_skill": (swift_kp or {}).get("leadtime_skill"),
+            "nominal_lead_bias_calibration": (swift_kp or {}).get("nominal_lead_bias_calibration") or ((swift_kp or {}).get("coefficients") or {}).get("nominal_lead_bias_calibration"),
             "current_observed_anchor": (swift_kp or {}).get("current_observed_anchor"),
             "recent_trend_3h": (swift_kp or {}).get("recent_trend_3h"),
+        },
+        "bz_model": {
+            "model": (bz_ai or {}).get("model"),
+            "readiness": (bz_ai or {}).get("readiness"),
+            "nominal_lead_bias_calibration": (bz_ai or {}).get("nominal_lead_bias_calibration") or ((bz_ai or {}).get("coefficients") or {}).get("nominal_lead_bias_calibration"),
         },
         "wind_accuracy_current": current_acc,
         "research_validation": {
             "models": validation.get("models", {}),
             "uncertainty": validation.get("uncertainty", {}),
+            "generation": generation,
+            "calibration": calibration,
             "nominal_lead_skill": nominal_skill,
             "past_forecast_snapshots": past_snapshots,
+            "skill_history_30d": skill_history_30d,
             "methodology": validation.get("methodology", {}),
         },
         "enlil": {
@@ -1140,6 +1154,37 @@ def main() -> None:
     kp_lead_pairs = _validation_lead_pairs(validation, "kp")
     bz_lead_pairs = _validation_lead_pairs(validation, "bz")
 
+    ws = wb.add_worksheet("Model_Generations")
+    gen_rows=[]
+    for family in ("kp","bz"):
+        g=(generation.get(family) or {}) if isinstance(generation,dict) else {}
+        gen_rows.append({"Family":family.upper(),"Current_Model":g.get("current_model"),"Current_Pairs":g.get("current_pairs"),"Legacy_Pairs":g.get("legacy_pairs"),"By_Model_JSON":json.dumps(g.get("by_model") or {},ensure_ascii=False)})
+    write_table(ws,0,0,["Family","Current_Model","Current_Pairs","Legacy_Pairs","By_Model_JSON"],gen_rows,fmt)
+    ws.set_column("A:A",12);ws.set_column("B:B",42);ws.set_column("C:D",16);ws.set_column("E:E",80)
+    ws.write(5,0,"Primary verification rule",fmt["section"]);ws.write(6,0,"Current-model-only: archive.model must exactly match latest.json model. Legacy/unversioned records stay available for historical comparison but are excluded from auto-calibration.",fmt["body"])
+
+    ws = wb.add_worksheet("Auto_Calibration")
+    cal_rows=[]
+    for family in ("kp","bz"):
+        block=(calibration.get(family) or {}) if isinstance(calibration,dict) else {}
+        cal=block.get("nominal_lead_bias_calibration") or {}
+        for h in (24,48,72):
+            x=((cal.get("leads") or {}).get(str(h)) or {})
+            cal_rows.append({"Family":family.upper(),"Model":block.get("model") or cal.get("model"),"Lead_h":h,"Count":x.get("count"),"Status":x.get("status"),"Bias":x.get("bias") if family=="kp" else x.get("bz_min_bias"),"Alpha":x.get("alpha"),"Kp_Subtract":x.get("subtract_from_kp"),"BzMin_Add_nT":x.get("add_to_bz_min_nt"),"Probability_Add_pp":x.get("add_to_probability_pp")})
+    write_table(ws,0,0,["Family","Model","Lead_h","Count","Status","Bias","Alpha","Kp_Subtract","BzMin_Add_nT","Probability_Add_pp"],cal_rows,fmt)
+    ws.set_column("A:A",12);ws.set_column("B:B",42);ws.set_column("C:J",18)
+
+    ws = wb.add_worksheet("Forecast_Skill_History")
+    hist_rows=[]
+    for x in skill_history_30d:
+        tt=parse_time(x.get("time"))
+        k=x.get("kp_current_30d") or {};b=x.get("bz_current_30d") or {};w=x.get("swift_wind_30d") or {}
+        hist_rows.append({"UTC":tt.replace(tzinfo=None) if tt else None,"Wind_Hit50_pct":w.get("hit_rate_50"),"Wind_MAE":w.get("mae"),"Kp_Hit1_pct":k.get("hit_rate_1"),"Kp_MAE":k.get("mae"),"Bz_Hit2nT_pct":b.get("hit_rate_2nt"),"Bz_MAE_nT":b.get("bz_min_mae"),"Kp_Model":x.get("kp_model"),"Bz_Model":x.get("bz_model")})
+    write_table(ws,0,0,["UTC","Wind_Hit50_pct","Wind_MAE","Kp_Hit1_pct","Kp_MAE","Bz_Hit2nT_pct","Bz_MAE_nT","Kp_Model","Bz_Model"],hist_rows,fmt)
+    ws.set_column("A:A",19);ws.set_column("B:G",18);ws.set_column("H:I",42)
+    if hist_rows:
+        add_line_chart(wb,ws,"Rolling 30d primary hit rates","Forecast_Skill_History",0,len(hist_rows),0,[(1,"Wind ±50 km/s"),(3,"Kp ±1.0"),(5,"Bz ±2 nT")],"K2","Hit rate %")
+
     ws = wb.add_worksheet("Kp_Lead_Skill")
     kp_lead_rows = []
     rolling_kp = {int(x.get("nominal_lead_hours")): x for x in (lead_skill.get("kp") or []) if isinstance(x, dict) and str(x.get("nominal_lead_hours", "")).isdigit()}
@@ -1268,6 +1313,8 @@ def main() -> None:
         {"Item":"Kp verification","Definition":"Issued 3-hour SWIFT Kp vs NOAA planetary K; primary hit = ±1.0 Kp, strict hit = ±0.67 Kp. 24/48/72 h skill selects one archived forecast per target nearest the nominal lead within ±4.5 h."},
         {"Item":"Kp range verification","Definition":"Observed-Kp strata are non-overlapping: 1<=Kp<5, 5<=Kp<6, 6<=Kp<8, 8<=Kp<=9. Kp<1 is excluded from this requested stratification."},
         {"Item":"Bz verification","Definition":"Forecast 3-hour Bz minimum vs observed 3-hour minimum; primary numeric hit = ±2 nT, secondary = ±3 nT; southward probability is also scored with 60% direction threshold and Brier score. 24/48/72 h skill uses ±4.5 h lead matching."},
+        {"Item":"Model generation separation","Definition":"Primary Kp/Bz verification and calibration use only archive rows whose model field exactly matches the current latest.json model. Legacy and unversioned forecasts are preserved for historical comparison only."},
+        {"Item":"24/48/72 h auto-calibration","Definition":"Current-generation residual bias is estimated separately near nominal 24/48/72 h leads over the previous 30 days. Correction strength ramps with sample count and is linearly interpolated by forecast lead; short-lead correction tends to zero."},
         {"Item":"CME arrival","Definition":"NOAA speed/density shock proxy near predicted arrival. Keep this distinct from a manually adjudicated ICME boundary in publications."},
         {"Item":"Uncertainty","Definition":"Empirical p10/p50/p90 forecast-minus-observation residuals from previous 30 days, split by lead day."},
         {"Item":"DBM gamma","Definition":str(((validation.get("models") or {}).get("cme_arrival") or {}).get("dbm_gamma_fit"))},
@@ -1310,7 +1357,7 @@ def main() -> None:
         "primary_wind_accuracy": {"definition": "|predicted - observed| <= 50 km/s", "window": "last_24h", **current_acc},
         "retention_months": REPORT_RETENTION_MONTHS,
         "validation_feed_url": "./data/validation/ui_validation_latest.json",
-        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Wind_Fcst_History", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Coronal_Holes", "Research_Metrics", "Wind_Verification", "ENLIL_Verification", "Kp_Verification", "Bz_Verification", "Kp_Lead_Skill", "Kp_Range_Skill", "Kp_Fcst_History", "Bz_Lead_Skill", "Bz_Fcst_History", "CME_Verification", "Uncertainty", "Kp_Observed", "ENLIL_Earth", "Methods", "Sources"],
+        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Wind_Fcst_History", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Coronal_Holes", "Research_Metrics", "Wind_Verification", "ENLIL_Verification", "Kp_Verification", "Bz_Verification", "Model_Generations", "Auto_Calibration", "Forecast_Skill_History", "Kp_Lead_Skill", "Kp_Range_Skill", "Kp_Fcst_History", "Bz_Lead_Skill", "Bz_Fcst_History", "CME_Verification", "Uncertainty", "Kp_Observed", "ENLIL_Earth", "Methods", "Sources"],
     }
     (OUT_DOCS / "index.json").write_text(json.dumps(index_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote {final_path}")

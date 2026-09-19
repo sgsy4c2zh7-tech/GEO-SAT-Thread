@@ -149,7 +149,7 @@ def score_bz(obs):
         w=window(obs,tt,1.5);vals=[r['bz'] for r in w if r.get('bz') is not None]
         if not vals:continue
         omin=min(vals);south=any(x<0 for x in vals);pr=clamp(prob/100,0,1);e=pmin-omin
-        out.append({'issued_at':iso(it),'target_time':iso(tt),'lead_hours':num(a.get('lead_hours'),(tt-it).total_seconds()/3600),'predicted_bz_min':round(pmin,3),'observed_bz_min':round(omin,3),'error_bz_min':round(e,3),'abs_error_bz_min':round(abs(e),3),'southward_probability':round(prob,2),'observed_southward':south,'brier':round((pr-(1 if south else 0))**2,5)})
+        out.append({'issued_at':iso(it),'target_time':iso(tt),'lead_hours':num(a.get('lead_hours'),(tt-it).total_seconds()/3600),'predicted_bz_min':round(pmin,3),'observed_bz_min':round(omin,3),'error_bz_min':round(e,3),'abs_error_bz_min':round(abs(e),3),'southward_probability':round(prob,2),'observed_southward':south,'brier':round((pr-(1 if south else 0))**2,5),'model':a.get('model') or 'legacy-unversioned'})
     return out
 
 def filter_window(pairs,now,days):
@@ -227,9 +227,10 @@ def kp_range_skill(kp_pairs,now):
         rows.append({'observed_range':band,'nominal_lead_hours':'all',**kp_metrics(merged)})
     return rows
 
-def _snapshot_group(rows_raw,now,age_h):
+def _snapshot_group(rows_raw,now,age_h,model=None):
     groups={}
     for a in rows_raw:
+        if model is not None and a.get("model") != model:continue
         it=parse(a.get('issued_at'));tt=parse(a.get('target_time') or a.get('time'))
         if not it or not tt:continue
         groups.setdefault(iso(it),[]).append((it,tt,a))
@@ -244,12 +245,12 @@ def _snapshot_group(rows_raw,now,age_h):
     g=[q for q in g if 0<=((q[1]-q[0]).total_seconds()/3600)<=72.5]
     return {'age_hours':age_h,'issued_at':k,'distance_from_nominal_age_h':round(d,2),'group':g}
 
-def build_past_snapshots(now,kp_obs,mag_obs):
+def build_past_snapshots(now,kp_obs,mag_obs,kp_model=None,bz_model=None):
     kp_raw=rows(load(DATA/'swift-kp'/'forecast-archive.json',{}) or {})
     bz_raw=rows(load(DATA/'swift-bz'/'forecast-archive.json',{}) or {})
     out={'kp':[],'bz':[]}
     for age in NOMINAL_LEAD_HOURS:
-        snap=_snapshot_group(kp_raw,now,age)
+        snap=_snapshot_group(kp_raw,now,age,kp_model)
         if snap:
             rows_out=[];scored=[]
             for it,tt,a in snap['group']:
@@ -262,14 +263,14 @@ def build_past_snapshots(now,kp_obs,mag_obs):
                 rows_out.append(q)
             met=kp_metrics(scored) if scored else {'count':0,'status':'learning'}
             out['kp'].append({k:v for k,v in snap.items() if k!='group'}|{'skill':met,'rows':rows_out})
-        snap=_snapshot_group(bz_raw,now,age)
+        snap=_snapshot_group(bz_raw,now,age,bz_model)
         if snap:
             rows_out=[];scored=[]
             for it,tt,a in snap['group']:
                 pmin=num(a.get('bz_min_forecast'));prob=num(a.get('southward_bz_probability'));bt=num(a.get('bt_forecast'))
                 if pmin is None:continue
                 w=window(mag_obs,tt,1.5) if tt<=now else [];vals=[r['bz'] for r in w if r.get('bz') is not None]
-                q={'time':iso(tt),'lead_hours':round((tt-it).total_seconds()/3600,2),'predicted_bz_min':round(pmin,3),'bt_forecast':bt,'southward_probability':prob}
+                q={'time':iso(tt),'lead_hours':round((tt-it).total_seconds()/3600,2),'predicted_bz_min':round(pmin,3),'bt_forecast':bt,'southward_probability':prob,'model':a.get('model') or 'legacy-unversioned'}
                 if vals:
                     omin=min(vals);south=any(x<0 for x in vals);pr=clamp((prob or 0)/100,0,1);e=pmin-omin
                     q.update({'observed_bz_min':round(omin,3),'observed_southward':south,'error_bz_min':round(e,3),'within_2nt':abs(e)<=2.0,'within_3nt':abs(e)<=3.0})
@@ -297,6 +298,25 @@ def build_nominal_lead_skill(kp_pairs,bz_pairs,now):
         },
         'kp':kp_rows,'bz':bz_rows,'kp_by_observed_range':kp_range_skill(kp_pairs,now),
         'pairs':{'kp':kp_pair_map,'bz':bz_pair_map},
+    }
+
+def current_model_name(family):
+    obj=load(DATA/family/'latest.json',{}) or {}
+    return str(obj.get('model') or '')
+
+def generation_split(pairs,current_model):
+    current=[x for x in pairs if current_model and x.get('model')==current_model]
+    legacy=[x for x in pairs if not current_model or x.get('model')!=current_model]
+    counts={}
+    for x in pairs:
+        k=str(x.get('model') or 'legacy-unversioned');counts[k]=counts.get(k,0)+1
+    return current,legacy,counts
+
+def calibration_snapshot():
+    kp=load(DATA/'swift-kp'/'latest.json',{}) or {};bz=load(DATA/'swift-bz'/'latest.json',{}) or {}
+    return {
+        'kp':{'model':kp.get('model'),'nominal_lead_bias_calibration':kp.get('nominal_lead_bias_calibration') or (kp.get('coefficients') or {}).get('nominal_lead_bias_calibration')},
+        'bz':{'model':bz.get('model'),'nominal_lead_bias_calibration':bz.get('nominal_lead_bias_calibration') or (bz.get('coefficients') or {}).get('nominal_lead_bias_calibration')},
     }
 
 def error_quantiles(rr,error_key):
@@ -429,9 +449,24 @@ def main():
     now=now_utc();wind=load_wind_obs();mag=load_mag_obs();kp=load_kp_obs()
     wind_pairs=score_wind_archive(DATA/'swift-wind'/'forecast-archive.json',wind)
     enlil_pairs=score_wind_archive(DATA/'enlil'/'forecast-archive.json',wind,pred_key='v_r',model_default='NOAA WSA-ENLIL L1')
-    kp_pairs=score_kp(kp);bz_pairs=score_bz(mag)
-    nominal_skill=build_nominal_lead_skill(kp_pairs,bz_pairs,now)
-    past_snapshots=build_past_snapshots(now,kp,mag)
+
+    kp_pairs_all=score_kp(kp);bz_pairs_all=score_bz(mag)
+    kp_model=current_model_name('swift-kp');bz_model=current_model_name('swift-bz')
+    kp_pairs,kp_legacy,kp_counts=generation_split(kp_pairs_all,kp_model)
+    bz_pairs,bz_legacy,bz_counts=generation_split(bz_pairs_all,bz_model)
+
+    current_nominal=build_nominal_lead_skill(kp_pairs,bz_pairs,now)
+    all_nominal=build_nominal_lead_skill(kp_pairs_all,bz_pairs_all,now)
+    generation={
+        'mode':'current-model-only',
+        'kp':{'current_model':kp_model,'current_pairs':len(kp_pairs),'legacy_pairs':len(kp_legacy),'by_model':kp_counts},
+        'bz':{'current_model':bz_model,'current_pairs':len(bz_pairs),'legacy_pairs':len(bz_legacy),'by_model':bz_counts},
+        'note':'Primary skill/calibration uses only records whose archive model exactly matches the current latest.json model. Legacy/unversioned records are retained only for historical comparison.'
+    }
+    nominal_skill={**current_nominal,'generation':generation,'all_generations':all_nominal}
+    past_snapshots=build_past_snapshots(now,kp,mag,kp_model,bz_model)
+    calibration=calibration_snapshot()
+
     cme_arch=update_cme_archive(now);cme_pairs=score_cme(cme_arch,wind,now);gamma=fit_gamma(cme_pairs);save(CME_MODEL,{'updated_at':iso(now),**gamma})
     ch_pairs=score_ch_hss(load_ch_history(),wind,now)
 
@@ -440,31 +475,43 @@ def main():
         'coronal_hole_hss':model_blocks(ch_pairs,ch_metrics,now),
         'enlil_wind':model_blocks(enlil_pairs,wind_metrics,now),
         'swift_kp':model_blocks(kp_pairs,kp_metrics,now),
+        'swift_kp_all_generations':model_blocks(kp_pairs_all,kp_metrics,now),
         'swift_bz':model_blocks(bz_pairs,bz_metrics,now),
+        'swift_bz_all_generations':model_blocks(bz_pairs_all,bz_metrics,now),
         'cme_arrival':{'last_30d':cme_metrics(filter_window([{**x,'target_time':x['predicted_arrival']} for x in cme_pairs],now,30)),'all_available':cme_metrics(cme_pairs),'dbm_gamma_fit':gamma},
     }
     unc={
         'wind_by_lead_day':[{'lead_day':d,**error_quantiles([x for x in filter_window(wind_pairs,now,30) if lead_day(x)==d],'error')} for d in (1,2,3)],
         'kp_by_lead_day':[{'lead_day':d,**error_quantiles([x for x in filter_window(kp_pairs,now,30) if lead_day(x)==d],'error')} for d in (1,2,3)],
         'bz_min_by_lead_day':[{'lead_day':d,**error_quantiles([x for x in filter_window(bz_pairs,now,30) if lead_day(x)==d],'error_bz_min')} for d in (1,2,3)],
-        'definition':'p10/p50/p90 empirical forecast-minus-observation residuals over previous 30 days; add these residual quantiles to point forecasts for empirical intervals',
+        'definition':'current-generation p10/p50/p90 empirical forecast-minus-observation residuals over previous 30 days; add residual quantiles to point forecasts for empirical intervals',
     }
-    latest={'updated_at':iso(now),'retention_months_excel':24,'models':models,'uncertainty':unc,'nominal_lead_skill':nominal_skill,'past_forecast_snapshots':past_snapshots,'methodology':{'wind':'true issued-forecast verification against NOAA RTSW; error=forecast-observed','kp':'true issued-forecast verification against NOAA planetary K; nominal lead skill uses one forecast per target at ~24/48/72 h','bz':'issued probability/minimum verified against NOAA IMF 3-h target window; nominal lead skill uses one forecast per target at ~24/48/72 h','cme':'shock proxy from NOAA speed/density; clearly not manually adjudicated ICME boundary'},'pairs':{'wind':wind_pairs[-6000:],'enlil_wind':enlil_pairs[-6000:],'kp':kp_pairs[-6000:],'bz':bz_pairs[-6000:],'cme':cme_pairs[-1000:]}}
-    save(LATEST,latest)
 
-    ui={'updated_at':iso(now),'models':models,'uncertainty':unc,'nominal_lead_skill':nominal_skill,'past_forecast_snapshots':past_snapshots,'dbm_gamma':gamma,'counts':{'wind_pairs':len(wind_pairs),'enlil_pairs':len(enlil_pairs),'kp_pairs':len(kp_pairs),'bz_pairs':len(bz_pairs),'cme_pairs':len(cme_pairs)}}
-    save(UI,ui)
+    methodology={
+        'wind':'true issued-forecast verification against NOAA RTSW; error=forecast-observed',
+        'kp':'true issued-forecast verification against NOAA planetary K; primary metrics use only current model generation; nominal lead skill uses one forecast per target at ~24/48/72 h',
+        'bz':'issued probability/minimum verified against NOAA IMF 3-h target window; primary metrics use only current model generation; nominal lead skill uses one forecast per target at ~24/48/72 h',
+        'generation':'model identity is archive.model == current latest.json model; legacy records are never used for current calibration',
+        'cme':'shock proxy from NOAA speed/density; clearly not manually adjudicated ICME boundary',
+    }
+
+    latest={'updated_at':iso(now),'retention_months_excel':24,'models':models,'uncertainty':unc,'generation':generation,'calibration':calibration,'nominal_lead_skill':nominal_skill,'past_forecast_snapshots':past_snapshots,'methodology':methodology,'pairs':{'wind':wind_pairs[-6000:],'enlil_wind':enlil_pairs[-6000:],'kp':kp_pairs[-6000:],'bz':bz_pairs[-6000:],'cme':cme_pairs[-1000:]},'pairs_all_generations':{'kp':kp_pairs_all[-6000:],'bz':bz_pairs_all[-6000:]}}
+    save(LATEST,latest)
 
     hist=load(HISTORY,{'history':[]}) or {'history':[]};h=[x for x in hist.get('history',[]) if isinstance(x,dict)]
     h=[x for x in h if parse(x.get('time')) and parse(x['time'])<now-timedelta(hours=2)]
-    h.append({'time':iso(now),'swift_wind_30d':models['swift_wind']['last_30d'],'enlil_wind_30d':models['enlil_wind']['last_30d'],'kp_30d':models['swift_kp']['last_30d'],'bz_30d':models['swift_bz']['last_30d'],'cme_all':models['cme_arrival']['all_available'],'dbm_gamma':gamma})
+    h.append({'time':iso(now),'swift_wind_30d':models['swift_wind']['last_30d'],'enlil_wind_30d':models['enlil_wind']['last_30d'],'kp_current_30d':models['swift_kp']['last_30d'],'bz_current_30d':models['swift_bz']['last_30d'],'kp_all_30d':models['swift_kp_all_generations']['last_30d'],'bz_all_30d':models['swift_bz_all_generations']['last_30d'],'kp_model':kp_model,'bz_model':bz_model,'cme_all':models['cme_arrival']['all_available'],'dbm_gamma':gamma})
     cutoff=now-timedelta(days=MODEL_RETENTION_DAYS);h=[x for x in h if parse(x.get('time')) and parse(x['time'])>=cutoff]
     save(HISTORY,{'updated_at':iso(now),'retention_days':MODEL_RETENTION_DAYS,'history':h})
+    hist30=[x for x in h if parse(x.get('time')) and parse(x['time'])>=now-timedelta(days=30)]
+
+    ui={'updated_at':iso(now),'models':models,'uncertainty':unc,'generation':generation,'calibration':calibration,'nominal_lead_skill':nominal_skill,'past_forecast_snapshots':past_snapshots,'skill_history_30d':hist30[-400:],'dbm_gamma':gamma,'counts':{'wind_pairs':len(wind_pairs),'enlil_pairs':len(enlil_pairs),'kp_pairs_current':len(kp_pairs),'kp_pairs_all':len(kp_pairs_all),'bz_pairs_current':len(bz_pairs),'bz_pairs_all':len(bz_pairs_all),'cme_pairs':len(cme_pairs)}}
+    save(UI,ui)
 
     month=now.strftime('%Y-%m');ms=datetime(now.year,now.month,1,tzinfo=timezone.utc);me=(datetime(now.year+(now.month==12),(now.month%12)+1,1,tzinfo=timezone.utc))
     def month_rows(rr,time_key='target_time'):
         return [x for x in rr if parse(x.get(time_key)) and ms<=parse(x[time_key])<me]
-    save(MONTHLY/f'{month}.json',{'updated_at':iso(now),'month':month,'models':models,'uncertainty':unc,'nominal_lead_skill':nominal_skill,'past_forecast_snapshots':past_snapshots,'pairs':{'wind':month_rows(wind_pairs),'enlil_wind':month_rows(enlil_pairs),'kp':month_rows(kp_pairs),'bz':month_rows(bz_pairs),'cme':month_rows(cme_pairs,'predicted_arrival')}})
-    print(json.dumps({'swift_wind_30d':models['swift_wind']['last_30d'],'kp_30d':models['swift_kp']['last_30d'],'bz_30d':models['swift_bz']['last_30d'],'cme':models['cme_arrival']['all_available'],'gamma':gamma},ensure_ascii=False,indent=2))
+    save(MONTHLY/f'{month}.json',{'updated_at':iso(now),'month':month,'models':models,'uncertainty':unc,'generation':generation,'calibration':calibration,'nominal_lead_skill':nominal_skill,'past_forecast_snapshots':past_snapshots,'pairs':{'wind':month_rows(wind_pairs),'enlil_wind':month_rows(enlil_pairs),'kp':month_rows(kp_pairs),'bz':month_rows(bz_pairs),'cme':month_rows(cme_pairs,'predicted_arrival')},'pairs_all_generations':{'kp':month_rows(kp_pairs_all),'bz':month_rows(bz_pairs_all)}})
+    print(json.dumps({'generation':generation,'swift_wind_30d':models['swift_wind']['last_30d'],'kp_current_30d':models['swift_kp']['last_30d'],'bz_current_30d':models['swift_bz']['last_30d'],'calibration':calibration,'cme':models['cme_arrival']['all_available'],'gamma':gamma},ensure_ascii=False,indent=2))
 
 if __name__=='__main__':main()

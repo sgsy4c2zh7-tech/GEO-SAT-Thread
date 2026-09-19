@@ -55,6 +55,10 @@ MODEL = "SWIFT-Kp-AI-v0.9-adaptive-residual-CH"
 FORECAST_HOURS = 72
 STEP_HOURS = 3
 Kp_FLOOR = 0.33
+NOMINAL_LEADS = (24, 48, 72)
+NOMINAL_TOLERANCE_H = 4.5
+LEAD_CAL_WINDOW_DAYS = 30
+CALIBRATION_VERSION = "kp-nominal-lead-bias-v1"
 
 
 def now_utc() -> datetime:
@@ -493,11 +497,28 @@ for a in old_archive:
     })
     scored.append(q)
 
-def model_scored_for_day(day: int) -> list[dict[str, Any]]:
-    cutoff = NOW - timedelta(days=30)
+def current_generation_scored() -> list[dict[str, Any]]:
+    cutoff = NOW - timedelta(days=LEAD_CAL_WINDOW_DAYS)
     return [a for a in scored if a.get("scored") and a.get("model") == MODEL and
-            int(a.get("lead_day", 0)) == day and parse_time(a.get("target_time")) and
-            parse_time(a["target_time"]) >= cutoff]
+            parse_time(a.get("target_time")) and parse_time(a["target_time"]) >= cutoff]
+
+
+def nominal_lead_scored(nominal_h: int) -> list[dict[str, Any]]:
+    """One scored forecast per target nearest nominal 24/48/72 h lead."""
+    best: dict[str, tuple[tuple[float, float], dict[str, Any]]] = {}
+    for a in current_generation_scored():
+        tt = parse_time(a.get("target_time")); it = parse_time(a.get("issued_at"))
+        lh = fnum(a.get("lead_hours"), None)
+        if not tt or not it or lh is None:
+            continue
+        delta = abs(lh - nominal_h)
+        if delta > NOMINAL_TOLERANCE_H:
+            continue
+        key = iso(tt)
+        score = (delta, -it.timestamp())
+        if key not in best or score < best[key][0]:
+            best[key] = (score, a)
+    return [best[k][1] for k in sorted(best)]
 
 
 def robust_bias(errors: list[float]) -> float:
@@ -509,23 +530,56 @@ def robust_bias(errors: list[float]) -> float:
     return 0.65 * med + 0.35 * mean(clipped)
 
 
-def lead_bias_correction(lead_h: float) -> dict[str, float]:
-    day = max(1, min(3, int(max(0.0, lead_h) // 24) + 1))
-    own = model_scored_for_day(day)
-    errors = [fnum(x.get("error"), 0.0) for x in own]
-    n = len(errors)
-    bias = robust_bias(errors)
-    # Gentle adaptation: avoid swinging from "too high" to "too low".
-    if n < 16:
-        alpha = 0.0
-    elif n < 50:
-        alpha = 0.15
-    elif n < 150:
-        alpha = 0.25
-    else:
-        alpha = 0.35
-    correction = clamp(alpha * bias, -0.75, 0.75)
-    return {"day": day, "bias": bias, "alpha": alpha, "correction": correction, "n": n, "source": "v0.9-self-only"}
+def _adaptive_alpha(n: int) -> float:
+    if n < 12:
+        return 0.0
+    if n < 30:
+        return 0.15
+    if n < 80:
+        return 0.30
+    return 0.45
+
+
+def build_nominal_lead_calibration() -> dict[str, Any]:
+    out: dict[str, Any] = {"version": CALIBRATION_VERSION, "window_days": LEAD_CAL_WINDOW_DAYS, "tolerance_hours": NOMINAL_TOLERANCE_H, "model": MODEL, "leads": {}}
+    for h in NOMINAL_LEADS:
+        own = nominal_lead_scored(h)
+        errors = [fnum(x.get("error"), 0.0) for x in own]
+        n = len(errors); bias = robust_bias(errors); alpha = _adaptive_alpha(n)
+        correction = clamp(alpha * bias, -0.75, 0.75)
+        out["leads"][str(h)] = {
+            "nominal_lead_hours": h, "count": n, "bias": round(bias, 3),
+            "alpha": round(alpha, 3), "subtract_from_kp": round(correction, 3),
+            "status": "active" if alpha > 0 else "learning",
+        }
+    return out
+
+
+NOMINAL_LEAD_CAL = build_nominal_lead_calibration()
+
+
+def _interp_lead_value(lead_h: float, key: str) -> float:
+    pts = [(0.0, 0.0)]
+    for h in NOMINAL_LEADS:
+        pts.append((float(h), fnum(NOMINAL_LEAD_CAL["leads"][str(h)].get(key), 0.0)))
+    x = clamp(float(lead_h), 0.0, 72.0)
+    for (x0,y0),(x1,y1) in zip(pts,pts[1:]):
+        if x <= x1:
+            f = 0.0 if x1 == x0 else (x-x0)/(x1-x0)
+            return y0 + f*(y1-y0)
+    return pts[-1][1]
+
+
+def lead_bias_correction(lead_h: float) -> dict[str, Any]:
+    correction = _interp_lead_value(lead_h, "subtract_from_kp")
+    nearest_h = min(NOMINAL_LEADS, key=lambda h: abs(h-lead_h))
+    info = dict(NOMINAL_LEAD_CAL["leads"][str(nearest_h)])
+    info.update({
+        "interpolated_for_lead_hours": round(lead_h, 2),
+        "interpolated_subtract_from_kp": round(correction, 3),
+        "source": CALIBRATION_VERSION,
+    })
+    return info
 
 
 def anchor_for_lead(lead_h: float) -> float:
@@ -556,7 +610,7 @@ def predict_raw(t: datetime) -> tuple[float, dict[str, Any]]:
     # Observed-Kp trend matters most in the first 18 h, then rapidly decays.
     trend_steps = min(4.0, lead_h / 3.0)
     trend_delta = clamp(RECENT_TREND_3H * trend_steps * math.exp(-lead_h / 18.0), -0.85, 0.85)
-    y = anchor + driver + trend_delta - bc["correction"]
+    y = anchor + driver + trend_delta - bc["interpolated_subtract_from_kp"]
 
     # Storm gate: without high-confidence southward IMF, high wind alone should not
     # jump Kp several units above the current observed state.
@@ -659,9 +713,7 @@ leadtime = {
         {"lead_day": d, **skill([x for x in new_scored if int(x.get("lead_day", 0)) == d])}
         for d in range(1, 4)
     ],
-    "adaptive_bias": {
-        str(d): lead_bias_correction((d-1)*24 + 12) for d in range(1, 4)
-    },
+    "adaptive_bias": NOMINAL_LEAD_CAL,
 }
 
 # Simple recent observed-vs-anchor diagnostic (not future forecast skill).
@@ -692,6 +744,7 @@ coef_payload = {
     "forecast_hours": FORECAST_HOURS,
     "wind_gate": round(WIND_GATE, 3),
     "bz_model_gate": round(float(bz_model_gate), 3),
+    "nominal_lead_bias_calibration": NOMINAL_LEAD_CAL,
 }
 
 latest = {
@@ -715,9 +768,10 @@ latest = {
     "current": forecast[0] if forecast else None,
     "max_kp": max(forecast, key=lambda x: x["kp"]) if forecast else None,
     "leadtime_skill": leadtime,
+    "nominal_lead_bias_calibration": NOMINAL_LEAD_CAL,
     "verification": verification,
     "coefficients": coef_payload,
-    "formula": "Kp = observed-Kp anchor + decaying observed trend + fitted Delta-Kp Wind/Bz drivers - v0.8 self-only robust bias correction",
+    "formula": "Kp = observed-Kp anchor + decaying observed trend + fitted Delta-Kp Wind/Bz drivers - current-generation 24/48/72h residual bias correction (linearly interpolated by lead)",
 }
 
 save_json(LATEST, latest)

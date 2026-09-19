@@ -35,6 +35,11 @@ INDEX = OUT / "index.json"
 BIN_H = 3
 FORECAST_DAYS = 5
 RECURRENCE_DAYS = 27.27
+MODEL = "SWIFT-Bz-v2.1-lead-calibration"
+NOMINAL_LEADS = (24, 48, 72)
+NOMINAL_TOLERANCE_H = 4.5
+LEAD_CAL_WINDOW_DAYS = 30
+CALIBRATION_VERSION = "bz-nominal-lead-bias-v1"
 
 
 def utcnow():
@@ -243,9 +248,64 @@ def readiness(ver30):
     return {"state": state, "scored_forecasts": n, "kp_input_confidence": round(clamp(conf, 0.2, 0.9), 3)}
 
 
+def current_generation_scored(scored, now):
+    return [x for x in scored if x.get("scored") and x.get("model") == MODEL and parse_time(x.get("target_time")) and parse_time(x["target_time"]) >= now-timedelta(days=LEAD_CAL_WINDOW_DAYS)]
+
+
+def robust_bias(vals):
+    vals=[num(x) for x in vals]; vals=[x for x in vals if x is not None]
+    if not vals:return 0.0
+    med=statistics.median(vals); clipped=[clamp(x,med-3.0,med+3.0) for x in vals]
+    return 0.65*med+0.35*(sum(clipped)/len(clipped))
+
+
+def _adaptive_alpha(n):
+    if n < 12:return 0.0
+    if n < 30:return 0.15
+    if n < 80:return 0.30
+    return 0.45
+
+
+def nominal_lead_scored(scored, now, nominal_h):
+    best={}
+    for x in current_generation_scored(scored, now):
+        tt=parse_time(x.get("target_time")); it=parse_time(x.get("issued_at")); lh=num(x.get("lead_hours"))
+        if not tt or not it or lh is None:continue
+        delta=abs(lh-nominal_h)
+        if delta>NOMINAL_TOLERANCE_H:continue
+        key=iso_z(tt); score=(delta,-it.timestamp())
+        if key not in best or score<best[key][0]:best[key]=(score,x)
+    return [best[k][1] for k in sorted(best)]
+
+
+def build_nominal_lead_calibration(scored, now):
+    out={"version":CALIBRATION_VERSION,"model":MODEL,"window_days":LEAD_CAL_WINDOW_DAYS,"tolerance_hours":NOMINAL_TOLERANCE_H,"leads":{}}
+    for h in NOMINAL_LEADS:
+        rr=nominal_lead_scored(scored,now,h); n=len(rr); alpha=_adaptive_alpha(n)
+        err=[num(x.get("error_bz_min"),0.0) for x in rr]
+        bias=robust_bias(err)
+        pred_rate=sum(num(x.get("southward_bz_probability"),50)/100 for x in rr)/n if n else 0.0
+        obs_rate=sum(1 if x.get("observed_southward") else 0 for x in rr)/n if n else 0.0
+        add_nt=clamp(-alpha*bias,-5.0,5.0)
+        add_pp=clamp(alpha*(obs_rate-pred_rate)*100,-12.0,12.0)
+        out["leads"][str(h)]={"nominal_lead_hours":h,"count":n,"bz_min_bias":round(bias,3),"alpha":round(alpha,3),"add_to_bz_min_nt":round(add_nt,3),"add_to_probability_pp":round(add_pp,3),"status":"active" if alpha>0 else "learning"}
+    return out
+
+
+def _interp_lead_cal(cal, lead_h, key):
+    pts=[(0.0,0.0)]+[(float(h),num(cal["leads"][str(h)].get(key),0.0)) for h in NOMINAL_LEADS]
+    x=clamp(float(lead_h),0.0,72.0)
+    for (x0,y0),(x1,y1) in zip(pts,pts[1:]):
+        if x<=x1:
+            f=0.0 if x1==x0 else (x-x0)/(x1-x0); return y0+f*(y1-y0)
+    return pts[-1][1]
+
+
 def update_calibration(coef, scored, now):
-    recent = [x for x in scored if x.get("scored") and parse_time(x.get("target_time")) and parse_time(x["target_time"]) >= now-timedelta(days=30)]
+    recent = current_generation_scored(scored, now)
     if len(recent) < 16:
+        coef["calibration_generation"] = MODEL
+        coef["calibration_count"] = len(recent)
         return coef
     pred_rate = sum(num(x.get("southward_bz_probability"), 50)/100 for x in recent)/len(recent)
     obs_rate = sum(1 if x.get("observed_southward") else 0 for x in recent)/len(recent)
@@ -256,11 +316,12 @@ def update_calibration(coef, scored, now):
     coef["probability_bias_pp"] = round(0.8*old_p + 0.2*probability_bias_pp, 3)
     coef["bz_min_bias_nt"] = round(0.8*old_b + 0.2*bz_bias, 3)
     coef["calibration_count"] = len(recent)
+    coef["calibration_generation"] = MODEL
     coef["updated_at"] = iso_z(now)
     return coef
 
 
-def build(hist, wind_fc, cmes, coef, now):
+def build(hist, wind_fc, cmes, coef, now, lead_cal):
     recent = [r for r in hist if r["_dt"] >= now-timedelta(hours=6)]
     recent_bz = med([r["bz"] for r in recent], 0.0)
     recent_bt = med([r.get("bt") for r in recent], 6.0)
@@ -295,10 +356,14 @@ def build(hist, wind_fc, cmes, coef, now):
             p += w_recent*0.22*(recent_south-0.45)
         p += 0.35*cscore
         p += num(coef.get("probability_bias_pp"), 0)/100
+        lead_prob_add_pp = _interp_lead_cal(lead_cal, lead, "add_to_probability_pp")
+        p += lead_prob_add_pp/100
         p = clamp(p, 0.05, 0.92)
 
         bz_min = min(base_bz - 1.65*sigma - 8*cscore, clim_q10 - 4*cscore)
         bz_min += num(coef.get("bz_min_bias_nt"), 0)
+        lead_bz_add_nt = _interp_lead_cal(lead_cal, lead, "add_to_bz_min_nt")
+        bz_min += lead_bz_add_nt
         bt = clamp(base_bt + clamp((vsw-450)/350, 0, 4) + 7*cscore, 2, 40)
 
         conf = 0.28 + (0.20 if rec else 0) + 0.12 + (0.08 if cme else 0)
@@ -319,6 +384,9 @@ def build(hist, wind_fc, cmes, coef, now):
                 "solar_wind_speed": round(vsw, 1),
                 "probability_bias_pp": num(coef.get("probability_bias_pp"), 0),
                 "bz_min_bias_nt": num(coef.get("bz_min_bias_nt"), 0),
+                "lead_bias_add_nt": round(lead_bz_add_nt, 3),
+                "lead_probability_add_pp": round(lead_prob_add_pp, 3),
+                "lead_calibration_version": CALIBRATION_VERSION,
             },
         })
     return fc
@@ -330,15 +398,17 @@ def main():
     wind_fc = load_wind_forecast()
     cmes = load_cmes()
     coef = load(COEF, {}) or {}
-    coef.setdefault("version", "SWIFT-Bz-v2-online-calibration")
+    coef.setdefault("version", MODEL)
     coef.setdefault("probability_bias_pp", 0.0)
     coef.setdefault("bz_min_bias_nt", 0.0)
 
     old_archive = (load(ARCHIVE, {}) or {}).get("items", [])
     scored = score_archive(hist, old_archive[-12000:], now)
     coef = update_calibration(coef, scored, now)
+    lead_cal = build_nominal_lead_calibration(scored, now)
+    coef["nominal_lead_bias_calibration"] = lead_cal
 
-    forecast = build(hist, wind_fc, cmes, coef, now) if hist else []
+    forecast = build(hist, wind_fc, cmes, coef, now, lead_cal) if hist else []
     issued = iso_z(now)
     for r in forecast:
         scored.append({
@@ -348,18 +418,21 @@ def main():
             "southward_bz_probability": r["southward_bz_probability"],
             "bz_min_forecast": r["bz_min_forecast"],
             "bt_forecast": r["bt_forecast"],
+            "model": MODEL,
             "scored": False,
         })
     scored = scored[-12000:]
 
-    v7 = metrics(scored, now, 7)
-    v30 = metrics(scored, now, 30)
+    current_scored = [x for x in scored if x.get("model") == MODEL]
+    v7 = metrics(current_scored, now, 7)
+    v30 = metrics(current_scored, now, 30)
+    all30 = metrics(scored, now, 30)
     ready = readiness(v30)
-    ver = {"updated_at": iso_z(now), "last_7d": v7, "last_30d": v30, "readiness": ready}
+    ver = {"updated_at": iso_z(now), "model": MODEL, "last_7d": v7, "last_30d": v30, "all_generations_30d": all30, "readiness": ready, "nominal_lead_bias_calibration": lead_cal}
     latest = {
         "updated_at": iso_z(now),
-        "model": "SWIFT-Bz-v2-online-calibration",
-        "description": "Probabilistic southward-Bz model with forecast archive scoring and online calibration.",
+        "model": MODEL,
+        "description": "Probabilistic southward-Bz model with current-generation archive scoring plus 24/48/72h residual bias calibration.",
         "forecast_days": FORECAST_DAYS,
         "cadence_hours": BIN_H,
         "inputs": {"imf_history_records": len(hist), "cme_arrivals": len(cmes), "uses_rotation27_days": RECURRENCE_DAYS},
@@ -368,6 +441,7 @@ def main():
         "max_risk": max(forecast, key=lambda r:r["southward_bz_probability"], default=None),
         "forecast": forecast,
         "verification": ver,
+        "nominal_lead_bias_calibration": lead_cal,
         "coefficients": coef,
     }
     save(FORECAST, {"updated_at": iso_z(now), "items": forecast})
