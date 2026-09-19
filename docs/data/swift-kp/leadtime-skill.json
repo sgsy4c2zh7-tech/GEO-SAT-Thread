@@ -1,24 +1,24 @@
 {
-  "updated_at": "2026-09-19T04:39:26Z",
+  "updated_at": "2026-09-19T07:53:33Z",
   "model": "SWIFT-Kp-AI-v0.9-adaptive-residual-CH",
   "overall": {
-    "count": 16,
-    "mae": 1.018,
-    "bias": 0.269,
-    "rmse": 1.154,
-    "hit_rate_within_1kp": 43.8,
-    "hit_rate_within_067kp": 37.5,
+    "count": 22,
+    "mae": 1.105,
+    "bias": -0.169,
+    "rmse": 1.235,
+    "hit_rate_within_1kp": 40.9,
+    "hit_rate_within_067kp": 36.4,
     "g_scale_hit_rate": 100.0
   },
   "by_lead_day": [
     {
       "lead_day": 1,
-      "count": 16,
-      "mae": 1.018,
-      "bias": 0.269,
-      "rmse": 1.154,
-      "hit_rate_within_1kp": 43.8,
-      "hit_rate_within_067kp": 37.5,
+      "count": 22,
+      "mae": 1.105,
+      "bias": -0.169,
+      "rmse": 1.235,
+      "hit_rate_within_1kp": 40.9,
+      "hit_rate_within_067kp": 36.4,
       "g_scale_hit_rate": 100.0
     },
     {
@@ -33,29 +33,35 @@
     }
   ],
   "adaptive_bias": {
-    "1": {
-      "day": 1,
-      "bias": 0.444359375,
-      "alpha": 0.15,
-      "correction": 0.06665390624999999,
-      "n": 16,
-      "source": "v0.9-self-only"
-    },
-    "2": {
-      "day": 2,
-      "bias": 0.0,
-      "alpha": 0.0,
-      "correction": 0.0,
-      "n": 0,
-      "source": "v0.9-self-only"
-    },
-    "3": {
-      "day": 3,
-      "bias": 0.0,
-      "alpha": 0.0,
-      "correction": 0.0,
-      "n": 0,
-      "source": "v0.9-self-only"
+    "version": "kp-nominal-lead-bias-v1",
+    "window_days": 30,
+    "tolerance_hours": 4.5,
+    "model": "SWIFT-Kp-AI-v0.9-adaptive-residual-CH",
+    "leads": {
+      "24": {
+        "nominal_lead_hours": 24,
+        "count": 0,
+        "bias": 0.0,
+        "alpha": 0.0,
+        "subtract_from_kp": 0.0,
+        "status": "learning"
+      },
+      "48": {
+        "nominal_lead_hours": 48,
+        "count": 0,
+        "bias": 0.0,
+        "alpha": 0.0,
+        "subtract_from_kp": 0.0,
+        "status": "learning"
+      },
+      "72": {
+        "nominal_lead_hours": 72,
+        "count": 0,
+        "bias": 0.0,
+        "alpha": 0.0,
+        "subtract_from_kp": 0.0,
+        "status": "learning"
+      }
     }
   }
 }

@@ -15,5 +15,41 @@
   "notes": "CME内部Bzの向きは断定せず確率扱い。27日前IMFは主にHSS/CIRリスクに使用。",
   "probability_bias_pp": 19.925,
   "bz_min_bias_nt": 2.079,
-  "calibration_count": 918
+  "calibration_count": 0,
+  "calibration_generation": "SWIFT-Bz-v2.1-lead-calibration",
+  "nominal_lead_bias_calibration": {
+    "version": "bz-nominal-lead-bias-v1",
+    "model": "SWIFT-Bz-v2.1-lead-calibration",
+    "window_days": 30,
+    "tolerance_hours": 4.5,
+    "leads": {
+      "24": {
+        "nominal_lead_hours": 24,
+        "count": 0,
+        "bz_min_bias": 0.0,
+        "alpha": 0.0,
+        "add_to_bz_min_nt": -0.0,
+        "add_to_probability_pp": 0.0,
+        "status": "learning"
+      },
+      "48": {
+        "nominal_lead_hours": 48,
+        "count": 0,
+        "bz_min_bias": 0.0,
+        "alpha": 0.0,
+        "add_to_bz_min_nt": -0.0,
+        "add_to_probability_pp": 0.0,
+        "status": "learning"
+      },
+      "72": {
+        "nominal_lead_hours": 72,
+        "count": 0,
+        "bz_min_bias": 0.0,
+        "alpha": 0.0,
+        "add_to_bz_min_nt": -0.0,
+        "add_to_probability_pp": 0.0,
+        "status": "learning"
+      }
+    }
+  }
 }

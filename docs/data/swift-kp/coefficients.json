@@ -1,6 +1,6 @@
 {
   "version": "SWIFT-Kp-AI-v0.9-adaptive-residual-CH",
-  "updated_at": "2026-09-19T04:39:26Z",
+  "updated_at": "2026-09-19T07:53:33Z",
   "feature_names": [
     "bias",
     "v_excess",
@@ -23,10 +23,42 @@
   ],
   "fit": {
     "status": "fallback",
-    "fit_count": 29
+    "fit_count": 30
   },
   "kp_floor": 0.33,
   "forecast_hours": 72,
-  "wind_gate": 0.671,
-  "bz_model_gate": 0.538
+  "wind_gate": 0.602,
+  "bz_model_gate": 0.2,
+  "nominal_lead_bias_calibration": {
+    "version": "kp-nominal-lead-bias-v1",
+    "window_days": 30,
+    "tolerance_hours": 4.5,
+    "model": "SWIFT-Kp-AI-v0.9-adaptive-residual-CH",
+    "leads": {
+      "24": {
+        "nominal_lead_hours": 24,
+        "count": 0,
+        "bias": 0.0,
+        "alpha": 0.0,
+        "subtract_from_kp": 0.0,
+        "status": "learning"
+      },
+      "48": {
+        "nominal_lead_hours": 48,
+        "count": 0,
+        "bias": 0.0,
+        "alpha": 0.0,
+        "subtract_from_kp": 0.0,
+        "status": "learning"
+      },
+      "72": {
+        "nominal_lead_hours": 72,
+        "count": 0,
+        "bias": 0.0,
+        "alpha": 0.0,
+        "subtract_from_kp": 0.0,
+        "status": "learning"
+      }
+    }
+  }
 }

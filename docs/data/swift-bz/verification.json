@@ -1,24 +1,60 @@
 {
-  "updated_at": "2026-09-19T04:00:00Z",
+  "updated_at": "2026-09-19T07:00:00Z",
+  "model": "SWIFT-Bz-v2.1-lead-calibration",
   "last_7d": {
-    "count": 918,
-    "brier_score": 0.2634,
-    "direction_hit_rate_threshold60": 31.2,
-    "bz_min_mae": 3.43,
-    "predicted_southward_rate": 51.5,
-    "observed_southward_rate": 94.6
+    "count": 0,
+    "status": "learning"
   },
   "last_30d": {
-    "count": 918,
-    "brier_score": 0.2634,
-    "direction_hit_rate_threshold60": 31.2,
-    "bz_min_mae": 3.43,
-    "predicted_southward_rate": 51.5,
-    "observed_southward_rate": 94.6
+    "count": 0,
+    "status": "learning"
+  },
+  "all_generations_30d": {
+    "count": 960,
+    "brier_score": 0.2635,
+    "direction_hit_rate_threshold60": 30.7,
+    "bz_min_mae": 3.34,
+    "predicted_southward_rate": 51.4,
+    "observed_southward_rate": 94.8
   },
   "readiness": {
-    "state": "calibrated",
-    "scored_forecasts": 918,
-    "kp_input_confidence": 0.538
+    "state": "learning",
+    "scored_forecasts": 0,
+    "kp_input_confidence": 0.2
+  },
+  "nominal_lead_bias_calibration": {
+    "version": "bz-nominal-lead-bias-v1",
+    "model": "SWIFT-Bz-v2.1-lead-calibration",
+    "window_days": 30,
+    "tolerance_hours": 4.5,
+    "leads": {
+      "24": {
+        "nominal_lead_hours": 24,
+        "count": 0,
+        "bz_min_bias": 0.0,
+        "alpha": 0.0,
+        "add_to_bz_min_nt": -0.0,
+        "add_to_probability_pp": 0.0,
+        "status": "learning"
+      },
+      "48": {
+        "nominal_lead_hours": 48,
+        "count": 0,
+        "bz_min_bias": 0.0,
+        "alpha": 0.0,
+        "add_to_bz_min_nt": -0.0,
+        "add_to_probability_pp": 0.0,
+        "status": "learning"
+      },
+      "72": {
+        "nominal_lead_hours": 72,
+        "count": 0,
+        "bz_min_bias": 0.0,
+        "alpha": 0.0,
+        "add_to_bz_min_nt": -0.0,
+        "add_to_probability_pp": 0.0,
+        "status": "learning"
+      }
+    }
   }
 }
