@@ -261,7 +261,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
       <span class="modelChip">CME propagation: Drag-Based Model</span>
       <span class="modelChip">Solar rotation: 27.27 d</span>
       <span class="modelChip">Parker 1958 HMF • north view: CCW rotation</span><span class="modelChip">ENLIL-style 21.5 R☉ boundary</span><span class="modelChip">Ω: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
-      <span class="modelChip">Solar wind @ magnetosphere ETA: NOAA observed → SWIFT AI forecast → WSA fallback</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span>
+      <span class="modelChip">Earth speed display = local Vsw sampled from rendered heliospheric field</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span>
       <span class="modelChip">Magnetosphere: Pdyn / Bz / CME impact response</span>
     </div>
   </section>
@@ -1281,7 +1281,7 @@ function solarWindFieldAt(phi,rKm,time,fallbackV,boundary){
     .16 + .19*Math.log1p(nPhysical*radialComp) + .62*compression,
     .12,1.0
   );
-  return{speed:v,densityVisual,compression,seed};
+  return{speed:v,densityVisual,compression,seed,nPhysical};
 }
 
 function makeSolarWindSheetMaterial(){
@@ -1398,14 +1398,46 @@ function updateSolarWindSheet(time,fallbackV){
   mesh.userData.meanDensity=densitySum/density.length;
   mesh.userData.compressionMax=compressionMax;
 
+  // Exact sample of the SAME field used to color the sheet at Earth's location.
+  // Earth is on +X from the Sun in this scene, so heliocentric phi = 0 at 1 AU.
+  const earthField=solarWindFieldAt(0,AU_KM,time,fv,boundary);
+  mesh.userData.earthField={
+    ...earthField,
+    time:tm,
+    ambientSpeed:fv,
+    ambientSource:windStateAt(time).source
+  };
+
   const legend=document.getElementById("windMapLegend");
   if(legend){
     legend.querySelector(".note").innerHTML=
       `色 = radial Vsw / 明るさ = density・compression<br>`+
-      `Earth-line Vsw: <b>${Math.round(fv)} km/s</b> / compression proxy max: <b>${compressionMax.toFixed(2)}</b>`;
+      `Earth local Vsw: <b>${Math.round(earthField.speed)} km/s</b> / ambient: <b>${Math.round(fv)} km/s</b><br>`+
+      `Earth compression: <b>${earthField.compression.toFixed(2)}</b> / max: <b>${compressionMax.toFixed(2)}</b>`;
   }
 }
 
+
+function localSolarWindAtEarth(time){
+  const t=time instanceof Date?time:new Date(time);
+  const tm=t.getTime();
+  const mesh=STATE.three?.solarWindSheet;
+  const cached=mesh?.userData?.earthField;
+  if(cached && Number.isFinite(cached.time) && Math.abs(cached.time-tm)<20*60e3){
+    return cached;
+  }
+
+  const ambient=windStateAt(t);
+  const fv=clamp(num(ambient.speed,425),250,900);
+  const boundary=sampleWindBoundary(t,fv,96);
+  const f=solarWindFieldAt(0,AU_KM,t,fv,boundary);
+  return{
+    ...f,
+    time:tm,
+    ambientSpeed:fv,
+    ambientSource:ambient.source
+  };
+}
 
 function makeParkerCoreMaterial(color){
   return new THREE.ShaderMaterial({
@@ -1722,30 +1754,49 @@ function animateWindParticles(dt){
 
 function updateSpeedHud(info){
   const el=document.getElementById("speedHud");if(!el)return;
-  const simTime=STATE.selectedTime||new Date(),simWind=windStateAt(simTime);
+  const simTime=STATE.selectedTime||new Date();
+  const ambient=windStateAt(simTime);
+  const local=localSolarWindAtEarth(simTime);
+  const localSpeed=Number.isFinite(Number(local?.speed))?Number(local.speed):ambient.speed;
+  const compression=Number.isFinite(Number(local?.compression))?Number(local.compression):0;
+  const localDensity=Number.isFinite(Number(local?.nPhysical))?Number(local.nPhysical):null;
+
   if(!info){
-    el.innerHTML=`<div class="model">Drag-Based Model</div><div class="big wind">${Math.round(simWind.speed)} km/s</div><div>Solar wind @ Earth/L1 (${esc(simWind.source)})</div><div>Parker HMF angle @ 1 AU: ${parkerAngleDeg(simWind.speed).toFixed(1)}° / winding ${parkerWindingDeg(simWind.speed).toFixed(1)}°</div><div>Solar surface rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic</div><div>Parker rotation: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal</div><div>No active Earth-directed CME at this simulation time.</div>`;
+    el.innerHTML=
+      `<div class="model">Heliospheric local-field sample @ Earth</div>`+
+      `<div class="big wind">${Math.round(localSpeed)} km/s</div>`+
+      `<div class="wind"><b>Modeled solar wind @ Earth NOW</b></div>`+
+      `<div class="small">same Vsw field used to color the ENLIL-style sheet</div>`+
+      `<div style="margin-top:5px">Ambient baseline: <b>${Math.round(ambient.speed)} km/s</b> (${esc(ambient.source)})</div>`+
+      `<div>Compression proxy @ Earth: <b>${compression.toFixed(2)}</b></div>`+
+      (localDensity===null?"":`<div>Continuity density @ Earth: <b>${localDensity.toFixed(1)} cm⁻³</b></div>`)+
+      `<div>Parker HMF angle @ 1 AU: ${parkerAngleDeg(localSpeed).toFixed(1)}°</div>`+
+      `<div>No active Earth-directed CME at this simulation time.</div>`;
     return;
   }
+
   const {c,s,m}=info;
-  const etaTime=m.earthArrival?.time||null;
-  const arrivalWind=etaTime?windStateAt(etaTime):simWind;
   const earthCmeSpeed=m.earthArrival?Number(m.earthArrival.v):NaN;
-  const dvEarth=Number.isFinite(earthCmeSpeed)?earthCmeSpeed-arrivalWind.speed:null;
-  const acc=s.a*1000,eta=etaTime?formatTime(etaTime):"-",footLon=sourceFootpointLongitude(c,simTime);
+  const deltaLocal=Number.isFinite(earthCmeSpeed)?earthCmeSpeed-localSpeed:null;
+  const acc=s.a*1000;
+  const eta=m.earthArrival?formatTime(m.earthArrival.time):"-";
+  const footLon=sourceFootpointLongitude(c,simTime);
 
   el.innerHTML=
     `<div class="model">DBM • ${esc(shortId(c.id))} • ${esc(c.impactClass)}</div>`+
-    `<div class="big wind">${Math.round(arrivalWind.speed)} km/s</div>`+
-    `<div class="wind"><b>Solar wind @ magnetosphere arrival</b></div>`+
-    `<div>${eta}</div>`+
-    `<div class="small">${esc(arrivalWind.source)}</div>`+
+    `<div class="big wind">${Math.round(localSpeed)} km/s</div>`+
+    `<div class="wind"><b>Modeled solar wind @ Earth NOW</b></div>`+
+    `<div class="small">same local Vsw as the sheet color at Earth</div>`+
+    `<div style="margin-top:5px">Ambient baseline: <b>${Math.round(ambient.speed)} km/s</b> (${esc(ambient.source)})</div>`+
+    `<div>Compression proxy @ Earth: <b>${compression.toFixed(2)}</b></div>`+
+    (localDensity===null?"":`<div>Continuity density @ Earth: <b>${localDensity.toFixed(1)} cm⁻³</b></div>`)+
     `<div style="margin-top:5px">CME speed @ current position: <b>${Math.round(s.v)} km/s</b></div>`+
     `<div>CME speed @ Earth: <b>${Number.isFinite(earthCmeSpeed)?Math.round(earthCmeSpeed):"-"} km/s</b></div>`+
-    (dvEarth===null?"":`<div class="delta">CME − ambient wind @ Earth: <b>${dvEarth>=0?"+":""}${Math.round(dvEarth)} km/s</b></div>`)+
+    (deltaLocal===null?"":`<div class="delta">CME − local wind @ Earth: <b>${deltaLocal>=0?"+":""}${Math.round(deltaLocal)} km/s</b></div>`)+
     `<div>Acceleration now: <b>${acc.toFixed(2)} m/s²</b></div>`+
     `<div>Distance now: <b>${s.rAU.toFixed(3)} AU</b></div>`+
-    `<div>Parker angle using arrival wind: ${parkerAngleDeg(arrivalWind.speed).toFixed(1)}°</div>`+
+    `<div>DBM ETA Earth: <b>${eta}</b></div>`+
+    `<div>Parker angle using local Earth wind: ${parkerAngleDeg(localSpeed).toFixed(1)}°</div>`+
     (footLon===null?"":`<div>Launch longitude: <b>${formatHelioLon(c.lon)}</b></div><div>Rotating source footpoint: <b>${formatHelioLon(footLon)}</b></div>`)+
     `<div>Solar surface: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic</div>`+
     `<div>Parker Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal</div>`;
@@ -1774,11 +1825,12 @@ function update3D(time){
   const solarSurfacePhase=solarSynodicRotationRad(time);
   if(STATE.three.sun)STATE.three.sun.rotation.y=-solarSurfacePhase;
   if(STATE.three.sunLoopGroup)STATE.three.sunLoopGroup.rotation.y=-solarSurfacePhase;
-  updateSolarWindSheet(time,ws.speed);updateParkerSpiral(time,ws.speed);updateMagnetosphere(impactStrength,bzS.bz);updateSpeedHud(bestInfo);
+  updateSolarWindSheet(time,ws.speed);
+  const localEarth=localSolarWindAtEarth(time);
+  const localEarthSpeed=Number.isFinite(Number(localEarth?.speed))?Number(localEarth.speed):ws.speed;
+  updateParkerSpiral(time,ws.speed);updateMagnetosphere(impactStrength,bzS.bz);updateSpeedHud(bestInfo);
   const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz,magState=impactStrength>.72?"STRONG IMPACT":impactStrength>.35?"IMPACT":impactStrength>.05?"CONTACT":"QUIET";
-  const etaWind=bestInfo?.m?.earthArrival?.time?windStateAt(bestInfo.m.earthArrival.time):null;
-  const etaWindLine=etaWind?`<br><b>Solar wind @ magnetosphere ETA: ${Math.round(etaWind.speed)} km/s</b> (${esc(etaWind.source)})`:"";
-  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Earth/L1 wind @ sim time: ${Math.round(ws.speed)} km/s (${esc(ws.source)})${etaWindLine}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(ws.speed).toFixed(1)}° local / ${parkerWindingDeg(ws.speed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Solar-wind sheet: ENLIL-style radial Vsw + density/compression proxy<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
+  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br><b>Modeled local wind @ Earth: ${Math.round(localEarthSpeed)} km/s</b><br>Ambient baseline: ${Math.round(ws.speed)} km/s (${esc(ws.source)})<br>Earth compression proxy: ${Number(localEarth?.compression||0).toFixed(2)}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(localEarthSpeed).toFixed(1)}° local / ${parkerWindingDeg(localEarthSpeed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Solar-wind sheet: ENLIL-style radial Vsw + density/compression proxy<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
 }
 
 function animate3D(){
