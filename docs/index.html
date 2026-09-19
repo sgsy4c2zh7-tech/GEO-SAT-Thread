@@ -233,7 +233,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
     <div class="panelHeader">
       <div>
         <div class="panelTitle">3D CME Propagation Model <span class="chip">DBM + Parker HMF / Luminous Pinwheel</span></div>
-        <div class="panelSub">DBMでCME速度を積分。太陽風・HMFは Parker (1958) の凍結磁場/Archimedean spiral を使用。NOAA WSA-ENLILのような回転する太陽風速度・密度構造を、21.5 R☉ 内側境界からのretarded-time移流として半透明ecliptic sheetに表示します。各セクターのVswで巻き角が変化し、タイムラインに合わせてpinwheel状に共回転します。フル3D MHD ENLILそのものではなく、実測/予報Vswを使う軽量可視化です。</div>
+        <div class="panelSub">DBMでCME速度を積分。太陽風・HMFは Parker (1958) の凍結磁場/Archimedean spiral を使用。NOAA WSA-ENLILのような回転する太陽風速度・密度構造を、21.5 R☉ 内側境界からのretarded-time移流として半透明ecliptic sheetに表示します。各セクターのVswで巻き角が変化し、タイムラインに合わせてpinwheel状に共回転します。pinwheelは背景/HSS系太陽風、別の膨張シェルはCME/shock-sheathとして分離表示します。フル3D MHD ENLILそのものではなく、実測/予報Vswを使う軽量可視化です。</div>
       </div>
       <div class="viewTools">
         <button onclick="set3DCamera('top')">Top</button>
@@ -1439,6 +1439,43 @@ function localSolarWindAtEarth(time){
   };
 }
 
+// -----------------------------------------------------------------------------
+// Distinguish the two mechanisms at Earth:
+// 1) background/rotating solar wind (HSS-like Parker/ENLIL pinwheel)
+// 2) transient CME-driven enhancement when the shock/sheath reaches Earth
+// This is a lightweight visualization blend, not a full MHD solution.
+// -----------------------------------------------------------------------------
+function cmeDisturbanceAtEarth(info,time,backgroundSpeed){
+  if(!info)return{earthCmeSpeed:NaN,deltaSpeed:0,shockWeight:0,combinedSpeed:backgroundSpeed};
+  const {s,m}=info;
+  const earthCmeSpeed=m?.earthArrival?Number(m.earthArrival.v):NaN;
+  if(!Number.isFinite(earthCmeSpeed))return{earthCmeSpeed:NaN,deltaSpeed:0,shockWeight:0,combinedSpeed:backgroundSpeed};
+  const tm=(time instanceof Date?time:new Date(time)).getTime();
+  const arrTm=m?.earthArrival?new Date(m.earthArrival.time).getTime():NaN;
+  const spatial=Math.exp(-Math.pow(Math.abs(num(s?.rAU,0)-1)/0.060,2));
+  const temporal=Number.isFinite(arrTm)?Math.exp(-Math.pow((tm-arrTm)/(10*3600e3),2)):0;
+  const shockWeight=clamp(Math.max(spatial,temporal),0,1);
+  const positiveExcess=Math.max(0,earthCmeSpeed-backgroundSpeed);
+  const deltaSpeed=positiveExcess*shockWeight;
+  return{earthCmeSpeed,deltaSpeed,shockWeight,combinedSpeed:backgroundSpeed+deltaSpeed,backgroundSpeed};
+}
+
+function earthSpaceWeatherState(time,info){
+  const ambient=windStateAt(time);
+  const local=localSolarWindAtEarth(time);
+  const backgroundSpeed=Number.isFinite(Number(local?.speed))?Number(local.speed):ambient.speed;
+  const cme=cmeDisturbanceAtEarth(info,time,backgroundSpeed);
+  const combinedSpeed=Number.isFinite(cme.combinedSpeed)?cme.combinedSpeed:backgroundSpeed;
+  const localDensity=Number.isFinite(Number(local?.nPhysical))?Number(local.nPhysical):null;
+  const compression=Number.isFinite(Number(local?.compression))?Number(local.compression):0;
+  const impactStrength=clamp(cme.shockWeight*Math.max(0,(combinedSpeed-backgroundSpeed))/260,0,1);
+  return{
+    ambient,local,backgroundSpeed,combinedSpeed,localDensity,compression,
+    cmeDelta:cme.deltaSpeed,earthCmeSpeed:cme.earthCmeSpeed,shockWeight:cme.shockWeight,
+    cmeImpactStrength:impactStrength
+  };
+}
+
 function makeParkerCoreMaterial(color){
   return new THREE.ShaderMaterial({
     transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
@@ -1752,51 +1789,55 @@ function animateWindParticles(dt){
   t.windParticles.geometry.attributes.position.needsUpdate=true;
 }
 
-function updateSpeedHud(info){
+function updateSpeedHud(info,earthState=null){
   const el=document.getElementById("speedHud");if(!el)return;
   const simTime=STATE.selectedTime||new Date();
-  const ambient=windStateAt(simTime);
-  const local=localSolarWindAtEarth(simTime);
-  const localSpeed=Number.isFinite(Number(local?.speed))?Number(local.speed):ambient.speed;
-  const compression=Number.isFinite(Number(local?.compression))?Number(local.compression):0;
-  const localDensity=Number.isFinite(Number(local?.nPhysical))?Number(local.nPhysical):null;
+  const st=earthState||earthSpaceWeatherState(simTime,info);
+  const ambient=st.ambient;
+  const backgroundSpeed=st.backgroundSpeed;
+  const combinedSpeed=st.combinedSpeed;
+  const compression=st.compression;
+  const localDensity=st.localDensity;
+  const cmeDelta=st.cmeDelta;
+  const shockWeight=st.shockWeight;
 
   if(!info){
     el.innerHTML=
-      `<div class="model">Heliospheric local-field sample @ Earth</div>`+
-      `<div class="big wind">${Math.round(localSpeed)} km/s</div>`+
-      `<div class="wind"><b>Modeled solar wind @ Earth NOW</b></div>`+
-      `<div class="small">same Vsw field used to color the ENLIL-style sheet</div>`+
+      `<div class="model">Background rotating solar wind @ Earth</div>`+
+      `<div class="big wind">${Math.round(backgroundSpeed)} km/s</div>`+
+      `<div class="wind"><b>Background / HSS-like wind at Earth</b></div>`+
+      `<div class="small">pinwheel = rotating Parker / ENLIL-style background wind</div>`+
       `<div style="margin-top:5px">Ambient baseline: <b>${Math.round(ambient.speed)} km/s</b> (${esc(ambient.source)})</div>`+
       `<div>Compression proxy @ Earth: <b>${compression.toFixed(2)}</b></div>`+
       (localDensity===null?"":`<div>Continuity density @ Earth: <b>${localDensity.toFixed(1)} cm⁻³</b></div>`)+
-      `<div>Parker HMF angle @ 1 AU: ${parkerAngleDeg(localSpeed).toFixed(1)}°</div>`+
-      `<div>No active Earth-directed CME at this simulation time.</div>`;
+      `<div>Parker HMF angle @ 1 AU: ${parkerAngleDeg(backgroundSpeed).toFixed(1)}°</div>`+
+      `<div>No active Earth-directed CME: CME-driven speed enhancement = <b>0 km/s</b></div>`;
     return;
   }
 
   const {c,s,m}=info;
-  const earthCmeSpeed=m.earthArrival?Number(m.earthArrival.v):NaN;
-  const deltaLocal=Number.isFinite(earthCmeSpeed)?earthCmeSpeed-localSpeed:null;
+  const earthCmeSpeed=st.earthCmeSpeed;
   const acc=s.a*1000;
   const eta=m.earthArrival?formatTime(m.earthArrival.time):"-";
   const footLon=sourceFootpointLongitude(c,simTime);
 
   el.innerHTML=
-    `<div class="model">DBM • ${esc(shortId(c.id))} • ${esc(c.impactClass)}</div>`+
-    `<div class="big wind">${Math.round(localSpeed)} km/s</div>`+
-    `<div class="wind"><b>Modeled solar wind @ Earth NOW</b></div>`+
-    `<div class="small">same local Vsw as the sheet color at Earth</div>`+
-    `<div style="margin-top:5px">Ambient baseline: <b>${Math.round(ambient.speed)} km/s</b> (${esc(ambient.source)})</div>`+
+    `<div class="model">DBM + Parker split view • ${esc(shortId(c.id))} • ${esc(c.impactClass)}</div>`+
+    `<div class="big wind">${Math.round(combinedSpeed)} km/s</div>`+
+    `<div class="wind"><b>Local wind at magnetosphere (background + CME)</b></div>`+
+    `<div class="small">pinwheel = background/HSS • expanding shell = CME shock/sheath</div>`+
+    `<div style="margin-top:5px">Background / HSS wind @ Earth: <b>${Math.round(backgroundSpeed)} km/s</b></div>`+
+    `<div>CME-driven enhancement @ Earth: <b>${Math.round(cmeDelta)} km/s</b> <span class="small">(weight ${(shockWeight*100).toFixed(0)}%)</span></div>`+
+    `<div>Combined local wind @ magnetosphere: <b>${Math.round(combinedSpeed)} km/s</b></div>`+
     `<div>Compression proxy @ Earth: <b>${compression.toFixed(2)}</b></div>`+
     (localDensity===null?"":`<div>Continuity density @ Earth: <b>${localDensity.toFixed(1)} cm⁻³</b></div>`)+
     `<div style="margin-top:5px">CME speed @ current position: <b>${Math.round(s.v)} km/s</b></div>`+
     `<div>CME speed @ Earth: <b>${Number.isFinite(earthCmeSpeed)?Math.round(earthCmeSpeed):"-"} km/s</b></div>`+
-    (deltaLocal===null?"":`<div class="delta">CME − local wind @ Earth: <b>${deltaLocal>=0?"+":""}${Math.round(deltaLocal)} km/s</b></div>`)+
+    `<div class="delta">CME contribution above background: <b>+${Math.round(cmeDelta)} km/s</b></div>`+
     `<div>Acceleration now: <b>${acc.toFixed(2)} m/s²</b></div>`+
     `<div>Distance now: <b>${s.rAU.toFixed(3)} AU</b></div>`+
     `<div>DBM ETA Earth: <b>${eta}</b></div>`+
-    `<div>Parker angle using local Earth wind: ${parkerAngleDeg(localSpeed).toFixed(1)}°</div>`+
+    `<div>Parker angle using background Earth wind: ${parkerAngleDeg(backgroundSpeed).toFixed(1)}°</div>`+
     (footLon===null?"":`<div>Launch longitude: <b>${formatHelioLon(c.lon)}</b></div><div>Rotating source footpoint: <b>${formatHelioLon(footLon)}</b></div>`)+
     `<div>Solar surface: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic</div>`+
     `<div>Parker Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal</div>`;
@@ -1826,11 +1867,12 @@ function update3D(time){
   if(STATE.three.sun)STATE.three.sun.rotation.y=-solarSurfacePhase;
   if(STATE.three.sunLoopGroup)STATE.three.sunLoopGroup.rotation.y=-solarSurfacePhase;
   updateSolarWindSheet(time,ws.speed);
-  const localEarth=localSolarWindAtEarth(time);
-  const localEarthSpeed=Number.isFinite(Number(localEarth?.speed))?Number(localEarth.speed):ws.speed;
-  updateParkerSpiral(time,ws.speed);updateMagnetosphere(impactStrength,bzS.bz);updateSpeedHud(bestInfo);
-  const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz,magState=impactStrength>.72?"STRONG IMPACT":impactStrength>.35?"IMPACT":impactStrength>.05?"CONTACT":"QUIET";
-  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br><b>Modeled local wind @ Earth: ${Math.round(localEarthSpeed)} km/s</b><br>Ambient baseline: ${Math.round(ws.speed)} km/s (${esc(ws.source)})<br>Earth compression proxy: ${Number(localEarth?.compression||0).toFixed(2)}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(localEarthSpeed).toFixed(1)}° local / ${parkerWindingDeg(localEarthSpeed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Solar-wind sheet: ENLIL-style radial Vsw + density/compression proxy<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
+  const earthState=earthSpaceWeatherState(time,bestInfo);
+  const localEarthSpeed=earthState.combinedSpeed;
+  const magnetosphereImpact=Math.max(impactStrength,earthState.cmeImpactStrength);
+  updateParkerSpiral(time,ws.speed);updateMagnetosphere(magnetosphereImpact,bzS.bz);updateSpeedHud(bestInfo,earthState);
+  const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz,magState=magnetosphereImpact>.72?"STRONG IMPACT":magnetosphereImpact>.35?"IMPACT":magnetosphereImpact>.05?"CONTACT":"QUIET";
+  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br><b>Local wind @ magnetosphere: ${Math.round(localEarthSpeed)} km/s</b><br>Background/HSS @ Earth: ${Math.round(earthState.backgroundSpeed)} km/s<br>CME enhancement @ Earth: +${Math.round(earthState.cmeDelta)} km/s<br>Earth compression proxy: ${Number(earthState.compression||0).toFixed(2)}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(earthState.backgroundSpeed).toFixed(1)}° background / ${parkerWindingDeg(earthState.backgroundSpeed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Pinwheel = background rotating solar wind / expanding shell = CME shock-sheath<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
 }
 
 function animate3D(){
