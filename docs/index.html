@@ -261,7 +261,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
       <span class="modelChip">CME propagation: Drag-Based Model</span>
       <span class="modelChip">Solar rotation: 27.27 d</span>
       <span class="modelChip">Parker 1958 HMF • north view: CCW rotation</span><span class="modelChip">ENLIL-style 21.5 R☉ boundary</span><span class="modelChip">Ω: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
-      <span class="modelChip">Solar wind: NOAA observed → SWIFT AI forecast → WSA fallback</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span>
+      <span class="modelChip">Solar wind @ magnetosphere ETA: NOAA observed → SWIFT AI forecast → WSA fallback</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span>
       <span class="modelChip">Magnetosphere: Pdyn / Bz / CME impact response</span>
     </div>
   </section>
@@ -1721,10 +1721,34 @@ function animateWindParticles(dt){
 }
 
 function updateSpeedHud(info){
-  const el=document.getElementById("speedHud");if(!el)return;const ws=windStateAt(STATE.selectedTime||new Date());
-  if(!info){el.innerHTML=`<div class="model">Drag-Based Model</div><div class="big wind">${Math.round(ws.speed)} km/s</div><div>Solar wind (${esc(ws.source)})</div><div>Parker HMF angle @ 1 AU: ${parkerAngleDeg(ws.speed).toFixed(1)}° / winding ${parkerWindingDeg(ws.speed).toFixed(1)}°</div><div>Solar surface rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic</div><div>Parker rotation: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal</div><div>No active Earth-directed CME at this simulation time.</div>`;return;}
-  const{c,s,m}=info,dv=s.v-s.w,acc=s.a*1000,eta=m.earthArrival?formatTime(m.earthArrival.time):"-",footLon=sourceFootpointLongitude(c,STATE.selectedTime||new Date());
-  el.innerHTML=`<div class="model">DBM • ${esc(shortId(c.id))} • ${esc(c.impactClass)}</div><div class="big cme">${Math.round(s.v)} km/s</div><div>CME speed</div><div class="wind">Solar wind: <b>${Math.round(s.w)} km/s</b></div><div class="delta">ΔV: <b>${dv>=0?"+":""}${Math.round(dv)} km/s</b></div><div>Acceleration: <b>${acc.toFixed(2)} m/s²</b></div><div>Distance: <b>${s.rAU.toFixed(3)} AU</b></div><div>DBM ETA Earth: <b>${eta}</b></div><div>DBM speed @ Earth: <b>${m.earthArrival?Math.round(m.earthArrival.v):0} km/s</b></div><div>Parker angle @ 1 AU: ${parkerAngleDeg(ws.speed).toFixed(1)}°</div>${footLon===null?"":`<div>Launch longitude: <b>${formatHelioLon(c.lon)}</b></div><div>Rotating source footpoint: <b>${formatHelioLon(footLon)}</b></div>`}<div>Solar surface: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic</div><div>Parker Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal</div>`;
+  const el=document.getElementById("speedHud");if(!el)return;
+  const simTime=STATE.selectedTime||new Date(),simWind=windStateAt(simTime);
+  if(!info){
+    el.innerHTML=`<div class="model">Drag-Based Model</div><div class="big wind">${Math.round(simWind.speed)} km/s</div><div>Solar wind @ Earth/L1 (${esc(simWind.source)})</div><div>Parker HMF angle @ 1 AU: ${parkerAngleDeg(simWind.speed).toFixed(1)}° / winding ${parkerWindingDeg(simWind.speed).toFixed(1)}°</div><div>Solar surface rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic</div><div>Parker rotation: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal</div><div>No active Earth-directed CME at this simulation time.</div>`;
+    return;
+  }
+  const {c,s,m}=info;
+  const etaTime=m.earthArrival?.time||null;
+  const arrivalWind=etaTime?windStateAt(etaTime):simWind;
+  const earthCmeSpeed=m.earthArrival?Number(m.earthArrival.v):NaN;
+  const dvEarth=Number.isFinite(earthCmeSpeed)?earthCmeSpeed-arrivalWind.speed:null;
+  const acc=s.a*1000,eta=etaTime?formatTime(etaTime):"-",footLon=sourceFootpointLongitude(c,simTime);
+
+  el.innerHTML=
+    `<div class="model">DBM • ${esc(shortId(c.id))} • ${esc(c.impactClass)}</div>`+
+    `<div class="big wind">${Math.round(arrivalWind.speed)} km/s</div>`+
+    `<div class="wind"><b>Solar wind @ magnetosphere arrival</b></div>`+
+    `<div>${eta}</div>`+
+    `<div class="small">${esc(arrivalWind.source)}</div>`+
+    `<div style="margin-top:5px">CME speed @ current position: <b>${Math.round(s.v)} km/s</b></div>`+
+    `<div>CME speed @ Earth: <b>${Number.isFinite(earthCmeSpeed)?Math.round(earthCmeSpeed):"-"} km/s</b></div>`+
+    (dvEarth===null?"":`<div class="delta">CME − ambient wind @ Earth: <b>${dvEarth>=0?"+":""}${Math.round(dvEarth)} km/s</b></div>`)+
+    `<div>Acceleration now: <b>${acc.toFixed(2)} m/s²</b></div>`+
+    `<div>Distance now: <b>${s.rAU.toFixed(3)} AU</b></div>`+
+    `<div>Parker angle using arrival wind: ${parkerAngleDeg(arrivalWind.speed).toFixed(1)}°</div>`+
+    (footLon===null?"":`<div>Launch longitude: <b>${formatHelioLon(c.lon)}</b></div><div>Rotating source footpoint: <b>${formatHelioLon(footLon)}</b></div>`)+
+    `<div>Solar surface: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic</div>`+
+    `<div>Parker Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal</div>`;
 }
 
 function make3DCME(c,s,index){
@@ -1752,7 +1776,9 @@ function update3D(time){
   if(STATE.three.sunLoopGroup)STATE.three.sunLoopGroup.rotation.y=-solarSurfacePhase;
   updateSolarWindSheet(time,ws.speed);updateParkerSpiral(time,ws.speed);updateMagnetosphere(impactStrength,bzS.bz);updateSpeedHud(bestInfo);
   const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz,magState=impactStrength>.72?"STRONG IMPACT":impactStrength>.35?"IMPACT":impactStrength>.05?"CONTACT":"QUIET";
-  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Solar wind: ${Math.round(ws.speed)} km/s (${esc(ws.source)})<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(ws.speed).toFixed(1)}° local / ${parkerWindingDeg(ws.speed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Solar-wind sheet: ENLIL-style radial Vsw + density/compression proxy<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
+  const etaWind=bestInfo?.m?.earthArrival?.time?windStateAt(bestInfo.m.earthArrival.time):null;
+  const etaWindLine=etaWind?`<br><b>Solar wind @ magnetosphere ETA: ${Math.round(etaWind.speed)} km/s</b> (${esc(etaWind.source)})`:"";
+  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br>Earth/L1 wind @ sim time: ${Math.round(ws.speed)} km/s (${esc(ws.source)})${etaWindLine}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(ws.speed).toFixed(1)}° local / ${parkerWindingDeg(ws.speed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Solar-wind sheet: ENLIL-style radial Vsw + density/compression proxy<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
 }
 
 function animate3D(){
