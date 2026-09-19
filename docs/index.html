@@ -160,6 +160,12 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 .forecastGraphWrap canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .forecastStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:11px 13px;background:#f8fbfe;border-top:1px solid #d5e1ec}
 .forecastStat{background:#fff;border:1px solid #d1dfeb;border-radius:10px;padding:9px}.forecastStat .k{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#7690a8}.forecastStat .v{font-size:18px;font-weight:900;color:#183752;margin-top:4px}
+.skillMatrixWrap{padding:10px 13px;background:#fff;border-top:1px solid #d5e1ec;overflow:auto}
+.skillMatrix{width:100%;border-collapse:collapse;font-size:10px;min-width:500px}
+.skillMatrix th,.skillMatrix td{border-bottom:1px solid #e2eaf1;padding:6px 7px;text-align:center;color:#36526d}
+.skillMatrix th{background:#f3f7fb;color:#17324f;font-weight:900}
+.skillMatrix td:first-child,.skillMatrix th:first-child{text-align:left}
+.skillMatrix .learning{color:#91a3b4}
 @media(max-width:1000px){.forecastGrid{grid-template-columns:1fr}.forecastStats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:620px){.forecastStats{grid-template-columns:1fr}}
 
@@ -264,12 +270,13 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 
   <div class="forecastGrid">
     <section class="card forecastPanel">
-      <div class="panelHeader"><div><div class="panelTitle">Kp Forecast <span class="chip">Excel linked</span></div><div class="panelSub">月次Excelの Kp_Forecast と同じPython生成データ。予報は+72時間（3日）まで。シミュレーション時刻の縦線が同期します。</div></div></div>
+      <div class="panelHeader"><div><div class="panelTitle">Kp Forecast <span class="chip">24 / 48 / 72 h verification</span></div><div class="panelSub">NOAA実測 + 現在予報 + 24/48/72時間前に発行された過去予報を重ねます。的中率は実測との差 ±1.0 Kp（厳格指標 ±0.67）で集計。</div></div></div>
       <div class="forecastGraphWrap"><canvas id="kpGraph"></canvas></div>
       <div class="forecastStats" id="kpStats"></div>
+      <div class="skillMatrixWrap" id="kpRangeSkill"></div>
     </section>
     <section class="card forecastPanel">
-      <div class="panelHeader"><div><div class="panelTitle">Bz / Bt Forecast <span class="chip">Excel linked</span></div><div class="panelSub">月次Excelの Bz_AI と同じPython生成データ。南向きBzを磁気圏表示にも同期します。</div></div></div>
+      <div class="panelHeader"><div><div class="panelTitle">Bz / Bt Forecast <span class="chip">24 / 48 / 72 h verification</span></div><div class="panelSub">3時間Bz最小値の実測・現在予報・24/48/72時間前予報を比較。主的中率は Bz最小値 ±2 nT、併記で ±3 nT と南向き方向判定を表示。</div></div></div>
       <div class="forecastGraphWrap"><canvas id="bzGraph"></canvas></div>
       <div class="forecastStats" id="bzStats"></div>
     </section>
@@ -293,6 +300,7 @@ const REPORT_INDEX_CANDIDATES=["./reports/index.json","./docs/reports/index.json
 const REPORT_UI_CANDIDATES=["./reports/ui_forecast_latest.json","./docs/reports/ui_forecast_latest.json"];
 const SWIFT_KP_LATEST=dataCandidates("swift-kp/latest.json");
 const SWIFT_BZ_LATEST=dataCandidates("swift-bz/latest.json");
+const VALIDATION_UI_CANDIDATES=dataCandidates("validation/ui_validation_latest.json");
 const NOAA_WIND_HISTORY=[...dataCandidates("noaa/wind_history.json"),...dataCandidates("noaa_wind_history.json"),...dataCandidates("noaa-wind/history.json")];
 const DONKI_LON_POSITIVE_WEST=true;
 const NOAA={
@@ -340,7 +348,7 @@ const POST_PASS_HOURS=36;
 const STATE={
   sources:{donkiCache:src("DONKI Cache","未取得"),donkiAnalysis:src("DONKI CMEAnalysis","未取得"),donkiCME:src("DONKI CME","未取得"),wsa:src("WSA Wind","未取得"),cactus:src("CACTus","未取得"),noaaWind:src("NOAA Wind","未取得"),noaaMag:src("NOAA IMF","未取得"),noaaKp:src("NOAA Kp","未取得"),swiftWind:src("SWIFT Wind AI","未取得"),reportUi:src("Report UI Feed","未取得")},
   donkiPayloads:[],wsaModel:null,cactusEvents:[],env:defaultEnv(),cmes:[],timelineCenter:new Date(),timelineStart:new Date(),timelineEnd:new Date(),selectedTime:new Date(),timer:null,
-  windObserved:[],windForecast:[],windPastForecast:[],kpObserved:[],kpForecast:[],bzForecast:[],kpModel:null,windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,propagationCache:new Map(),mode:"3d",
+  windObserved:[],windForecast:[],windPastForecast:[],kpObserved:[],kpForecast:[],kpPastSnapshots:[],bzObserved:[],bzForecast:[],bzPastSnapshots:[],kpLeadSkill:[],bzLeadSkill:[],kpRangeSkill:[],kpModel:null,validationUi:null,windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,propagationCache:new Map(),mode:"3d",
   three:{ready:false,scene:null,camera:null,renderer:null,controls:null,sun:null,earth:null,cmeGroup:null,starPoints:null,clock:null,parkerGroup:null,windParticles:null,windSpeed:425,impactStrength:0}
 };
 function src(label,status){return{label,status,data:null,time:null,error:null};}
@@ -527,10 +535,51 @@ function normalizeBzForecast(payload){
   return out.sort((a,b)=>a._t-b._t);
 }
 function mergeTimed(a,b,key){const m=new Map();for(const r of [...(a||[]),...(b||[])])if(Number.isFinite(r?._t))m.set(Math.round(r._t/60000),r);return[...m.values()].sort((x,y)=>x._t-y._t);}
+function normalizeBzObserved(payload){
+  const out=[];
+  for(const r of genericRows(payload,["bz_history","records","items","data"])){
+    const t=windTime(r),bzMin=firstFinite(r,["bz_min","observed_bz_min","bz_min_observed"]),bz=firstFinite(r,["bz_median","bz","bz_gsm"]),bt=firstFinite(r,["bt_median","bt"]);
+    const v=Number.isFinite(bzMin)?bzMin:bz;
+    if(Number.isFinite(t)&&Number.isFinite(v))out.push({_t:t,time:new Date(t).toISOString(),bzMin:v,bz:Number.isFinite(bz)?bz:v,bt:Number.isFinite(bt)?bt:null,source:r.source||"NOAA IMF observed"});
+  }
+  return out.sort((a,b)=>a._t-b._t);
+}
+function normalizeKpPastSnapshots(payload){
+  const out=[];
+  for(const s of (Array.isArray(payload)?payload:[])){
+    const rows=[];
+    for(const r of (s.rows||[])){
+      const t=windTime(r),kp=firstFinite(r,["predicted_kp","kp"]);if(!Number.isFinite(t)||!Number.isFinite(kp))continue;
+      rows.push({_t:t,time:new Date(t).toISOString(),kp:Number(kp),observedKp:firstFinite(r,["observed_kp"])});
+    }
+    out.push({ageHours:Number(s.age_hours),issuedAt:s.issued_at,skill:s.skill||{},rows});
+  }
+  return out.filter(x=>Number.isFinite(x.ageHours)&&x.rows.length);
+}
+function normalizeBzPastSnapshots(payload){
+  const out=[];
+  for(const s of (Array.isArray(payload)?payload:[])){
+    const rows=[];
+    for(const r of (s.rows||[])){
+      const t=windTime(r),bzMin=firstFinite(r,["predicted_bz_min","bz_min_forecast"]);if(!Number.isFinite(t)||!Number.isFinite(bzMin))continue;
+      rows.push({_t:t,time:new Date(t).toISOString(),bzMin:Number(bzMin),observedBzMin:firstFinite(r,["observed_bz_min"]),southProb:firstFinite(r,["southward_probability"])});
+    }
+    out.push({ageHours:Number(s.age_hours),issuedAt:s.issued_at,skill:s.skill||{},rows});
+  }
+  return out.filter(x=>Number.isFinite(x.ageHours)&&x.rows.length);
+}
+function skillForLead(rows,h){return (rows||[]).find(x=>Number(x.nominal_lead_hours)===Number(h))||null;}
+function renderKpRangeSkill(){
+  const box=document.getElementById("kpRangeSkill");if(!box)return;
+  const rows=STATE.kpRangeSkill||[],bands=["Kp 1-4","Kp 5-<6","Kp 6-7","Kp 8-9"];
+  const cell=(band,h)=>{const r=rows.find(x=>String(x.observed_range)===band&&Number(x.nominal_lead_hours)===h);if(!r||!Number(r.count))return '<span class="learning">learning</span>';const hit=Number(r.hit_rate_1);const strict=Number(r.hit_rate_067);return `<b>${Number.isFinite(hit)?hit.toFixed(1):"-"}%</b><br><span class="small">±0.67 ${Number.isFinite(strict)?strict.toFixed(1):"-"}% / n=${r.count}</span>`;};
+  box.innerHTML=`<table class="skillMatrix"><thead><tr><th>Observed Kp range</th><th>24 h lead</th><th>48 h lead</th><th>72 h lead</th></tr></thead><tbody>${bands.map(b=>`<tr><td><b>${b}</b></td><td>${cell(b,24)}</td><td>${cell(b,48)}</td><td>${cell(b,72)}</td></tr>`).join("")}</tbody></table><div class="small" style="margin-top:7px">区分は重複防止のため 1≤Kp&lt;5 / 5≤Kp&lt;6 / 6≤Kp&lt;8 / 8≤Kp≤9。Kp&lt;1 はこの区分集計から除外。</div>`;
+}
 async function loadReportUiFeed(){
   setSource("reportUi","LOADING...");
-  let feed=null;
+  let feed=null,validation=null;
   try{const got=await fetchJsonAny(REPORT_UI_CANDIDATES);feed=got.data;STATE.reportUi=feed;}catch(_){ }
+  try{validation=(await fetchJsonAny(VALIDATION_UI_CANDIDATES)).data;}catch(_){ }
   if(feed){
     const hist=normalizeWindPayload(feed.wind_history||[],"observed");
     const fc=normalizeWindPayload(feed.wind_forecast||[],"forecast");
@@ -540,20 +589,25 @@ async function loadReportUiFeed(){
     STATE.kpObserved=normalizeKpObserved(feed.kp_history||[]);
     STATE.kpForecast=normalizeKpForecast(feed);
     STATE.kpModel=feed.kp_model||null;
+    STATE.bzObserved=normalizeBzObserved(feed.bz_history||[]);
     STATE.bzForecast=normalizeBzForecast(feed);
+    const rv=validation||feed.research_validation||{};STATE.validationUi=rv;
+    const lead=rv.nominal_lead_skill||feed.research_validation?.nominal_lead_skill||{};
+    const snaps=rv.past_forecast_snapshots||feed.research_validation?.past_forecast_snapshots||{};
+    STATE.kpLeadSkill=lead.kp||[];STATE.bzLeadSkill=lead.bz||[];STATE.kpRangeSkill=lead.kp_by_observed_range||[];
+    STATE.kpPastSnapshots=normalizeKpPastSnapshots(snaps.kp||[]);STATE.bzPastSnapshots=normalizeBzPastSnapshots(snaps.bz||[]);
     const a=feed.wind_accuracy_current||{};const hit=finiteOrNull(a.hit_rate_50kms);if(hit!==null)STATE.windAccuracy50=hit;const n=finiteOrNull(a.count);if(n!==null)STATE.windAccuracyCount=Math.round(n);
-    setSource("reportUi",`OK: wind ${hist.length}/${fc.length}, Kp ${STATE.kpForecast.length}, Bz ${STATE.bzForecast.length}`,feed);
+    setSource("reportUi",`OK: wind ${hist.length}/${fc.length}, Kp ${STATE.kpForecast.length}, Bz ${STATE.bzForecast.length}, lead-skill ${STATE.kpLeadSkill.length}/${STATE.bzLeadSkill.length}`,feed);
   }else{
     let kp=null,bz=null;
     try{kp=(await fetchJsonAny(SWIFT_KP_LATEST)).data;}catch(_){ }
     try{bz=(await fetchJsonAny(SWIFT_BZ_LATEST)).data;}catch(_){ }
-    STATE.kpForecast=normalizeKpForecast(kp);
-    STATE.kpModel=kp||null;
-    STATE.bzForecast=normalizeBzForecast(bz);
+    STATE.kpForecast=normalizeKpForecast(kp);STATE.kpModel=kp||null;STATE.bzForecast=normalizeBzForecast(bz);
+    if(validation){STATE.validationUi=validation;const lead=validation.nominal_lead_skill||{},snaps=validation.past_forecast_snapshots||{};STATE.kpLeadSkill=lead.kp||[];STATE.bzLeadSkill=lead.bz||[];STATE.kpRangeSkill=lead.kp_by_observed_range||[];STATE.kpPastSnapshots=normalizeKpPastSnapshots(snaps.kp||[]);STATE.bzPastSnapshots=normalizeBzPastSnapshots(snaps.bz||[]);}
     if(kp||bz)setSource("reportUi",`OK fallback: Kp ${STATE.kpForecast.length}, Bz ${STATE.bzForecast.length}`,{kp,bz});
     else setSource("reportUi","FAILED",null,"Monthly report UI feed / Kp / Bz forecast not found");
   }
-  STATE.windVersion++;STATE.propagationCache.clear();rebuildAll();drawWindGraph();drawSpaceWeatherGraphs();
+  STATE.windVersion++;STATE.propagationCache.clear();rebuildAll();drawWindGraph();drawSpaceWeatherGraphs();renderKpRangeSkill();
 }
 function nearestForecast(series,time,key,maxGapHours=6){
   if(!series?.length)return null;const x=time instanceof Date?time.getTime():Number(time);let best=null,bd=Infinity;
@@ -575,17 +629,37 @@ function drawForecastChart(canvasId,series,defs,yTitle,statsId,horizonDays=5){
   ctx.fillStyle="#24415d";ctx.font="bold 11px system-ui";ctx.fillText(yTitle,pad.l,pad.t-7);
 }
 function drawKpGraph(){
-  const canvas=document.getElementById("kpGraph");if(!canvas)return;const{ctx,w,h}=setupCanvas("kpGraph");ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);const pad={l:52,r:18,t:24,b:38},now=Date.now(),x0=now-7*86400e3,x1=now+3*86400e3,X=t=>pad.l+(t-x0)/(x1-x0)*(w-pad.l-pad.r),Y=v=>pad.t+(9-v)/9*(h-pad.t-pad.b);
-  ctx.strokeStyle="#e5ecf3";ctx.fillStyle="#6c8298";ctx.font="10px system-ui";for(let v=0;v<=9;v++){const y=Y(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillText(String(v),14,y+3);}for(let d=-7;d<=3;d++){const x=X(now+d*86400e3);ctx.strokeStyle=d===0?"#8398ad":"#eff3f7";ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();if(d===0||d===-7||d===-3||d>0){ctx.fillStyle="#6f879e";ctx.fillText(d===0?"NOW":`${d>0?"+":""}${d}d`,x-12,h-14);}}
-  function line(rows,color,dash=[],markers=false){const q=rows.filter(r=>r._t>=x0&&r._t<=x1&&Number.isFinite(r.kp));if(!q.length)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=1.9;ctx.setLineDash(dash);ctx.beginPath();q.forEach((r,i)=>{i?ctx.lineTo(X(r._t),Y(r.kp)):ctx.moveTo(X(r._t),Y(r.kp));});ctx.stroke();ctx.setLineDash([]);if(markers){ctx.fillStyle=color;for(const r of q){ctx.beginPath();ctx.arc(X(r._t),Y(r.kp),2.2,0,Math.PI*2);ctx.fill();}}ctx.restore();}
-  line(STATE.kpObserved,"#176fae",[],true);line(STATE.kpForecast,"#ef8f26",[5,3],true);const st=STATE.selectedTime?.getTime?.()||now;if(st>=x0&&st<=x1){const x=X(st);ctx.strokeStyle="#7b48cc";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();}ctx.fillStyle="#24415d";ctx.font="bold 11px system-ui";ctx.fillText("Kp — NOAA observed → SWIFT 72 h forecast",pad.l,pad.t-7);
+  const canvas=document.getElementById("kpGraph");if(!canvas)return;const{ctx,w,h}=setupCanvas("kpGraph");ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
+  const pad={l:52,r:18,t:28,b:38},now=Date.now(),x0=now-3*86400e3,x1=now+3*86400e3,X=t=>pad.l+(t-x0)/(x1-x0)*(w-pad.l-pad.r),Y=v=>pad.t+(9-v)/9*(h-pad.t-pad.b);
+  ctx.strokeStyle="#e5ecf3";ctx.fillStyle="#6c8298";ctx.font="10px system-ui";for(let v=0;v<=9;v++){const y=Y(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillText(String(v),14,y+3);}for(let d=-3;d<=3;d++){const x=X(now+d*86400e3);ctx.strokeStyle=d===0?"#8398ad":"#eff3f7";ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();ctx.fillStyle="#6f879e";ctx.fillText(d===0?"NOW":`${d>0?"+":""}${d}d`,x-12,h-14);}
+  function line(rows,color,dash=[],markers=false,width=1.9){const q=rows.filter(r=>r._t>=x0&&r._t<=x1&&Number.isFinite(Number(r.kp)));if(!q.length)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.beginPath();q.forEach((r,i)=>{i?ctx.lineTo(X(r._t),Y(Number(r.kp))):ctx.moveTo(X(r._t),Y(Number(r.kp)));});ctx.stroke();ctx.setLineDash([]);if(markers){ctx.fillStyle=color;for(const r of q){ctx.beginPath();ctx.arc(X(r._t),Y(Number(r.kp)),2.1,0,Math.PI*2);ctx.fill();}}ctx.restore();}
+  line(STATE.kpObserved,"#176fae",[],true,2.2);
+  for(const snap of STATE.kpPastSnapshots||[]){const style=snap.ageHours===24?[6,3]:snap.ageHours===48?[3,3]:[1,4],color=snap.ageHours===24?"#3da35d":snap.ageHours===48?"#9167c7":"#8a98a8";line(snap.rows,color,style,false,1.35);}
+  line(STATE.kpForecast,"#ef8f26",[7,3],true,2.2);
+  const st=STATE.selectedTime?.getTime?.()||now;if(st>=x0&&st<=x1){const x=X(st);ctx.strokeStyle="#7b48cc";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();}
+  const legend=[['#176fae','NOAA obs'],['#ef8f26','current'],['#3da35d','issued -24h'],['#9167c7','issued -48h'],['#8a98a8','issued -72h']];let lx=pad.l;ctx.font="10px system-ui";for(const [c,l] of legend){ctx.fillStyle=c;ctx.fillRect(lx,pad.t-19,12,2);ctx.fillStyle="#405a72";ctx.fillText(l,lx+16,pad.t-15);lx+=Math.max(72,ctx.measureText(l).width+30);}ctx.fillStyle="#24415d";ctx.font="bold 11px system-ui";ctx.fillText("Kp — observed + current / 24h / 48h / 72h-old forecasts",pad.l,pad.t-3);
+}
+function drawBzHistoryGraph(){
+  const canvas=document.getElementById("bzGraph");if(!canvas)return;const{ctx,w,h}=setupCanvas("bzGraph");ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
+  const now=Date.now(),x0=now-3*86400e3,x1=now+3*86400e3,pad={l:56,r:18,t:28,b:38};
+  const vals=[];for(const r of STATE.bzObserved||[])if(r._t>=x0&&r._t<=x1&&Number.isFinite(Number(r.bzMin)))vals.push(Number(r.bzMin));for(const r of STATE.bzForecast||[])if(r._t>=x0&&r._t<=x1){if(Number.isFinite(Number(r.bzMin)))vals.push(Number(r.bzMin));if(Number.isFinite(Number(r.bt)))vals.push(Number(r.bt));}for(const s of STATE.bzPastSnapshots||[])for(const r of s.rows)if(r._t>=x0&&r._t<=x1&&Number.isFinite(Number(r.bzMin)))vals.push(Number(r.bzMin));
+  let ymin=vals.length?Math.floor((Math.min(...vals)-2)/5)*5:-20,ymax=vals.length?Math.ceil((Math.max(...vals)+2)/5)*5:20;ymin=Math.min(ymin,-5);ymax=Math.max(ymax,10);if(ymax<=ymin)ymax=ymin+10;
+  const X=t=>pad.l+(t-x0)/(x1-x0)*(w-pad.l-pad.r),Y=v=>pad.t+(ymax-v)/(ymax-ymin)*(h-pad.t-pad.b);
+  ctx.strokeStyle="#e5ecf3";ctx.fillStyle="#6c8298";ctx.font="10px system-ui";for(let v=Math.ceil(ymin/5)*5;v<=ymax;v+=5){const y=Y(v);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillText(String(v),12,y+3);}const y0=Y(0);ctx.strokeStyle="#8799aa";ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(pad.l,y0);ctx.lineTo(w-pad.r,y0);ctx.stroke();for(let d=-3;d<=3;d++){const x=X(now+d*86400e3);ctx.strokeStyle=d===0?"#8398ad":"#eff3f7";ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();ctx.fillStyle="#6f879e";ctx.fillText(d===0?"NOW":`${d>0?"+":""}${d}d`,x-12,h-14);}
+  function line(rows,key,color,dash=[],width=1.7){const q=rows.filter(r=>r._t>=x0&&r._t<=x1&&Number.isFinite(Number(r[key])));if(!q.length)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.beginPath();q.forEach((r,i)=>{i?ctx.lineTo(X(r._t),Y(Number(r[key]))):ctx.moveTo(X(r._t),Y(Number(r[key])));});ctx.stroke();ctx.restore();}
+  line(STATE.bzObserved,"bzMin","#176fae",[],2.2);for(const snap of STATE.bzPastSnapshots||[]){const style=snap.ageHours===24?[6,3]:snap.ageHours===48?[3,3]:[1,4],color=snap.ageHours===24?"#3da35d":snap.ageHours===48?"#9167c7":"#8a98a8";line(snap.rows,"bzMin",color,style,1.35);}line(STATE.bzForecast,"bzMin","#d9505f",[7,3],2.2);line(STATE.bzForecast,"bt","#7b48cc",[2,3],1.2);
+  const st=STATE.selectedTime?.getTime?.()||now;if(st>=x0&&st<=x1){const x=X(st);ctx.strokeStyle="#7b48cc";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();}
+  const legend=[['#176fae','obs Bz min'],['#d9505f','current Bz min'],['#3da35d','issued -24h'],['#9167c7','issued -48h'],['#8a98a8','issued -72h']];let lx=pad.l;ctx.font="10px system-ui";for(const [c,l] of legend){ctx.fillStyle=c;ctx.fillRect(lx,pad.t-19,12,2);ctx.fillStyle="#405a72";ctx.fillText(l,lx+16,pad.t-15);lx+=Math.max(76,ctx.measureText(l).width+30);}ctx.fillStyle="#24415d";ctx.font="bold 11px system-ui";ctx.fillText("Bz 3h minimum — observed + archived lead forecasts [nT]",pad.l,pad.t-3);
 }
 function drawSpaceWeatherGraphs(){
-  drawKpGraph();
-  drawForecastChart("bzGraph",STATE.bzForecast,[{key:"bz",color:"#2d7fb8"},{key:"bzMin",color:"#d9505f",dash:[5,3]},{key:"bt",color:"#7b48cc",dash:[2,3]}],"Bz / Bt [nT]","bzStats",5);
+  drawKpGraph();drawBzHistoryGraph();
   const t=STATE.selectedTime||new Date(),k=kpStateAt(t),b=bzStateAt(t),now=Date.now(),kp72=STATE.kpForecast.filter(r=>r._t>=now-3*3600e3&&r._t<=now+3*86400e3),kmax=kp72.length?Math.max(...kp72.map(r=>r.kp).filter(Number.isFinite)):null,bmin=STATE.bzForecast.length?Math.min(...STATE.bzForecast.map(r=>Number.isFinite(Number(r.bzMin))?Number(r.bzMin):Number(r.bz)).filter(Number.isFinite)):null;
-  const km=STATE.kpModel||{},skill=km.leadtime_skill?.overall||{},trend=Number(km.recent_trend_3h);const ks=document.getElementById("kpStats");if(ks)ks.innerHTML=`<div class="forecastStat"><div class="k">Kp @ sim time</div><div class="v">${k.kp.toFixed(2)}</div></div><div class="forecastStat"><div class="k">Source</div><div class="v" style="font-size:13px">${esc(k.source)}</div></div><div class="forecastStat"><div class="k">Forecast max</div><div class="v">${Number.isFinite(kmax)?kmax.toFixed(2):"--"}</div></div><div class="forecastStat"><div class="k">Kp model</div><div class="v" style="font-size:12px">${esc(km.model||"SWIFT Kp")}</div><div class="small">floor ${km.kp_floor??0.33} / 72 h</div></div><div class="forecastStat"><div class="k">Recent ΔKp / 3h</div><div class="v">${Number.isFinite(trend)?(trend>=0?"+":"")+trend.toFixed(2):"--"}</div></div><div class="forecastStat"><div class="k">30d forecast bias</div><div class="v">${Number.isFinite(Number(skill.bias))?Number(skill.bias).toFixed(2):"learning"}</div><div class="small">n=${skill.count||0}</div></div>`;
-  const bs=document.getElementById("bzStats");if(bs)bs.innerHTML=`<div class="forecastStat"><div class="k">Bz @ sim time</div><div class="v">${b.bz.toFixed(1)} nT</div></div><div class="forecastStat"><div class="k">Bz minimum</div><div class="v">${Number.isFinite(bmin)?bmin.toFixed(1):"--"} nT</div></div><div class="forecastStat"><div class="k">Source</div><div class="v" style="font-size:13px">${esc(b.source)}</div></div>`;
+  const km=STATE.kpModel||{},trend=Number(km.recent_trend_3h),ks=document.getElementById("kpStats");
+  const kcard=h=>{const q=skillForLead(STATE.kpLeadSkill,h);return `<div class="forecastStat"><div class="k">${h}h lead hit ±1</div><div class="v">${q&&Number.isFinite(Number(q.hit_rate_1))?Number(q.hit_rate_1).toFixed(1)+"%":"learning"}</div><div class="small">±0.67 ${q&&Number.isFinite(Number(q.hit_rate_067))?Number(q.hit_rate_067).toFixed(1)+"%":"-"} / n=${q?.count||0}</div></div>`;};
+  if(ks)ks.innerHTML=`<div class="forecastStat"><div class="k">Kp @ sim time</div><div class="v">${k.kp.toFixed(2)}</div></div><div class="forecastStat"><div class="k">Forecast max</div><div class="v">${Number.isFinite(kmax)?kmax.toFixed(2):"--"}</div><div class="small">next 72 h</div></div>${kcard(24)}${kcard(48)}${kcard(72)}<div class="forecastStat"><div class="k">Recent ΔKp / 3h</div><div class="v">${Number.isFinite(trend)?(trend>=0?"+":"")+trend.toFixed(2):"--"}</div><div class="small">${esc(km.model||"SWIFT Kp")}</div></div>`;
+  const bs=document.getElementById("bzStats"),bcard=h=>{const q=skillForLead(STATE.bzLeadSkill,h);return `<div class="forecastStat"><div class="k">${h}h Bz-min hit ±2nT</div><div class="v">${q&&Number.isFinite(Number(q.hit_rate_2nt))?Number(q.hit_rate_2nt).toFixed(1)+"%":"learning"}</div><div class="small">±3nT ${q&&Number.isFinite(Number(q.hit_rate_3nt))?Number(q.hit_rate_3nt).toFixed(1)+"%":"-"} / dir ${q&&Number.isFinite(Number(q.direction_hit_rate_threshold60))?Number(q.direction_hit_rate_threshold60).toFixed(1)+"%":"-"} / n=${q?.count||0}</div></div>`;};
+  if(bs)bs.innerHTML=`<div class="forecastStat"><div class="k">Bz @ sim time</div><div class="v">${b.bz.toFixed(1)} nT</div></div><div class="forecastStat"><div class="k">Forecast Bz minimum</div><div class="v">${Number.isFinite(bmin)?bmin.toFixed(1):"--"} nT</div></div>${bcard(24)}${bcard(48)}${bcard(72)}<div class="forecastStat"><div class="k">Primary metric</div><div class="v" style="font-size:13px">Bz min ±2 nT</div><div class="small">3 h target window</div></div>`;
+  renderKpRangeSkill();
 }
 
 async function loadAll(){await Promise.allSettled([loadDONKICache(),loadWSA(),loadCACTusCache(),loadNOAAWind(),loadNOAAMag(),loadNOAAKp(),loadSwiftWind(),loadReportUiFeed()]);rebuildAll();drawSpaceWeatherGraphs();}
