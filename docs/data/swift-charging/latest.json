@@ -1,0 +1,455 @@
+{
+  "updated_at": "2026-09-20T13:19:00Z",
+  "model": "SWIFT-CHARGE-v0.1-6d21f91d30",
+  "generation": {
+    "family": "charging",
+    "current_model": "SWIFT-CHARGE-v0.1-6d21f91d30"
+  },
+  "reference_spacecraft": {
+    "scope": "generic GEO reference spacecraft / dielectric model",
+    "surface_unit": "kV",
+    "internal_unit": "MV/m",
+    "warning": "Values are estimates unless observed.json provides validated charging targets. Do not interpret as direct GOES hardware telemetry."
+  },
+  "coefficients": {
+    "surface": {
+      "intercept": 0.15,
+      "kp": 0.38,
+      "south_bz_nt": 0.1,
+      "wind_excess_100kms": 0.22
+    },
+    "internal": {
+      "intercept": 0.03,
+      "log10_e2mev_above_100": 0.075,
+      "kp_excess_3": 0.028,
+      "wind_excess_100kms": 0.018,
+      "fluence_24h_1e8": 0.02
+    },
+    "differential_ratio": 0.38,
+    "training": {
+      "window_days": 180,
+      "surface_samples": 0,
+      "internal_samples": 0,
+      "surface_status": "default_reference",
+      "internal_status": "default_reference"
+    },
+    "model_id": "SWIFT-CHARGE-v0.1-6d21f91d30",
+    "updated_at": "2026-09-20T13:19:00Z"
+  },
+  "forecast": [
+    {
+      "time": "2026-09-20T13:19:00Z",
+      "lead_hours": 0,
+      "surface_kv": -0.783,
+      "differential_kv": 0.298,
+      "internal_field_mvm": 0.0705,
+      "electron_flux_gt2mev": 339.107,
+      "electron_fluence_24h_proxy": 3662356.201,
+      "kp": 1.0,
+      "bz_min_nt": -2.53,
+      "wind_kms": 319.37,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-20T16:19:00Z",
+      "lead_hours": 3,
+      "surface_kv": -0.783,
+      "differential_kv": 0.298,
+      "internal_field_mvm": 0.0685,
+      "electron_flux_gt2mev": 312.28,
+      "electron_fluence_24h_proxy": 7034980.046,
+      "kp": 1.0,
+      "bz_min_nt": -2.53,
+      "wind_kms": 317.12,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-20T19:19:00Z",
+      "lead_hours": 6,
+      "surface_kv": -0.658,
+      "differential_kv": 0.25,
+      "internal_field_mvm": 0.0666,
+      "electron_flux_gt2mev": 289.214,
+      "electron_fluence_24h_proxy": 10158488.447,
+      "kp": 0.67,
+      "bz_min_nt": -2.53,
+      "wind_kms": 312.86,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-20T22:19:00Z",
+      "lead_hours": 9,
+      "surface_kv": -0.658,
+      "differential_kv": 0.25,
+      "internal_field_mvm": 0.0649,
+      "electron_flux_gt2mev": 269.272,
+      "electron_fluence_24h_proxy": 13066625.027,
+      "kp": 0.67,
+      "bz_min_nt": -2.53,
+      "wind_kms": 311.64,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-21T01:19:00Z",
+      "lead_hours": 12,
+      "surface_kv": -0.658,
+      "differential_kv": 0.25,
+      "internal_field_mvm": 0.0633,
+      "electron_flux_gt2mev": 251.943,
+      "electron_fluence_24h_proxy": 15787608.448,
+      "kp": 0.67,
+      "bz_min_nt": -2.53,
+      "wind_kms": 309.63,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-21T04:19:00Z",
+      "lead_hours": 15,
+      "surface_kv": -0.658,
+      "differential_kv": 0.25,
+      "internal_field_mvm": 0.0617,
+      "electron_flux_gt2mev": 236.813,
+      "electron_fluence_24h_proxy": 18345184.242,
+      "kp": 0.67,
+      "bz_min_nt": -2.53,
+      "wind_kms": 314.0,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-21T07:19:00Z",
+      "lead_hours": 18,
+      "surface_kv": -0.658,
+      "differential_kv": 0.25,
+      "internal_field_mvm": 0.0604,
+      "electron_flux_gt2mev": 223.543,
+      "electron_fluence_24h_proxy": 20759451.591,
+      "kp": 0.67,
+      "bz_min_nt": -2.53,
+      "wind_kms": 311.93,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-21T10:19:00Z",
+      "lead_hours": 21,
+      "surface_kv": -0.66,
+      "differential_kv": 0.251,
+      "internal_field_mvm": 0.0591,
+      "electron_flux_gt2mev": 211.939,
+      "electron_fluence_24h_proxy": 23048388.759,
+      "kp": 0.67,
+      "bz_min_nt": -2.55,
+      "wind_kms": 310.0,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-21T13:19:00Z",
+      "lead_hours": 24,
+      "surface_kv": -0.667,
+      "differential_kv": 0.253,
+      "internal_field_mvm": 0.0579,
+      "electron_flux_gt2mev": 201.91,
+      "electron_fluence_24h_proxy": 25229018.555,
+      "kp": 0.67,
+      "bz_min_nt": -2.62,
+      "wind_kms": 308.3,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-21T16:19:00Z",
+      "lead_hours": 27,
+      "surface_kv": -0.81,
+      "differential_kv": 0.308,
+      "internal_field_mvm": 0.0562,
+      "electron_flux_gt2mev": 193.558,
+      "electron_fluence_24h_proxy": 23657090.618,
+      "kp": 1.0,
+      "bz_min_nt": -2.8,
+      "wind_kms": 311.12,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-21T19:19:00Z",
+      "lead_hours": 30,
+      "surface_kv": -0.871,
+      "differential_kv": 0.331,
+      "internal_field_mvm": 0.0551,
+      "electron_flux_gt2mev": 188.251,
+      "electron_fluence_24h_proxy": 22317574.528,
+      "kp": 1.0,
+      "bz_min_nt": -3.41,
+      "wind_kms": 309.94,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-21T22:19:00Z",
+      "lead_hours": 33,
+      "surface_kv": -1.01,
+      "differential_kv": 0.384,
+      "internal_field_mvm": 0.0548,
+      "electron_flux_gt2mev": 187.812,
+      "electron_fluence_24h_proxy": 21222437.255,
+      "kp": 1.0,
+      "bz_min_nt": -4.8,
+      "wind_kms": 311.12,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-22T01:19:00Z",
+      "lead_hours": 36,
+      "surface_kv": -1.322,
+      "differential_kv": 0.503,
+      "internal_field_mvm": 0.0552,
+      "electron_flux_gt2mev": 191.211,
+      "electron_fluence_24h_proxy": 20379376.767,
+      "kp": 1.33,
+      "bz_min_nt": -6.67,
+      "wind_kms": 318.67,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-22T04:19:00Z",
+      "lead_hours": 39,
+      "surface_kv": -1.51,
+      "differential_kv": 0.574,
+      "internal_field_mvm": 0.0559,
+      "electron_flux_gt2mev": 196.222,
+      "electron_fluence_24h_proxy": 19777587.79,
+      "kp": 1.33,
+      "bz_min_nt": -8.55,
+      "wind_kms": 337.25,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-22T07:19:00Z",
+      "lead_hours": 42,
+      "surface_kv": -1.625,
+      "differential_kv": 0.618,
+      "internal_field_mvm": 0.0562,
+      "electron_flux_gt2mev": 198.296,
+      "electron_fluence_24h_proxy": 19361608.579,
+      "kp": 1.33,
+      "bz_min_nt": -9.7,
+      "wind_kms": 360.83,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-22T10:19:00Z",
+      "lead_hours": 45,
+      "surface_kv": -1.614,
+      "differential_kv": 0.613,
+      "internal_field_mvm": 0.0553,
+      "electron_flux_gt2mev": 193.395,
+      "electron_fluence_24h_proxy": 19036012.234,
+      "kp": 1.33,
+      "bz_min_nt": -9.59,
+      "wind_kms": 368.86,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-22T13:19:00Z",
+      "lead_hours": 48,
+      "surface_kv": -1.485,
+      "differential_kv": 0.564,
+      "internal_field_mvm": 0.0532,
+      "electron_flux_gt2mev": 181.65,
+      "electron_fluence_24h_proxy": 18708900.268,
+      "kp": 1.33,
+      "bz_min_nt": -8.3,
+      "wind_kms": 363.76,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-22T16:19:00Z",
+      "lead_hours": 51,
+      "surface_kv": -1.297,
+      "differential_kv": 0.493,
+      "internal_field_mvm": 0.0504,
+      "electron_flux_gt2mev": 167.005,
+      "electron_fluence_24h_proxy": 18331919.939,
+      "kp": 1.33,
+      "bz_min_nt": -6.42,
+      "wind_kms": 356.43,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-22T19:19:00Z",
+      "lead_hours": 54,
+      "surface_kv": -1.122,
+      "differential_kv": 0.427,
+      "internal_field_mvm": 0.0476,
+      "electron_flux_gt2mev": 153.88,
+      "electron_fluence_24h_proxy": 17903396.943,
+      "kp": 1.33,
+      "bz_min_nt": -4.67,
+      "wind_kms": 349.14,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-22T22:19:00Z",
+      "lead_hours": 57,
+      "surface_kv": -1.0,
+      "differential_kv": 0.38,
+      "internal_field_mvm": 0.0454,
+      "electron_flux_gt2mev": 144.251,
+      "electron_fluence_24h_proxy": 17428198.582,
+      "kp": 1.33,
+      "bz_min_nt": -3.45,
+      "wind_kms": 343.8,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-23T01:19:00Z",
+      "lead_hours": 60,
+      "surface_kv": -1.063,
+      "differential_kv": 0.404,
+      "internal_field_mvm": 0.0438,
+      "electron_flux_gt2mev": 137.896,
+      "electron_fluence_24h_proxy": 16889099.512,
+      "kp": 1.67,
+      "bz_min_nt": -2.78,
+      "wind_kms": 340.49,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-23T04:19:00Z",
+      "lead_hours": 63,
+      "surface_kv": -1.045,
+      "differential_kv": 0.397,
+      "internal_field_mvm": 0.0429,
+      "electron_flux_gt2mev": 134.314,
+      "electron_fluence_24h_proxy": 16274619.357,
+      "kp": 1.67,
+      "bz_min_nt": -2.6,
+      "wind_kms": 338.94,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-23T07:19:00Z",
+      "lead_hours": 66,
+      "surface_kv": -1.04,
+      "differential_kv": 0.395,
+      "internal_field_mvm": 0.0421,
+      "electron_flux_gt2mev": 131.622,
+      "electron_fluence_24h_proxy": 15576937.724,
+      "kp": 1.67,
+      "bz_min_nt": -2.55,
+      "wind_kms": 338.99,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-23T10:19:00Z",
+      "lead_hours": 69,
+      "surface_kv": -1.038,
+      "differential_kv": 0.394,
+      "internal_field_mvm": 0.0413,
+      "electron_flux_gt2mev": 129.288,
+      "electron_fluence_24h_proxy": 14831652.172,
+      "kp": 1.67,
+      "bz_min_nt": -2.53,
+      "wind_kms": 340.11,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    },
+    {
+      "time": "2026-09-23T13:19:00Z",
+      "lead_hours": 72,
+      "surface_kv": -1.038,
+      "differential_kv": 0.394,
+      "internal_field_mvm": 0.0407,
+      "electron_flux_gt2mev": 127.243,
+      "electron_fluence_24h_proxy": 14117209.549,
+      "kp": 1.67,
+      "bz_min_nt": -2.53,
+      "wind_kms": 341.68,
+      "source": "SWIFT-CHARGE reference GEO model + learned residual coefficients",
+      "electron_source": "GOES >2 MeV current/persistence proxy"
+    }
+  ],
+  "observed": [],
+  "verification": {
+    "updated_at": "2026-09-20T13:19:00Z",
+    "model": "SWIFT-CHARGE-v0.1-6d21f91d30",
+    "observation_rule": "Only docs/data/swift-charging/observed.json rows are verification truth; model outputs are never self-scored.",
+    "nominal_lead_skill": {
+      "surface": [
+        {
+          "count": 0,
+          "status": "learning",
+          "nominal_lead_hours": 24
+        },
+        {
+          "count": 0,
+          "status": "learning",
+          "nominal_lead_hours": 48
+        },
+        {
+          "count": 0,
+          "status": "learning",
+          "nominal_lead_hours": 72
+        }
+      ],
+      "internal": [
+        {
+          "count": 0,
+          "status": "learning",
+          "nominal_lead_hours": 24
+        },
+        {
+          "count": 0,
+          "status": "learning",
+          "nominal_lead_hours": 48
+        },
+        {
+          "count": 0,
+          "status": "learning",
+          "nominal_lead_hours": 72
+        }
+      ]
+    },
+    "lead_pairs": {
+      "surface": {
+        "24h": [],
+        "48h": [],
+        "72h": []
+      },
+      "internal": {
+        "24h": [],
+        "48h": [],
+        "72h": []
+      }
+    }
+  },
+  "past_forecast_snapshots": {
+    "surface": [],
+    "internal": []
+  },
+  "methodology": {
+    "surface": "Reference potential magnitude from Kp + southward Bz + solar-wind enhancement, with ridge-updated coefficients when validated target data exist.",
+    "internal": "Reference dielectric field from >2 MeV electron flux persistence/driver proxy + 24 h fluence + geomagnetic drivers; coefficients update only when validated target data exist.",
+    "forecast_step_hours": 3,
+    "forecast_horizon_hours": 72
+  }
+}
