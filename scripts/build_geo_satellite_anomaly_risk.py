@@ -62,8 +62,11 @@ OUT_DIR = DATA / "satellite-risk"
 HISTORY_DIR = OUT_DIR / "history"
 ENV_HISTORY_DIR = OUT_DIR / "environment-history"
 NCEI_CACHE = OUT_DIR / "ncei-legacy.json"
+TLE_CACHE = OUT_DIR / "geo-tle-latest.txt"
+TLE_META = OUT_DIR / "geo-tle-meta.json"
+TLE_REFRESH_HOURS = 23
 
-UA = "SWIFT-GEO-Satellite-Risk/0.2 (+public research dashboard)"
+UA = "SWIFT-GEO-Satellite-Risk/0.4 (+public research dashboard)"
 TIMEOUT = 45
 
 OSPO_STATUS = "https://www.ospo.noaa.gov/operations/goes/status.html"
@@ -92,6 +95,7 @@ CELESTRAK_GEO = (
     "SPECIAL=gpz&FORMAT=JSON&ACTIVE=1&MAX=2000"
 )
 CELESTRAK_GEO_TLE = "https://celestrak.org/NORAD/elements/gp.php?GROUP=GEO&FORMAT=TLE"
+CELESTRAK_GEO_2LE = "https://celestrak.org/NORAD/elements/gp.php?GROUP=GEO&FORMAT=2LE"
 
 # These are intentionally transparent research bands, not operational failure
 # thresholds. They are kept in the output JSON so the UI can display them.
@@ -822,6 +826,139 @@ def parse_tle_sets(txt: str) -> list[dict[str, Any]]:
     return out
 
 
+def _valid_tle_text(txt: str) -> bool:
+    """A valid GEO response must yield several actual two-line element sets."""
+    try:
+        return len(parse_tle_sets(txt)) >= 3
+    except Exception:
+        return False
+
+
+def load_daily_tle_cache(errors: list[str]) -> tuple[str, dict[str, Any]]:
+    """
+    Keep ONE latest GEO TLE file only.
+
+    The anomaly/risk workflow may run hourly, but CelesTrak is contacted only when
+    the cached TLE is >= TLE_REFRESH_HOURS old (or the cache is missing).
+    If the refresh fails, the last good cache is retained.
+    """
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    now = now_utc()
+
+    old_txt = ""
+    if TLE_CACHE.exists():
+        try:
+            old_txt = TLE_CACHE.read_text(encoding="utf-8")
+        except Exception as e:
+            errors.append(f"TLE cache read failed: {e}")
+
+    meta = load_json_candidates([TLE_META]) or {}
+    fetched_at = parse_time(meta.get("fetched_at")) if isinstance(meta, dict) else None
+    fresh = bool(
+        old_txt and _valid_tle_text(old_txt) and fetched_at
+        and (now - fetched_at) < timedelta(hours=TLE_REFRESH_HOURS)
+    )
+
+    if fresh:
+        return old_txt, {
+            "mode": "cache",
+            "fetched_at": iso(fetched_at),
+            "refresh_hours": TLE_REFRESH_HOURS,
+            "tle_sets": len(parse_tle_sets(old_txt)),
+            "file": "docs/data/satellite-risk/geo-tle-latest.txt",
+            "retention": "latest only",
+        }
+
+    refreshed = None
+    used_url = None
+    for url in (CELESTRAK_GEO_TLE, CELESTRAK_GEO_2LE):
+        try:
+            txt = fetch_text(url)
+            if _valid_tle_text(txt):
+                refreshed = txt
+                used_url = url
+                break
+            errors.append(f"TLE response parsed zero/few records: {url}")
+        except Exception as e:
+            errors.append(f"TLE refresh failed {url}: {e}")
+
+    if refreshed:
+        TLE_CACHE.write_text(refreshed, encoding="utf-8")
+        meta = {
+            "fetched_at": iso(now),
+            "source": used_url,
+            "refresh_hours": TLE_REFRESH_HOURS,
+            "retention": "latest only",
+            "tle_sets": len(parse_tle_sets(refreshed)),
+        }
+        TLE_META.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+        return refreshed, {"mode": "refreshed", **meta, "file": "docs/data/satellite-risk/geo-tle-latest.txt"}
+
+    if old_txt and _valid_tle_text(old_txt):
+        errors.append("Using last good GEO TLE cache because daily refresh failed.")
+        return old_txt, {
+            "mode": "stale-cache",
+            "fetched_at": iso(fetched_at),
+            "refresh_hours": TLE_REFRESH_HOURS,
+            "tle_sets": len(parse_tle_sets(old_txt)),
+            "file": "docs/data/satellite-risk/geo-tle-latest.txt",
+            "retention": "latest only",
+        }
+
+    return "", {
+        "mode": "unavailable",
+        "fetched_at": None,
+        "refresh_hours": TLE_REFRESH_HOURS,
+        "tle_sets": 0,
+        "file": "docs/data/satellite-risk/geo-tle-latest.txt",
+        "retention": "latest only",
+    }
+
+
+def swpc_goes_fallback_positions(longitude_json: Any, status_rows: list[dict[str, Any]], when: datetime) -> list[dict[str, Any]]:
+    """
+    TLE is primary. If no TLE rows can be propagated, show NOAA GOES satellites
+    at SWPC-published geostationary longitudes so the 3-D view never silently
+    becomes empty. SWPC longitude values are west longitudes in this feed.
+    """
+    raw = longitude_json if isinstance(longitude_json, list) else []
+    status_by_name = {str(x.get("name", "")).upper(): x for x in status_rows}
+    out = []
+    for r in raw:
+        if not isinstance(r, dict):
+            continue
+        sat = r.get("satellite")
+        lon_w = fnum(r.get("longitude"))
+        if sat is None or lon_w is None:
+            continue
+        try:
+            satn = int(sat)
+        except Exception:
+            continue
+        name = f"GOES-{satn}"
+        public = status_by_name.get(name.upper(), {})
+        out.append({
+            "name": name,
+            "norad": None,
+            "latitude_deg": 0.0,
+            "longitude_deg": -abs(float(lon_w)),
+            "altitude_km": 35786.0,
+            "position_time": iso(when),
+            "ops_status_code": None,
+            "owner": "US",
+            "launch_date": None,
+            "public_health_label": public.get("public_health_label"),
+            "public_status_color": public.get("status_color"),
+            "recent_public_alert": None,
+            "recent_public_alert_age_hours": None,
+            "issue_category": "NONE",
+            "issue_color": None,
+            "position_basis": "NOAA SWPC published GOES longitude fallback; TLE unavailable.",
+            "position_quality": "SWPC_LONGITUDE_FALLBACK",
+        })
+    return out
+
+
 def gmst_rad(dt: datetime) -> float:
     jd = 2440587.5 + dt.timestamp() / 86400.0
     t = (jd - 2451545.0) / 36525.0
@@ -956,7 +1093,7 @@ def build() -> dict[str, Any]:
 
     ncei_txt = safe_fetch_text(NCEI_ANOM_SUMMARY, errors) or ""
     ncei_raw_txt = safe_fetch_text(NCEI_ANOM_RAW, errors) or ""
-    tle_txt = safe_fetch_text(CELESTRAK_GEO_TLE, errors) or ""
+    tle_txt, tle_cache_info = load_daily_tle_cache(errors)
     electron_json = safe_fetch_json(SWPC_GOES_PRIMARY_E, errors)
     proton_json = safe_fetch_json(SWPC_GOES_PRIMARY_P, errors)
     source_json = safe_fetch_json(SWPC_GOES_SOURCES, errors)
@@ -1111,6 +1248,18 @@ def build() -> dict[str, Any]:
         })
     # Keep active-payload matches first, but preserve GOES/alerts even if SATCAT metadata is incomplete.
     geo_satellites_3d.sort(key=lambda x: (0 if (x.get("recent_public_alert") or "GOES" in x["name"].upper()) else 1, x["name"]))
+    # Do not leave the 3-D layer blank. TLE remains primary; SWPC GOES longitude
+    # is a transparent fallback only when no TLE could be propagated.
+    if not geo_satellites_3d:
+        geo_satellites_3d = swpc_goes_fallback_positions(longitude_json, satellites, now_utc())
+        for row in geo_satellites_3d:
+            alerts = recent_events_by_sat.get(str(row.get("name", "")).upper(), [])
+            latest_alert = sorted(alerts, key=lambda x: x.get("issued_at") or "", reverse=True)[0] if alerts else None
+            row["recent_public_alert"] = latest_alert
+            if latest_alert:
+                cat = latest_alert.get("issue_category") or "UNKNOWN"
+                row["issue_category"] = cat
+                row["issue_color"] = issue_color(cat)
 
     if ncei_events:
         NCEI_CACHE.write_text(json.dumps({
@@ -1121,7 +1270,7 @@ def build() -> dict[str, Any]:
         }, ensure_ascii=False, indent=2), encoding="utf-8")
 
     result = {
-        "schema_version": "SWIFT-GEO-SAT-RISK-v0.2",
+        "schema_version": "SWIFT-GEO-SAT-RISK-v0.4",
         "generated_at": iso(now_utc()),
         "purpose": (
             "Research dashboard for public satellite anomaly status, GEO space-environment exposure, "
@@ -1164,6 +1313,7 @@ def build() -> dict[str, Any]:
         "ncei_historic_anomaly_summary_top_geo_like": historic_geo_like,
         "celestrak_active_geo_sample": geo_rows,
         "geo_satellites_3d": geo_satellites_3d,
+        "tle_cache": tle_cache_info,
         "ncei_legacy_anomaly_records": len(ncei_events),
         "visual_cause_legend": {
             "SURFACE_CHARGING_ESD": "#ff8c42",
@@ -1194,7 +1344,7 @@ def build() -> dict[str, Any]:
         reverse=True
     )[:2500]
     ledger = {
-        "schema_version": "SWIFT-GEO-SAT-EVENT-LEDGER-v0.2",
+        "schema_version": "SWIFT-GEO-SAT-EVENT-LEDGER-v0.4",
         "updated_at": result["generated_at"],
         "events": ledger_events,
         "note": "Public OSPO anomaly/outage reports; not automatically space-weather-caused.",
