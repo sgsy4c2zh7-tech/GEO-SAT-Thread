@@ -1,40 +1,45 @@
 {
-  "updated_at": "2026-09-20T13:37:25Z",
+  "updated_at": "2026-09-20T18:13:40Z",
   "model": "SWIFT-Kp-AI-v0.9-adaptive-residual-CH",
   "overall": {
-    "count": 126,
-    "mae": 0.766,
-    "bias": -0.028,
-    "rmse": 0.911,
-    "hit_rate_within_1kp": 77.0,
-    "hit_rate_within_067kp": 60.3,
+    "count": 156,
+    "mae": 0.85,
+    "bias": 0.209,
+    "rmse": 0.996,
+    "hit_rate_within_1kp": 70.5,
+    "hit_rate_within_067kp": 54.5,
     "g_scale_hit_rate": 100.0
   },
   "by_lead_day": [
     {
       "lead_day": 1,
-      "count": 89,
-      "mae": 0.774,
-      "bias": -0.02,
-      "rmse": 0.918,
-      "hit_rate_within_1kp": 76.4,
-      "hit_rate_within_067kp": 60.7,
+      "count": 101,
+      "mae": 0.821,
+      "bias": 0.122,
+      "rmse": 0.967,
+      "hit_rate_within_1kp": 72.3,
+      "hit_rate_within_067kp": 58.4,
       "g_scale_hit_rate": 100.0
     },
     {
       "lead_day": 2,
-      "count": 37,
-      "mae": 0.746,
-      "bias": -0.047,
-      "rmse": 0.894,
-      "hit_rate_within_1kp": 78.4,
-      "hit_rate_within_067kp": 59.5,
+      "count": 51,
+      "mae": 0.869,
+      "bias": 0.293,
+      "rmse": 1.017,
+      "hit_rate_within_1kp": 68.6,
+      "hit_rate_within_067kp": 51.0,
       "g_scale_hit_rate": 100.0
     },
     {
       "lead_day": 3,
-      "count": 0,
-      "status": "learning"
+      "count": 4,
+      "mae": 1.335,
+      "bias": 1.335,
+      "rmse": 1.376,
+      "hit_rate_within_1kp": 50.0,
+      "hit_rate_within_067kp": 0.0,
+      "g_scale_hit_rate": 100.0
     }
   ],
   "adaptive_bias": {
@@ -45,16 +50,16 @@
     "leads": {
       "24": {
         "nominal_lead_hours": 24,
-        "count": 9,
-        "bias": -0.254,
+        "count": 11,
+        "bias": 0.257,
         "alpha": 0.0,
-        "subtract_from_kp": -0.0,
+        "subtract_from_kp": 0.0,
         "status": "learning"
       },
       "48": {
         "nominal_lead_hours": 48,
-        "count": 1,
-        "bias": 1.33,
+        "count": 3,
+        "bias": 1.293,
         "alpha": 0.0,
         "subtract_from_kp": 0.0,
         "status": "learning"
