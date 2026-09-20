@@ -134,7 +134,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 #mode3d{display:block!important}
 .threeScene{height:760px;background:#010611;border-bottom:1px solid #c9d9e8}
 .viewCard:fullscreen .threeScene{height:calc(100vh - 92px)}
-.hudBox{background:rgba(2,10,24,.80);border-color:rgba(87,163,238,.48);color:#dcecff;max-width:330px}
+.hudBox{background:rgba(2,10,24,.80);border-color:rgba(87,163,238,.48);color:#dcecff;max-width:340px;max-height:205px;overflow:auto}
 .speedHud{position:absolute;right:14px;top:14px;z-index:6;width:300px;padding:12px 13px;border:1px solid rgba(98,176,255,.48);border-radius:12px;background:rgba(2,10,24,.82);color:#e9f5ff;font-size:12px;line-height:1.62;backdrop-filter:blur(7px);box-shadow:0 8px 24px rgba(0,0,0,.22)}
 .speedHud .big{font-size:24px;font-weight:900;color:#fff;line-height:1.05}.speedHud .wind{color:#64d7ff}.speedHud .cme{color:#ffbd67}.speedHud .delta{color:#ff7187}.speedHud .model{color:#a9bed3}
 .windMapLegend{position:absolute;left:14px;top:14px;z-index:6;width:250px;padding:10px 11px;border:1px solid rgba(98,176,255,.40);border-radius:11px;background:rgba(2,10,24,.76);color:#dcecff;font-size:10px;line-height:1.45;backdrop-filter:blur(7px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
@@ -203,10 +203,10 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 
 
 /* GEO satellite TLE/health overlay */
-.geoSatLegend{position:absolute;left:14px;bottom:210px;z-index:7;width:280px;padding:9px 10px;border:1px solid rgba(123,170,212,.38);border-radius:10px;background:rgba(2,10,24,.78);color:#dcecff;font-size:10px;line-height:1.45;backdrop-filter:blur(7px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.geoSatLegend{position:absolute;left:14px;top:205px;bottom:auto;z-index:7;width:300px;padding:9px 10px;border:1px solid rgba(123,170,212,.38);border-radius:10px;background:rgba(2,10,24,.78);color:#dcecff;font-size:10px;line-height:1.45;backdrop-filter:blur(7px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
 .geoSatLegend .title{font-size:11px;font-weight:900;color:#fff;margin-bottom:5px}.geoLegendRow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.geoDot{display:inline-block;width:8px;height:8px;border-radius:50%}.geoSatInfo{position:absolute;right:14px;bottom:14px;z-index:7;width:315px;padding:10px 11px;border:1px solid rgba(123,170,212,.38);border-radius:10px;background:rgba(2,10,24,.80);color:#dcecff;font-size:10px;line-height:1.5;backdrop-filter:blur(7px)}
 .geoSatInfo b{color:#fff}.geoSatInfo .cause{font-weight:900}.satArchiveBar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}.satArchiveBar select{min-width:180px}
-@media(max-width:720px){.geoSatLegend{left:8px;bottom:170px;width:215px}.geoSatInfo{display:none}}
+@media(max-width:720px){.geoSatLegend{left:8px;top:190px;bottom:auto;width:225px}.geoSatInfo{display:none}}
 
 </style>
 </head>
@@ -2033,13 +2033,33 @@ function createGeoOrbitGuide(group){
   const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x6f8ba5,transparent:true,opacity:.16}));
   line.userData.role="geoOrbitGuide";group.add(line);
 }
+function fallbackGeoSatRows(){
+  const raw=SAT_RISK?.goes_space_environment_now?.satellite_longitudes_raw;
+  if(!Array.isArray(raw))return[];
+  const status=new Map((SAT_RISK?.satellites||[]).map(x=>[String(x.name||"").toUpperCase(),x]));
+  return raw.filter(x=>Number.isFinite(Number(x?.satellite))&&Number.isFinite(Number(x?.longitude))).map(x=>{
+    const name=`GOES-${Number(x.satellite)}`,pub=status.get(name.toUpperCase())||{};
+    return{
+      name,norad:null,latitude_deg:0,longitude_deg:-Math.abs(Number(x.longitude)),altitude_km:35786,
+      position_time:SAT_RISK?.generated_at||null,ops_status_code:null,
+      public_health_label:pub.public_health_label||"PUBLIC STATUS UNKNOWN",
+      recent_public_alert:pub.latest_public_anomaly_or_outage||null,
+      issue_category:pub.latest_public_anomaly_or_outage?.issue_category||"NONE",
+      issue_color:null,position_quality:"SWPC_LONGITUDE_FALLBACK",
+      position_basis:"NOAA SWPC published GOES longitude fallback"
+    };
+  });
+}
+
 function renderGeoSatellites3D(){
   if(!STATE.three?.ready)return;
   const t=STATE.three;
   if(!t.geoSatGroup)return;
   clearGeoSatellites3D();
   createGeoOrbitGuide(t.geoSatGroup);
-  const rows=Array.isArray(SAT_RISK?.geo_satellites_3d)?SAT_RISK.geo_satellites_3d:[];
+  let rows=Array.isArray(SAT_RISK?.geo_satellites_3d)?SAT_RISK.geo_satellites_3d:[];
+  let fallbackUsed=false;
+  if(!rows.length){rows=fallbackGeoSatRows();fallbackUsed=rows.length>0;}
   // Alerts and GOES first, then the active GEO population. Cap for browser clarity.
   const sorted=[...rows].sort((a,b)=>{
     const pa=(a.recent_public_alert?0:(String(a.name||"").toUpperCase().includes("GOES")?1:2));
@@ -2051,8 +2071,9 @@ function renderGeoSatellites3D(){
     const p=geoSatLocalPosition(s),health=geoHealthHex(s),isAlert=!!s.recent_public_alert,isGOES=String(s.name||"").toUpperCase().includes("GOES");
     if(isAlert)alerts++;if(isGOES)goes++;
     const g=new THREE.Group();g.position.copy(p);g.userData.geoSat=s;
-    const rad=isAlert?.34:(isGOES?.28:.16);
-    const core=new THREE.Mesh(new THREE.SphereGeometry(rad,12,9),new THREE.MeshBasicMaterial({color:health,transparent:true,opacity:isAlert?1:.88}));
+    const rad=isAlert?.48:(isGOES?.38:.25);
+    const coreColor=isAlert?geoIssueHex(s):health;
+    const core=new THREE.Mesh(new THREE.SphereGeometry(rad,14,10),new THREE.MeshBasicMaterial({color:coreColor,transparent:true,opacity:isAlert?1:.92}));
     core.userData.geoSatData=s;core.userData.role="geoSatCore";g.add(core);t.geoSatPickables.push(core);
     if(isAlert){
       const haloColor=geoIssueHex(s);
@@ -2069,7 +2090,11 @@ function renderGeoSatellites3D(){
   }
   t.geoSatGroup.visible=GEO_SAT_VISIBLE;
   const leg=document.getElementById("geoSatLegendCount");
-  if(leg)leg.innerHTML=`Displayed <b>${sorted.length}</b> GEO objects • GOES ${goes} • recent alert ${alerts}<br><span style="color:#9db7cf">位置: CelesTrak TLE + SGP4 current snapshot</span>`;
+  if(leg){
+    const tc=SAT_RISK?.tle_cache||{},mode=fallbackUsed?"SWPC GOES longitude fallback":(tc.mode||"TLE/SGP4");
+    const when=tc.fetched_at?` • TLE ${esc(String(tc.fetched_at).slice(0,16))}Z`:"";
+    leg.innerHTML=`Displayed <b>${sorted.length}</b> GEO objects • GOES ${goes} • recent alert ${alerts}<br><span style="color:#9db7cf">Position: ${esc(mode)}${when} • TLE refresh once/day, latest only</span>`;
+  }
 }
 function toggleGeoSatellites(){
   GEO_SAT_VISIBLE=!GEO_SAT_VISIBLE;
@@ -2085,7 +2110,7 @@ function selectGeoSatellite(s){
     `Lon/Lat: <b>${satFmt(s.longitude_deg,1,"°")}</b> / <b>${satFmt(s.latitude_deg,1,"°")}</b> • Alt ${satFmt(s.altitude_km,0," km")}<br>`+
     `Public health: <b>${esc(s.public_health_label||s.ops_status_code||"unknown")}</b><br>`+
     (alert?`Recent public issue: <span class="cause" style="color:${catColor}">${esc(cat)}</span><br>${esc((alert.title||"").slice(0,180))}<br>`:`Recent public issue: none matched<br>`)+
-    `<span style="color:#9db7cf">Position ${esc(s.position_time||"-")} • approximate TLE/SGP4 placement</span>`;
+    `<span style="color:#9db7cf">Position ${esc(s.position_time||"-")} • ${esc(s.position_basis||"approximate TLE/SGP4 placement")}</span>`;
 }
 
 function update3D(time){
