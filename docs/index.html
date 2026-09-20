@@ -177,6 +177,30 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 .skillBox{border:1px solid #d1dfeb;border-radius:11px;background:#fbfdff;padding:10px;min-height:138px}.skillBox .name{font-size:12px;font-weight:900;color:#17324f;margin-bottom:7px}.skillLeadRow{display:grid;grid-template-columns:44px 1fr 1fr;gap:5px;padding:5px 0;border-top:1px solid #e8eef4;font-size:10px;color:#49657f}.skillLeadRow:first-of-type{border-top:0}.skillLeadRow b{color:#183752}.skillLearning{color:#93a5b5}.calibrationGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.calCard{border:1px solid #d1dfeb;border-radius:11px;background:#f8fbfe;padding:10px}.calCard .title{font-size:12px;font-weight:900;color:#17324f;margin-bottom:6px}.calRow{display:grid;grid-template-columns:52px 1fr 1fr 1fr;gap:5px;font-size:10px;color:#49657f;padding:4px 0;border-top:1px solid #e6edf4}.calRow:first-of-type{border-top:0}.skillTrendWrap{height:250px;position:relative;margin-top:10px;border:1px solid #d7e3ed;border-radius:11px;background:#fff;overflow:hidden}.skillTrendWrap canvas{position:absolute;inset:0;width:100%;height:100%}.skillRangeDash{margin-top:10px;border:1px solid #d7e3ed;border-radius:11px;overflow:auto;background:#fff;padding:10px}.skillRangeDash .title{font-size:12px;font-weight:900;color:#17324f;margin-bottom:7px}
 @media(max-width:1050px){.skillLeadGrid{grid-template-columns:1fr}.calibrationGrid{grid-template-columns:1fr}}
 
+
+/* GEO satellite anomaly / space-weather risk */
+.satRiskBody{padding:14px}
+.satBoundary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.satBoundary>div{border:1px solid #dfe8f1;border-radius:10px;padding:9px 10px;background:#fbfdff;font-size:12px;color:#526a80}
+.satBoundary b{display:block;color:#234764;margin-bottom:3px}
+.satGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.satCard{border:1px solid #dfe8f1;border-radius:12px;padding:12px;background:#fff;min-width:0}
+.satCard .satName{font-size:16px;font-weight:800;color:#1e405c;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.satStatus{display:inline-flex;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:800;background:#eef4f8;color:#3b5970}
+.satMetrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:9px}
+.satMetric{border:1px solid #edf2f6;border-radius:8px;padding:7px 8px;min-width:0}
+.satMetric .k{font-size:10px;color:#71869a}
+.satMetric .v{font-size:15px;font-weight:800;color:#24415d;margin-top:2px}
+.satRiskHigh{color:#a9432f!important}.satRiskModerate{color:#a66a12!important}.satRiskLow{color:#36745e!important}
+.satTables{display:grid;grid-template-columns:1.2fr .8fr;gap:10px;margin-top:12px}
+.satTableWrap{border:1px solid #dfe8f1;border-radius:10px;overflow:auto;background:#fff}
+.satTableTitle{padding:9px 10px;font-weight:800;color:#284a66;border-bottom:1px solid #e8eef4;background:#f8fbfd}
+.satTable{width:100%;border-collapse:collapse;font-size:11px}
+.satTable th,.satTable td{padding:7px 8px;border-bottom:1px solid #eef3f6;text-align:left;vertical-align:top}
+.satTable th{color:#607b91;background:#fbfdff;position:sticky;top:0}
+.satWarn{margin-top:10px;padding:9px 10px;border-radius:9px;background:#fff8e7;border:1px solid #f0dfaf;color:#6c5a27;font-size:11px}
+@media(max-width:1050px){.satGrid,.satTables,.satBoundary{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -308,6 +332,38 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
     </div>
   </section>
 
+
+  <section class="card" id="satelliteRiskCard" style="margin-top:14px">
+    <div class="panelHeader">
+      <div>
+        <div class="panelTitle">GEO Satellite Anomaly × Space Weather <span class="chip">GOES proof-of-concept</span></div>
+        <div class="panelSub">公開された衛星/プロダクト異常と、Kp・Bz・Vsw・GOES高エネルギー粒子を時刻同期。現在の衛星公開ステータスと「宇宙環境リスク」を分離して表示します。</div>
+      </div>
+      <div class="viewTools"><button class="ghost" onclick="loadSatelliteRisk()">衛星データ再読込</button></div>
+    </div>
+    <div class="satRiskBody">
+      <div class="satBoundary">
+        <div><b>PUBLIC HEALTH</b>OSPOの公開運用状態・outage/anomaly。実際に報告された状態。</div>
+        <div><b>ENVIRONMENT RISK</b>宇宙環境への曝露スコア。故障確率ではありません。</div>
+        <div><b>LINK ANALYSIS</b>異常前72hの環境を比較。自動で因果関係とは判定しません。</div>
+      </div>
+      <div id="satRiskStatus" class="small">satellite-risk/latest.json waiting...</div>
+      <div class="satGrid" id="satRiskGrid"></div>
+      <div class="satTables">
+        <div class="satTableWrap">
+          <div class="satTableTitle">Recent public GOES anomaly/outage × preceding 72 h environment</div>
+          <div id="satAnomalyTable"></div>
+        </div>
+        <div class="satTableWrap">
+          <div class="satTableTitle">NCEI historical anomaly context</div>
+          <div id="satHistoricTable"></div>
+        </div>
+      </div>
+      <div class="satWarn" id="satRiskWarning">Important: 公開outageには地上系・データ配信・計画停止も含まれます。宇宙天気との時間的一致だけで衛星故障原因とは判定しません。</div>
+    </div>
+  </section>
+
+
   <section class="card" style="margin-top:14px">
     <div class="panelHeader"><div><div class="panelTitle">Earth-directed CME Events</div><div class="panelSub">DONKI/CACTus geometry + DBM model ETA / speed</div></div></div>
     <div class="panelBody"><div id="eventList" class="eventList"></div></div>
@@ -327,6 +383,7 @@ const REPORT_UI_CANDIDATES=["./reports/ui_forecast_latest.json","./docs/reports/
 const SWIFT_KP_LATEST=dataCandidates("swift-kp/latest.json");
 const SWIFT_BZ_LATEST=dataCandidates("swift-bz/latest.json");
 const VALIDATION_UI_CANDIDATES=dataCandidates("validation/ui_validation_latest.json");
+const SATELLITE_RISK_CANDIDATES=dataCandidates("satellite-risk/latest.json");
 const NOAA_WIND_HISTORY=[...dataCandidates("noaa/wind_history.json"),...dataCandidates("noaa_wind_history.json"),...dataCandidates("noaa-wind/history.json")];
 const DONKI_LON_POSITIVE_WEST=true;
 const NOAA={
@@ -1908,6 +1965,81 @@ function animate3D(){
   t.renderer.render(t.scene,t.camera);
 }
 
+
+let SAT_RISK=null;
+function satFmt(v,d=1,suffix=""){
+  const n=Number(v);return Number.isFinite(n)?`${n.toFixed(d)}${suffix}`:"--";
+}
+function satRiskClass(label){
+  const s=String(label||"").toUpperCase();
+  if(s.includes("VERY")||s.includes("HIGH"))return "satRiskHigh";
+  if(s.includes("MODERATE")||s.includes("ELEVATED"))return "satRiskModerate";
+  return "satRiskLow";
+}
+function renderSatelliteRisk(){
+  const grid=document.getElementById("satRiskGrid"),status=document.getElementById("satRiskStatus"),anom=document.getElementById("satAnomalyTable"),hist=document.getElementById("satHistoricTable"),warn=document.getElementById("satRiskWarning");
+  if(!grid)return;
+  const d=SAT_RISK;
+  if(!d){
+    status.textContent="satellite risk feed unavailable";
+    grid.innerHTML="";
+    return;
+  }
+  const gen=d.generated_at?new Date(d.generated_at).toISOString().replace("T"," ").slice(0,19)+" UTC":"--";
+  status.innerHTML=`Generated: <b>${esc(gen)}</b> • public events ${d.association_summary?.public_events_total??0} • environment-covered ${d.association_summary?.events_with_local_environment_coverage??0}`;
+  const sats=Array.isArray(d.satellites)?d.satellites:[];
+  grid.innerHTML=sats.map(s=>{
+    const r=s.environment_risk||{},sc=r.scores_0_100||{},e=d.goes_space_environment_now?.electron_gt2mev||{},p=d.goes_space_environment_now?.proton_gt10mev||{},env=s.environment_forecast_72h||{};
+    const last=s.latest_public_anomaly_or_outage;
+    return `<div class="satCard">
+      <div class="satName">${esc(s.name||"GEO")} <span class="satStatus">${esc(s.public_health_label||"PUBLIC STATUS UNKNOWN")}</span></div>
+      <div class="small">${esc(s.operational_status||"-")} ${s.location?`• ${esc(s.location)}`:""}</div>
+      <div class="satMetrics">
+        <div class="satMetric"><div class="k">Environment risk</div><div class="v ${satRiskClass(r.overall_environment_risk_label)}">${esc(r.overall_environment_risk_label||"--")} ${satFmt(r.overall_environment_risk_score,0,"/100")}</div></div>
+        <div class="satMetric"><div class="k">Internal charging</div><div class="v">${satFmt(sc.internal_charging,0,"/100")}</div></div>
+        <div class="satMetric"><div class="k">SEE / proton</div><div class="v">${satFmt(sc.single_event_effect,0,"/100")}</div></div>
+        <div class="satMetric"><div class="k">Surface charging / geomag</div><div class="v">${satFmt(sc.surface_charging_geomagnetic,0,"/100")}</div></div>
+        <div class="satMetric"><div class="k">72h Kp max / Bz min</div><div class="v">${satFmt(env.kp_max_72h,1)} / ${satFmt(env.bz_min_72h_nt,1," nT")}</div></div>
+        <div class="satMetric"><div class="k">72h Vsw max</div><div class="v">${satFmt(env.wind_max_72h_kms,0," km/s")}</div></div>
+        <div class="satMetric"><div class="k">&gt;2 MeV electron</div><div class="v">${satFmt(e.flux,1)}</div><div class="small">${esc(e.energy||"")}</div></div>
+        <div class="satMetric"><div class="k">&gt;10 MeV proton</div><div class="v">${satFmt(p.flux,2)}</div><div class="small">${esc(p.energy||"")}</div></div>
+      </div>
+      <div class="small" style="margin-top:8px">${last?`Latest public anomaly/outage: ${esc(last.issued_at||"")} • ${esc((last.title||"").slice(0,180))}`:"No recent public GOES anomaly/outage matched in feed."}</div>
+    </div>`;
+  }).join("") || `<div class="small">GOES public status not available in latest feed.</div>`;
+
+  const events=Array.isArray(d.recent_public_goes_events)?d.recent_public_goes_events.slice(0,20):[];
+  anom.innerHTML=`<table class="satTable"><thead><tr><th>Issued</th><th>Satellite / report</th><th>-72h env</th><th>Interpretation</th></tr></thead><tbody>${
+    events.map(e=>{
+      const a=e.space_weather_72h_before||{},m=a.metrics||{},f=a.flags||{};
+      const env=a.covered?`Kp≤max ${satFmt(m.max_kp,1)}<br>Bz min ${satFmt(m.min_bz_nt,1," nT")}<br>Vsw max ${satFmt(m.max_wind_kms,0," km/s")}`:"no local history coverage";
+      const flags=[f.kp_ge_5?"Kp≥5":"",f.bz_le_minus5?"Bz≤−5":"",f.wind_ge_500?"Vsw≥500":""].filter(Boolean).join(", ");
+      return `<tr><td>${esc(e.issued_at||"--")}</td><td><b>${esc((e.satellites||[]).join(", ")||"GOES")}</b><br>${esc((e.title||"").slice(0,220))}<br><span class="small">${esc(e.scope||"")} • ${esc(e.nature||"")}</span></td><td>${env}${flags?`<br><b>${esc(flags)}</b>`:""}${a.covered?`<br>association score ${satFmt(a.association_score_0_100,0,"/100")}`:""}</td><td>Temporal association only.<br><span class="small">Causality NOT established.</span></td></tr>`;
+    }).join("")
+  }</tbody></table>`;
+
+  const hs=Array.isArray(d.ncei_historic_anomaly_summary_top_geo_like)?d.ncei_historic_anomaly_summary_top_geo_like.slice(0,20):[];
+  hist.innerHTML=`<table class="satTable"><thead><tr><th>Satellite</th><th>Reports</th><th>Period</th></tr></thead><tbody>${
+    hs.map(x=>`<tr><td>${esc(x.satellite||"")}</td><td><b>${Number(x.count||0)}</b></td><td>${esc(x.first_report||"")} → ${esc(x.last_report||"")}</td></tr>`).join("")
+  }</tbody></table>`;
+  if(warn){
+    const errs=Array.isArray(d.fetch_errors)&&d.fetch_errors.length?` • Fetch warnings: ${d.fetch_errors.length}`:"";
+    warn.textContent=`Important: Public outage/anomaly reports may describe ground/data/instrument events, not spacecraft hardware failure. Environment score is not a failure probability. Automatic causal attribution is disabled.${errs}`;
+  }
+}
+async function loadSatelliteRisk(){
+  const status=document.getElementById("satRiskStatus");if(status)status.textContent="Loading satellite-risk/latest.json ...";
+  try{
+    const got=await fetchJsonAny(SATELLITE_RISK_CANDIDATES);
+    SAT_RISK=got.data;
+    renderSatelliteRisk();
+  }catch(e){
+    SAT_RISK=null;
+    if(status)status.textContent="Satellite-risk feed not found yet. Run scripts/build_geo_satellite_anomaly_risk.py or its GitHub Action.";
+    renderSatelliteRisk();
+  }
+}
+
 function resize3D(){
   if(!STATE.three.ready)return;
   const box=document.getElementById("threeContainer"),t=STATE.three;
@@ -1926,7 +2058,7 @@ window.addEventListener("resize",()=>{resize3D();drawWindGraph();});
 document.addEventListener("fullscreenchange",()=>setTimeout(()=>{resize3D();drawWindGraph();},100));
 setInterval(()=>{document.getElementById("utcClock").textContent=new Date().toISOString().replace("T"," ").slice(0,19)+" UTC";},1000);
 
-renderSourcePanel();initTimeline();init3D();renderSummary();renderEvents();renderForecastSkillDashboard();updateTimeline();drawWindGraph();loadReportIndex();loadAll();
+renderSourcePanel();initTimeline();init3D();renderSummary();renderEvents();renderForecastSkillDashboard();updateTimeline();drawWindGraph();loadReportIndex();loadSatelliteRisk();loadAll();
 </script>
 </body>
 </html>
