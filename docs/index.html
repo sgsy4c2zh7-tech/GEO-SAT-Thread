@@ -100,7 +100,11 @@ button.stop{background:linear-gradient(180deg,#b72d40,#781b2a);border-color:rgba
 .metricGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-top:12px}@media(max-width:900px){.metricGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.metricGrid{grid-template-columns:1fr}}
 .metric{border:1px solid rgba(64,139,218,.30);border-radius:13px;background:rgba(6,23,45,.72);padding:11px}.metric .label{font-size:11px;color:#86a8cf}.metric .value{font-size:21px;font-weight:900;margin-top:3px}.metric .sub{font-size:11px;color:#93afd0;margin-top:4px}
 .viewGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:1120px){.viewGrid{grid-template-columns:1fr}}
-.viewCard:fullscreen{background:#020713;padding:12px}.viewCard:fullscreen .scene2d{height:calc(100vh - 95px)}.viewCard:fullscreen .threeScene{height:calc(100vh - 95px)}
+#threeContainer:fullscreen{width:100vw;height:100vh;background:#010611;border:0;margin:0;padding:0}
+#threeContainer:fullscreen::backdrop{background:#000}
+#threeContainer:fullscreen canvas{width:100%!important;height:100%!important}
+.fullscreenTimelineControls{display:none}
+#threeContainer:fullscreen .fullscreenTimelineControls{display:flex}
 .scene2d{height:520px;position:relative;background:#f5f8fc;overflow:hidden}.threeScene{height:680px;position:relative;background:#020817;overflow:hidden}.scene2d canvas,#threeContainer canvas{position:absolute;inset:0;width:100%;height:100%;display:block}.threeOverlay{position:absolute;z-index:5;inset:0;pointer-events:none}.hudBox{position:absolute;left:14px;bottom:14px;max-width:280px;padding:9px 10px;background:rgba(2,10,24,.72);border:1px solid rgba(68,151,240,.34);border-radius:10px;color:#b9d1ec;font-size:11px;line-height:1.55;backdrop-filter:blur(6px)}
 .viewTools{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.chip{border:1px solid rgba(67,148,235,.28);background:rgba(6,27,52,.65);border-radius:999px;padding:5px 9px;font-size:11px;color:#9fc0e6}.legend{display:flex;flex-wrap:wrap;gap:7px;padding:9px 12px;border-top:1px solid rgba(45,129,218,.25);background:rgba(3,15,32,.68)}.legendItem{font-size:11px;color:#9fb9d9;display:flex;align-items:center;gap:6px}.dot{width:9px;height:9px;border-radius:50%}
 .eventList{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:9px}.event{border:1px solid rgba(61,137,219,.28);border-radius:12px;padding:11px;background:rgba(4,17,36,.60)}.eventHead{display:flex;align-items:center;justify-content:space-between;gap:8px}.eventName{font-size:13px;font-weight:900}.tag{border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900}.tag.core{color:#ff96a7;background:rgba(255,82,111,.15)}.tag.body{color:#ffc56f;background:rgba(255,158,44,.14)}.tag.flank{color:#ffe98a;background:rgba(255,214,90,.12)}.tag.enlil{color:#e29cff;background:rgba(202,98,255,.13)}.tag.cactus{color:#75eaff;background:rgba(53,215,255,.12)}.tag.miss{color:#a9bad1;background:rgba(150,170,196,.10)}
@@ -133,7 +137,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 .toggleBox label{background:#f7fafc;border-color:#cbd9e5;color:#35516c}
 #mode3d{display:block!important}
 .threeScene{height:760px;background:#010611;border-bottom:1px solid #c9d9e8}
-.viewCard:fullscreen .threeScene{height:calc(100vh - 92px)}
+
 .hudBox{background:rgba(2,10,24,.80);border-color:rgba(87,163,238,.48);color:#dcecff;max-width:340px;max-height:205px;overflow:auto}
 .speedHud{position:absolute;right:14px;top:14px;z-index:6;width:300px;padding:12px 13px;border:1px solid rgba(98,176,255,.48);border-radius:12px;background:rgba(2,10,24,.82);color:#e9f5ff;font-size:12px;line-height:1.62;backdrop-filter:blur(7px);box-shadow:0 8px 24px rgba(0,0,0,.22)}
 .speedHud .big{font-size:24px;font-weight:900;color:#fff;line-height:1.05}.speedHud .wind{color:#64d7ff}.speedHud .cme{color:#ffbd67}.speedHud .delta{color:#ff7187}.speedHud .model{color:#a9bed3}
@@ -142,6 +146,14 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 .windMapLegend .bar{height:9px;border-radius:999px;background:linear-gradient(90deg,#3d6fff 0%,#34c9ff 24%,#42e39b 44%,#f3e64f 64%,#ff9d2d 82%,#ff4038 100%);box-shadow:0 0 12px rgba(84,179,255,.30)}
 .windMapLegend .ticks{display:flex;justify-content:space-between;color:#99b5d0;margin-top:3px;font-size:9px}
 .windMapLegend .note{color:#9db7cf;margin-top:5px}
+
+.fullscreenTimelineControls{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:20;align-items:center;gap:9px;width:min(820px,calc(100% - 36px));padding:10px 12px;border:1px solid rgba(117,177,230,.48);border-radius:14px;background:rgba(2,10,24,.88);color:#eaf5ff;backdrop-filter:blur(9px);box-shadow:0 10px 30px rgba(0,0,0,.32)}
+.fullscreenTimelineControls button{min-width:44px;padding:8px 11px;border-radius:9px;font-size:13px;font-weight:800}
+.fullscreenTimelineControls .fsPause{background:linear-gradient(180deg,#a94a56,#7d2c37);border-color:#bd6670}
+.fullscreenTimelineControls .fsExit{margin-left:auto;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.26);color:#fff}
+.fullscreenTimelineControls input[type=range]{flex:1;min-width:140px}
+.fullscreenTimelineControls .fsTime{min-width:160px;text-align:center;font-size:11px;line-height:1.35;color:#dcecff;white-space:nowrap}
+@media(max-width:720px){.fullscreenTimelineControls{gap:6px;bottom:10px;width:calc(100% - 16px);padding:8px}.fullscreenTimelineControls .fsTime{display:none}.fullscreenTimelineControls button{min-width:40px;padding:7px 8px}}
 
 
 .modelStrip{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;background:#f8fbfe;border-top:1px solid #d5e1ec}
@@ -276,7 +288,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
         <button onclick="set3DCamera('side')">Side</button>
         <button onclick="set3DCamera('perspective')">Perspective</button>
         <button id="geoSatToggleBtn" onclick="toggleGeoSatellites()">GOES Health: ON</button>
-        <button class="ghost" onclick="toggleFullscreen('threeViewCard')">⛶ 全画面</button>
+        <button class="ghost" onclick="toggleThreeFullscreen()">⛶ 全画面</button>
       </div>
     </div>
     <div class="threeScene" id="threeContainer">
@@ -304,6 +316,15 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
         </div>
         <div class="geoSatInfo" id="geoSatInfo"><b>GOES status</b><br>markerをクリックすると公開運用状態・最近の異常情報を表示</div>
         <div class="camHelp">Drag: rotate / Wheel: zoom / Right drag: pan</div>
+      </div>
+      <div class="fullscreenTimelineControls" id="fullscreenTimelineControls">
+        <button type="button" onclick="stepTimeline(-1)" title="1時間戻る">◀</button>
+        <button type="button" onclick="playTimeline()" title="再生">▶</button>
+        <button type="button" class="fsPause" onclick="stopTimeline()" title="一時停止">Ⅱ</button>
+        <input id="timeSliderFs" type="range" min="0" max="144" value="72" step="1" oninput="updateTimelineFromFs()" aria-label="Fullscreen timeline">
+        <div class="fsTime" id="fsTimeLabel">NOW</div>
+        <button type="button" onclick="stepTimeline(1)" title="1時間進む">▶|</button>
+        <button type="button" class="fsExit" onclick="toggleThreeFullscreen()" title="全画面を終了">⛶ 終了</button>
       </div>
     </div>
     <div class="modelStrip">
@@ -519,7 +540,7 @@ function classColor(c){if(c==="ENLIL-HIT")return"#ca62ff";if(c==="CORE-HIT")retu
 function latest(arr){if(!Array.isArray(arr))return{};for(let i=arr.length-1;i>=0;i--){const r=arr[i];if(Array.isArray(r)){if(String(r[0]).toLowerCase().includes("time"))continue;return r;}if(r&&typeof r==="object")return r;}return{};}
 function pick(obj,names){for(const n of names){if(typeof n==="number"&&Array.isArray(obj)){const v=Number(obj[n]);if(Number.isFinite(v))return v;}if(typeof n==="string"&&obj&&obj[n]!==undefined){const v=Number(obj[n]);if(Number.isFinite(v))return v;}}return 0;}
 function defaultEnv(){return{speed:425,density:0,bt:0,by:0,bz:0,kp:0,dynamicPressure:0};}
-function initTimeline(){STATE.timelineCenter=new Date();STATE.timelineStart=new Date(STATE.timelineCenter.getTime()-72*3600e3);STATE.timelineEnd=new Date(STATE.timelineCenter.getTime()+72*3600e3);STATE.selectedTime=new Date(STATE.timelineCenter);const s=document.getElementById("timeSlider");s.value=72;}
+function initTimeline(){STATE.timelineCenter=new Date();STATE.timelineStart=new Date(STATE.timelineCenter.getTime()-72*3600e3);STATE.timelineEnd=new Date(STATE.timelineCenter.getTime()+72*3600e3);STATE.selectedTime=new Date(STATE.timelineCenter);const s=document.getElementById("timeSlider"),fs=document.getElementById("timeSliderFs");if(s)s.value=72;if(fs)fs.value=72;syncTimelineControls(72,STATE.selectedTime);}
 async function fetchJson(url){const sep=url.includes("?")?"&":"?";const r=await fetch(url+sep+"t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error(`HTTP ${r.status}: ${url}`);return await r.json();}
 async function fetchJsonAny(urls){let last="";for(const u of urls){try{return{data:await fetchJson(u),url:u};}catch(e){last=e.message;}}throw new Error(last);}
 function sibling(base,file){return base.replace(/[^/]+$/,String(file));}
@@ -1066,10 +1087,34 @@ function drawTechBackdrop(ctx,w,h,solarMode=false){
   ctx.restore();
 }
 
-function updateTimeline(){const h=Number(document.getElementById("timeSlider").value),t=new Date(STATE.timelineStart.getTime()+h*3600e3);STATE.selectedTime=t;const off=h-72,ws=windStateAt(t);document.getElementById("timeLabel").innerHTML=`<b>${formatTime(t)}</b> / now ${off>=0?"+":""}${off}h / solar wind <b>${Math.round(ws.speed)} km/s</b> (${esc(ws.source)})`;renderSummary();update3D(t);drawWindGraph();drawSpaceWeatherGraphs();}
+function syncTimelineControls(h,t){
+  const main=document.getElementById("timeSlider"),fs=document.getElementById("timeSliderFs");
+  if(main&&Number(main.value)!==Number(h))main.value=String(h);
+  if(fs&&Number(fs.value)!==Number(h))fs.value=String(h);
+  const off=Number(h)-72,lab=document.getElementById("fsTimeLabel");
+  if(lab)lab.innerHTML=`${formatTime(t)}<br><b>${off===0?"NOW":`${off>0?"+":""}${off} h`}</b>`;
+}
+function updateTimeline(){
+  const s=document.getElementById("timeSlider");if(!s)return;
+  const h=Number(s.value),t=new Date(STATE.timelineStart.getTime()+h*3600e3);STATE.selectedTime=t;
+  syncTimelineControls(h,t);
+  const off=h-72,ws=windStateAt(t),label=document.getElementById("timeLabel");
+  if(label)label.innerHTML=`<b>${formatTime(t)}</b> / now ${off>=0?"+":""}${off}h / solar wind <b>${Math.round(ws.speed)} km/s</b> (${esc(ws.source)})`;
+  renderSummary();update3D(t);drawWindGraph();drawSpaceWeatherGraphs();
+}
+function updateTimelineFromFs(){
+  const fs=document.getElementById("timeSliderFs"),main=document.getElementById("timeSlider");if(!fs||!main)return;
+  main.value=fs.value;updateTimeline();
+}
 function playTimeline(){stopTimeline();STATE.timer=setInterval(()=>{const s=document.getElementById("timeSlider");let v=Number(s.value)+1;if(v>Number(s.max))v=0;s.value=v;updateTimeline();},260);}
 function stopTimeline(){if(STATE.timer)clearInterval(STATE.timer);STATE.timer=null;}
 function stepTimeline(d){const s=document.getElementById("timeSlider");s.value=clamp(Number(s.value)+d,Number(s.min),Number(s.max));updateTimeline();}
+function toggleThreeFullscreen(){
+  const el=document.getElementById("threeContainer");
+  if(document.fullscreenElement===el)document.exitFullscreen?.();
+  else if(document.fullscreenElement)document.exitFullscreen?.().then(()=>el?.requestFullscreen?.());
+  else el?.requestFullscreen?.();
+}
 function toggleFullscreen(id){const el=document.getElementById(id);if(document.fullscreenElement)document.exitFullscreen();else el?.requestFullscreen?.();}
 function switchMode(){init3D();resize3D();update3D(STATE.selectedTime);}
 
@@ -2538,7 +2583,7 @@ function set3DCamera(mode){
   k.target.set(10,0,0);k.update();
 }
 window.addEventListener("resize",()=>{resize3D();drawWindGraph();drawSpaceWeatherGraphs();});
-document.addEventListener("fullscreenchange",()=>setTimeout(()=>{resize3D();drawWindGraph();drawSpaceWeatherGraphs();},100));
+document.addEventListener("fullscreenchange",()=>{syncTimelineControls(Number(document.getElementById("timeSlider")?.value||72),STATE.selectedTime||new Date());setTimeout(()=>{resize3D();drawWindGraph();drawSpaceWeatherGraphs();},120);});
 setInterval(()=>{document.getElementById("utcClock").textContent=new Date().toISOString().replace("T"," ").slice(0,19)+" UTC";},1000);
 
 renderSourcePanel();initTimeline();init3D();renderSummary();renderEvents();renderForecastSkillDashboard();updateTimeline();drawWindGraph();loadReportIndex();loadSatelliteRisk();loadAll();
