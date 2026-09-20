@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SWIFT GEO Satellite Anomaly / Space-Weather Risk Builder v0.1
+SWIFT GEO Satellite Anomaly / Space-Weather Risk Builder v0.2
 
 Purpose
 -------
@@ -60,8 +60,10 @@ DOCS = ROOT / "docs"
 DATA = DOCS / "data"
 OUT_DIR = DATA / "satellite-risk"
 HISTORY_DIR = OUT_DIR / "history"
+ENV_HISTORY_DIR = OUT_DIR / "environment-history"
+NCEI_CACHE = OUT_DIR / "ncei-legacy.json"
 
-UA = "SWIFT-GEO-Satellite-Risk/0.1 (+public research dashboard)"
+UA = "SWIFT-GEO-Satellite-Risk/0.2 (+public research dashboard)"
 TIMEOUT = 45
 
 OSPO_STATUS = "https://www.ospo.noaa.gov/operations/goes/status.html"
@@ -74,6 +76,7 @@ NCEI_ANOM_DOC = (
     "https://www.ngdc.noaa.gov/stp/space-weather/"
     "satellite-data/spacecraft-anomalies/data/anomalies.txt"
 )
+NCEI_ANOM_RAW = "https://www.ngdc.noaa.gov/stp/satellite/goes/doc/ANOM5JT.TXT"
 
 SWPC_GOES_PRIMARY_E = (
     "https://services.swpc.noaa.gov/json/goes/primary/integral-electrons-1-day.json"
@@ -88,6 +91,7 @@ CELESTRAK_GEO = (
     "https://celestrak.org/satcat/records.php?"
     "SPECIAL=gpz&FORMAT=JSON&ACTIVE=1&MAX=2000"
 )
+CELESTRAK_GEO_TLE = "https://celestrak.org/NORAD/elements/gp.php?GROUP=GEO&FORMAT=TLE"
 
 # These are intentionally transparent research bands, not operational failure
 # thresholds. They are kept in the output JSON so the UI can display them.
@@ -467,11 +471,35 @@ def classify_public_event(text: str) -> dict[str, Any]:
         scope = "product/data"
     if "PLANNED" in u or "SCHEDULED" in u or "MAINTENANCE" in u:
         nature = "planned/administrative"
-    elif "ANOMALY" in u or "OUTAGE" in u:
+    elif "ANOMALY" in u or "OUTAGE" in u or "SAFEHOLD" in u:
         nature = "anomaly/outage"
     else:
         nature = "other"
-    return {"satellites": sats, "scope": scope, "nature": nature}
+
+    # This is an issue CATEGORY derived from the public text, not a root-cause claim.
+    if any(k in u for k in ("ESD", "ELECTROSTATIC", "SURFACE CHARG")):
+        issue_category = "SURFACE_CHARGING_ESD"
+    elif any(k in u for k in ("ECEMP", "DEEP DIELECTRIC", "INTERNAL CHARG")):
+        issue_category = "INTERNAL_CHARGING"
+    elif any(k in u for k in ("SEU", "SINGLE EVENT", "RADIATION UPSET")):
+        issue_category = "SEE_SEU"
+    elif any(k in u for k in ("POWER", "BATTERY", "EPS")):
+        issue_category = "POWER_EPS"
+    elif any(k in u for k in ("ATTITUDE", "POINTING", "GNC", "SAFEHOLD", "THRUSTER")):
+        issue_category = "ATTITUDE_GNC"
+    elif any(k in u for k in ("TELEMETRY", "COMMAND", "COMMUNICATION", "COMMS", "RF")):
+        issue_category = "COMMUNICATIONS"
+    elif any(k in u for k in ("ABI", "SEISS", "EXIS", "SUVI", "CCOR", "INSTRUMENT")):
+        issue_category = "INSTRUMENT"
+    elif any(k in u for k in ("PRODUCT", "DATA", "DELIVERY", "NCCF")):
+        issue_category = "PRODUCT_DATA"
+    else:
+        issue_category = "UNKNOWN"
+    return {
+        "satellites": sats, "scope": scope, "nature": nature,
+        "issue_category": issue_category,
+        "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+    }
 
 
 def parse_ospo_messages(html: str) -> list[dict[str, Any]]:
@@ -668,6 +696,235 @@ def risk_components(env: dict[str, Any], electron: dict[str, Any], proton: dict[
     }
 
 
+
+NCEI_DIAGNOSIS_LABELS = {
+    "ECEMP": "INTERNAL_CHARGING",
+    "ESD": "SURFACE_CHARGING_ESD",
+    "SEU": "SEE_SEU",
+    "MCP": "MISSION_CONTROL_SOFTWARE",
+    "RFI": "COMMUNICATIONS_RFI",
+    "UNK": "UNKNOWN",
+}
+
+def parse_ncei_fixed_width(txt: str) -> list[dict[str, Any]]:
+    """Parse Version-5 fixed-width spacecraft anomaly records (152 columns)."""
+    out: list[dict[str, Any]] = []
+    for raw in txt.splitlines():
+        line = raw.rstrip("\r\n")
+        if len(line) < 69 or not line[:1].strip().isdigit():
+            continue
+        line = line.ljust(152)
+        try:
+            spacecraft = line[9:19].strip()
+            date_s = line[19:27].strip()
+            time_s = line[27:31].strip()
+            if not spacecraft or not re.fullmatch(r"\d{8}", date_s):
+                continue
+            dt = datetime.strptime(date_s, "%Y%m%d").replace(tzinfo=timezone.utc)
+            if time_s and time_s != "9999" and re.fullmatch(r"\d{4}", time_s):
+                hh, mm = int(time_s[:2]), int(time_s[2:])
+                if hh < 24 and mm < 60:
+                    dt = dt.replace(hour=hh, minute=mm)
+            lat = None
+            if line[43:44].strip() in {"N", "S"} and line[44:46].strip().isdigit():
+                lat = int(line[44:46].strip()) * (1 if line[43:44] == "N" else -1)
+            lon = None
+            if line[48:49].strip() in {"E", "W"} and line[49:52].strip().isdigit():
+                lon = int(line[49:52].strip()) * (1 if line[48:49] == "E" else -1)
+            alt = fnum(line[54:59].strip())
+            anomaly_type = line[59:64].strip()
+            diagnosis = line[64:69].strip()
+            out.append({
+                "spacecraft": spacecraft,
+                "anomaly_time": iso(dt),
+                "time_known": time_s != "9999",
+                "uncertainty_minutes": fnum(line[31:34].strip()),
+                "duration_minutes": fnum(line[34:38].strip()),
+                "local_time_hhmm": line[38:42].strip() or None,
+                "orbit_type": line[42:43].strip() or None,
+                "latitude_deg": lat,
+                "longitude_deg": lon,
+                "altitude_km": alt,
+                "anomaly_type": anomaly_type or None,
+                "diagnosis": diagnosis or None,
+                "diagnosis_category": NCEI_DIAGNOSIS_LABELS.get(diagnosis, "UNKNOWN"),
+                "comment": line[69:148].strip() or None,
+                "sun_vehicle_earth_angle_deg": fnum(line[148:151].strip()),
+                "attitude_stabilization": line[151:152].strip() or None,
+                "source": NCEI_ANOM_RAW,
+            })
+        except Exception:
+            continue
+    out.sort(key=lambda x: x.get("anomaly_time") or "")
+    return out
+
+
+def nearest_value(series: list[tuple[datetime, float]], t: datetime, max_gap_hours: float = 4.0) -> Optional[float]:
+    if not series:
+        return None
+    best = min(series, key=lambda x: abs((x[0] - t).total_seconds()))
+    if abs((best[0] - t).total_seconds()) > max_gap_hours * 3600:
+        return None
+    return best[1]
+
+
+def summarize_event_windows(event: dict[str, Any], histories: dict[str, list[tuple[datetime,float]]]) -> dict[str, Any]:
+    t = parse_time(event.get("issued_at") or event.get("anomaly_time"))
+    if t is None:
+        return {"covered": False, "reason": "event timestamp unavailable"}
+    at = {
+        "kp": nearest_value(histories["kp"], t, 4),
+        "bz_nt": nearest_value(histories["bz"], t, 2),
+        "wind_kms": nearest_value(histories["wind"], t, 2),
+    }
+    windows = {}
+    for h in (6, 24, 72):
+        start = t - timedelta(hours=h)
+        w = window_values(histories["wind"], start, t)
+        k = window_values(histories["kp"], start, t)
+        b = window_values(histories["bz"], start, t)
+        windows[str(h)] = {
+            "max_wind_kms": max(w) if w else None,
+            "max_kp": max(k) if k else None,
+            "min_bz_nt": min(b) if b else None,
+            "n_wind": len(w), "n_kp": len(k), "n_bz": len(b),
+        }
+    return {
+        "covered": any(v is not None for v in at.values()) or any(
+            any(x is not None for x in (m["max_wind_kms"], m["max_kp"], m["min_bz_nt"]))
+            for m in windows.values()
+        ),
+        "at_event": at,
+        "windows": windows,
+        "interpretation": "Descriptive co-occurrence only; causal attribution is not automatic.",
+    }
+
+
+def parse_tle_sets(txt: str) -> list[dict[str, Any]]:
+    lines = [x.rstrip() for x in txt.splitlines() if x.strip()]
+    out = []
+    i = 0
+    while i < len(lines):
+        if i + 2 < len(lines) and not lines[i].startswith("1 ") and lines[i+1].startswith("1 ") and lines[i+2].startswith("2 "):
+            name, l1, l2 = lines[i].strip(), lines[i+1], lines[i+2]
+            i += 3
+        elif i + 1 < len(lines) and lines[i].startswith("1 ") and lines[i+1].startswith("2 "):
+            name, l1, l2 = f"NORAD {lines[i][2:7].strip()}", lines[i], lines[i+1]
+            i += 2
+        else:
+            i += 1
+            continue
+        try:
+            norad = int(l1[2:7].strip())
+        except Exception:
+            continue
+        out.append({"name": name, "norad": norad, "tle1": l1, "tle2": l2})
+    return out
+
+
+def gmst_rad(dt: datetime) -> float:
+    jd = 2440587.5 + dt.timestamp() / 86400.0
+    t = (jd - 2451545.0) / 36525.0
+    deg = 280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * t * t - (t ** 3) / 38710000.0
+    return math.radians(deg % 360.0)
+
+
+def ecef_to_geodetic(x: float, y: float, z: float) -> tuple[float, float, float]:
+    a = 6378.137
+    f = 1.0 / 298.257223563
+    e2 = f * (2 - f)
+    lon = math.atan2(y, x)
+    p = math.hypot(x, y)
+    lat = math.atan2(z, p * (1 - e2))
+    alt = 0.0
+    for _ in range(6):
+        sinp = math.sin(lat)
+        n = a / math.sqrt(1 - e2 * sinp * sinp)
+        alt = p / max(1e-9, math.cos(lat)) - n
+        lat = math.atan2(z, p * (1 - e2 * n / max(1e-6, n + alt)))
+    return math.degrees(lat), ((math.degrees(lon) + 180) % 360) - 180, alt
+
+
+def propagate_tles(tle_sets: list[dict[str, Any]], when: datetime, errors: list[str]) -> list[dict[str, Any]]:
+    try:
+        from sgp4.api import Satrec, jday
+    except Exception as e:
+        errors.append(f"sgp4 unavailable: {e}")
+        return []
+    jd, fr = jday(when.year, when.month, when.day, when.hour, when.minute, when.second + when.microsecond / 1e6)
+    th = gmst_rad(when)
+    ct, st = math.cos(th), math.sin(th)
+    out = []
+    for r in tle_sets:
+        try:
+            sat = Satrec.twoline2rv(r["tle1"], r["tle2"])
+            err, pos, _vel = sat.sgp4(jd, fr)
+            if err != 0:
+                continue
+            xi, yi, zi = pos
+            # TEME -> approximate Earth-fixed rotation, sufficient for the dashboard placement.
+            xe = ct * xi + st * yi
+            ye = -st * xi + ct * yi
+            ze = zi
+            lat, lon, alt = ecef_to_geodetic(xe, ye, ze)
+            row = dict(r)
+            row.update({"latitude_deg": lat, "longitude_deg": lon, "altitude_km": alt, "position_time": iso(when)})
+            out.append(row)
+        except Exception:
+            continue
+    return out
+
+
+def issue_color(category: str) -> str:
+    return {
+        "SURFACE_CHARGING_ESD": "#ff8c42",
+        "INTERNAL_CHARGING": "#9b5de5",
+        "SEE_SEU": "#ff4fa3",
+        "POWER_EPS": "#ffd34e",
+        "ATTITUDE_GNC": "#36d7ff",
+        "COMMUNICATIONS": "#4c8cff",
+        "COMMUNICATIONS_RFI": "#4c8cff",
+        "INSTRUMENT": "#ffb14e",
+        "PRODUCT_DATA": "#e6a84c",
+        "MISSION_CONTROL_SOFTWARE": "#a4b0bd",
+        "UNKNOWN": "#ff5f63",
+    }.get(str(category or "UNKNOWN"), "#ff5f63")
+
+
+def write_environment_snapshot(result: dict[str, Any]) -> None:
+    ENV_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+    now = parse_time(result.get("generated_at")) or now_utc()
+    month = now.strftime("%Y-%m")
+    p = ENV_HISTORY_DIR / f"{month}.json"
+    old = load_json_candidates([p]) or {"month": month, "records": []}
+    rows = old.get("records", []) if isinstance(old, dict) else []
+    env = result.get("goes_space_environment_now", {})
+    histories = load_local_histories()
+    snap = {
+        "time": iso(now),
+        "kp_current": nearest_value(histories["kp"], now, 6),
+        "bz_current_nt": nearest_value(histories["bz"], now, 2),
+        "wind_current_kms": nearest_value(histories["wind"], now, 2),
+        "electron_gt2mev": env.get("electron_gt2mev", {}).get("flux"),
+        "proton_gt10mev": env.get("proton_gt10mev", {}).get("flux"),
+        "forecast_environment_72h": result.get("forecast_environment_72h", {}),
+    }
+    by_hour = {str(x.get("time", ""))[:13]: x for x in rows if isinstance(x, dict)}
+    by_hour[snap["time"][:13]] = snap
+    vals = sorted(by_hour.values(), key=lambda x: x.get("time") or "")
+    p.write_text(json.dumps({"month": month, "updated_at": iso(now), "records": vals}, ensure_ascii=False, indent=2), encoding="utf-8")
+    # Rolling 12 calendar months.
+    keep = set()
+    y, m = now.year, now.month
+    for i in range(12):
+        yy, mm = y, m - i
+        while mm <= 0:
+            yy -= 1; mm += 12
+        keep.add(f"{yy:04d}-{mm:02d}")
+    for q in ENV_HISTORY_DIR.glob("????-??.json"):
+        if q.stem not in keep:
+            q.unlink(missing_ok=True)
+
 def public_health_label(s: dict[str, Any]) -> str:
     c = str(s.get("status_color") or "").lower()
     if c == "green":
@@ -686,6 +943,7 @@ def public_health_label(s: dict[str, Any]) -> str:
 def build() -> dict[str, Any]:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+    ENV_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
     errors: list[str] = []
 
     status_html = safe_fetch_text(OSPO_STATUS, errors) or ""
@@ -697,6 +955,8 @@ def build() -> dict[str, Any]:
     year_html = safe_fetch_text(year_url, errors) or ""
 
     ncei_txt = safe_fetch_text(NCEI_ANOM_SUMMARY, errors) or ""
+    ncei_raw_txt = safe_fetch_text(NCEI_ANOM_RAW, errors) or ""
+    tle_txt = safe_fetch_text(CELESTRAK_GEO_TLE, errors) or ""
     electron_json = safe_fetch_json(SWPC_GOES_PRIMARY_E, errors)
     proton_json = safe_fetch_json(SWPC_GOES_PRIMARY_P, errors)
     source_json = safe_fetch_json(SWPC_GOES_SOURCES, errors)
@@ -706,6 +966,8 @@ def build() -> dict[str, Any]:
     status = parse_goes_status(status_html) if status_html else {"satellites": [], "note": "status fetch failed"}
     events = parse_ospo_messages(msg_html + "\n" + year_html) if (msg_html or year_html) else []
     ncei_summary = parse_ncei_summary(ncei_txt) if ncei_txt else []
+    ncei_events = parse_ncei_fixed_width(ncei_raw_txt) if ncei_raw_txt else []
+    tle_sets = parse_tle_sets(tle_txt) if tle_txt else []
 
     electron = choose_integral_flux(electron_json, "electron", ">2 MeV")
     proton = choose_integral_flux(proton_json, "proton", ">10 MeV")
@@ -720,6 +982,7 @@ def build() -> dict[str, Any]:
     for ev in events[:250]:
         row = dict(ev)
         row["space_weather_72h_before"] = summarize_event_environment(ev, histories)
+        row["space_weather_windows"] = summarize_event_windows(ev, histories)
         corr.append(row)
 
     covered = [x for x in corr if x["space_weather_72h_before"].get("covered")]
@@ -787,8 +1050,78 @@ def build() -> dict[str, Any]:
                 "perigee_km": r.get("PERIGEE"),
             })
 
+
+    # TLE/SGP4-based approximate current GEO positions for the 3-D scene.
+    satcat_by_norad = {}
+    if isinstance(geo_catalog, list):
+        for r in geo_catalog:
+            if not isinstance(r, dict):
+                continue
+            try:
+                satcat_by_norad[int(r.get("NORAD_CAT_ID"))] = r
+            except Exception:
+                pass
+    propagated = propagate_tles(tle_sets, now_utc(), errors)
+    status_by_name = {str(x.get("name", "")).upper(): x for x in satellites}
+    recent_cutoff = now_utc() - timedelta(hours=72)
+    recent_events_by_sat: dict[str, list[dict[str, Any]]] = {}
+    for ev in corr:
+        et = parse_time(ev.get("issued_at"))
+        if not et or et < recent_cutoff or ev.get("nature") == "planned/administrative":
+            continue
+        for name in ev.get("satellites", []):
+            recent_events_by_sat.setdefault(str(name).upper(), []).append(ev)
+    geo_satellites_3d = []
+    for r in propagated:
+        meta = satcat_by_norad.get(int(r["norad"]), {})
+        name = str(meta.get("OBJECT_NAME") or r.get("name") or f"NORAD {r['norad']}")
+        up = name.upper().replace(" ", "-")
+        public = None
+        for k, v in status_by_name.items():
+            if k.replace(" ", "-") in up or up in k.replace(" ", "-"):
+                public = v; break
+        alerts = []
+        for k, vals in recent_events_by_sat.items():
+            if k in up:
+                alerts.extend(vals)
+        latest_alert = sorted(alerts, key=lambda x: x.get("issued_at") or "", reverse=True)[0] if alerts else None
+        cat = latest_alert.get("issue_category") if latest_alert else None
+        alert_age_hours = None
+        if latest_alert:
+            aet = parse_time(latest_alert.get("issued_at"))
+            if aet:
+                alert_age_hours = round(max(0.0, (now_utc() - aet).total_seconds() / 3600.0), 2)
+        geo_satellites_3d.append({
+            "name": name,
+            "norad": r["norad"],
+            "latitude_deg": round(r["latitude_deg"], 4),
+            "longitude_deg": round(r["longitude_deg"], 4),
+            "altitude_km": round(r["altitude_km"], 1),
+            "position_time": r["position_time"],
+            "ops_status_code": meta.get("OPS_STATUS_CODE"),
+            "owner": meta.get("OWNER"),
+            "launch_date": meta.get("LAUNCH_DATE"),
+            "public_health_label": public.get("public_health_label") if public else None,
+            "public_status_color": public.get("status_color") if public else None,
+            "recent_public_alert": latest_alert,
+            "recent_public_alert_age_hours": alert_age_hours,
+            "issue_category": cat or "NONE",
+            "issue_color": issue_color(cat or "UNKNOWN") if latest_alert else None,
+            "position_basis": "CelesTrak TLE + SGP4; Earth-fixed conversion is approximate for visualization.",
+        })
+    # Keep active-payload matches first, but preserve GOES/alerts even if SATCAT metadata is incomplete.
+    geo_satellites_3d.sort(key=lambda x: (0 if (x.get("recent_public_alert") or "GOES" in x["name"].upper()) else 1, x["name"]))
+
+    if ncei_events:
+        NCEI_CACHE.write_text(json.dumps({
+            "schema_version": "NCEI-SC-ANOMALY-V5-normalized-v0.2",
+            "updated_at": iso(now_utc()),
+            "source": NCEI_ANOM_RAW,
+            "records": ncei_events,
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
+
     result = {
-        "schema_version": "SWIFT-GEO-SAT-RISK-v0.1",
+        "schema_version": "SWIFT-GEO-SAT-RISK-v0.2",
         "generated_at": iso(now_utc()),
         "purpose": (
             "Research dashboard for public satellite anomaly status, GEO space-environment exposure, "
@@ -806,11 +1139,13 @@ def build() -> dict[str, Any]:
             "ospo_messages": OSPO_MESSAGES,
             "ospo_year_archive": year_url,
             "ncei_anomaly_summary": NCEI_ANOM_SUMMARY,
+            "ncei_anomaly_raw": NCEI_ANOM_RAW,
             "swpc_goes_electrons": SWPC_GOES_PRIMARY_E,
             "swpc_goes_protons": SWPC_GOES_PRIMARY_P,
             "swpc_goes_instrument_sources": SWPC_GOES_SOURCES,
             "swpc_goes_longitudes": SWPC_GOES_LONGITUDES,
             "celestrak_geo": CELESTRAK_GEO,
+            "celestrak_geo_tle": CELESTRAK_GEO_TLE,
         },
         "fetch_errors": errors,
         "goes_public_status": status,
@@ -828,6 +1163,19 @@ def build() -> dict[str, Any]:
         "association_summary": association_summary,
         "ncei_historic_anomaly_summary_top_geo_like": historic_geo_like,
         "celestrak_active_geo_sample": geo_rows,
+        "geo_satellites_3d": geo_satellites_3d,
+        "ncei_legacy_anomaly_records": len(ncei_events),
+        "visual_cause_legend": {
+            "SURFACE_CHARGING_ESD": "#ff8c42",
+            "INTERNAL_CHARGING": "#9b5de5",
+            "SEE_SEU": "#ff4fa3",
+            "POWER_EPS": "#ffd34e",
+            "ATTITUDE_GNC": "#36d7ff",
+            "COMMUNICATIONS": "#4c8cff",
+            "INSTRUMENT": "#ffb14e",
+            "PRODUCT_DATA": "#e6a84c",
+            "UNKNOWN": "#ff5f63"
+        },
     }
 
     # Merge event ledger so events remain available even after OSPO rotates the page.
@@ -846,7 +1194,7 @@ def build() -> dict[str, Any]:
         reverse=True
     )[:2500]
     ledger = {
-        "schema_version": "SWIFT-GEO-SAT-EVENT-LEDGER-v0.1",
+        "schema_version": "SWIFT-GEO-SAT-EVENT-LEDGER-v0.2",
         "updated_at": result["generated_at"],
         "events": ledger_events,
         "note": "Public OSPO anomaly/outage reports; not automatically space-weather-caused.",
@@ -869,6 +1217,8 @@ def build() -> dict[str, Any]:
                 p.unlink()
         except Exception:
             pass
+
+    write_environment_snapshot(result)
 
     return result
 
