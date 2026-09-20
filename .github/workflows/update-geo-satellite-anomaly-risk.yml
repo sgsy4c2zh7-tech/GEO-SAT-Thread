@@ -15,7 +15,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,22 +30,29 @@ jobs:
       - name: Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests
+          pip install requests sgp4 xlsxwriter
 
       - name: Build GEO satellite anomaly / risk feed
         run: python scripts/build_geo_satellite_anomaly_risk.py
 
-      - name: Validate JSON
+      - name: Build rolling 12-month Excel archive
+        run: python scripts/build_satellite_anomaly_monthly_excel.py
+
+      - name: Validate outputs
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           p=Path("docs/data/satellite-risk/latest.json")
           d=json.loads(p.read_text())
-          assert d["schema_version"].startswith("SWIFT-GEO-SAT-RISK")
-          assert "satellites" in d
+          assert d["schema_version"].startswith("SWIFT-GEO-SAT-RISK-v0.2")
+          assert "geo_satellites_3d" in d
           assert "scientific_boundary" in d
-          print("OK", d["generated_at"], len(d["satellites"]))
+          i=Path("docs/data/satellite-risk/monthly-index.json")
+          m=json.loads(i.read_text())
+          assert m["retention_months"] == 12
+          assert len(m["reports"]) == 12
+          print("OK", d["generated_at"], len(d["geo_satellites_3d"]), len(m["reports"]))
           PY
 
       - name: Commit and push
@@ -59,7 +66,7 @@ jobs:
             echo "No satellite-risk changes."
             exit 0
           fi
-          git commit -m "Update GEO satellite anomaly risk feed"
+          git commit -m "Update GEO satellite anomaly risk and monthly Excel"
           for i in 1 2 3; do
             git pull --rebase origin main || true
             if git push origin HEAD:main; then
