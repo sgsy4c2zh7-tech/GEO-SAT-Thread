@@ -33,6 +33,8 @@ jobs:
           pip install requests sgp4 xlsxwriter
 
       - name: Build GEO satellite anomaly / risk feed
+        # Runs hourly for anomaly/environment data. The Python builder refreshes
+        # CelesTrak TLE only once per ~23 h and keeps latest only.
         run: python scripts/build_geo_satellite_anomaly_risk.py
 
       - name: Build rolling 12-month Excel archive
@@ -45,14 +47,15 @@ jobs:
           from pathlib import Path
           p=Path("docs/data/satellite-risk/latest.json")
           d=json.loads(p.read_text())
-          assert d["schema_version"].startswith("SWIFT-GEO-SAT-RISK-v0.2")
+          assert d["schema_version"].startswith("SWIFT-GEO-SAT-RISK-v0.4")
           assert "geo_satellites_3d" in d
           assert "scientific_boundary" in d
+          assert "tle_cache" in d
           i=Path("docs/data/satellite-risk/monthly-index.json")
           m=json.loads(i.read_text())
           assert m["retention_months"] == 12
           assert len(m["reports"]) == 12
-          print("OK", d["generated_at"], len(d["geo_satellites_3d"]), len(m["reports"]))
+          print("OK", d["generated_at"], len(d["geo_satellites_3d"]), len(m["reports"]), d["tle_cache"])
           PY
 
       - name: Commit and push
