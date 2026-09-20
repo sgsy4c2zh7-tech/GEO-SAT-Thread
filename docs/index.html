@@ -2022,7 +2022,59 @@ function makeGeoSatLabel(s){
   ctx.fillStyle="#"+new THREE.Color(statusColor).getHexString();ctx.fillRect(18,91,c.width-36,10);
   const tx=new THREE.CanvasTexture(c);tx.minFilter=THREE.LinearFilter;
   const mat=new THREE.SpriteMaterial({map:tx,transparent:true,depthWrite:false});
-  const sp=new THREE.Sprite(mat);sp.scale.set(9.2,2.36,1);sp.position.set(0,1.55,0);return sp;
+  const sp=new THREE.Sprite(mat);sp.scale.set(9.2,2.36,1);sp.position.set(0,2.5,0);return sp;
+}
+function buildGeoSatelliteModel(s,baseColor){
+  const group=new THREE.Group();
+  const color=new THREE.Color(baseColor);
+  const dim=color.clone().lerp(new THREE.Color(0x102030),0.35);
+  const panelColor=color.clone().lerp(new THREE.Color(0x7fc7ff),0.35);
+  const trussMat=new THREE.MeshPhongMaterial({color:0xd8e5f2,emissive:color.clone().multiplyScalar(0.12),shininess:85});
+  const busMat=new THREE.MeshPhongMaterial({color:dim,emissive:color.clone().multiplyScalar(0.45),shininess:75});
+  const panelMat=new THREE.MeshPhongMaterial({color:panelColor,emissive:panelColor.clone().multiplyScalar(0.30),transparent:true,opacity:0.96,shininess:95});
+  const dishMat=new THREE.MeshPhongMaterial({color:0xeaf4ff,emissive:color.clone().multiplyScalar(0.16),shininess:120});
+
+  const body=new THREE.Mesh(new THREE.BoxGeometry(0.54,0.54,0.78),busMat);
+  body.userData.role='geoSatCore';
+  body.userData.geoSatData=s;
+  group.add(body);
+
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.72,10),trussMat);
+  mast.rotation.z=Math.PI/2;
+  group.add(mast);
+
+  const panelGeo=new THREE.BoxGeometry(0.82,0.04,0.34);
+  const leftPanel=new THREE.Mesh(panelGeo,panelMat);
+  leftPanel.position.set(-0.74,0,0);
+  group.add(leftPanel);
+  const rightPanel=new THREE.Mesh(panelGeo,panelMat);
+  rightPanel.position.set(0.74,0,0);
+  group.add(rightPanel);
+
+  const panelFrameGeo=new THREE.BoxGeometry(0.84,0.012,0.36);
+  const leftFrame=new THREE.Mesh(panelFrameGeo,trussMat);
+  leftFrame.position.copy(leftPanel.position);
+  group.add(leftFrame);
+  const rightFrame=new THREE.Mesh(panelFrameGeo,trussMat);
+  rightFrame.position.copy(rightPanel.position);
+  group.add(rightFrame);
+
+  const dish=new THREE.Mesh(new THREE.SphereGeometry(0.20,16,12,0,Math.PI*2,0,Math.PI/2),dishMat);
+  dish.rotation.x=Math.PI;
+  dish.position.set(0,0.18,0.42);
+  group.add(dish);
+
+  const antenna=new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,0.26,8),trussMat);
+  antenna.position.set(0,0.18,0.52);
+  antenna.rotation.x=Math.PI/2;
+  group.add(antenna);
+
+  const glow=new THREE.Mesh(new THREE.SphereGeometry(0.43,16,12),new THREE.MeshBasicMaterial({color:baseColor,transparent:true,opacity:0.11,blending:THREE.AdditiveBlending,depthWrite:false}));
+  group.add(glow);
+
+  group.scale.setScalar(0.72);
+  group.userData.coreMesh=body;
+  return group;
 }
 function clearGeoSatellites3D(){
   const t=STATE.three;if(!t?.geoSatGroup)return;
@@ -2068,38 +2120,59 @@ function renderGeoSatellites3D(){
   createGeoOrbitGuide(t.geoSatGroup);
   let rows=Array.isArray(SAT_RISK?.geo_satellites_3d)?SAT_RISK.geo_satellites_3d:[];
   let fallbackUsed=false;
-  if(!rows.length){rows=fallbackGeoSatRows();fallbackUsed=rows.length>0;}
-  // Only objects for which this dashboard can actually judge public operational/anomaly state.
-  // At present the public anomaly pipeline is GOES-focused; generic GEO TLE/SATCAT status is not treated as anomaly evidence.
   const monitoredNames=new Set((SAT_RISK?.satellites||[]).map(x=>String(x?.name||"").trim().toUpperCase()).filter(Boolean));
-  rows=rows.filter(s=>{
-    const name=String(s?.name||"").trim().toUpperCase();
-    return name.startsWith("GOES-") && monitoredNames.has(name);
-  });
-  // Recent public issues first, then GOES name order.
+
+  rows=rows.filter(s=>String(s?.name||"").toUpperCase().includes("GOES"));
+  if(!rows.length){
+    rows=fallbackGeoSatRows();
+    fallbackUsed=rows.length>0;
+  }
+
+  // If no exact monitored-name match is available, still show GOES entries from the visible orbit feed.
+  if(monitoredNames.size){
+    const matched=rows.filter(s=>{
+      const name=String(s?.name||"").trim().toUpperCase();
+      if(monitoredNames.has(name))return true;
+      const compact=name.replace(/\s+/g,'').replace(/_/g,'-');
+      for(const m of monitoredNames){
+        const mc=String(m).replace(/\s+/g,'').replace(/_/g,'-');
+        if(compact===mc||compact.includes(mc)||mc.includes(compact))return true;
+      }
+      return false;
+    });
+    if(matched.length)rows=matched;
+  }
+
   const sorted=[...rows].sort((a,b)=>{
     const pa=a.recent_public_alert?0:1,pb=b.recent_public_alert?0:1;
     return pa-pb||String(a.name||"").localeCompare(String(b.name||""));
   });
+
   let alerts=0,goes=0;
   for(const s of sorted){
-    const p=geoSatLocalPosition(s),health=geoHealthHex(s),isAlert=!!s.recent_public_alert,isGOES=true;
-    if(isAlert)alerts++;goes++;
-    const g=new THREE.Group();g.position.copy(p);g.userData.geoSat=s;
-    const rad=isAlert?.48:.38;
-    // Core color always represents current operational/public-health status.
-    // Anomaly/issue category remains a separate pulsing halo.
-    const coreColor=health;
-    const core=new THREE.Mesh(new THREE.SphereGeometry(rad,14,10),new THREE.MeshBasicMaterial({color:coreColor,transparent:true,opacity:isAlert?1:.92}));
-    core.userData.geoSatData=s;core.userData.role="geoSatCore";g.add(core);t.geoSatPickables.push(core);
+    const p=geoSatLocalPosition(s),health=geoHealthHex(s),isAlert=!!s.recent_public_alert;
+    if(isAlert)alerts++;
+    goes++;
+    const g=new THREE.Group();
+    g.position.copy(p);
+    g.userData.geoSat=s;
+
+    const satModel=buildGeoSatelliteModel(s,health);
+    const core=satModel.userData.coreMesh;
+    if(core){
+      core.userData.geoSatData=s;
+      t.geoSatPickables.push(core);
+    }
+    g.add(satModel);
+
     if(isAlert){
       const haloColor=geoIssueHex(s);
-      const halo=new THREE.Mesh(new THREE.SphereGeometry(rad*2.05,14,10),new THREE.MeshBasicMaterial({color:haloColor,transparent:true,opacity:.28,wireframe:true,blending:THREE.AdditiveBlending,depthWrite:false}));
-      halo.userData.role="geoSatAlertHalo";halo.userData.phase=Math.random()*Math.PI*2;g.add(halo);
-      const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),p.clone().multiplyScalar(-1)]),new THREE.LineBasicMaterial({color:haloColor,transparent:true,opacity:.10}));
-      // line geometry is local to marker; use Earth direction only as a subtle alert stem
-      line.visible=false;g.add(line);
+      const halo=new THREE.Mesh(new THREE.SphereGeometry(0.95,18,14),new THREE.MeshBasicMaterial({color:haloColor,transparent:true,opacity:.24,wireframe:true,blending:THREE.AdditiveBlending,depthWrite:false}));
+      halo.userData.role="geoSatAlertHalo";
+      halo.userData.phase=Math.random()*Math.PI*2;
+      g.add(halo);
     }
+
     g.add(makeGeoSatLabel(s));
     t.geoSatGroup.add(g);
   }
@@ -2108,7 +2181,7 @@ function renderGeoSatellites3D(){
   if(leg){
     const tc=SAT_RISK?.tle_cache||{},mode=fallbackUsed?"SWPC GOES longitude fallback":(tc.mode||"TLE/SGP4");
     const when=tc.fetched_at?` • TLE ${esc(String(tc.fetched_at).slice(0,16))}Z`:"";
-    leg.innerHTML=`Monitored GOES <b>${goes}</b> • recent public issue ${alerts}<br><span style="color:#9db7cf">Only satellites covered by the GOES public-health/anomaly feed are shown. Position: ${esc(mode)}${when}</span>`;
+    leg.innerHTML=`Displayed GOES <b>${goes}</b> • recent public issue ${alerts}<br><span style="color:#9db7cf">Satellite body + label bar = current operational/public status. Halo = recent public issue. Position: ${esc(mode)}${when}</span>`;
   }
 }
 function toggleGeoSatellites(){
