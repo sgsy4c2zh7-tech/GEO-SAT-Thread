@@ -945,6 +945,8 @@ def main() -> None:
         if t:
             charging_obs.append({"_t": t, "time": iso_z(t), "surface_kv": num(r.get("surface_kv")), "differential_kv": num(r.get("differential_kv")), "internal_field_mvm": num(r.get("internal_field_mvm")), "electron_flux_gt2mev": num(r.get("electron_flux_gt2mev")), "source": r.get("source")})
     charging_obs.sort(key=lambda x: x["_t"])
+    # SWIFT-CHARGE independent observations are retained for 30 days only.
+    charging_obs = [r for r in charging_obs if now - timedelta(days=30) <= r["_t"] <= now + timedelta(hours=2)]
     surface_skill = _charging_skill_map(charging_verification, "surface")
     internal_skill = _charging_skill_map(charging_verification, "internal")
     surface_vals = [r["surface_kv"] for r in charging_fc if r.get("surface_kv") is not None]
@@ -1377,34 +1379,87 @@ def main() -> None:
     add_line_chart(wb,ws,"Bz minimum observed vs 24/48/72 h lead forecasts","Bz_Fcst_History",0,len(bz_chart_rows),13,[(14,"Observed Bz min"),(15,"24h forecast"),(16,"48h forecast"),(17,"72h forecast")],"T2","nT")
 
     # SWIFT-CHARGE forecast and verification
+    # Display window mirrors the browser UI: validated observations / archived forecast
+    # for the previous 72 h and current forecast for the next 72 h.
+    charge_x0 = now - timedelta(hours=72)
+    charge_x1 = now + timedelta(hours=72)
+
+    def _lead_pair_map(family: str, lead: int = 24):
+        block = (((charging_verification.get("lead_pairs") or {}).get(family) or {}).get(f"{lead}h") or [])
+        out = {}
+        for r in block:
+            tt = parse_time(r.get("target_time"))
+            if tt and charge_x0 <= tt <= now + timedelta(hours=1):
+                out[iso_z(tt)] = r
+        return out
+
+    surface_pair24 = _lead_pair_map("surface", 24)
+    internal_pair24 = _lead_pair_map("internal", 24)
+
     ws = wb.add_worksheet("Surface_Charging")
+    surface_fc_by_time = {r["time"]: r for r in charging_fc if charge_x0 <= r["_t"] <= charge_x1}
+    surface_obs_by_time = {r["time"]: r for r in charging_obs if charge_x0 <= r["_t"] <= now + timedelta(hours=1) and r.get("surface_kv") is not None}
+    surface_times = sorted(set(surface_fc_by_time) | set(surface_obs_by_time) | set(surface_pair24))
     surface_rows = []
-    obs_surface_by_time = {r["time"]: r for r in charging_obs if r.get("surface_kv") is not None}
-    for r in charging_fc:
+    for ts in surface_times:
+        tt = parse_time(ts)
+        if not tt or not (charge_x0 <= tt <= charge_x1):
+            continue
+        fc = surface_fc_by_time.get(ts) or {}
+        ob = surface_obs_by_time.get(ts) or {}
+        p24 = surface_pair24.get(ts) or {}
         surface_rows.append({
-            "UTC": r["_t"].replace(tzinfo=None), "Lead_h": r.get("lead_hours"),
-            "Surface_kV": r.get("surface_kv"), "Differential_kV": r.get("differential_kv"),
-            "Observed_Surface_kV": (obs_surface_by_time.get(r["time"]) or {}).get("surface_kv"),
-            "Kp": r.get("kp"), "BzMin_nT": r.get("bz_min_nt"), "Wind_km_s": r.get("wind_kms"), "Source": r.get("source")
+            "UTC": tt.replace(tzinfo=None),
+            "Hours_From_Now": round((tt-now).total_seconds()/3600.0, 2),
+            "Observed_Surface_kV": ob.get("surface_kv"),
+            "Forecast_24h_Ago_kV": p24.get("predicted"),
+            "Current_Forecast_kV": fc.get("surface_kv") if tt >= now - timedelta(hours=2) else None,
+            "Differential_kV": fc.get("differential_kv"),
+            "Kp": fc.get("kp"), "BzMin_nT": fc.get("bz_min_nt"), "Wind_km_s": fc.get("wind_kms"),
+            "Source": ob.get("source") or fc.get("source"),
         })
-    write_table(ws,0,0,["UTC","Lead_h","Surface_kV","Differential_kV","Observed_Surface_kV","Kp","BzMin_nT","Wind_km_s","Source"],surface_rows,fmt)
-    ws.set_column("A:A",19);ws.set_column("B:H",16);ws.set_column("I:I",48)
-    add_line_chart(wb,ws,"SWIFT-CHARGE surface potential — next 72 h","Surface_Charging",0,len(surface_rows),0,[(2,"Surface kV"),(3,"Differential kV"),(4,"Observed surface kV")],"K2","kV")
+    write_table(ws,0,0,["UTC","Hours_From_Now","Observed_Surface_kV","Forecast_24h_Ago_kV","Current_Forecast_kV","Differential_kV","Kp","BzMin_nT","Wind_km_s","Source"],surface_rows,fmt)
+    ws.set_column("A:A",19);ws.set_column("B:I",18);ws.set_column("J:J",48)
+    add_line_chart(wb,ws,"SWIFT-CHARGE surface potential — −72 h observed / archived → +72 h forecast","Surface_Charging",0,len(surface_rows),0,[(2,"Observed surface kV"),(3,"24h-issued forecast"),(4,"Current forecast")],"L2","kV")
 
     ws = wb.add_worksheet("Internal_Charging")
+    internal_fc_by_time = {r["time"]: r for r in charging_fc if charge_x0 <= r["_t"] <= charge_x1}
+    internal_obs_by_time = {r["time"]: r for r in charging_obs if charge_x0 <= r["_t"] <= now + timedelta(hours=1) and r.get("internal_field_mvm") is not None}
+    internal_times = sorted(set(internal_fc_by_time) | set(internal_obs_by_time) | set(internal_pair24))
     internal_rows = []
-    obs_internal_by_time = {r["time"]: r for r in charging_obs if r.get("internal_field_mvm") is not None}
-    for r in charging_fc:
+    for ts in internal_times:
+        tt = parse_time(ts)
+        if not tt or not (charge_x0 <= tt <= charge_x1):
+            continue
+        fc = internal_fc_by_time.get(ts) or {}
+        ob = internal_obs_by_time.get(ts) or {}
+        p24 = internal_pair24.get(ts) or {}
         internal_rows.append({
-            "UTC": r["_t"].replace(tzinfo=None), "Lead_h": r.get("lead_hours"),
-            "Internal_Field_MV_m": r.get("internal_field_mvm"),
-            "Observed_Internal_MV_m": (obs_internal_by_time.get(r["time"]) or {}).get("internal_field_mvm"),
-            "Electron_gt2MeV": r.get("electron_flux_gt2mev"), "Electron_Fluence24h_Proxy": r.get("electron_fluence_24h_proxy"),
-            "Kp": r.get("kp"), "BzMin_nT": r.get("bz_min_nt"), "Wind_km_s": r.get("wind_kms"), "Source": r.get("source")
+            "UTC": tt.replace(tzinfo=None),
+            "Hours_From_Now": round((tt-now).total_seconds()/3600.0, 2),
+            "Observed_Internal_MV_m": ob.get("internal_field_mvm"),
+            "Forecast_24h_Ago_MV_m": p24.get("predicted"),
+            "Current_Forecast_MV_m": fc.get("internal_field_mvm") if tt >= now - timedelta(hours=2) else None,
+            "Electron_gt2MeV": fc.get("electron_flux_gt2mev") or ob.get("electron_flux_gt2mev"),
+            "Electron_Fluence24h_Proxy": fc.get("electron_fluence_24h_proxy"),
+            "Kp": fc.get("kp"), "BzMin_nT": fc.get("bz_min_nt"), "Wind_km_s": fc.get("wind_kms"),
+            "Source": ob.get("source") or fc.get("source"),
         })
-    write_table(ws,0,0,["UTC","Lead_h","Internal_Field_MV_m","Observed_Internal_MV_m","Electron_gt2MeV","Electron_Fluence24h_Proxy","Kp","BzMin_nT","Wind_km_s","Source"],internal_rows,fmt)
-    ws.set_column("A:A",19);ws.set_column("B:I",19);ws.set_column("J:J",48)
-    add_line_chart(wb,ws,"SWIFT-CHARGE equivalent internal field — next 72 h","Internal_Charging",0,len(internal_rows),0,[(2,"Forecast MV/m"),(3,"Observed MV/m")],"L2","MV/m")
+    write_table(ws,0,0,["UTC","Hours_From_Now","Observed_Internal_MV_m","Forecast_24h_Ago_MV_m","Current_Forecast_MV_m","Electron_gt2MeV","Electron_Fluence24h_Proxy","Kp","BzMin_nT","Wind_km_s","Source"],internal_rows,fmt)
+    ws.set_column("A:A",19);ws.set_column("B:J",19);ws.set_column("K:K",48)
+    add_line_chart(wb,ws,"SWIFT-CHARGE internal field — −72 h observed / archived → +72 h forecast","Internal_Charging",0,len(internal_rows),0,[(2,"Observed MV/m"),(3,"24h-issued forecast"),(4,"Current forecast")],"M2","MV/m")
+
+    ws = wb.add_worksheet("Charging_Observed_30d")
+    observed_30d_rows = [{
+        "UTC": r["_t"].replace(tzinfo=None),
+        "Surface_kV": r.get("surface_kv"),
+        "Differential_kV": r.get("differential_kv"),
+        "Internal_Field_MV_m": r.get("internal_field_mvm"),
+        "Electron_gt2MeV": r.get("electron_flux_gt2mev"),
+        "Source": r.get("source"),
+    } for r in charging_obs]
+    write_table(ws,0,0,["UTC","Surface_kV","Differential_kV","Internal_Field_MV_m","Electron_gt2MeV","Source"],observed_30d_rows,fmt)
+    ws.set_column("A:A",19);ws.set_column("B:E",20);ws.set_column("F:F",52)
 
     ws = wb.add_worksheet("Charging_Lead_Skill")
     charging_skill_rows=[]
@@ -1486,6 +1541,7 @@ def main() -> None:
         {"Item":"Surface charging forecast","Definition":"SWIFT-CHARGE reference GEO spacecraft potential [kV] from Kp, southward Bz and solar-wind enhancement. Coefficients can be ridge-updated only when validated charging targets exist. It is not direct GOES bus-potential telemetry."},
         {"Item":"Internal charging forecast","Definition":"Equivalent reference-dielectric internal field [MV/m] from >2 MeV electron environment proxy, 24 h fluence and geomagnetic drivers. It is not a measured field inside GOES hardware."},
         {"Item":"Charging verification","Definition":"24/48/72 h surface primary hit = ±1 kV (secondary ±2 kV); internal primary hit = ±0.1 MV/m (secondary ±0.2 MV/m). Only independent observed/validated rows in docs/data/swift-charging/observed.json count as truth."},
+        {"Item":"Charging observation retention","Definition":"Independent charging observation/validation targets are retained for the latest 30 days. UI and workbook show −72 h observed context against +72 h current forecasts."},
         {"Item":"CME arrival","Definition":"NOAA speed/density shock proxy near predicted arrival. Keep this distinct from a manually adjudicated ICME boundary in publications."},
         {"Item":"Uncertainty","Definition":"Empirical p10/p50/p90 forecast-minus-observation residuals from previous 30 days, split by lead day."},
         {"Item":"DBM gamma","Definition":str(((validation.get("models") or {}).get("cme_arrival") or {}).get("dbm_gamma_fit"))},
@@ -1532,7 +1588,7 @@ def main() -> None:
         "primary_wind_accuracy": {"definition": "|predicted - observed| <= 50 km/s", "window": "last_24h", **current_acc},
         "retention_months": REPORT_RETENTION_MONTHS,
         "validation_feed_url": "./data/validation/ui_validation_latest.json",
-        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Wind_Fcst_History", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Coronal_Holes", "Research_Metrics", "Wind_Verification", "ENLIL_Verification", "Kp_Verification", "Bz_Verification", "Model_Generations", "Auto_Calibration", "Forecast_Skill_History", "Kp_Lead_Skill", "Kp_Range_Skill", "Kp_Fcst_History", "Bz_Lead_Skill", "Bz_Fcst_History", "Surface_Charging", "Internal_Charging", "Charging_Lead_Skill", "Charging_Fcst_History", "Charging_Model", "CME_Verification", "Uncertainty", "Kp_Observed", "ENLIL_Earth", "Methods", "Sources"],
+        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Wind_Fcst_History", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Coronal_Holes", "Research_Metrics", "Wind_Verification", "ENLIL_Verification", "Kp_Verification", "Bz_Verification", "Model_Generations", "Auto_Calibration", "Forecast_Skill_History", "Kp_Lead_Skill", "Kp_Range_Skill", "Kp_Fcst_History", "Bz_Lead_Skill", "Bz_Fcst_History", "Surface_Charging", "Internal_Charging", "Charging_Observed_30d", "Charging_Lead_Skill", "Charging_Fcst_History", "Charging_Model", "CME_Verification", "Uncertainty", "Kp_Observed", "ENLIL_Earth", "Methods", "Sources"],
     }
     (OUT_DOCS / "index.json").write_text(json.dumps(index_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote {final_path}")

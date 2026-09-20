@@ -14,6 +14,7 @@ Outputs:
   docs/data/swift-charging/model.json
   docs/data/swift-charging/forecast-archive.json
   docs/data/swift-charging/verification.json
+  docs/data/swift-charging/observed.json  (pruned to latest 30 days)
 
 Important scientific boundary:
 - The forecast values are reference-spacecraft estimates, not direct GOES bus-potential telemetry.
@@ -38,7 +39,8 @@ OUT.mkdir(parents=True, exist_ok=True)
 FORECAST_HOURS = 72
 STEP_HOURS = 3
 ARCHIVE_DAYS = 45
-TRAIN_DAYS = 180
+OBS_KEEP_DAYS = 30
+TRAIN_DAYS = 30
 VERIFY_DAYS = 30
 NOMINAL_LEADS = (24, 48, 72)
 LEAD_TOL_H = 4.5
@@ -230,12 +232,19 @@ def current_e2_flux() -> float:
     return 100.0  # neutral placeholder, explicitly marked below
 
 
-def observed_rows() -> list[dict[str, Any]]:
+def observed_rows(now: datetime | None = None) -> list[dict[str, Any]]:
+    """Load independent charging observations and enforce 30-day retention.
+
+    These rows are the only verification truth. Forecast/model outputs are never
+    copied into this file as observations.
+    """
+    now = now or utcnow()
+    cutoff = now - timedelta(days=OBS_KEEP_DAYS)
     obj = load_json(OUT / "observed.json", {}) or {}
     out = []
     for r in rows(obj, ("observed", "records", "items", "data")):
         t = parse_time(r.get("time"))
-        if not t:
+        if not t or t < cutoff or t > now + timedelta(hours=2):
             continue
         out.append({
             "time": iso_z(t), "_t": t,
@@ -247,6 +256,16 @@ def observed_rows() -> list[dict[str, Any]]:
         })
     out.sort(key=lambda r: r["_t"])
     return out
+
+
+def persist_observed_rows(obs: list[dict[str, Any]], now: datetime) -> None:
+    payload = {
+        "updated_at": iso_z(now),
+        "retention_days": OBS_KEEP_DAYS,
+        "observation_rule": "Independent/validated charging observations only; model outputs are never written here as truth.",
+        "observed": [{k: v for k, v in r.items() if k != "_t"} for r in obs],
+    }
+    (OUT / "observed.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def fit_coefficients(obs: list[dict[str, Any]], now: datetime) -> dict[str, Any]:
@@ -524,7 +543,8 @@ def past_snapshots(archive: list[dict[str, Any]], now: datetime, model_id: str) 
 
 def main() -> None:
     now = utcnow()
-    obs = observed_rows()
+    obs = observed_rows(now)
+    persist_observed_rows(obs, now)
     model = fit_coefficients(obs, now)
     fc = forecast_rows(model, now)
     archive = update_archive(load_archive(), fc, model["model_id"], now)
@@ -551,6 +571,8 @@ def main() -> None:
             "internal": "Reference dielectric field from >2 MeV electron flux persistence/driver proxy + 24 h fluence + geomagnetic drivers; coefficients update only when validated target data exist.",
             "forecast_step_hours": STEP_HOURS,
             "forecast_horizon_hours": FORECAST_HOURS,
+            "observed_retention_days": OBS_KEEP_DAYS,
+            "display_window_hours": {"past": 72, "future": 72},
         },
     }
 
