@@ -201,6 +201,13 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 .satWarn{margin-top:10px;padding:9px 10px;border-radius:9px;background:#fff8e7;border:1px solid #f0dfaf;color:#6c5a27;font-size:11px}
 @media(max-width:1050px){.satGrid,.satTables,.satBoundary{grid-template-columns:1fr}}
 
+
+/* GEO satellite TLE/health overlay */
+.geoSatLegend{position:absolute;left:14px;bottom:210px;z-index:7;width:280px;padding:9px 10px;border:1px solid rgba(123,170,212,.38);border-radius:10px;background:rgba(2,10,24,.78);color:#dcecff;font-size:10px;line-height:1.45;backdrop-filter:blur(7px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.geoSatLegend .title{font-size:11px;font-weight:900;color:#fff;margin-bottom:5px}.geoLegendRow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.geoDot{display:inline-block;width:8px;height:8px;border-radius:50%}.geoSatInfo{position:absolute;right:14px;bottom:14px;z-index:7;width:315px;padding:10px 11px;border:1px solid rgba(123,170,212,.38);border-radius:10px;background:rgba(2,10,24,.80);color:#dcecff;font-size:10px;line-height:1.5;backdrop-filter:blur(7px)}
+.geoSatInfo b{color:#fff}.geoSatInfo .cause{font-weight:900}.satArchiveBar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}.satArchiveBar select{min-width:180px}
+@media(max-width:720px){.geoSatLegend{left:8px;bottom:170px;width:215px}.geoSatInfo{display:none}}
+
 </style>
 </head>
 <body>
@@ -263,6 +270,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
         <button onclick="set3DCamera('top')">Top</button>
         <button onclick="set3DCamera('side')">Side</button>
         <button onclick="set3DCamera('perspective')">Perspective</button>
+        <button id="geoSatToggleBtn" onclick="toggleGeoSatellites()">GEO Sat: ON</button>
         <button class="ghost" onclick="toggleFullscreen('threeViewCard')">⛶ 全画面</button>
       </div>
     </div>
@@ -278,6 +286,19 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
         </div>
         <div class="speedHud" id="speedHud"><div class="model">DBM model waiting for data...</div></div>
         <div class="chHud" id="chHud"><div class="title">CORONAL HOLE / HSS MODEL</div><div class="muted">解析データ待ち...</div></div>
+        <div class="geoSatLegend" id="geoSatLegend">
+          <div class="title">GEO SATELLITES • TLE/SGP4</div>
+          <div id="geoSatLegendCount">waiting for satellite-risk feed...</div>
+          <div class="geoLegendRow" style="margin-top:5px">
+            <span class="geoDot" style="background:#4ad97b"></span> operational
+            <span class="geoDot" style="background:#ffd34e"></span> limited
+            <span class="geoDot" style="background:#ff8c42"></span> degraded
+            <span class="geoDot" style="background:#ff4f5e"></span> non-op
+            <span class="geoDot" style="background:#8a98a8"></span> unknown
+          </div>
+          <div style="margin-top:5px">Core = public/SATCAT status • pulsing halo = recent public issue category</div>
+        </div>
+        <div class="geoSatInfo" id="geoSatInfo"><b>GEO satellite</b><br>markerをクリックすると詳細表示</div>
         <div class="camHelp">Drag: rotate / Wheel: zoom / Right drag: pan</div>
       </div>
     </div>
@@ -286,7 +307,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
       <span class="modelChip">Solar rotation: 27.27 d</span>
       <span class="modelChip">Parker 1958 HMF • north view: CCW rotation</span><span class="modelChip">ENLIL-style 21.5 R☉ boundary</span><span class="modelChip">Ω: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
       <span class="modelChip">Earth speed display = local Vsw sampled from rendered heliospheric field</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span>
-      <span class="modelChip">Magnetosphere: Pdyn / Bz / CME impact response</span>
+      <span class="modelChip">Magnetosphere: Pdyn / Bz / CME impact response</span><span class="modelChip">GEO: CelesTrak TLE → SGP4 current snapshot</span>
     </div>
   </section>
 
@@ -348,6 +369,12 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
         <div><b>LINK ANALYSIS</b>異常前72hの環境を比較。自動で因果関係とは判定しません。</div>
       </div>
       <div id="satRiskStatus" class="small">satellite-risk/latest.json waiting...</div>
+      <div class="satArchiveBar">
+        <b style="color:#284a66">Monthly anomaly Excel:</b>
+        <select id="satMonthlySelect"><option>loading...</option></select>
+        <button class="excel" onclick="downloadSatelliteMonthlyExcel()">選択月Excel</button>
+        <span class="small">rolling 12 months</span>
+      </div>
       <div class="satGrid" id="satRiskGrid"></div>
       <div class="satTables">
         <div class="satTableWrap">
@@ -384,6 +411,7 @@ const SWIFT_KP_LATEST=dataCandidates("swift-kp/latest.json");
 const SWIFT_BZ_LATEST=dataCandidates("swift-bz/latest.json");
 const VALIDATION_UI_CANDIDATES=dataCandidates("validation/ui_validation_latest.json");
 const SATELLITE_RISK_CANDIDATES=dataCandidates("satellite-risk/latest.json");
+const SATELLITE_MONTHLY_INDEX_CANDIDATES=dataCandidates("satellite-risk/monthly-index.json");
 const NOAA_WIND_HISTORY=[...dataCandidates("noaa/wind_history.json"),...dataCandidates("noaa_wind_history.json"),...dataCandidates("noaa-wind/history.json")];
 const DONKI_LON_POSITIVE_WEST=true;
 const NOAA={
@@ -1794,8 +1822,26 @@ function init3D(){
   const windParticles=new THREE.Points(pGeo,pMat);scene.add(windParticles);windParticles.userData={count:pCount,rAU:pR,lane:pLane,lat:pLat,seed:pSeed};
 
   const cmeGroup=new THREE.Group();scene.add(cmeGroup);
-  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,solarStreamers,sunLoopGroup,coronaShells,earth,earthNight,clouds,atmosphere,magnetosphere,cmeGroup,starPoints:stars,clock:new THREE.Clock(),solarWindSheet,parkerGroup,windParticles,windSpeed:425,impactStrength:0};
-  animate3D();update3D(STATE.selectedTime);
+
+  // GEO satellites: Earth-fixed snapshot from backend TLE/SGP4.
+  const geoSatGroup=new THREE.Group();
+  geoSatGroup.position.copy(earth.position);
+  geoSatGroup.rotation.copy(earth.rotation);
+  scene.add(geoSatGroup);
+  const geoSatPickables=[];
+  const geoSatRaycaster=new THREE.Raycaster();
+  const geoSatPointer=new THREE.Vector2();
+  renderer.domElement.addEventListener("click",ev=>{
+    if(!GEO_SAT_VISIBLE||!STATE.three?.geoSatPickables?.length)return;
+    const rect=renderer.domElement.getBoundingClientRect();
+    geoSatPointer.x=((ev.clientX-rect.left)/rect.width)*2-1;
+    geoSatPointer.y=-((ev.clientY-rect.top)/rect.height)*2+1;
+    geoSatRaycaster.setFromCamera(geoSatPointer,camera);
+    const hit=geoSatRaycaster.intersectObjects(STATE.three.geoSatPickables,false)[0];
+    if(hit?.object?.userData?.geoSatData)selectGeoSatellite(hit.object.userData.geoSatData);
+  });
+  STATE.three={ready:true,scene,camera,renderer,controls,sun,sunMaterial:sunMat,sunAtmos,sunGlows:[sg1,sg2,sg3],sunLoops,solarStreamers,sunLoopGroup,coronaShells,earth,earthNight,clouds,atmosphere,magnetosphere,cmeGroup,geoSatGroup,geoSatPickables,geoSatRaycaster,geoSatPointer,starPoints:stars,clock:new THREE.Clock(),solarWindSheet,parkerGroup,windParticles,windSpeed:425,impactStrength:0};
+  renderGeoSatellites3D();animate3D();update3D(STATE.selectedTime);
 }
 
 
@@ -1911,6 +1957,137 @@ function make3DCME(c,s,index){
   group.userData={id:c.id,rAU:s.rAU,v:s.v,w:s.w};return group;
 }
 
+
+const GEO_EARTH_RADIUS_KM=6378.137;
+const GEO_EARTH_SCENE_RADIUS=3.18;
+let GEO_SAT_VISIBLE=true;
+
+function geoHealthHex(s){
+  const pub=String(s?.public_health_label||"").toUpperCase();
+  const op=String(s?.ops_status_code||"").toUpperCase();
+  if(pub.includes("NON-OP"))return 0xff4f5e;
+  if(pub.includes("DEGRADED"))return 0xff8c42;
+  if(pub.includes("LIMITATION"))return 0xffd34e;
+  if(pub.includes("OPERATIONAL"))return 0x4ad97b;
+  if(pub.includes("OFF")||pub.includes("STORAGE"))return 0x4c8cff;
+  if(op==="-")return 0xff4f5e;
+  if(op==="P")return 0xffd34e;
+  if(op==="B"||op==="S")return 0x4c8cff;
+  if(op==="X")return 0x65c7d8;
+  if(op==="+")return 0x4ad97b;
+  return 0x8a98a8;
+}
+function geoIssueHex(s){
+  const c=String(s?.issue_color||"").trim();
+  if(/^#[0-9a-f]{6}$/i.test(c))return parseInt(c.slice(1),16);
+  const k=String(s?.issue_category||"UNKNOWN");
+  const map={
+    SURFACE_CHARGING_ESD:0xff8c42,
+    INTERNAL_CHARGING:0x9b5de5,
+    SEE_SEU:0xff4fa3,
+    POWER_EPS:0xffd34e,
+    ATTITUDE_GNC:0x36d7ff,
+    COMMUNICATIONS:0x4c8cff,
+    COMMUNICATIONS_RFI:0x4c8cff,
+    INSTRUMENT:0xffb14e,
+    PRODUCT_DATA:0xe6a84c,
+    MISSION_CONTROL_SOFTWARE:0xa4b0bd,
+    UNKNOWN:0xff5f63
+  };
+  return map[k]||0xff5f63;
+}
+function geoSatLocalPosition(s){
+  const lat=clamp(num(s?.latitude_deg,0),-90,90)*Math.PI/180;
+  const lon=num(s?.longitude_deg,0)*Math.PI/180;
+  const alt=clamp(num(s?.altitude_km,35786),1000,80000);
+  const r=GEO_EARTH_SCENE_RADIUS*(GEO_EARTH_RADIUS_KM+alt)/GEO_EARTH_RADIUS_KM;
+  const cl=Math.cos(lat);
+  return new THREE.Vector3(r*cl*Math.cos(lon),r*Math.sin(lat),r*cl*Math.sin(lon));
+}
+function makeGeoSatLabel(text,colorHex=0xffffff){
+  const c=document.createElement("canvas"),ctx=c.getContext("2d");
+  c.width=420;c.height=92;
+  ctx.fillStyle="rgba(2,10,24,.82)";ctx.fillRect(0,0,c.width,c.height);
+  ctx.strokeStyle="#6f9dc5";ctx.lineWidth=3;ctx.strokeRect(2,2,c.width-4,c.height-4);
+  ctx.font="bold 34px system-ui";ctx.fillStyle="#ffffff";ctx.fillText(String(text).slice(0,21),18,55);
+  ctx.fillStyle="#"+new THREE.Color(colorHex).getHexString();ctx.fillRect(18,67,180,7);
+  const tx=new THREE.CanvasTexture(c);tx.minFilter=THREE.LinearFilter;
+  const mat=new THREE.SpriteMaterial({map:tx,transparent:true,depthWrite:false});
+  const sp=new THREE.Sprite(mat);sp.scale.set(8.4,1.85,1);sp.position.set(0,1.35,0);return sp;
+}
+function clearGeoSatellites3D(){
+  const t=STATE.three;if(!t?.geoSatGroup)return;
+  while(t.geoSatGroup.children.length){
+    const x=t.geoSatGroup.children.pop();
+    if(x.geometry)x.geometry.dispose?.();
+    if(x.material){
+      if(x.material.map)x.material.map.dispose?.();
+      x.material.dispose?.();
+    }
+  }
+  t.geoSatPickables=[];
+}
+function createGeoOrbitGuide(group){
+  const pts=[],r=GEO_EARTH_SCENE_RADIUS*(GEO_EARTH_RADIUS_KM+35786)/GEO_EARTH_RADIUS_KM;
+  for(let i=0;i<=180;i++){const a=i/180*Math.PI*2;pts.push(new THREE.Vector3(r*Math.cos(a),0,r*Math.sin(a)));}
+  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x6f8ba5,transparent:true,opacity:.16}));
+  line.userData.role="geoOrbitGuide";group.add(line);
+}
+function renderGeoSatellites3D(){
+  if(!STATE.three?.ready)return;
+  const t=STATE.three;
+  if(!t.geoSatGroup)return;
+  clearGeoSatellites3D();
+  createGeoOrbitGuide(t.geoSatGroup);
+  const rows=Array.isArray(SAT_RISK?.geo_satellites_3d)?SAT_RISK.geo_satellites_3d:[];
+  // Alerts and GOES first, then the active GEO population. Cap for browser clarity.
+  const sorted=[...rows].sort((a,b)=>{
+    const pa=(a.recent_public_alert?0:(String(a.name||"").toUpperCase().includes("GOES")?1:2));
+    const pb=(b.recent_public_alert?0:(String(b.name||"").toUpperCase().includes("GOES")?1:2));
+    return pa-pb||String(a.name||"").localeCompare(String(b.name||""));
+  }).slice(0,260);
+  let alerts=0,goes=0;
+  for(const s of sorted){
+    const p=geoSatLocalPosition(s),health=geoHealthHex(s),isAlert=!!s.recent_public_alert,isGOES=String(s.name||"").toUpperCase().includes("GOES");
+    if(isAlert)alerts++;if(isGOES)goes++;
+    const g=new THREE.Group();g.position.copy(p);g.userData.geoSat=s;
+    const rad=isAlert?.34:(isGOES?.28:.16);
+    const core=new THREE.Mesh(new THREE.SphereGeometry(rad,12,9),new THREE.MeshBasicMaterial({color:health,transparent:true,opacity:isAlert?1:.88}));
+    core.userData.geoSatData=s;core.userData.role="geoSatCore";g.add(core);t.geoSatPickables.push(core);
+    if(isAlert){
+      const haloColor=geoIssueHex(s);
+      const halo=new THREE.Mesh(new THREE.SphereGeometry(rad*2.05,14,10),new THREE.MeshBasicMaterial({color:haloColor,transparent:true,opacity:.28,wireframe:true,blending:THREE.AdditiveBlending,depthWrite:false}));
+      halo.userData.role="geoSatAlertHalo";halo.userData.phase=Math.random()*Math.PI*2;g.add(halo);
+      const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),p.clone().multiplyScalar(-1)]),new THREE.LineBasicMaterial({color:haloColor,transparent:true,opacity:.10}));
+      // line geometry is local to marker; use Earth direction only as a subtle alert stem
+      line.visible=false;g.add(line);
+    }
+    if(isAlert||isGOES){
+      g.add(makeGeoSatLabel(s.name||`NORAD ${s.norad}`,isAlert?geoIssueHex(s):health));
+    }
+    t.geoSatGroup.add(g);
+  }
+  t.geoSatGroup.visible=GEO_SAT_VISIBLE;
+  const leg=document.getElementById("geoSatLegendCount");
+  if(leg)leg.innerHTML=`Displayed <b>${sorted.length}</b> GEO objects • GOES ${goes} • recent alert ${alerts}<br><span style="color:#9db7cf">位置: CelesTrak TLE + SGP4 current snapshot</span>`;
+}
+function toggleGeoSatellites(){
+  GEO_SAT_VISIBLE=!GEO_SAT_VISIBLE;
+  if(STATE.three?.geoSatGroup)STATE.three.geoSatGroup.visible=GEO_SAT_VISIBLE;
+  const b=document.getElementById("geoSatToggleBtn");if(b)b.textContent=`GEO Sat: ${GEO_SAT_VISIBLE?"ON":"OFF"}`;
+}
+function selectGeoSatellite(s){
+  const box=document.getElementById("geoSatInfo");if(!box||!s)return;
+  const alert=s.recent_public_alert||null,cat=String(s.issue_category||"NONE");
+  const catColor="#"+new THREE.Color(geoIssueHex(s)).getHexString();
+  box.innerHTML=
+    `<b>${esc(s.name||"GEO satellite")}</b> • NORAD ${esc(String(s.norad||"-"))}<br>`+
+    `Lon/Lat: <b>${satFmt(s.longitude_deg,1,"°")}</b> / <b>${satFmt(s.latitude_deg,1,"°")}</b> • Alt ${satFmt(s.altitude_km,0," km")}<br>`+
+    `Public health: <b>${esc(s.public_health_label||s.ops_status_code||"unknown")}</b><br>`+
+    (alert?`Recent public issue: <span class="cause" style="color:${catColor}">${esc(cat)}</span><br>${esc((alert.title||"").slice(0,180))}<br>`:`Recent public issue: none matched<br>`)+
+    `<span style="color:#9db7cf">Position ${esc(s.position_time||"-")} • approximate TLE/SGP4 placement</span>`;
+}
+
 function update3D(time){
   if(!STATE.three.ready)return;const g=STATE.three.cmeGroup;while(g.children.length)g.remove(g.children[0]);let active=0,passed=0,impactStrength=0,bestInfo=null,bestDist=Infinity;
   for(const [i,c] of STATE.cmes.filter(x=>x.earthCandidate).slice(0,18).entries()){
@@ -1953,6 +2130,18 @@ function animate3D(){
   if(t.earthNight){t.earthNight.rotation.y=t.earth.rotation.y;t.earthNight.rotation.z=t.earth.rotation.z;}
   if(t.clouds){t.clouds.rotation.y+=dt*.155;t.clouds.rotation.z=t.earth.rotation.z;}
   if(t.atmosphere)t.atmosphere.rotation.y-=dt*.015;
+  if(t.geoSatGroup){
+    t.geoSatGroup.rotation.copy(t.earth.rotation);
+    for(const marker of t.geoSatGroup.children){
+      for(const ch of (marker.children||[])){
+        if(ch.userData?.role==="geoSatAlertHalo"){
+          const ph=ch.userData.phase||0,p=1+.18*Math.sin(elapsed*4.5+ph);
+          ch.scale.setScalar(p);
+          if(ch.material)ch.material.opacity=.18+.20*(.5+.5*Math.sin(elapsed*4.5+ph));
+        }
+      }
+    }
+  }
   if(t.magnetosphere){
     // subtle breathing to keep the field visually alive
     t.magnetosphere.rotation.x=Math.sin(elapsed*.22)*.006;
@@ -2033,11 +2222,33 @@ async function loadSatelliteRisk(){
     const got=await fetchJsonAny(SATELLITE_RISK_CANDIDATES);
     SAT_RISK=got.data;
     renderSatelliteRisk();
+    renderGeoSatellites3D();
+    loadSatelliteMonthlyIndex();
   }catch(e){
     SAT_RISK=null;
     if(status)status.textContent="Satellite-risk feed not found yet. Run scripts/build_geo_satellite_anomaly_risk.py or its GitHub Action.";
     renderSatelliteRisk();
   }
+}
+
+
+let SAT_MONTHLY_INDEX=null;
+async function loadSatelliteMonthlyIndex(){
+  const sel=document.getElementById("satMonthlySelect");if(!sel)return;
+  try{
+    const got=await fetchJsonAny(SATELLITE_MONTHLY_INDEX_CANDIDATES);
+    SAT_MONTHLY_INDEX=got.data;
+    const rows=Array.isArray(SAT_MONTHLY_INDEX?.reports)?SAT_MONTHLY_INDEX.reports:[];
+    sel.innerHTML=rows.map((r,i)=>`<option value="${i}">${esc(r.month||"-")} • events ${Number(r.events||0)} • env ${Number(r.environment_records||0)}</option>`).join("")||"<option>no reports</option>";
+  }catch(e){sel.innerHTML="<option>monthly index unavailable</option>";}
+}
+function downloadSatelliteMonthlyExcel(){
+  const rows=Array.isArray(SAT_MONTHLY_INDEX?.reports)?SAT_MONTHLY_INDEX.reports:[];
+  const sel=document.getElementById("satMonthlySelect"),idx=Math.max(0,Number(sel?.value)||0),r=rows[idx];
+  if(!r?.file){alert("衛星異常の月次Excelがまだ生成されていません。Workflowを1回実行してください。");return;}
+  let rel=String(r.file).replace(/^\.?\//,"");
+  // monthly-index stores paths relative to docs/data.
+  const a=document.createElement("a");a.href="./data/"+rel;a.target="_blank";a.rel="noopener";a.download="";document.body.appendChild(a);a.click();a.remove();
 }
 
 function resize3D(){
