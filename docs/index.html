@@ -168,6 +168,11 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 .skillMatrix .learning{color:#91a3b4}
 @media(max-width:1000px){.forecastGrid{grid-template-columns:1fr}.forecastStats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:620px){.forecastStats{grid-template-columns:1fr}}
+.chargingGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.chargingPanel .forecastGraphWrap{height:320px}
+.chargingNote{padding:8px 13px 12px 13px;font-size:10px;color:#6f879e;background:#fbfdff;border-top:1px solid #e2eaf1;line-height:1.5}
+.chargingModelLine{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:#49657f}
+@media(max-width:1000px){.chargingGrid{grid-template-columns:1fr}}
 
 .skillDashboard{margin-top:14px}
 .skillDashboardBody{padding:14px}
@@ -334,9 +339,24 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
     </section>
   </div>
 
+  <div class="chargingGrid">
+    <section class="card forecastPanel chargingPanel">
+      <div class="panelHeader"><div><div class="panelTitle">Surface Charging Forecast <span class="chip">72 h / 3 h • kV</span></div><div class="panelSub">Reference GEO spacecraft model. Kp / Bz / solar wind / GOES particle contextから表面電位を推定。24/48/72 h の的中率・MAE・Biasを検証。</div></div></div>
+      <div class="forecastGraphWrap"><canvas id="surfaceChargeGraph"></canvas></div>
+      <div class="forecastStats" id="surfaceChargeStats"></div>
+      <div class="chargingNote"><b>Output:</b> spacecraft surface potential [kV]. 実衛星の電位ではなく基準GEOモデルの推定値。観測truthがない期間は skill を learning 表示。</div>
+    </section>
+    <section class="card forecastPanel chargingPanel">
+      <div class="panelHeader"><div><div class="panelTitle">Internal Charging Forecast <span class="chip">72 h / 3 h • MV/m</span></div><div class="panelSub">放射線帯高エネルギー電子による深部誘電体帯電を基準シールド/誘電体モデルで推定。>2 MeV電子が取得できる場合は入力に使用。</div></div></div>
+      <div class="forecastGraphWrap"><canvas id="internalChargeGraph"></canvas></div>
+      <div class="forecastStats" id="internalChargeStats"></div>
+      <div class="chargingNote"><b>Output:</b> equivalent internal electric field [MV/m]. 衛星固有値ではなく reference dielectric model。AI更新は物理式の残差補正係数のみ更新。</div>
+    </section>
+  </div>
+
   <section class="card skillDashboard" id="forecastSkillCard">
     <div class="panelHeader">
-      <div><div class="panelTitle">Forecast Skill / Auto Calibration <span class="chip">current-generation first</span></div><div class="panelSub">Wind / Kp / Bz の予報実績を集約。Kp/Bzはモデル世代を分離し、24/48/72時間リードの残差Biasを次回予報へ自動補正します。</div></div>
+      <div><div class="panelTitle">Forecast Skill / Auto Calibration <span class="chip">current-generation first</span></div><div class="panelSub">Wind / Kp / Bz / Charging の予報実績を集約。モデル世代を分離し、24/48/72時間リードの残差Biasを次回予報へ自動補正します。</div></div>
       <div class="viewTools"><button class="ghost" onclick="renderForecastSkillDashboard();drawSkillTrendGraph()">更新</button></div>
     </div>
     <div class="skillDashboardBody">
@@ -411,6 +431,9 @@ const SWIFT_BZ_LATEST=dataCandidates("swift-bz/latest.json");
 const VALIDATION_UI_CANDIDATES=dataCandidates("validation/ui_validation_latest.json");
 const SATELLITE_RISK_CANDIDATES=dataCandidates("satellite-risk/latest.json");
 const SATELLITE_MONTHLY_INDEX_CANDIDATES=dataCandidates("satellite-risk/monthly-index.json");
+const SWIFT_CHARGING_LATEST=dataCandidates("swift-charging/latest.json");
+const SWIFT_CHARGING_VALIDATION=dataCandidates("swift-charging/verification.json");
+const SWIFT_CHARGING_ARCHIVE=dataCandidates("swift-charging/forecast-archive.json");
 const NOAA_WIND_HISTORY=[...dataCandidates("noaa/wind_history.json"),...dataCandidates("noaa_wind_history.json"),...dataCandidates("noaa-wind/history.json")];
 const DONKI_LON_POSITIVE_WEST=true;
 const NOAA={
@@ -456,9 +479,9 @@ const SCENE={sunX:-78,earthX:78,span:156};
 const POST_PASS_HOURS=36;
 
 const STATE={
-  sources:{donkiCache:src("DONKI Cache","未取得"),donkiAnalysis:src("DONKI CMEAnalysis","未取得"),donkiCME:src("DONKI CME","未取得"),wsa:src("WSA Wind","未取得"),cactus:src("CACTus","未取得"),noaaWind:src("NOAA Wind","未取得"),noaaMag:src("NOAA IMF","未取得"),noaaKp:src("NOAA Kp","未取得"),swiftWind:src("SWIFT Wind AI","未取得"),reportUi:src("Report UI Feed","未取得")},
+  sources:{donkiCache:src("DONKI Cache","未取得"),donkiAnalysis:src("DONKI CMEAnalysis","未取得"),donkiCME:src("DONKI CME","未取得"),wsa:src("WSA Wind","未取得"),cactus:src("CACTus","未取得"),noaaWind:src("NOAA Wind","未取得"),noaaMag:src("NOAA IMF","未取得"),noaaKp:src("NOAA Kp","未取得"),swiftWind:src("SWIFT Wind AI","未取得"),reportUi:src("Report UI Feed","未取得"),charging:src("SWIFT Charging","未取得")},
   donkiPayloads:[],wsaModel:null,cactusEvents:[],env:defaultEnv(),cmes:[],timelineCenter:new Date(),timelineStart:new Date(),timelineEnd:new Date(),selectedTime:new Date(),timer:null,
-  windObserved:[],windForecast:[],windPastForecast:[],kpObserved:[],kpForecast:[],kpPastSnapshots:[],bzObserved:[],bzForecast:[],bzPastSnapshots:[],kpLeadSkill:[],bzLeadSkill:[],kpRangeSkill:[],kpModel:null,bzModel:null,validationUi:null,generationInfo:null,calibrationInfo:null,skillHistory:[],windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,propagationCache:new Map(),mode:"3d",
+  windObserved:[],windForecast:[],windPastForecast:[],kpObserved:[],kpForecast:[],kpPastSnapshots:[],bzObserved:[],bzForecast:[],bzPastSnapshots:[],kpLeadSkill:[],bzLeadSkill:[],kpRangeSkill:[],kpModel:null,bzModel:null,validationUi:null,generationInfo:null,calibrationInfo:null,skillHistory:[],windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,chargingForecast:[],chargingObserved:[],chargingPastSnapshots:[],chargingSkill:{surface:[],internal:[]},chargingModel:null,chargingFeed:null,chargingFallback:false,propagationCache:new Map(),mode:"3d",
   three:{ready:false,scene:null,camera:null,renderer:null,controls:null,sun:null,earth:null,cmeGroup:null,starPoints:null,clock:null,parkerGroup:null,windParticles:null,windSpeed:425,impactStrength:0}
 };
 function src(label,status){return{label,status,data:null,time:null,error:null};}
@@ -796,8 +819,102 @@ function drawBzHistoryGraph(){
   const st=STATE.selectedTime?.getTime?.()||now;if(st>=x0&&st<=x1){const x=X(st);ctx.strokeStyle="#7b48cc";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();}
   const legend=[['#176fae','obs Bz min'],['#d9505f','current Bz min'],['#3da35d','issued -24h'],['#9167c7','issued -48h'],['#8a98a8','issued -72h']];let lx=pad.l;ctx.font="10px system-ui";for(const [c,l] of legend){ctx.fillStyle=c;ctx.fillRect(lx,pad.t-19,12,2);ctx.fillStyle="#405a72";ctx.fillText(l,lx+16,pad.t-15);lx+=Math.max(76,ctx.measureText(l).width+30);}ctx.fillStyle="#24415d";ctx.font="bold 11px system-ui";ctx.fillText("Bz 3h minimum — observed + archived lead forecasts [nT]",pad.l,pad.t-3);
 }
+function chargingElectronFluxNow(){
+  const d=SAT_RISK?.goes_space_environment_now||{};
+  const cand=[d.electron_gt2mev?.flux,d.electron_2mev?.flux,d.electron_gt_2_mev?.flux,d.electron_gt2?.flux];
+  for(const v of cand){const n=Number(v);if(Number.isFinite(n)&&n>=0)return n;}
+  return null;
+}
+function chargingModelDefaults(){return{
+  version:"reference-v1",
+  surface:{intercept_kv:.20,kp:.58,south_bz:.075,wind_excess:.0015,electron_log:.16,bias_kv:0},
+  internal:{tau_hours:36,drive_base:.004,kp:.006,wind_excess:.00005,electron_log:.042,bias_mvm:0},
+  truth_note:"Verification requires independent observed charging truth; model output is never scored against itself."
+};}
+function chargingCoeff(path,key,def){const m=STATE.chargingModel||chargingModelDefaults();const v=Number(m?.[path]?.[key]);return Number.isFinite(v)?v:def;}
+function buildReferenceChargingForecast(){
+  const now=Date.now(),electronNow=chargingElectronFluxNow(),m=STATE.chargingModel||chargingModelDefaults();
+  STATE.chargingModel=m;
+  const out=[];let internal=0;
+  for(let h=0;h<=72;h+=3){
+    const t=new Date(now+h*3600e3),kp=kpStateAt(t).kp,bz=bzStateAt(t).bz,wind=windStateAt(t).speed;
+    const south=Math.max(0,-Number(bz||0)),wx=Math.max(0,Number(wind||400)-400);
+    const elog=electronNow===null?0:Math.max(0,Math.log10(1+electronNow)-2);
+    const s=m.surface||{};
+    const mag=clamp(num(s.intercept_kv,.20)+num(s.kp,.58)*kp+num(s.south_bz,.075)*south+num(s.wind_excess,.0015)*wx+num(s.electron_log,.16)*elog+num(s.bias_kv,0),0,25);
+    const surface=-mag;
+    const diff=clamp(.30*mag+.11*kp+.025*south,0,12);
+    const q=m.internal||{},tau=Math.max(6,num(q.tau_hours,36));
+    const decay=Math.exp(-3/tau);
+    const drive=Math.max(0,num(q.drive_base,.004)+num(q.kp,.006)*kp+num(q.wind_excess,.00005)*wx+num(q.electron_log,.042)*elog);
+    internal=clamp(internal*decay+drive+num(q.bias_mvm,0)/24,0,3.5);
+    out.push({_t:t.getTime(),time:t.toISOString(),surface_kv:surface,differential_kv:diff,internal_mvm:internal,kp,bz,wind_kms:wind,electron_gt2mev:electronNow,source:electronNow===null?"Reference GEO model: Kp/Bz/Wind":"Reference GEO model + current GOES >2MeV context"});
+  }
+  STATE.chargingForecast=out;STATE.chargingFallback=true;
+}
+function normalizeChargingRows(rows){
+  const src=Array.isArray(rows)?rows:[];const out=[];
+  for(const r of src){const t=new Date(r.time||r.target_time||r.datetime||0).getTime();if(!Number.isFinite(t))continue;
+    const surface=firstFinite(r,["surface_kv","surface_potential_kv","v_surface_kv"]),diff=firstFinite(r,["differential_kv","delta_v_kv"]),internal=firstFinite(r,["internal_mvm","internal_field_mvm","e_internal_mvm"]);
+    if(surface===null&&internal===null)continue;
+    out.push({...r,_t:t,time:new Date(t).toISOString(),surface_kv:surface,differential_kv:diff,internal_mvm:internal});
+  }
+  return out.sort((a,b)=>a._t-b._t);
+}
+function normalizeChargingSnapshots(rows){
+  const groups=new Map();for(const r of Array.isArray(rows)?rows:[]){const it=new Date(r.issued_at||r.issuedAt||0).getTime(),tt=new Date(r.target_time||r.time||0).getTime();if(!Number.isFinite(it)||!Number.isFinite(tt))continue;const key=new Date(it).toISOString();if(!groups.has(key))groups.set(key,[]);groups.get(key).push({...r,_t:tt});}
+  const issues=[...groups.keys()].map(k=>({k,t:new Date(k).getTime()})).filter(x=>Number.isFinite(x.t));const now=Date.now();
+  return [24,48,72].map(age=>{if(!issues.length)return null;const want=now-age*3600e3;let best=issues[0];for(const q of issues)if(Math.abs(q.t-want)<Math.abs(best.t-want))best=q;if(Math.abs(best.t-want)>10*3600e3)return null;return{ageHours:age,issued:best.t,rows:normalizeChargingRows(groups.get(best.k))};}).filter(Boolean);
+}
+async function loadChargingForecast(){
+  setSource("charging","LOADING...");let feed=null,ver=null,arch=null;
+  try{feed=(await fetchJsonAny(SWIFT_CHARGING_LATEST)).data;}catch(_){ }
+  try{ver=(await fetchJsonAny(SWIFT_CHARGING_VALIDATION)).data;}catch(_){ }
+  try{arch=(await fetchJsonAny(SWIFT_CHARGING_ARCHIVE)).data;}catch(_){ }
+  if(feed){
+    STATE.chargingFeed=feed;STATE.chargingModel=feed.coefficients||{version:feed.model||"SWIFT-CHARGE"};if(!STATE.chargingModel.version)STATE.chargingModel.version=feed.model||"SWIFT-CHARGE";
+    STATE.chargingForecast=normalizeChargingRows(feed.forecast||feed.records||feed.data||[]);
+    STATE.chargingObserved=normalizeChargingRows(feed.observed||feed.observations||[]);
+    STATE.chargingPastSnapshots=normalizeChargingSnapshots(arch?.items||arch?.records||feed.forecast_history||[]);
+    const sk=ver?.nominal_lead_skill||feed.verification?.nominal_lead_skill||ver?.lead_skill||feed.verification?.lead_skill||{};STATE.chargingSkill={surface:sk.surface||[],internal:sk.internal||[]};const snaps=feed.past_forecast_snapshots||{};if((snaps.surface||[]).length||(snaps.internal||[]).length){const merged=[];for(const x of (snaps.surface||[]))merged.push({ageHours:x.ageHours||x.age_hours||0,issued:new Date(x.issued_at||0).getTime(),rows:normalizeChargingRows(x.rows||[])});for(const x of (snaps.internal||[])){const age=x.ageHours||x.age_hours||0,existing=merged.find(q=>q.ageHours===age);if(existing){const byT=new Map(existing.rows.map(r=>[r.time,r]));for(const r of normalizeChargingRows(x.rows||[]))byT.set(r.time,{...(byT.get(r.time)||{}),...r});existing.rows=[...byT.values()].sort((a,b)=>a._t-b._t);}else merged.push({ageHours:age,issued:new Date(x.issued_at||0).getTime(),rows:normalizeChargingRows(x.rows||[])});}STATE.chargingPastSnapshots=merged;}STATE.chargingFallback=false;
+    setSource("charging",`OK: ${STATE.chargingForecast.length} forecast / obs ${STATE.chargingObserved.length}`,feed);
+  }else{
+    STATE.chargingModel=chargingModelDefaults();buildReferenceChargingForecast();STATE.chargingObserved=[];STATE.chargingPastSnapshots=[];STATE.chargingSkill={surface:[],internal:[]};
+    setSource("charging",`REFERENCE: ${STATE.chargingForecast.length} points`,STATE.chargingForecast,"swift-charging/latest.json not found; using reference-model fallback");
+  }
+  drawChargingGraphs();renderGeoChargingStatus();
+}
+function chargeSkillForLead(kind,h){const arr=STATE.chargingSkill?.[kind]||[];return arr.find(x=>Math.round(Number(x.nominal_lead_hours??x.lead_hours??x.lead??0))===h)||null;}
+function drawChargeGraph(canvasId,key,unit,title){
+  const canvas=document.getElementById(canvasId);if(!canvas)return;const{ctx,w,h}=setupCanvas(canvasId);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
+  const now=Date.now(),x0=now-3*3600e3,x1=now+72*3600e3,pad={l:62,r:18,t:28,b:38},vals=[];
+  const series=[...(STATE.chargingObserved||[]),...(STATE.chargingForecast||[])];for(const r of series){const v=Number(r[key]);if(Number.isFinite(v))vals.push(v);}for(const s of STATE.chargingPastSnapshots||[])for(const r of s.rows||[]){const v=Number(r[key]);if(Number.isFinite(v))vals.push(v);}
+  let ymin,ymax;if(key==="surface_kv"){ymin=vals.length?Math.floor(Math.min(...vals)-1):-10;ymax=Math.max(1,vals.length?Math.ceil(Math.max(...vals)+1):1);}else{ymin=0;ymax=Math.max(.5,vals.length?Math.ceil(Math.max(...vals)*5)/5+.2:1);}
+  if(ymax<=ymin)ymax=ymin+1;const X=t=>pad.l+(t-x0)/(x1-x0)*(w-pad.l-pad.r),Y=v=>pad.t+(ymax-v)/(ymax-ymin)*(h-pad.t-pad.b);
+  const step=key==="surface_kv"?Math.max(1,Math.ceil((ymax-ymin)/6)):Math.max(.1,Math.ceil((ymax-ymin)*10/6)/10);ctx.font="10px system-ui";ctx.fillStyle="#6c8298";
+  for(let v=Math.ceil(ymin/step)*step;v<=ymax+1e-9;v+=step){const y=Y(v);ctx.strokeStyle="#e6edf4";ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillStyle="#6c8298";ctx.fillText((Math.abs(step)<1?v.toFixed(1):v.toFixed(0)),8,y+3);}
+  for(let hh=0;hh<=72;hh+=12){const x=X(now+hh*3600e3);ctx.strokeStyle=hh===0?"#8398ad":"#eff3f7";ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();ctx.fillStyle="#6f879e";ctx.fillText(hh===0?"NOW":`+${hh}h`,x-13,h-14);}
+  function line(rows,color,dash=[],width=2){const q=(rows||[]).filter(r=>r._t>=x0&&r._t<=x1&&Number.isFinite(Number(r[key])));if(!q.length)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.beginPath();q.forEach((r,i)=>i?ctx.lineTo(X(r._t),Y(Number(r[key]))):ctx.moveTo(X(r._t),Y(Number(r[key]))));ctx.stroke();ctx.restore();}
+  line(STATE.chargingObserved,"#176fae",[],2.2);for(const snap of STATE.chargingPastSnapshots||[]){const color=snap.ageHours===24?"#3da35d":snap.ageHours===48?"#9167c7":"#8a98a8",dash=snap.ageHours===24?[6,3]:snap.ageHours===48?[3,3]:[1,4];line(snap.rows,color,dash,1.35);}line(STATE.chargingForecast,key==="surface_kv"?"#d9505f":"#8a56c9",[7,3],2.3);
+  ctx.fillStyle="#24415d";ctx.font="bold 11px system-ui";ctx.fillText(`${title} [${unit}] — observed + current / 24h / 48h / 72h-old forecasts`,pad.l,pad.t-8);
+}
+function drawChargingGraphs(){
+  drawChargeGraph("surfaceChargeGraph","surface_kv","kV","Surface potential");drawChargeGraph("internalChargeGraph","internal_mvm","MV/m","Equivalent internal field");
+  const now=Date.now(),surface=(STATE.chargingForecast||[]).filter(r=>r._t>=now&&r._t<=now+72*3600e3),internal=surface;
+  const smin=surface.length?Math.min(...surface.map(r=>Number(r.surface_kv)).filter(Number.isFinite)):null,imax=internal.length?Math.max(...internal.map(r=>Number(r.internal_mvm)).filter(Number.isFinite)):null;
+  const ss=document.getElementById("surfaceChargeStats"),is=document.getElementById("internalChargeStats");
+  const skillCard=(kind,h,primary,secondary,unit)=>{const q=chargeSkillForLead(kind,h);const p=q&&Number.isFinite(Number(q[primary]))?Number(q[primary]).toFixed(1)+"%":"learning",sec=q&&Number.isFinite(Number(q[secondary]))?Number(q[secondary]).toFixed(1)+"%":"-",mae=q&&Number.isFinite(Number(q.mae))?Number(q.mae).toFixed(kind==="surface"?2:3):"-",bias=q&&Number.isFinite(Number(q.bias))?Number(q.bias).toFixed(kind==="surface"?2:3):"-";return `<div class="forecastStat"><div class="k">${h}h hit</div><div class="v">${p}</div><div class="small">secondary ${sec} / MAE ${mae} ${unit} / Bias ${bias} / n=${q?.count||0}</div></div>`;};
+  if(ss)ss.innerHTML=`<div class="forecastStat"><div class="k">72h minimum</div><div class="v">${Number.isFinite(smin)?smin.toFixed(2):"--"} kV</div><div class="small">more negative = stronger charging</div></div><div class="forecastStat"><div class="k">Model</div><div class="v" style="font-size:13px">${esc(STATE.chargingModel?.version||"reference-v1")}</div><div class="small">${STATE.chargingFallback?"fallback / no trained feed":"AI residual calibration active"}</div></div>${skillCard("surface",24,"hit_rate_1kv","hit_rate_2kv","kV")}${skillCard("surface",48,"hit_rate_1kv","hit_rate_2kv","kV")}${skillCard("surface",72,"hit_rate_1kv","hit_rate_2kv","kV")}`;
+  if(is)is.innerHTML=`<div class="forecastStat"><div class="k">72h maximum</div><div class="v">${Number.isFinite(imax)?imax.toFixed(3):"--"} MV/m</div><div class="small">reference dielectric model</div></div><div class="forecastStat"><div class="k">Particle input</div><div class="v" style="font-size:13px">${(STATE.chargingForecast||[]).some(r=>Number.isFinite(Number(r.electron_flux_gt2mev||r.electron_gt2mev)))?"GOES >2 MeV":"proxy"}</div><div class="small">forecast feed can replace persistence</div></div>${skillCard("internal",24,"hit_rate_0_1mvm","hit_rate_0_2mvm","MV/m")}${skillCard("internal",48,"hit_rate_0_1mvm","hit_rate_0_2mvm","MV/m")}${skillCard("internal",72,"hit_rate_0_1mvm","hit_rate_0_2mvm","MV/m")}`;
+}
+function chargingStateAt(time){const t=time instanceof Date?time.getTime():new Date(time).getTime(),rows=STATE.chargingForecast||[];if(!rows.length)return null;let best=rows[0],bd=Math.abs(best._t-t);for(const r of rows){const d=Math.abs(r._t-t);if(d<bd){best=r;bd=d;}}return best;}
+function chargingHaloHex(row){if(!row)return 0x8a98a8;const s=Math.abs(num(row.surface_kv,0)),i=num(row.internal_mvm,0);if(s>=8||i>=1.0)return 0xff4f5e;if(s>=5||i>=.6)return 0xff8c42;if(s>=3||i>=.3)return 0xffd34e;return 0x4ad97b;}
+function renderGeoChargingStatus(){
+  if(!STATE.three?.geoSatGroup)return;const row=chargingStateAt(STATE.selectedTime||new Date()),col=chargingHaloHex(row);for(const g of STATE.three.geoSatGroup.children){if(!g?.userData?.geoSat)continue;let halo=g.children.find(x=>x.userData?.role==="geoChargingHalo");if(!halo&&typeof THREE!=="undefined"){halo=new THREE.Mesh(new THREE.SphereGeometry(1.15,18,14),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.10,wireframe:true,blending:THREE.AdditiveBlending,depthWrite:false}));halo.userData.role="geoChargingHalo";g.add(halo);}if(halo){halo.material.color.setHex(col);halo.visible=!!row;}}
+}
+
 function drawSpaceWeatherGraphs(){
-  drawKpGraph();drawBzHistoryGraph();
+  drawKpGraph();drawBzHistoryGraph();drawChargingGraphs();
   const t=STATE.selectedTime||new Date(),k=kpStateAt(t),b=bzStateAt(t),now=Date.now(),kp72=STATE.kpForecast.filter(r=>r._t>=now-3*3600e3&&r._t<=now+3*86400e3),kmax=kp72.length?Math.max(...kp72.map(r=>r.kp).filter(Number.isFinite)):null,bmin=STATE.bzForecast.length?Math.min(...STATE.bzForecast.map(r=>Number.isFinite(Number(r.bzMin))?Number(r.bzMin):Number(r.bz)).filter(Number.isFinite)):null;
   const km=STATE.kpModel||{},trend=Number(km.recent_trend_3h),ks=document.getElementById("kpStats");
   const kcard=h=>{const q=skillForLead(STATE.kpLeadSkill,h);return `<div class="forecastStat"><div class="k">${h}h lead hit ±1</div><div class="v">${q&&Number.isFinite(Number(q.hit_rate_1))?Number(q.hit_rate_1).toFixed(1)+"%":"learning"}</div><div class="small">±0.67 ${q&&Number.isFinite(Number(q.hit_rate_067))?Number(q.hit_rate_067).toFixed(1)+"%":"-"} / n=${q?.count||0}</div></div>`;};
@@ -807,8 +924,8 @@ function drawSpaceWeatherGraphs(){
   renderKpRangeSkill();
 }
 
-async function loadAll(){await Promise.allSettled([loadDONKICache(),loadWSA(),loadCACTusCache(),loadNOAAWind(),loadNOAAMag(),loadNOAAKp(),loadSwiftWind(),loadReportUiFeed()]);rebuildAll();drawSpaceWeatherGraphs();}
-function renderSourcePanel(){const rows=[["donkiCache","DONKI",loadDONKICache],["wsa","WSA",loadWSA],["cactus","CACTus",loadCACTusCache],["noaaWind","NOAA Wind",loadNOAAWind],["noaaMag","NOAA IMF",loadNOAAMag],["noaaKp","NOAA Kp",loadNOAAKp],["swiftWind","SWIFT Wind AI",loadSwiftWind],["reportUi","Kp/Bz + Report",loadReportUiFeed]];document.getElementById("sourcePanel").innerHTML=rows.map(([k,t,f])=>{const x=STATE.sources[k],cl=x.status.startsWith("OK")?"ok":x.status.startsWith("FAILED")?"bad":x.status.startsWith("LOADING")?"loading":"",tm=x.time?x.time.toISOString().slice(11,19)+" UTC":"-";return`<div class="sourceCard"><div class="sourceTitle">${t}</div><div class="sourceStatus ${cl}">${esc(x.status)}</div><div class="small">${tm}</div>${x.error?`<div class="small bad">${esc(x.error).slice(0,80)}</div>`:""}<button style="margin-top:7px;padding:5px 8px;font-size:10px" onclick="${f.name}()">LOAD</button></div>`;}).join("");}
+async function loadAll(){await Promise.allSettled([loadDONKICache(),loadWSA(),loadCACTusCache(),loadNOAAWind(),loadNOAAMag(),loadNOAAKp(),loadSwiftWind(),loadReportUiFeed()]);await loadChargingForecast();rebuildAll();drawSpaceWeatherGraphs();renderGeoChargingStatus();}
+function renderSourcePanel(){const rows=[["donkiCache","DONKI",loadDONKICache],["wsa","WSA",loadWSA],["cactus","CACTus",loadCACTusCache],["noaaWind","NOAA Wind",loadNOAAWind],["noaaMag","NOAA IMF",loadNOAAMag],["noaaKp","NOAA Kp",loadNOAAKp],["swiftWind","SWIFT Wind AI",loadSwiftWind],["reportUi","Kp/Bz + Report",loadReportUiFeed],["charging","Charging 72h",loadChargingForecast]];document.getElementById("sourcePanel").innerHTML=rows.map(([k,t,f])=>{const x=STATE.sources[k],cl=x.status.startsWith("OK")?"ok":x.status.startsWith("FAILED")?"bad":x.status.startsWith("LOADING")?"loading":"",tm=x.time?x.time.toISOString().slice(11,19)+" UTC":"-";return`<div class="sourceCard"><div class="sourceTitle">${t}</div><div class="sourceStatus ${cl}">${esc(x.status)}</div><div class="small">${tm}</div>${x.error?`<div class="small bad">${esc(x.error).slice(0,80)}</div>`:""}<button style="margin-top:7px;padding:5px 8px;font-size:10px" onclick="${f.name}()">LOAD</button></div>`;}).join("");}
 function getBackgroundWindSpeedFromWSA(t){const a=STATE.wsaModel?.records||[];if(!a.length)return null;const x=t.getTime();let p=null,n=null;for(const r of a){if(r._t<=x){p=r;continue;}n=r;break;}if(!p&&n)return clamp(n.speed,300,800);if(p&&!n)return clamp(p.speed,300,800);if(!p)return null;const f=(x-p._t)/(n._t-p._t||1);return clamp(p.speed+(n.speed-p.speed)*f,300,800);}
 function angularSeparation(lon,lat){const lo=lon*Math.PI/180,la=lat*Math.PI/180;return Math.acos(clamp(Math.cos(la)*Math.cos(lo),-1,1))*180/Math.PI;}
 function classifyHit(sep,half){const r=half>0?sep/half:999;if(r<=.5)return{earthCandidate:true,impactClass:"CORE-HIT",earthConfidence:.95,speedFactor:1,geometryMultiplier:1,ratio:r};if(r<=.85){const x=(r-.5)/.35;return{earthCandidate:true,impactClass:"BODY-HIT",earthConfidence:.85-.15*x,speedFactor:.95-.1*x,geometryMultiplier:.85-.25*x,ratio:r};}if(r<=1){const x=(r-.85)/.15;return{earthCandidate:true,impactClass:"FLANK-HIT",earthConfidence:.55-.2*x,speedFactor:.8-.2*x,geometryMultiplier:.55-.25*x,ratio:r};}return{earthCandidate:false,impactClass:"MISS",earthConfidence:.02,speedFactor:0,geometryMultiplier:0,ratio:r};}
@@ -2217,7 +2334,7 @@ function update3D(time){
   const earthState=earthSpaceWeatherState(time,bestInfo);
   const localEarthSpeed=earthState.combinedSpeed;
   const magnetosphereImpact=Math.max(impactStrength,earthState.cmeImpactStrength);
-  updateParkerSpiral(time,ws.speed);updateMagnetosphere(magnetosphereImpact,bzS.bz);updateSpeedHud(bestInfo,earthState);
+  updateParkerSpiral(time,ws.speed);updateMagnetosphere(magnetosphereImpact,bzS.bz);updateSpeedHud(bestInfo,earthState);renderGeoChargingStatus();
   const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz,magState=magnetosphereImpact>.72?"STRONG IMPACT":magnetosphereImpact>.35?"IMPACT":magnetosphereImpact>.05?"CONTACT":"QUIET";
   const threeHud=document.getElementById("threeHud");
   if(threeHud)threeHud.innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br><b>Local wind @ magnetosphere: ${Math.round(localEarthSpeed)} km/s</b><br>Background/HSS @ Earth: ${Math.round(earthState.backgroundSpeed)} km/s<br>CME enhancement @ Earth: +${Math.round(earthState.cmeDelta)} km/s<br>Earth compression proxy: ${Number(earthState.compression||0).toFixed(2)}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(earthState.backgroundSpeed).toFixed(1)}° background / ${parkerWindingDeg(earthState.backgroundSpeed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Pinwheel = background rotating solar wind / expanding shell = CME shock-sheath<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
@@ -2337,6 +2454,7 @@ async function loadSatelliteRisk(){
     SAT_RISK=got.data;
     renderSatelliteRisk();
     renderGeoSatellites3D();
+    if(STATE.chargingFallback){buildReferenceChargingForecast();drawChargingGraphs();renderGeoChargingStatus();}
     loadSatelliteMonthlyIndex();
   }catch(e){
     SAT_RISK=null;
@@ -2379,8 +2497,8 @@ function set3DCamera(mode){
   else c.position.set(78,60,188);
   k.target.set(10,0,0);k.update();
 }
-window.addEventListener("resize",()=>{resize3D();drawWindGraph();});
-document.addEventListener("fullscreenchange",()=>setTimeout(()=>{resize3D();drawWindGraph();},100));
+window.addEventListener("resize",()=>{resize3D();drawWindGraph();drawSpaceWeatherGraphs();});
+document.addEventListener("fullscreenchange",()=>setTimeout(()=>{resize3D();drawWindGraph();drawSpaceWeatherGraphs();},100));
 setInterval(()=>{document.getElementById("utcClock").textContent=new Date().toISOString().replace("T"," ").slice(0,19)+" UTC";},1000);
 
 renderSourcePanel();initTimeline();init3D();renderSummary();renderEvents();renderForecastSkillDashboard();updateTimeline();drawWindGraph();loadReportIndex();loadSatelliteRisk();loadAll();
