@@ -270,14 +270,13 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
         <button onclick="set3DCamera('top')">Top</button>
         <button onclick="set3DCamera('side')">Side</button>
         <button onclick="set3DCamera('perspective')">Perspective</button>
-        <button id="geoSatToggleBtn" onclick="toggleGeoSatellites()">GEO Sat: ON</button>
+        <button id="geoSatToggleBtn" onclick="toggleGeoSatellites()">GOES Health: ON</button>
         <button class="ghost" onclick="toggleFullscreen('threeViewCard')">⛶ 全画面</button>
       </div>
     </div>
     <div class="threeScene" id="threeContainer">
       <div class="error3d" id="error3d">Three.jsを読み込めませんでした。WebGL対応ブラウザで開いてください。</div>
       <div class="threeOverlay">
-        <div class="hudBox" id="threeHud">3D初期化待ち</div>
         <div class="windMapLegend" id="windMapLegend">
           <div class="title">ENLIL-style Solar Wind</div>
           <div class="bar"></div>
@@ -287,8 +286,8 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
         <div class="speedHud" id="speedHud"><div class="model">DBM model waiting for data...</div></div>
         <div class="chHud" id="chHud"><div class="title">CORONAL HOLE / HSS MODEL</div><div class="muted">解析データ待ち...</div></div>
         <div class="geoSatLegend" id="geoSatLegend">
-          <div class="title">GEO SATELLITES • TLE/SGP4</div>
-          <div id="geoSatLegendCount">waiting for satellite-risk feed...</div>
+          <div class="title">GOES • PUBLIC HEALTH / ANOMALY</div>
+          <div id="geoSatLegendCount">waiting for GOES health feed...</div>
           <div class="geoLegendRow" style="margin-top:5px">
             <span class="geoDot" style="background:#4ad97b"></span> operational
             <span class="geoDot" style="background:#ffd34e"></span> limited
@@ -296,9 +295,9 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
             <span class="geoDot" style="background:#ff4f5e"></span> non-op
             <span class="geoDot" style="background:#8a98a8"></span> unknown
           </div>
-          <div style="margin-top:5px">Core = public/SATCAT status • pulsing halo = recent public issue category</div>
+          <div style="margin-top:5px">Core + label bar = current public operational status • pulsing halo = recent public issue category</div>
         </div>
-        <div class="geoSatInfo" id="geoSatInfo"><b>GEO satellite</b><br>markerをクリックすると詳細表示</div>
+        <div class="geoSatInfo" id="geoSatInfo"><b>GOES status</b><br>markerをクリックすると公開運用状態・最近の異常情報を表示</div>
         <div class="camHelp">Drag: rotate / Wheel: zoom / Right drag: pan</div>
       </div>
     </div>
@@ -307,7 +306,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
       <span class="modelChip">Solar rotation: 27.27 d</span>
       <span class="modelChip">Parker 1958 HMF • north view: CCW rotation</span><span class="modelChip">ENLIL-style 21.5 R☉ boundary</span><span class="modelChip">Ω: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
       <span class="modelChip">Earth speed display = local Vsw sampled from rendered heliospheric field</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span>
-      <span class="modelChip">Magnetosphere: Pdyn / Bz / CME impact response</span><span class="modelChip">GEO: CelesTrak TLE → SGP4 current snapshot</span>
+      <span class="modelChip">Magnetosphere: Pdyn / Bz / CME impact response</span><span class="modelChip">GOES only: public health/anomaly feed + TLE/SGP4 position</span>
     </div>
   </section>
 
@@ -2004,16 +2003,26 @@ function geoSatLocalPosition(s){
   const cl=Math.cos(lat);
   return new THREE.Vector3(r*cl*Math.cos(lon),r*Math.sin(lat),r*cl*Math.sin(lon));
 }
-function makeGeoSatLabel(text,colorHex=0xffffff){
+function geoHealthText(s){
+  const pub=String(s?.public_health_label||"").trim();
+  if(pub)return pub;
+  const op=String(s?.ops_status_code||"").toUpperCase();
+  const map={"+":"OPERATIONAL","P":"LIMITED / PARTIAL","-":"NON-OP","B":"BACKUP","S":"STANDBY","X":"EXTENDED / OTHER"};
+  return map[op]||"STATUS UNKNOWN";
+}
+function makeGeoSatLabel(s){
   const c=document.createElement("canvas"),ctx=c.getContext("2d");
-  c.width=420;c.height=92;
-  ctx.fillStyle="rgba(2,10,24,.82)";ctx.fillRect(0,0,c.width,c.height);
+  c.width=460;c.height=118;
+  const statusColor=geoHealthHex(s);
+  const statusText=geoHealthText(s);
+  ctx.fillStyle="rgba(2,10,24,.84)";ctx.fillRect(0,0,c.width,c.height);
   ctx.strokeStyle="#6f9dc5";ctx.lineWidth=3;ctx.strokeRect(2,2,c.width-4,c.height-4);
-  ctx.font="bold 34px system-ui";ctx.fillStyle="#ffffff";ctx.fillText(String(text).slice(0,21),18,55);
-  ctx.fillStyle="#"+new THREE.Color(colorHex).getHexString();ctx.fillRect(18,67,180,7);
+  ctx.font="bold 32px system-ui";ctx.fillStyle="#ffffff";ctx.fillText(String(s?.name||"GOES").slice(0,22),18,45);
+  ctx.font="bold 20px system-ui";ctx.fillStyle="#dcecff";ctx.fillText(`OPS: ${statusText}`.slice(0,36),18,78);
+  ctx.fillStyle="#"+new THREE.Color(statusColor).getHexString();ctx.fillRect(18,91,c.width-36,10);
   const tx=new THREE.CanvasTexture(c);tx.minFilter=THREE.LinearFilter;
   const mat=new THREE.SpriteMaterial({map:tx,transparent:true,depthWrite:false});
-  const sp=new THREE.Sprite(mat);sp.scale.set(8.4,1.85,1);sp.position.set(0,1.35,0);return sp;
+  const sp=new THREE.Sprite(mat);sp.scale.set(9.2,2.36,1);sp.position.set(0,1.55,0);return sp;
 }
 function clearGeoSatellites3D(){
   const t=STATE.three;if(!t?.geoSatGroup)return;
@@ -2060,19 +2069,27 @@ function renderGeoSatellites3D(){
   let rows=Array.isArray(SAT_RISK?.geo_satellites_3d)?SAT_RISK.geo_satellites_3d:[];
   let fallbackUsed=false;
   if(!rows.length){rows=fallbackGeoSatRows();fallbackUsed=rows.length>0;}
-  // Alerts and GOES first, then the active GEO population. Cap for browser clarity.
+  // Only objects for which this dashboard can actually judge public operational/anomaly state.
+  // At present the public anomaly pipeline is GOES-focused; generic GEO TLE/SATCAT status is not treated as anomaly evidence.
+  const monitoredNames=new Set((SAT_RISK?.satellites||[]).map(x=>String(x?.name||"").trim().toUpperCase()).filter(Boolean));
+  rows=rows.filter(s=>{
+    const name=String(s?.name||"").trim().toUpperCase();
+    return name.startsWith("GOES-") && monitoredNames.has(name);
+  });
+  // Recent public issues first, then GOES name order.
   const sorted=[...rows].sort((a,b)=>{
-    const pa=(a.recent_public_alert?0:(String(a.name||"").toUpperCase().includes("GOES")?1:2));
-    const pb=(b.recent_public_alert?0:(String(b.name||"").toUpperCase().includes("GOES")?1:2));
+    const pa=a.recent_public_alert?0:1,pb=b.recent_public_alert?0:1;
     return pa-pb||String(a.name||"").localeCompare(String(b.name||""));
-  }).slice(0,260);
+  });
   let alerts=0,goes=0;
   for(const s of sorted){
-    const p=geoSatLocalPosition(s),health=geoHealthHex(s),isAlert=!!s.recent_public_alert,isGOES=String(s.name||"").toUpperCase().includes("GOES");
-    if(isAlert)alerts++;if(isGOES)goes++;
+    const p=geoSatLocalPosition(s),health=geoHealthHex(s),isAlert=!!s.recent_public_alert,isGOES=true;
+    if(isAlert)alerts++;goes++;
     const g=new THREE.Group();g.position.copy(p);g.userData.geoSat=s;
-    const rad=isAlert?.48:(isGOES?.38:.25);
-    const coreColor=isAlert?geoIssueHex(s):health;
+    const rad=isAlert?.48:.38;
+    // Core color always represents current operational/public-health status.
+    // Anomaly/issue category remains a separate pulsing halo.
+    const coreColor=health;
     const core=new THREE.Mesh(new THREE.SphereGeometry(rad,14,10),new THREE.MeshBasicMaterial({color:coreColor,transparent:true,opacity:isAlert?1:.92}));
     core.userData.geoSatData=s;core.userData.role="geoSatCore";g.add(core);t.geoSatPickables.push(core);
     if(isAlert){
@@ -2083,9 +2100,7 @@ function renderGeoSatellites3D(){
       // line geometry is local to marker; use Earth direction only as a subtle alert stem
       line.visible=false;g.add(line);
     }
-    if(isAlert||isGOES){
-      g.add(makeGeoSatLabel(s.name||`NORAD ${s.norad}`,isAlert?geoIssueHex(s):health));
-    }
+    g.add(makeGeoSatLabel(s));
     t.geoSatGroup.add(g);
   }
   t.geoSatGroup.visible=GEO_SAT_VISIBLE;
@@ -2093,13 +2108,13 @@ function renderGeoSatellites3D(){
   if(leg){
     const tc=SAT_RISK?.tle_cache||{},mode=fallbackUsed?"SWPC GOES longitude fallback":(tc.mode||"TLE/SGP4");
     const when=tc.fetched_at?` • TLE ${esc(String(tc.fetched_at).slice(0,16))}Z`:"";
-    leg.innerHTML=`Displayed <b>${sorted.length}</b> GEO objects • GOES ${goes} • recent alert ${alerts}<br><span style="color:#9db7cf">Position: ${esc(mode)}${when} • TLE refresh once/day, latest only</span>`;
+    leg.innerHTML=`Monitored GOES <b>${goes}</b> • recent public issue ${alerts}<br><span style="color:#9db7cf">Only satellites covered by the GOES public-health/anomaly feed are shown. Position: ${esc(mode)}${when}</span>`;
   }
 }
 function toggleGeoSatellites(){
   GEO_SAT_VISIBLE=!GEO_SAT_VISIBLE;
   if(STATE.three?.geoSatGroup)STATE.three.geoSatGroup.visible=GEO_SAT_VISIBLE;
-  const b=document.getElementById("geoSatToggleBtn");if(b)b.textContent=`GEO Sat: ${GEO_SAT_VISIBLE?"ON":"OFF"}`;
+  const b=document.getElementById("geoSatToggleBtn");if(b)b.textContent=`GOES Health: ${GEO_SAT_VISIBLE?"ON":"OFF"}`;
 }
 function selectGeoSatellite(s){
   const box=document.getElementById("geoSatInfo");if(!box||!s)return;
@@ -2131,7 +2146,8 @@ function update3D(time){
   const magnetosphereImpact=Math.max(impactStrength,earthState.cmeImpactStrength);
   updateParkerSpiral(time,ws.speed);updateMagnetosphere(magnetosphereImpact,bzS.bz);updateSpeedHud(bestInfo,earthState);
   const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz,magState=magnetosphereImpact>.72?"STRONG IMPACT":magnetosphereImpact>.35?"IMPACT":magnetosphereImpact>.05?"CONTACT":"QUIET";
-  document.getElementById("threeHud").innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br><b>Local wind @ magnetosphere: ${Math.round(localEarthSpeed)} km/s</b><br>Background/HSS @ Earth: ${Math.round(earthState.backgroundSpeed)} km/s<br>CME enhancement @ Earth: +${Math.round(earthState.cmeDelta)} km/s<br>Earth compression proxy: ${Number(earthState.compression||0).toFixed(2)}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(earthState.backgroundSpeed).toFixed(1)}° background / ${parkerWindingDeg(earthState.backgroundSpeed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Pinwheel = background rotating solar wind / expanding shell = CME shock-sheath<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
+  const threeHud=document.getElementById("threeHud");
+  if(threeHud)threeHud.innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br><b>Local wind @ magnetosphere: ${Math.round(localEarthSpeed)} km/s</b><br>Background/HSS @ Earth: ${Math.round(earthState.backgroundSpeed)} km/s<br>CME enhancement @ Earth: +${Math.round(earthState.cmeDelta)} km/s<br>Earth compression proxy: ${Number(earthState.compression||0).toFixed(2)}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(earthState.backgroundSpeed).toFixed(1)}° background / ${parkerWindingDeg(earthState.backgroundSpeed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Pinwheel = background rotating solar wind / expanding shell = CME shock-sheath<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
 }
 
 function animate3D(){
