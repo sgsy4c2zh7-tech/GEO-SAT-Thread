@@ -1,8 +1,8 @@
 {
-  "updated_at": "2026-09-21T01:32:31Z",
+  "updated_at": "2026-09-21T04:52:28Z",
   "retention_days": 30,
   "snapshot_interval_hours": 2,
-  "item_count": 17,
+  "item_count": 18,
   "items": [
     {
       "time": "2026-09-18T11:37:03Z",
@@ -1923,6 +1923,105 @@
           "central_meridian_deg": -25.0,
           "area_fraction_disk_deprojected": 0.005426,
           "hmi_unipolarity_proxy": 0.361,
+          "method": "CHIMERA-inspired EUV segmentation + HMI polarity proxy + ballistic HSS prior"
+        }
+      ]
+    },
+    {
+      "time": "2026-09-21T04:52:28Z",
+      "model": "SWIFT-CH-v1.0-CHIMERA-inspired",
+      "status": "ok",
+      "coronal_holes": [
+        {
+          "id": "CH-12",
+          "pixel_count": 21459,
+          "area_fraction_disk_deprojected": 0.070427,
+          "latitude_deg": -41.89,
+          "central_meridian_deg": -2.29,
+          "width_deg_proxy": 60.82,
+          "dchb_proxy_deg": 13.99,
+          "hmi_unipolarity_proxy": 0.126,
+          "hmi_polarity_proxy": 0.126,
+          "earth_facing_score": 0.025782,
+          "source_strength": 0.73,
+          "predicted_peak_speed_km_s_prior": 612.8,
+          "predicted_delta_v_km_s_prior": 222.8
+        },
+        {
+          "id": "CH-1",
+          "pixel_count": 7506,
+          "area_fraction_disk_deprojected": 0.042185,
+          "latitude_deg": 62.17,
+          "central_meridian_deg": 23.65,
+          "width_deg_proxy": 47.07,
+          "dchb_proxy_deg": 10.83,
+          "hmi_unipolarity_proxy": 0.192,
+          "hmi_polarity_proxy": -0.192,
+          "earth_facing_score": 0.004994,
+          "source_strength": 0.578,
+          "predicted_peak_speed_km_s_prior": 558.1,
+          "predicted_delta_v_km_s_prior": 168.1
+        },
+        {
+          "id": "CH-10",
+          "pixel_count": 2251,
+          "area_fraction_disk_deprojected": 0.005429,
+          "latitude_deg": 13.59,
+          "central_meridian_deg": -22.59,
+          "width_deg_proxy": 16.89,
+          "dchb_proxy_deg": 3.88,
+          "hmi_unipolarity_proxy": 0.388,
+          "hmi_polarity_proxy": -0.388,
+          "earth_facing_score": 0.002632,
+          "source_strength": 0.527,
+          "predicted_peak_speed_km_s_prior": 539.6,
+          "predicted_delta_v_km_s_prior": 149.6
+        },
+        {
+          "id": "CH-3",
+          "pixel_count": 257,
+          "area_fraction_disk_deprojected": 0.00118,
+          "latitude_deg": 54.63,
+          "central_meridian_deg": -35.45,
+          "width_deg_proxy": 7.87,
+          "dchb_proxy_deg": 1.81,
+          "hmi_unipolarity_proxy": 0.285,
+          "hmi_polarity_proxy": -0.285,
+          "earth_facing_score": 0.000132,
+          "source_strength": 0.252,
+          "predicted_peak_speed_km_s_prior": 440.6,
+          "predicted_delta_v_km_s_prior": 50.6
+        }
+      ],
+      "earth_impacts": [
+        {
+          "source_id": "CH-12",
+          "arrival_time": "2026-09-23T22:04:06Z",
+          "window_start": "2026-09-22T13:42:21Z",
+          "window_end": "2026-09-25T06:25:51Z",
+          "confidence": 0.38,
+          "predicted_peak_speed_km_s_prior": 612.8,
+          "predicted_delta_v_km_s_prior": 222.8,
+          "earth_facing_score": 0.025782,
+          "latitude_deg": -41.89,
+          "central_meridian_deg": -2.29,
+          "area_fraction_disk_deprojected": 0.070427,
+          "hmi_unipolarity_proxy": 0.126,
+          "method": "CHIMERA-inspired EUV segmentation + HMI polarity proxy + ballistic HSS prior"
+        },
+        {
+          "source_id": "CH-10",
+          "arrival_time": "2026-09-25T19:15:24Z",
+          "window_start": "2026-09-24T10:41:35Z",
+          "window_end": "2026-09-27T03:49:13Z",
+          "confidence": 0.373,
+          "predicted_peak_speed_km_s_prior": 539.6,
+          "predicted_delta_v_km_s_prior": 149.6,
+          "earth_facing_score": 0.002632,
+          "latitude_deg": 13.59,
+          "central_meridian_deg": -22.59,
+          "area_fraction_disk_deprojected": 0.005429,
+          "hmi_unipolarity_proxy": 0.388,
           "method": "CHIMERA-inspired EUV segmentation + HMI polarity proxy + ballistic HSS prior"
         }
       ]
