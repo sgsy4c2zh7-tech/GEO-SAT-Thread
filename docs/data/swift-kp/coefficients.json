@@ -1,6 +1,6 @@
 {
   "version": "SWIFT-Kp-AI-v0.9-adaptive-residual-CH",
-  "updated_at": "2026-09-21T12:44:34Z",
+  "updated_at": "2026-09-21T20:01:06Z",
   "feature_names": [
     "bias",
     "v_excess",
@@ -12,27 +12,27 @@
     "bt_excess"
   ],
   "beta": [
-    -0.50694,
-    0.132863,
-    -0.134306,
-    0.070358,
-    0.629184,
-    0.451729,
-    0.344532,
-    0.166013
+    -0.496323,
+    0.128353,
+    -0.133852,
+    0.072457,
+    0.597663,
+    0.448627,
+    0.35319,
+    0.164463
   ],
   "fit": {
     "status": "fitted",
-    "fit_count": 48,
-    "mae_residual": 0.47,
-    "bias_residual": 0.019,
-    "sample_start": "2026-08-07T12:44:34Z",
-    "sample_end": "2026-09-21T12:44:34Z"
+    "fit_count": 50,
+    "mae_residual": 0.466,
+    "bias_residual": 0.018,
+    "sample_start": "2026-08-07T20:01:06Z",
+    "sample_end": "2026-09-21T20:01:06Z"
   },
   "kp_floor": 0.33,
   "forecast_hours": 72,
   "wind_gate": 0.4,
-  "bz_model_gate": 0.547,
+  "bz_model_gate": 0.614,
   "nominal_lead_bias_calibration": {
     "version": "kp-nominal-lead-bias-v1",
     "window_days": 30,
@@ -41,24 +41,24 @@
     "leads": {
       "24": {
         "nominal_lead_hours": 24,
-        "count": 17,
-        "bias": 0.593,
+        "count": 19,
+        "bias": 0.608,
         "alpha": 0.15,
-        "subtract_from_kp": 0.089,
+        "subtract_from_kp": 0.091,
         "status": "active"
       },
       "48": {
         "nominal_lead_hours": 48,
-        "count": 9,
-        "bias": 1.241,
+        "count": 11,
+        "bias": 1.247,
         "alpha": 0.0,
         "subtract_from_kp": 0.0,
         "status": "learning"
       },
       "72": {
         "nominal_lead_hours": 72,
-        "count": 1,
-        "bias": 1.33,
+        "count": 3,
+        "bias": 1.293,
         "alpha": 0.0,
         "subtract_from_kp": 0.0,
         "status": "learning"
