@@ -1,7 +1,75 @@
 {
   "schema_version": "SWIFT-GEO-SAT-EVENT-LEDGER-v0.4",
-  "updated_at": "2026-09-21T00:31:17.024499Z",
+  "updated_at": "2026-09-21T05:29:07.960381Z",
   "events": [
+    {
+      "issued_at": "2026-09-21T04:50:00Z",
+      "title": "Product Anomaly/Outage: GOES-19 Aerosol, Cloud, and Land Meso-2 products-Issued: September 21, 2026 0450Z",
+      "satellites": [
+        "GOES-19"
+      ],
+      "scope": "product/data",
+      "nature": "anomaly/outage",
+      "issue_category": "PRODUCT_DATA",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": true,
+        "metrics": {
+          "window_start": "2026-09-18T04:50:00Z",
+          "window_end": "2026-09-21T04:50:00Z",
+          "max_wind_kms": 594.56,
+          "max_kp": 3.0,
+          "min_bz_nt": -5.71,
+          "n_wind": 7659,
+          "n_kp": 23,
+          "n_bz": 7689
+        },
+        "flags": {
+          "wind_ge_500": true,
+          "kp_ge_5": false,
+          "bz_le_minus5": true
+        },
+        "association_score_0_100": 39.8,
+        "interpretation": "Descriptive 72 h pre-event environment only; does not establish that space weather caused the anomaly."
+      },
+      "space_weather_windows": {
+        "covered": true,
+        "at_event": {
+          "kp": null,
+          "bz_nt": -0.69,
+          "wind_kms": 365.54
+        },
+        "windows": {
+          "6": {
+            "max_wind_kms": 594.56,
+            "max_kp": 1.67,
+            "min_bz_nt": -2.1,
+            "n_wind": 712,
+            "n_kp": 1,
+            "n_bz": 716
+          },
+          "24": {
+            "max_wind_kms": 594.56,
+            "max_kp": 2.0,
+            "min_bz_nt": -4.05,
+            "n_wind": 2631,
+            "n_kp": 7,
+            "n_bz": 2639
+          },
+          "72": {
+            "max_wind_kms": 594.56,
+            "max_kp": 3.0,
+            "min_bz_nt": -5.71,
+            "n_wind": 7659,
+            "n_kp": 23,
+            "n_bz": 7689
+          }
+        },
+        "interpretation": "Descriptive co-occurrence only; causal attribution is not automatic."
+      }
+    },
     {
       "issued_at": "2026-09-14T14:25:00Z",
       "title": "Product Anomaly/Outage: Impact to GOES-18, GOES-19, and SOLAR-1 Products Issued: September 14, 2026 1425Z",
@@ -9259,6 +9327,27 @@
       "title": "Administrative: Product Anomaly/Outage: GOES-18 - Sectorized Cloud",
       "satellites": [
         "GOES-18"
+      ],
+      "scope": "product/data",
+      "nature": "anomaly/outage",
+      "issue_category": "PRODUCT_DATA",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      },
+      "space_weather_windows": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      }
+    },
+    {
+      "issued_at": null,
+      "title": "Product Anomaly/Outage: GOES-19 Aerosol, Cloud, and Land Meso-2",
+      "satellites": [
+        "GOES-19"
       ],
       "scope": "product/data",
       "nature": "anomaly/outage",
