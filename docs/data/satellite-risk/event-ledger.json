@@ -1,7 +1,75 @@
 {
   "schema_version": "SWIFT-GEO-SAT-EVENT-LEDGER-v0.4",
-  "updated_at": "2026-09-22T15:11:28.994164Z",
+  "updated_at": "2026-09-22T19:11:56.070370Z",
   "events": [
+    {
+      "issued_at": "2026-09-22T16:35:00Z",
+      "title": "Product Anomaly/Outage: Update #2 - GOES-18/19 Product Distribution Outage, Issued: September 22, 2026 1635 UTC",
+      "satellites": [
+        "GOES-18"
+      ],
+      "scope": "product/data",
+      "nature": "anomaly/outage",
+      "issue_category": "PRODUCT_DATA",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": true,
+        "metrics": {
+          "window_start": "2026-09-19T16:35:00Z",
+          "window_end": "2026-09-22T16:35:00Z",
+          "max_wind_kms": 594.56,
+          "max_kp": 3.0,
+          "min_bz_nt": -4.14,
+          "n_wind": 6422,
+          "n_kp": 24,
+          "n_bz": 6666
+        },
+        "flags": {
+          "wind_ge_500": true,
+          "kp_ge_5": false,
+          "bz_le_minus5": false
+        },
+        "association_score_0_100": 34.3,
+        "interpretation": "Descriptive 72 h pre-event environment only; does not establish that space weather caused the anomaly."
+      },
+      "space_weather_windows": {
+        "covered": true,
+        "at_event": {
+          "kp": 0.67,
+          "bz_nt": 1.77,
+          "wind_kms": 294.0
+        },
+        "windows": {
+          "6": {
+            "max_wind_kms": 476.79,
+            "max_kp": 0.67,
+            "min_bz_nt": -3.02,
+            "n_wind": 145,
+            "n_kp": 2,
+            "n_bz": 342
+          },
+          "24": {
+            "max_wind_kms": 576.91,
+            "max_kp": 2.0,
+            "min_bz_nt": -3.92,
+            "n_wind": 1151,
+            "n_kp": 8,
+            "n_bz": 1379
+          },
+          "72": {
+            "max_wind_kms": 594.56,
+            "max_kp": 3.0,
+            "min_bz_nt": -4.14,
+            "n_wind": 6422,
+            "n_kp": 24,
+            "n_bz": 6666
+          }
+        },
+        "interpretation": "Descriptive co-occurrence only; causal attribution is not automatic."
+      }
+    },
     {
       "issued_at": "2026-09-22T14:15:00Z",
       "title": "Product Anomaly/Outage: Update #1 - GOES-18/19 Product Distribution Outage, Issued: September 22, 2026 1415 UTC",
@@ -23,7 +91,7 @@
           "max_kp": 3.0,
           "min_bz_nt": -4.14,
           "n_wind": 6472,
-          "n_kp": 23,
+          "n_kp": 24,
           "n_bz": 6701
         },
         "flags": {
@@ -37,7 +105,7 @@
       "space_weather_windows": {
         "covered": true,
         "at_event": {
-          "kp": null,
+          "kp": 0.67,
           "bz_nt": 2.61,
           "wind_kms": 324.33
         },
@@ -47,15 +115,15 @@
             "max_kp": 0.33,
             "min_bz_nt": -1.49,
             "n_wind": 134,
-            "n_kp": 1,
+            "n_kp": 2,
             "n_bz": 342
           },
           "24": {
             "max_wind_kms": 576.91,
             "max_kp": 2.0,
-            "min_bz_nt": -3.97,
+            "min_bz_nt": -3.92,
             "n_wind": 1308,
-            "n_kp": 7,
+            "n_kp": 8,
             "n_bz": 1520
           },
           "72": {
@@ -63,7 +131,7 @@
             "max_kp": 3.0,
             "min_bz_nt": -4.14,
             "n_wind": 6472,
-            "n_kp": 23,
+            "n_kp": 24,
             "n_bz": 6701
           }
         },
@@ -121,7 +189,7 @@
           "24": {
             "max_wind_kms": 576.91,
             "max_kp": 2.0,
-            "min_bz_nt": -3.97,
+            "min_bz_nt": -3.92,
             "n_wind": 1565,
             "n_kp": 8,
             "n_bz": 1663
@@ -9524,6 +9592,27 @@
     {
       "issued_at": null,
       "title": "Product Anomaly/Outage: GOES-18/19 Product Distribution Outage,",
+      "satellites": [
+        "GOES-18"
+      ],
+      "scope": "product/data",
+      "nature": "anomaly/outage",
+      "issue_category": "PRODUCT_DATA",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      },
+      "space_weather_windows": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      }
+    },
+    {
+      "issued_at": null,
+      "title": "Product Anomaly/Outage: Update #2 - GOES-18/19 Product Distribution",
       "satellites": [
         "GOES-18"
       ],
