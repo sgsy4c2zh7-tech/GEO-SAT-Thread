@@ -1488,11 +1488,21 @@ def main() -> None:
             "Forecast_24h_Ago_kV": p24.get("predicted"),
             "Current_Forecast_kV": fc.get("surface_kv") if tt >= now - timedelta(hours=2) else None,
             "Differential_kV": fc.get("differential_kv"),
+            "Secondary_Surface_kV": fc.get("surface_secondary_kv"),
+            "Surface_Model_Mode": fc.get("surface_model_mode"),
+            "LowE_ElectronFlux_cm2_s": fc.get("surface_plasma_e_flux_cm2_s"),
+            "LowE_IonFlux_cm2_s": fc.get("surface_plasma_i_flux_cm2_s"),
+            "Electron_Char_keV": fc.get("surface_e_char_kev"),
+            "Ion_Char_keV": fc.get("surface_i_char_kev"),
+            "Electron_Current_A_m2": fc.get("surface_e_current_a_m2"),
+            "Ion_Current_A_m2": fc.get("surface_i_current_a_m2"),
+            "Photo_Current_A_m2": fc.get("surface_photo_current_a_m2"),
+            "Secondary_Yield": fc.get("surface_secondary_yield"),
             "Kp": fc.get("kp"), "BzMin_nT": fc.get("bz_min_nt"), "Wind_km_s": fc.get("wind_kms"),
             "Source": ob.get("source") or fc.get("source"),
         })
-    write_table(ws,0,0,["UTC","Hours_From_Now","Observed_Surface_kV","Forecast_24h_Ago_kV","Current_Forecast_kV","Differential_kV","Kp","BzMin_nT","Wind_km_s","Source"],surface_rows,fmt)
-    ws.set_column("A:A",19);ws.set_column("B:I",18);ws.set_column("J:J",48)
+    write_table(ws,0,0,["UTC","Hours_From_Now","Observed_Surface_kV","Forecast_24h_Ago_kV","Current_Forecast_kV","Differential_kV","Secondary_Surface_kV","Surface_Model_Mode","LowE_ElectronFlux_cm2_s","LowE_IonFlux_cm2_s","Electron_Char_keV","Ion_Char_keV","Electron_Current_A_m2","Ion_Current_A_m2","Photo_Current_A_m2","Secondary_Yield","Kp","BzMin_nT","Wind_km_s","Source"],surface_rows,fmt)
+    ws.set_column("A:A",19);ws.set_column("B:S",18);ws.set_column("T:T",48)
     add_line_chart(wb,ws,"SWIFT-CHARGE surface potential — −72 h observed / archived → +72 h forecast","Surface_Charging",0,len(surface_rows),0,[(2,"Observed surface kV"),(3,"24h-issued forecast"),(4,"Current forecast")],"L2","kV")
 
     ws = wb.add_worksheet("Internal_Charging")
@@ -1562,9 +1572,11 @@ def main() -> None:
         {"Item":"Model","Value":charging.get("model"),"Note":"Current SWIFT-CHARGE generation"},
         {"Item":"Reference scope","Value":((charging.get("reference_spacecraft") or {}).get("scope")),"Note":"Not direct GOES hardware telemetry"},
         {"Item":"Material scenario","Value":str(((charging.get("reference_spacecraft") or {}).get("material_scenario"))),"Note":"Declared epsilon/sigma/transport-response assumptions"},
-        {"Item":"Surface coefficients","Value":json.dumps(coeff.get("surface") or {},ensure_ascii=False),"Note":tr.get("surface_status")},
+        {"Item":"Surface model","Value":json.dumps(coeff.get("surface") or {},ensure_ascii=False),"Note":tr.get("surface_status")},
+        {"Item":"Surface current-balance scenario","Value":json.dumps(((charging.get("reference_spacecraft") or {}).get("surface_scenario") or {}),ensure_ascii=False),"Note":"Ji + Jph + Jse + Jbs - Je - Jleak = 0"},
+        {"Item":"Differential surface scenario","Value":json.dumps(((charging.get("reference_spacecraft") or {}).get("differential_surface_scenario") or {}),ensure_ascii=False),"Note":"Differential kV = |V_surface2 - V_surface1|"},
         {"Item":"Internal coefficients","Value":json.dumps(coeff.get("internal") or {},ensure_ascii=False),"Note":tr.get("internal_status")},
-        {"Item":"Differential ratio","Value":coeff.get("differential_ratio"),"Note":"Reference material differential-potential proxy"},
+        {"Item":"Differential method","Value":"two-surface equilibrium difference","Note":"No fixed differential ratio"},
         {"Item":"Surface training N","Value":tr.get("surface_samples"),"Note":"Validated target count used for coefficient update"},
         {"Item":"Internal training N","Value":tr.get("internal_samples"),"Note":"Validated target count used for coefficient update"},
         {"Item":"Verification rule","Value":charging_verification.get("observation_rule"),"Note":"Model-generated values never self-score"},

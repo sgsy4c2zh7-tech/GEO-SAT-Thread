@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SWIFT-RB-CHARGE v1.6: GEO >2 MeV electron forecast + charging scenarios + verification.
+"""SWIFT-RB-CHARGE v1.6.1: GEO >2 MeV electron forecast + charging scenarios + verification.
 
 Inputs (all optional/tolerant):
   docs/data/swift-kp/latest.json
@@ -22,7 +22,7 @@ Outputs:
 
 Important scientific boundary:
 - The forecast values are reference-spacecraft estimates, not direct GOES bus-potential telemetry.
-- Surface charging is an engineering proxy until low-energy plasma / validated potential observations are supplied.
+- Surface charging uses a reference current-balance model driven by GOES low-energy differential particle flux when available; it remains a scenario estimate until validated spacecraft-potential observations are supplied.
 - Internal charging is an equivalent reference-dielectric field, not a measured internal field in GOES hardware.
 - Verification is counted only against rows in observed.json. Model-generated values never score themselves.
 """
@@ -95,6 +95,37 @@ MATERIAL_SCENARIO = {
     "flux_power": 0.85,
     "max_field_mvm": 5.0,
 }
+
+
+SURFACE_SCENARIO = {
+    "name": "reference-GEO-surface-current-balance-v1",
+    # Differential flux products are treated as omnidirectional particle flux.
+    # The collection factor converts that flux to an effective incident surface flux.
+    "collection_factor": 0.25,
+    "photoelectron_current_a_m2": 4.0e-5,
+    "photoelectron_characteristic_v": 2.0,
+    "secondary_yield_max": 1.2,
+    "secondary_yield_peak_keV": 0.35,
+    "backscatter_fraction": 0.12,
+    "areal_leakage_resistance_ohm_m2": 2.0e10,
+    "min_potential_kv": -30.0,
+    "max_potential_kv": 5.0,
+}
+DIFFERENTIAL_SURFACE_SCENARIO = {
+    "name": "shadowed-low-emission-surface-v1",
+    "collection_factor": 0.25,
+    "photoelectron_current_a_m2": 2.0e-7,
+    "photoelectron_characteristic_v": 2.0,
+    "secondary_yield_max": 0.75,
+    "secondary_yield_peak_keV": 0.45,
+    "backscatter_fraction": 0.08,
+    "areal_leakage_resistance_ohm_m2": 8.0e10,
+    "min_potential_kv": -30.0,
+    "max_potential_kv": 5.0,
+}
+SURFACE_PLASMA_KEEP_DAYS = 30
+SURFACE_PLASMA_STALE_HOURS = 12.0
+ELEMENTARY_CHARGE_C = 1.602176634e-19
 
 
 
@@ -815,6 +846,272 @@ def material_internal_field_forecast(e_observed: list[tuple[datetime, float]], e
         })
     return out
 
+def _energy_kev(v: Any) -> float | None:
+    if v is None:
+        return None
+    if isinstance(v, (int, float)):
+        x = float(v)
+        return x if math.isfinite(x) else None
+    txt = str(v).strip().lower().replace(" ", "")
+    # SWPC realtime differential products normally expose energy in keV, but
+    # tolerate strings/ranges and explicit units.
+    nums = []
+    cur = ""
+    for ch in txt:
+        if ch.isdigit() or ch in ".eE+-":
+            cur += ch
+        else:
+            if cur:
+                try: nums.append(float(cur))
+                except Exception: pass
+                cur = ""
+    if cur:
+        try: nums.append(float(cur))
+        except Exception: pass
+    if not nums:
+        return None
+    x = sum(nums[:2]) / min(2, len(nums)) if len(nums) >= 2 and "-" in txt else nums[0]
+    if "mev" in txt:
+        x *= 1000.0
+    elif "ev" in txt and "kev" not in txt:
+        x /= 1000.0
+    return x if math.isfinite(x) else None
+
+
+def _flux_per_kev(row: dict[str, Any]) -> float | None:
+    f = num(row.get("flux"))
+    if f is None or f < 0:
+        return None
+    units = str(row.get("units") or row.get("unit") or "").lower()
+    # SWPC GOES real-time differential particle JSON is typically
+    # cm^-2 s^-1 keV^-1. Keep conversions explicit if metadata says otherwise.
+    if "mev" in units and ("-1" in units or "/" in units):
+        f /= 1000.0
+    elif "ev" in units and "kev" not in units and ("-1" in units or "/" in units):
+        f *= 1000.0
+    return f
+
+
+def _fetch_goes_low_energy(kind: str) -> tuple[list[dict[str, Any]], str]:
+    if os.environ.get("SWIFT_CHARGE_OFFLINE") == "1":
+        return [], "offline"
+    fname = "differential-electrons-7-day.json" if kind == "electron" else "differential-protons-7-day.json"
+    url = f"https://services.swpc.noaa.gov/json/goes/primary/{fname}"
+    try:
+        req = Request(url, headers={"User-Agent":"SWIFT-RB-CHARGE/1.6.1"})
+        with urlopen(req, timeout=30) as response:
+            payload = json.load(response)
+        out = []
+        for row in rows(payload):
+            t = parse_time(row.get("time_tag") or row.get("time"))
+            e = _energy_kev(row.get("energy"))
+            f = _flux_per_kev(row)
+            q = row.get("quality_flag")
+            if not t or e is None or f is None:
+                continue
+            if q not in (None, 0, "0"):
+                continue
+            # MPS-LO range: 30 eV to 30 keV. Exclude the high-energy channels.
+            if 0.03 <= e <= 30.0:
+                out.append({"time":iso_z(t), "_t":t, "energy_kev":e, "flux_per_kev":f,
+                            "satellite":row.get("satellite"), "source":fname})
+        return out, f"{fname}: {len(out)} valid low-energy rows"
+    except Exception as exc:
+        return [], f"{fname} fetch failed: {type(exc).__name__}: {exc}"
+
+
+def _channel_widths_kev(energies: list[float]) -> dict[float, float]:
+    es = sorted(set(e for e in energies if e > 0))
+    if not es:
+        return {}
+    if len(es) == 1:
+        return {es[0]: max(0.01, es[0] * 0.12)}
+    edges = []
+    for a, b in zip(es[:-1], es[1:]):
+        edges.append(math.sqrt(a*b))
+    lo = es[0] * es[0] / edges[0]
+    hi = es[-1] * es[-1] / edges[-1]
+    full = [lo] + edges + [hi]
+    return {e:max(1e-6, full[i+1]-full[i]) for i,e in enumerate(es)}
+
+
+def _surface_spectrum_moment(rows_in: list[dict[str, Any]]) -> dict[str, float] | None:
+    if not rows_in:
+        return None
+    # Multiple angular records may share a channel/time. Median them first.
+    by_e: dict[float, list[float]] = {}
+    for r in rows_in:
+        e = num(r.get("energy_kev")); f = num(r.get("flux_per_kev"))
+        if e is None or f is None or e <= 0 or f < 0:
+            continue
+        by_e.setdefault(round(e,6), []).append(f)
+    if not by_e:
+        return None
+    widths = _channel_widths_kev(list(by_e.keys()))
+    integral = 0.0
+    weighted_e = 0.0
+    for e, vals in by_e.items():
+        vals = sorted(vals)
+        n = len(vals)
+        med = vals[n//2] if n % 2 else 0.5*(vals[n//2-1]+vals[n//2])
+        dE = widths.get(e, max(0.01,e*0.12))
+        part = max(0.0, med) * dE
+        integral += part
+        weighted_e += e * part
+    char_e = weighted_e / integral if integral > 0 else 1.0
+    return {"integral_flux_cm2_s": integral, "characteristic_energy_kev": char_e}
+
+
+def _plasma_moments_from_rows(e_rows: list[dict[str, Any]], i_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    # 5-minute bins keep electron and ion observations aligned without inventing interpolation.
+    def key5(t: datetime):
+        minute = (t.minute // 5) * 5
+        return t.replace(minute=minute, second=0, microsecond=0)
+    eb: dict[datetime, list[dict[str,Any]]] = {}
+    ib: dict[datetime, list[dict[str,Any]]] = {}
+    for r in e_rows: eb.setdefault(key5(r["_t"]), []).append(r)
+    for r in i_rows: ib.setdefault(key5(r["_t"]), []).append(r)
+    out = []
+    all_t = sorted(set(eb) | set(ib))
+    for t in all_t:
+        em = _surface_spectrum_moment(eb.get(t,[]))
+        im = _surface_spectrum_moment(ib.get(t,[]))
+        if not em and not im:
+            continue
+        out.append({
+            "time":iso_z(t), "_t":t,
+            "electron_integral_flux_cm2_s": em["integral_flux_cm2_s"] if em else None,
+            "electron_characteristic_keV": em["characteristic_energy_kev"] if em else None,
+            "ion_integral_flux_cm2_s": im["integral_flux_cm2_s"] if im else None,
+            "ion_characteristic_keV": im["characteristic_energy_kev"] if im else None,
+        })
+    return out
+
+
+def refresh_surface_plasma_history(now: datetime) -> dict[str, Any]:
+    path = OUT / "surface-plasma-history.json"
+    old = load_json(path,{}) or {}
+    saved = {}
+    for r in rows(old, ("records","items","data")):
+        t = parse_time(r.get("time"))
+        if t and t >= now-timedelta(days=SURFACE_PLASMA_KEEP_DAYS):
+            saved[iso_z(t)] = {**r, "_t":t}
+    er, es = _fetch_goes_low_energy("electron")
+    ir, is_ = _fetch_goes_low_energy("ion")
+    for r in _plasma_moments_from_rows(er,ir):
+        if r["_t"] >= now-timedelta(days=SURFACE_PLASMA_KEEP_DAYS):
+            saved[r["time"]] = r
+    recs = [saved[k] for k in sorted(saved)]
+    atomic_json(path,{
+        "updated_at":iso_z(now),"retention_days":SURFACE_PLASMA_KEEP_DAYS,
+        "source":"NOAA/SWPC GOES primary differential electrons/protons; low-energy channels <=30 keV",
+        "electron_fetch_status":es,"ion_fetch_status":is_,
+        "records":[{k:v for k,v in r.items() if k!="_t"} for r in recs],
+    })
+    return {"records":recs,"electron_fetch_status":es,"ion_fetch_status":is_}
+
+
+def _latest_plasma(plasma_rows: list[dict[str,Any]], t: datetime, max_age_h: float = SURFACE_PLASMA_STALE_HOURS) -> dict[str,Any] | None:
+    pts=[r for r in plasma_rows if isinstance(r.get("_t"),datetime) and r["_t"]<=t and (t-r["_t"]).total_seconds()<=max_age_h*3600]
+    return max(pts,key=lambda r:r["_t"]) if pts else None
+
+
+def _secondary_yield(energy_kev: float, scenario: dict[str,Any]) -> float:
+    e=max(1e-5,energy_kev)
+    emax=max(1e-5,float(scenario["secondary_yield_peak_keV"]))
+    dmax=max(0.0,float(scenario["secondary_yield_max"]))
+    x=e/emax
+    return max(0.0, min(5.0, dmax*x*math.exp(1.0-x)))
+
+
+def _surface_current_components(v_kv: float, plasma: dict[str,float], scenario: dict[str,Any]) -> dict[str,float]:
+    # Effective incident particle current density from omnidirectional differential flux.
+    cf=float(scenario["collection_factor"])
+    fe=max(0.0,float(plasma.get("electron_integral_flux_cm2_s") or 0.0))
+    fi=max(0.0,float(plasma.get("ion_integral_flux_cm2_s") or 0.0))
+    ee=max(0.03,float(plasma.get("electron_characteristic_keV") or 1.0))
+    ei=max(0.03,float(plasma.get("ion_characteristic_keV") or 1.0))
+    je0=ELEMENTARY_CHARGE_C*cf*fe*1.0e4
+    ji0=ELEMENTARY_CHARGE_C*cf*fi*1.0e4
+
+    # Maxwellian-like collection response using characteristic energies as scale parameters.
+    if v_kv < 0:
+        je=je0*math.exp(max(-50.0,v_kv/ee))
+        ji=ji0*(1.0+min(100.0,abs(v_kv)/ei))
+    else:
+        je=je0*(1.0+min(100.0,v_kv/ee))
+        ji=ji0*math.exp(max(-50.0,-v_kv/ei))
+
+    delta=_secondary_yield(ee,scenario)
+    jse=delta*je
+    jbs=float(scenario["backscatter_fraction"])*je
+
+    # Photoelectron emission is suppressed as the surface goes positive.
+    jph0=float(scenario["photoelectron_current_a_m2"])*float(plasma.get("sunlit_fraction",1.0))
+    vph=max(1e-6,float(scenario["photoelectron_characteristic_v"]))/1000.0 # kV
+    jph=jph0 if v_kv<=0 else jph0*math.exp(-v_kv/vph)
+
+    rarea=max(1.0,float(scenario["areal_leakage_resistance_ohm_m2"]))
+    jleak=(v_kv*1000.0)/rarea
+
+    net=ji+jph+jse+jbs-je-jleak
+    return {"net_a_m2":net,"electron_a_m2":je,"ion_a_m2":ji,"photo_a_m2":jph,
+            "secondary_a_m2":jse,"backscatter_a_m2":jbs,"leak_a_m2":jleak,
+            "secondary_yield":delta}
+
+
+def solve_surface_potential_kv(plasma: dict[str,float], scenario: dict[str,Any]) -> tuple[float,dict[str,float]]:
+    lo=float(scenario["min_potential_kv"]); hi=float(scenario["max_potential_kv"])
+    flo=_surface_current_components(lo,plasma,scenario)["net_a_m2"]
+    fhi=_surface_current_components(hi,plasma,scenario)["net_a_m2"]
+    if flo==0: return lo,_surface_current_components(lo,plasma,scenario)
+    if fhi==0: return hi,_surface_current_components(hi,plasma,scenario)
+    if flo*fhi < 0:
+        a,b,fa=lo,hi,flo
+        for _ in range(80):
+            m=0.5*(a+b); fm=_surface_current_components(m,plasma,scenario)["net_a_m2"]
+            if abs(fm)<1e-12 or (b-a)<1e-5:
+                return m,_surface_current_components(m,plasma,scenario)
+            if fa*fm<=0: b=m
+            else: a=m; fa=fm
+        m=0.5*(a+b); return m,_surface_current_components(m,plasma,scenario)
+
+    # No bracketed root: choose minimum absolute current imbalance on a dense grid.
+    best=None
+    for j in range(351):
+        v=lo+(hi-lo)*j/350.0
+        comp=_surface_current_components(v,plasma,scenario)
+        score=abs(comp["net_a_m2"])
+        if best is None or score<best[0]: best=(score,v,comp)
+    return best[1],best[2]
+
+
+def surface_plasma_for_forecast(t: datetime, now: datetime, plasma_rows: list[dict[str,Any]], kp: float, bz: float, wind: float) -> tuple[dict[str,float],str]:
+    base=_latest_plasma(plasma_rows,now)
+    if base:
+        # Future low-energy plasma is not observed. Persist the measured spectral moments
+        # and apply bounded storm-response scaling to particle flux amplitudes only.
+        kp0=2.0; south=max(0.0,-bz)
+        e_scale=math.exp(clamp(0.10*(kp-kp0)+0.018*south+0.055*((wind-425.0)/100.0),-2.0,2.2))
+        i_scale=math.exp(clamp(0.06*(kp-kp0)+0.010*south+0.035*((wind-425.0)/100.0),-1.5,1.6))
+        return {
+            "electron_integral_flux_cm2_s": max(0.0,float(base.get("electron_integral_flux_cm2_s") or 0.0))*e_scale,
+            "electron_characteristic_keV": max(0.03,float(base.get("electron_characteristic_keV") or 1.0)),
+            "ion_integral_flux_cm2_s": max(0.0,float(base.get("ion_integral_flux_cm2_s") or 0.0))*i_scale,
+            "ion_characteristic_keV": max(0.03,float(base.get("ion_characteristic_keV") or 1.0)),
+            "sunlit_fraction": 1.0,
+        },"mps-lo-persistence+storm-scaling"
+    # Explicit fallback: a scenario plasma, not a measurement.
+    eflux=1.5e7*math.exp(clamp(0.12*(kp-2.0)+0.02*max(0.0,-bz)+0.05*((wind-425)/100),-2,2))
+    iflux=8.0e6*math.exp(clamp(0.07*(kp-2.0)+0.01*max(0.0,-bz)+0.03*((wind-425)/100),-2,2))
+    return {
+        "electron_integral_flux_cm2_s":eflux,"electron_characteristic_keV":1.5+0.25*max(0,kp-2),
+        "ion_integral_flux_cm2_s":iflux,"ion_characteristic_keV":2.0+0.2*max(0,kp-2),
+        "sunlit_fraction":1.0,
+    },"reference-plasma-proxy"
+
+
+
 def observed_rows(now: datetime | None = None) -> list[dict[str, Any]]:
     """Load independent charging observations and enforce 30-day retention.
 
@@ -878,16 +1175,8 @@ def fit_coefficients(obs: list[dict[str, Any]], now: datetime) -> dict[str, Any]
     surface_status = "default_reference"
     internal_status = "default_reference"
 
-    if len(sx) >= MIN_TRAIN:
-        beta = ridge_fit(sx, sy)
-        if beta:
-            surface = {
-                "intercept": clamp(beta[0], 0.0, 5.0),
-                "kp": clamp(beta[1], 0.0, 2.0),
-                "south_bz_nt": clamp(beta[2], 0.0, 0.8),
-                "wind_excess_100kms": clamp(beta[3], 0.0, 2.0),
-            }
-            surface_status = f"ridge_learned_n={len(sx)}"
+    surface = {"model":"current_balance","scenario":SURFACE_SCENARIO["name"],"differential_scenario":DIFFERENTIAL_SURFACE_SCENARIO["name"]}
+    surface_status = f"current_balance_scenario; validated_surface_targets_n={len(sx)}"
 
     if len(ix) >= MIN_TRAIN:
         beta = ridge_fit(ix, iy)
@@ -903,7 +1192,7 @@ def fit_coefficients(obs: list[dict[str, Any]], now: datetime) -> dict[str, Any]
     payload = {
         "surface": surface,
         "internal": internal,
-        "differential_ratio": DEFAULT_DIFFERENTIAL_RATIO,
+        "differential_ratio": None,
         "training": {
             "window_days": TRAIN_DAYS,
             "surface_samples": len(sx),
@@ -913,7 +1202,7 @@ def fit_coefficients(obs: list[dict[str, Any]], now: datetime) -> dict[str, Any]
         },
     }
     digest = hashlib.sha1(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:10]
-    payload["model_id"] = f"SWIFT-CHARGE-v0.1-{digest}"
+    payload["model_id"] = f"SWIFT-CHARGE-v0.2-{digest}"
     payload["updated_at"] = iso_z(now)
     return payload
 
@@ -929,12 +1218,11 @@ def driver_at(series: list[tuple[datetime, float]], t: datetime, default: float)
 
 
 
-def forecast_rows(model: dict[str, Any], now: datetime, electron_history: list[tuple[datetime, float]], electron_model: dict[str, Any]) -> list[dict[str, Any]]:
+def forecast_rows(model: dict[str, Any], now: datetime, electron_history: list[tuple[datetime, float]], electron_model: dict[str, Any], surface_plasma_rows: list[dict[str,Any]]) -> list[dict[str, Any]]:
     kp_s, bz_s, wind_s, raw = load_drivers()
     electron_fc = electron_forecast_rows(electron_history, electron_model, now)
     internal_fc = material_internal_field_forecast(electron_history, electron_fc, now)
     internal_by_t = {r["time"]: r for r in internal_fc}
-    s_coef = model["surface"]
     out = []
     for er in electron_fc:
         lead = int(er["lead_hours"])
@@ -943,22 +1231,26 @@ def forecast_rows(model: dict[str, Any], now: datetime, electron_history: list[t
         bz = clamp(driver_at(bz_s, t, -1.0), -80.0, 80.0)
         wind = clamp(driver_at(wind_s, t, 425.0), 200.0, 1800.0)
 
-        # Surface potential remains an engineering proxy until low-energy plasma /
-        # validated spacecraft-potential observations are available.
-        surface_abs = (
-            s_coef["intercept"]
-            + s_coef["kp"] * kp
-            + s_coef["south_bz_nt"] * max(0.0, -bz)
-            + s_coef["wind_excess_100kms"] * max(0.0, (wind - 400.0) / 100.0)
-        )
-        surface_kv = -clamp(surface_abs, 0.0, 30.0)
-        differential_kv = clamp(abs(surface_kv) * float(model.get("differential_ratio", DEFAULT_DIFFERENTIAL_RATIO)), 0.0, 20.0)
+        plasma, surface_mode = surface_plasma_for_forecast(t, now, surface_plasma_rows, kp, bz, wind)
+        surface_kv, surface_components = solve_surface_potential_kv(plasma, SURFACE_SCENARIO)
+        differential_surface_kv, differential_components = solve_surface_potential_kv(plasma, DIFFERENTIAL_SURFACE_SCENARIO)
+        differential_kv = clamp(abs(differential_surface_kv - surface_kv), 0.0, 35.0)
         ir = internal_by_t.get(er["time"], {})
 
         out.append({
             "time": er["time"], "lead_hours": lead,
             "surface_kv": round(surface_kv, 3),
             "differential_kv": round(differential_kv, 3),
+            "surface_secondary_kv": round(differential_surface_kv, 3),
+            "surface_model_mode": surface_mode,
+            "surface_plasma_e_flux_cm2_s": round(float(plasma.get("electron_integral_flux_cm2_s") or 0.0),3),
+            "surface_plasma_i_flux_cm2_s": round(float(plasma.get("ion_integral_flux_cm2_s") or 0.0),3),
+            "surface_e_char_kev": round(float(plasma.get("electron_characteristic_keV") or 0.0),4),
+            "surface_i_char_kev": round(float(plasma.get("ion_characteristic_keV") or 0.0),4),
+            "surface_e_current_a_m2": round(float(surface_components.get("electron_a_m2") or 0.0),12),
+            "surface_i_current_a_m2": round(float(surface_components.get("ion_a_m2") or 0.0),12),
+            "surface_photo_current_a_m2": round(float(surface_components.get("photo_a_m2") or 0.0),12),
+            "surface_secondary_yield": round(float(surface_components.get("secondary_yield") or 0.0),5),
             "internal_field_mvm": ir.get("internal_field_mvm"),
             "electron_flux_gt2mev": er["electron_flux_gt2mev"],
             "electron_flux_empirical": round(10 ** clamp(er["electron_log10_empirical"], 0.0, 7.0), 4),
@@ -998,6 +1290,8 @@ def update_archive(archive: list[dict[str, Any]], fc: list[dict[str, Any]], mode
             "model": model_id,
             "surface_kv": r["surface_kv"],
             "differential_kv": r["differential_kv"],
+            "surface_secondary_kv": r.get("surface_secondary_kv"),
+            "surface_model_mode": r.get("surface_model_mode"),
             "internal_field_mvm": r["internal_field_mvm"],
             "electron_flux_gt2mev": r["electron_flux_gt2mev"],
             "electron_flux_empirical": r.get("electron_flux_empirical"),
@@ -1186,7 +1480,7 @@ def atomic_json(path: Path, payload: Any) -> None:
     tmp.replace(path)
 
 
-def build_estimated_history(model: dict[str, Any], now: datetime) -> dict[str, Any]:
+def build_estimated_history(model: dict[str, Any], now: datetime, surface_plasma_rows: list[dict[str,Any]]) -> dict[str, Any]:
     """Archive observation-driven estimates separately from independent truth.
 
     UTC 3h samples; no future samples, forecast substitution or neutral fillers.
@@ -1214,7 +1508,7 @@ def build_estimated_history(model: dict[str, Any], now: datetime) -> dict[str, A
         pts = [(tt, v) for tt, v in series if tt <= t and (t-tt).total_seconds() <= max_age*3600]
         return max(pts, key=lambda x: x[0])[1] if pts else None
     t = cutoff.replace(hour=(cutoff.hour//3)*3, minute=0, second=0, microsecond=0)
-    s, i = model["surface"], model["internal"]
+    i = model["internal"]
     while t <= now:
         if t < cutoff:
             t += timedelta(hours=3)
@@ -1226,9 +1520,21 @@ def build_estimated_history(model: dict[str, Any], now: datetime) -> dict[str, A
                 "source":"Observed environment -> reference charging model; NOT charging telemetry",
                 "kp":kp, "bz_min_nt":bz, "wind_kms":wind})
             if r.get("surface_kv") is None:
-                magnitude=s["intercept"]+s["kp"]*kp+s["south_bz_nt"]*max(0,-bz)+s["wind_excess_100kms"]*max(0,(wind-400)/100)
-                r["surface_kv"] = round(-clamp(magnitude,0,30),3)
-                r["differential_kv"] = round(abs(r["surface_kv"])*model.get("differential_ratio",DEFAULT_DIFFERENTIAL_RATIO),3)
+                p=_latest_plasma(surface_plasma_rows,t,max_age_h=6.0)
+                if p:
+                    plasma={
+                        "electron_integral_flux_cm2_s":p.get("electron_integral_flux_cm2_s"),
+                        "electron_characteristic_keV":p.get("electron_characteristic_keV"),
+                        "ion_integral_flux_cm2_s":p.get("ion_integral_flux_cm2_s"),
+                        "ion_characteristic_keV":p.get("ion_characteristic_keV"),
+                        "sunlit_fraction":1.0,
+                    }
+                    v1,c1=solve_surface_potential_kv(plasma,SURFACE_SCENARIO)
+                    v2,c2=solve_surface_potential_kv(plasma,DIFFERENTIAL_SURFACE_SCENARIO)
+                    r["surface_kv"]=round(v1,3)
+                    r["surface_secondary_kv"]=round(v2,3)
+                    r["differential_kv"]=round(clamp(abs(v2-v1),0,35),3)
+                    r["surface_model_mode"]="measured-mps-lo-current-balance"
             flux_now = sample(es,t,3.1)
             if r.get("internal_field_mvm") is None and flux_now is not None:
                 # Historical estimate uses the same declared material scenario. A 7-day spin-up
@@ -1259,11 +1565,12 @@ def main() -> None:
     persist_observed_rows(obs, now)
 
     e_hist = refresh_electron_histories(now)
+    surface_plasma = refresh_surface_plasma_history(now)
     electron_model = build_electron_model(e_hist["research"], now)
 
     model = fit_coefficients(obs, now)
-    estimated = build_estimated_history(model, now)
-    fc = forecast_rows(model, now, e_hist["research"], electron_model)
+    estimated = build_estimated_history(model, now, surface_plasma["records"])
+    fc = forecast_rows(model, now, e_hist["research"], electron_model, surface_plasma["records"])
     archive = update_archive(load_archive(), fc, electron_model["model_id"] + "|" + model["model_id"], now)
 
     verification = build_verification(archive, obs, electron_model["model_id"] + "|" + model["model_id"], now)
@@ -1285,6 +1592,8 @@ def main() -> None:
             "internal_unit": "MV/m",
             "warning": "Surface/internal values are scenario estimates unless independent charging telemetry exists. Electron flux is separately verified against measured GOES >2 MeV data.",
             "material_scenario": MATERIAL_SCENARIO,
+            "surface_scenario": SURFACE_SCENARIO,
+            "differential_surface_scenario": DIFFERENTIAL_SURFACE_SCENARIO,
         },
         "coefficients": model,
         "forecast": fc,
@@ -1300,13 +1609,16 @@ def main() -> None:
             "electron_ui_count": len(e_hist["ui"]),
             "electron_research_count": len(e_hist["research"]),
             "electron_fetch_status": e_hist["fetch_status"],
+            "surface_plasma_count": len(surface_plasma["records"]),
+            "surface_electron_fetch_status": surface_plasma["electron_fetch_status"],
+            "surface_ion_fetch_status": surface_plasma["ion_fetch_status"],
         },
         "observed": [{k: v for k, v in r.items() if k != "_t"} for r in obs[-1000:]],
         "verification": verification,
         "past_forecast_snapshots": snapshots,
         "methodology": {
             "electron": "Lagged direct log10 flux forecast using electron persistence + exponentially weighted solar-wind/geomagnetic history; optional AI corrects only time-ordered OOF residuals and is shrinkage weighted. No future observed driver is used.",
-            "surface": "Engineering surface-potential proxy from Kp + southward Bz + solar-wind enhancement. Requires low-energy plasma/current-balance data and independent potential observations before physical validation.",
+            "surface": "Reference current-balance solution Ji + Jph + Jse + Jbs - Je - Jleak = 0. GOES low-energy differential particle flux (<=30 keV) is used when available; future low-energy flux amplitudes use bounded persistence+storm scaling. If MPS-LO data are unavailable, a clearly labelled reference-plasma proxy is used. Independent spacecraft-potential observations remain required for validation.",
             "internal": "Reference dielectric state equation epsilon*dE/dt=J_eff-sigma*E with declared material/scenario parameters. J_eff is a transport-response scenario driven by the forecast electron environment, not a direct conversion of integral flux to hardware current.",
             "fluence": "Exact 24 h trapezoidal integration across 8 three-hour intervals / available measured+forecast trajectory; no 9-point x 3h overcount.",
             "forecast_step_hours": STEP_HOURS,
