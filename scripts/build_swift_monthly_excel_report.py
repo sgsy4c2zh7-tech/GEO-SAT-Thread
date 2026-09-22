@@ -646,6 +646,18 @@ def load_charging_archive() -> list[dict[str, Any]]:
     return [r for r in records(obj, keys=("items", "records", "data")) if isinstance(r, dict)]
 
 
+def load_electron_history() -> list[dict[str, Any]]:
+    obj = load_json(DATA / "swift-charging" / "electron-history.json") or {}
+    out=[]
+    for r in records(obj, keys=("records","items","data")):
+        t=parse_time(r.get("time") or r.get("time_tag"))
+        v=num(r.get("electron_flux_gt2mev") or r.get("flux"))
+        if t and v is not None and v >= 0:
+            out.append({"_t":t,"time":iso_z(t),"electron_flux_gt2mev":v})
+    return sorted(out,key=lambda x:x["_t"])
+
+
+
 def _charging_skill_map(v: dict[str, Any], family: str) -> dict[int, dict[str, Any]]:
     rows_ = ((v.get("nominal_lead_skill") or {}).get(family) or []) if isinstance(v, dict) else []
     out = {}
@@ -882,6 +894,7 @@ def main() -> None:
     charging = load_swift_charging()
     charging_verification = load_charging_verification() or (charging.get("verification") or {})
     charging_archive = load_charging_archive()
+    electron_history = load_electron_history()
     validation_history_obj = load_json(DATA / 'validation' / 'history.json') or {}
     validation_history = [x for x in (validation_history_obj.get('history') or []) if isinstance(x, dict)]
     coronal_holes = load_json(DATA / 'coronal-holes' / 'latest.json') or {}
@@ -949,6 +962,8 @@ def main() -> None:
     charging_obs = [r for r in charging_obs if now - timedelta(days=30) <= r["_t"] <= now + timedelta(hours=2)]
     surface_skill = _charging_skill_map(charging_verification, "surface")
     internal_skill = _charging_skill_map(charging_verification, "internal")
+    electron_skill_rows = ((charging_verification.get("electron") or {}).get("nominal_lead_skill") or [])
+    electron_skill = {int(r.get("nominal_lead_hours",0)):r for r in electron_skill_rows if r.get("nominal_lead_hours")}
     surface_vals = [r["surface_kv"] for r in charging_fc if r.get("surface_kv") is not None]
     internal_vals = [r["internal_field_mvm"] for r in charging_fc if r.get("internal_field_mvm") is not None]
     if surface_vals:
@@ -959,6 +974,8 @@ def main() -> None:
     i24 = internal_skill.get(24, {})
     month_metrics.append({"Metric": "Surface charging 24h hit ±1 kV", "Value": s24.get("hit_rate_1kv"), "Unit": "%"})
     month_metrics.append({"Metric": "Internal charging 24h hit ±0.1 MV/m", "Value": i24.get("hit_rate_0_1mvm"), "Unit": "%"})
+    e24=electron_skill.get(24,{})
+    month_metrics.append({"Metric":"Electron 24h factor-2 hit","Value":e24.get("hit_rate_factor2"),"Unit":"%"})
 
     # Companion JSON for the browser UI.  It is built from the exact same
     # arrays used below for the monthly Excel sheets, so Kp/Bz/Wind remain in sync.
@@ -1031,6 +1048,9 @@ def main() -> None:
                 {k: r.get(k) for k in ("time", "surface_kv", "differential_kv", "internal_field_mvm", "electron_flux_gt2mev", "source")}
                 for r in charging_obs[-1000:]
             ],
+            "estimated_history": charging.get("estimated_history") or [],
+            "electron_observed_30d": charging.get("electron_observed_30d") or [],
+            "electron_model": charging.get("electron_model") or {},
             "verification": charging_verification,
             "past_forecast_snapshots": charging.get("past_forecast_snapshots") or {},
             "methodology": charging.get("methodology") or {},
@@ -1378,6 +1398,15 @@ def main() -> None:
     ws.set_column("N:N",19);ws.set_column("O:R",15)
     add_line_chart(wb,ws,"Bz minimum observed vs 24/48/72 h lead forecasts","Bz_Fcst_History",0,len(bz_chart_rows),13,[(14,"Observed Bz min"),(15,"24h forecast"),(16,"48h forecast"),(17,"72h forecast")],"T2","nT")
 
+    # Observation-driven history is intentionally separate from measured truth.
+    estimate_rows = charging.get("estimated_history") or []
+    ws_est = wb.add_worksheet("Charging_Estimates")
+    estimate_columns = ["time", "surface_kv", "internal_field_mvm", "kp", "bz_min_nt", "wind_kms", "electron_flux_gt2mev", "model", "source"]
+    write_table(ws_est, 0, 0, estimate_columns, estimate_rows, fmt)
+    ws_est.set_column("A:A", 24)
+    ws_est.set_column("B:H", 20)
+    ws_est.set_column("I:I", 70)
+
     # SWIFT-CHARGE forecast and verification
     # Display window mirrors the browser UI: validated observations / archived forecast
     # for the previous 72 h and current forecast for the next 72 h.
@@ -1395,6 +1424,50 @@ def main() -> None:
 
     surface_pair24 = _lead_pair_map("surface", 24)
     internal_pair24 = _lead_pair_map("internal", 24)
+
+
+    # Radiation-belt electron forecast / observations / skill.
+    ws = wb.add_worksheet("Electron_Forecast_72h")
+    electron_fc_rows=[]
+    for r in charging_fc:
+        electron_fc_rows.append({
+            "Time": r.get("time"), "Lead_h": r.get("lead_hours"),
+            "Hybrid_Flux_gt2MeV": r.get("electron_flux_gt2mev"),
+            "Empirical_Flux": r.get("electron_flux_empirical"),
+            "AI_Delta_dex": r.get("electron_ai_delta_dex"),
+            "AI_Weight": r.get("electron_ai_weight"),
+            "Q05_Flux": r.get("electron_q05"), "Q95_Flux": r.get("electron_q95"),
+            "Fluence_24h": r.get("electron_fluence_24h"),
+            "Mode": r.get("electron_model_mode"),
+        })
+    write_table(ws,0,0,["Time","Lead_h","Hybrid_Flux_gt2MeV","Empirical_Flux","AI_Delta_dex","AI_Weight","Q05_Flux","Q95_Flux","Fluence_24h","Mode"],electron_fc_rows,fmt)
+    ws.set_column("A:A",22);ws.set_column("B:I",18);ws.set_column("J:J",30)
+
+    ws = wb.add_worksheet("Electron_Observed_30d")
+    ecut=now-timedelta(days=30)
+    eobs=[{"Time":r.get("time"),"Electron_gt2MeV":r.get("electron_flux_gt2mev")} for r in electron_history if ecut <= r["_t"] <= now+timedelta(hours=1)]
+    write_table(ws,0,0,["Time","Electron_gt2MeV"],eobs,fmt)
+    ws.set_column("A:A",22);ws.set_column("B:B",22)
+
+    ws = wb.add_worksheet("Electron_Lead_Skill")
+    esk=[]
+    for h in (24,48,72):
+        q=electron_skill.get(h,{})
+        esk.append({"Lead_h":h,"Count":q.get("count"),"Status":q.get("status"),"MAE_dex":q.get("mae_dex"),"Bias_dex":q.get("bias_dex"),"RMSE_dex":q.get("rmse_dex"),"Factor2_Hit_pct":q.get("hit_rate_factor2"),"Factor3_Hit_pct":q.get("hit_rate_factor3")})
+    write_table(ws,0,0,["Lead_h","Count","Status","MAE_dex","Bias_dex","RMSE_dex","Factor2_Hit_pct","Factor3_Hit_pct"],esk,fmt)
+    ws.set_column("A:H",18)
+
+    ws = wb.add_worksheet("Electron_Model")
+    em=charging.get("electron_model") or {}
+    em_rows=[
+        {"Item":"Model ID","Value":em.get("model_id"),"Note":"Lagged empirical + optional OOF AI residual"},
+        {"Item":"Family","Value":em.get("model_family"),"Note":"Direct log10 >2 MeV electron forecast"},
+        {"Item":"Training samples","Value":em.get("training_samples_common"),"Note":"Common issue times with all target leads"},
+        {"Item":"No future observation","Value":str(((em.get("feature_definition") or {}).get("no_future_observation_rule"))),"Note":"issued_at-time information only"},
+        {"Item":"Electron lags h","Value":str(((em.get("feature_definition") or {}).get("electron_lags_hours"))),"Note":"autoregressive memory"},
+        {"Item":"Driver memories h","Value":str(((em.get("feature_definition") or {}).get("driver_memory_hours"))),"Note":"EWMA histories"},
+    ]
+    write_table(ws,0,0,["Item","Value","Note"],em_rows,fmt);ws.set_column("A:A",24);ws.set_column("B:B",60);ws.set_column("C:C",70)
 
     ws = wb.add_worksheet("Surface_Charging")
     surface_fc_by_time = {r["time"]: r for r in charging_fc if charge_x0 <= r["_t"] <= charge_x1}
@@ -1488,6 +1561,7 @@ def main() -> None:
     model_rows=[
         {"Item":"Model","Value":charging.get("model"),"Note":"Current SWIFT-CHARGE generation"},
         {"Item":"Reference scope","Value":((charging.get("reference_spacecraft") or {}).get("scope")),"Note":"Not direct GOES hardware telemetry"},
+        {"Item":"Material scenario","Value":str(((charging.get("reference_spacecraft") or {}).get("material_scenario"))),"Note":"Declared epsilon/sigma/transport-response assumptions"},
         {"Item":"Surface coefficients","Value":json.dumps(coeff.get("surface") or {},ensure_ascii=False),"Note":tr.get("surface_status")},
         {"Item":"Internal coefficients","Value":json.dumps(coeff.get("internal") or {},ensure_ascii=False),"Note":tr.get("internal_status")},
         {"Item":"Differential ratio","Value":coeff.get("differential_ratio"),"Note":"Reference material differential-potential proxy"},
@@ -1539,9 +1613,11 @@ def main() -> None:
         {"Item":"Model generation separation","Definition":"Primary Kp/Bz verification and calibration use only archive rows whose model field exactly matches the current latest.json model. Legacy and unversioned forecasts are preserved for historical comparison only."},
         {"Item":"24/48/72 h auto-calibration","Definition":"Current-generation residual bias is estimated separately near nominal 24/48/72 h leads over the previous 30 days. Correction strength ramps with sample count and is linearly interpolated by forecast lead; short-lead correction tends to zero."},
         {"Item":"Surface charging forecast","Definition":"SWIFT-CHARGE reference GEO spacecraft potential [kV] from Kp, southward Bz and solar-wind enhancement. Coefficients can be ridge-updated only when validated charging targets exist. It is not direct GOES bus-potential telemetry."},
-        {"Item":"Internal charging forecast","Definition":"Equivalent reference-dielectric internal field [MV/m] from >2 MeV electron environment proxy, 24 h fluence and geomagnetic drivers. It is not a measured field inside GOES hardware."},
+        {"Item":"Electron forecast","Definition":"Primary research target: GOES >2 MeV integral electron flux. Lagged empirical regression uses only issue-time/past observations; optional AI learns time-ordered OOF residuals and is shrinkage weighted."},
+        {"Item":"Internal charging forecast","Definition":"Reference material scenario solves epsilon*dE/dt=J_eff-sigma*E with declared epsilon, conductivity and transport-response assumptions. Integral flux is not treated as direct hardware current."},
         {"Item":"Charging verification","Definition":"24/48/72 h surface primary hit = ±1 kV (secondary ±2 kV); internal primary hit = ±0.1 MV/m (secondary ±0.2 MV/m). Only independent observed/validated rows in docs/data/swift-charging/observed.json count as truth."},
         {"Item":"Charging observation retention","Definition":"Independent charging observation/validation targets are retained for the latest 30 days. UI and workbook show −72 h observed context against +72 h current forecasts."},
+        {"Item":"Electron data retention","Definition":"UI electron observations retain 30 days; a separate research archive accumulates longer history for model training/verification and is not charging truth."},
         {"Item":"CME arrival","Definition":"NOAA speed/density shock proxy near predicted arrival. Keep this distinct from a manually adjudicated ICME boundary in publications."},
         {"Item":"Uncertainty","Definition":"Empirical p10/p50/p90 forecast-minus-observation residuals from previous 30 days, split by lead day."},
         {"Item":"DBM gamma","Definition":str(((validation.get("models") or {}).get("cme_arrival") or {}).get("dbm_gamma_fit"))},
@@ -1565,6 +1641,9 @@ def main() -> None:
         {"Data": "SWIFT-CHARGE forecast", "Path_or_URL": "docs/data/swift-charging/latest.json"},
         {"Data": "SWIFT-CHARGE verification", "Path_or_URL": "docs/data/swift-charging/verification.json"},
         {"Data": "SWIFT-CHARGE forecast archive", "Path_or_URL": "docs/data/swift-charging/forecast-archive.json"},
+        {"Data":"GOES >2 MeV electron UI history","Path_or_URL":"docs/data/swift-charging/electron-history.json"},
+        {"Data":"GOES >2 MeV electron research history","Path_or_URL":"docs/data/swift-charging/electron-research-history.json"},
+        {"Data":"SWIFT-RB electron model","Path_or_URL":"docs/data/swift-charging/electron-model.json"},
         {"Data": "SWIFT-CHARGE independent targets", "Path_or_URL": "docs/data/swift-charging/observed.json"},
         {"Data": "SWIFT Kp forecast archive", "Path_or_URL": "docs/data/swift-kp/forecast-archive.json"},
         {"Data": "SWIFT Bz forecast archive", "Path_or_URL": "docs/data/swift-bz/forecast-archive.json"},
@@ -1588,7 +1667,7 @@ def main() -> None:
         "primary_wind_accuracy": {"definition": "|predicted - observed| <= 50 km/s", "window": "last_24h", **current_acc},
         "retention_months": REPORT_RETENTION_MONTHS,
         "validation_feed_url": "./data/validation/ui_validation_latest.json",
-        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Wind_Fcst_History", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Coronal_Holes", "Research_Metrics", "Wind_Verification", "ENLIL_Verification", "Kp_Verification", "Bz_Verification", "Model_Generations", "Auto_Calibration", "Forecast_Skill_History", "Kp_Lead_Skill", "Kp_Range_Skill", "Kp_Fcst_History", "Bz_Lead_Skill", "Bz_Fcst_History", "Surface_Charging", "Internal_Charging", "Charging_Observed_30d", "Charging_Lead_Skill", "Charging_Fcst_History", "Charging_Model", "CME_Verification", "Uncertainty", "Kp_Observed", "ENLIL_Earth", "Methods", "Sources"],
+        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Wind_Fcst_History", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Coronal_Holes", "Research_Metrics", "Wind_Verification", "ENLIL_Verification", "Kp_Verification", "Bz_Verification", "Model_Generations", "Auto_Calibration", "Forecast_Skill_History", "Kp_Lead_Skill", "Kp_Range_Skill", "Kp_Fcst_History", "Bz_Lead_Skill", "Bz_Fcst_History", "Electron_Forecast_72h", "Electron_Observed_30d", "Electron_Lead_Skill", "Electron_Model", "Surface_Charging", "Internal_Charging", "Charging_Observed_30d", "Charging_Lead_Skill", "Charging_Fcst_History", "Charging_Model", "CME_Verification", "Uncertainty", "Kp_Observed", "ENLIL_Earth", "Methods", "Sources"],
     }
     (OUT_DOCS / "index.json").write_text(json.dumps(index_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote {final_path}")
