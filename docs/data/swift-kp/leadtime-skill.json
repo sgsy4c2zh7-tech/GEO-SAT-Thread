@@ -1,44 +1,44 @@
 {
-  "updated_at": "2026-09-22T19:00:46Z",
+  "updated_at": "2026-09-22T23:38:45Z",
   "model": "SWIFT-Kp-AI-v0.9-adaptive-residual-CH",
   "overall": {
-    "count": 455,
-    "mae": 0.912,
-    "bias": 0.581,
-    "rmse": 1.058,
-    "hit_rate_within_1kp": 65.1,
-    "hit_rate_within_067kp": 45.5,
+    "count": 473,
+    "mae": 0.906,
+    "bias": 0.583,
+    "rmse": 1.051,
+    "hit_rate_within_1kp": 66.0,
+    "hit_rate_within_067kp": 45.9,
     "g_scale_hit_rate": 100.0
   },
   "by_lead_day": [
     {
       "lead_day": 1,
-      "count": 196,
-      "mae": 0.788,
-      "bias": 0.243,
-      "rmse": 0.962,
-      "hit_rate_within_1kp": 71.9,
-      "hit_rate_within_067kp": 60.2,
+      "count": 202,
+      "mae": 0.784,
+      "bias": 0.246,
+      "rmse": 0.961,
+      "hit_rate_within_1kp": 71.8,
+      "hit_rate_within_067kp": 60.4,
       "g_scale_hit_rate": 100.0
     },
     {
       "lead_day": 2,
-      "count": 158,
-      "mae": 0.941,
-      "bias": 0.68,
-      "rmse": 1.06,
-      "hit_rate_within_1kp": 67.1,
-      "hit_rate_within_067kp": 39.9,
+      "count": 164,
+      "mae": 0.933,
+      "bias": 0.681,
+      "rmse": 1.051,
+      "hit_rate_within_1kp": 68.3,
+      "hit_rate_within_067kp": 40.9,
       "g_scale_hit_rate": 100.0
     },
     {
       "lead_day": 3,
-      "count": 101,
-      "mae": 1.107,
-      "bias": 1.081,
-      "rmse": 1.217,
-      "hit_rate_within_1kp": 48.5,
-      "hit_rate_within_067kp": 25.7,
+      "count": 107,
+      "mae": 1.095,
+      "bias": 1.07,
+      "rmse": 1.202,
+      "hit_rate_within_1kp": 51.4,
+      "hit_rate_within_067kp": 26.2,
       "g_scale_hit_rate": 100.0
     }
   ],
@@ -50,27 +50,27 @@
     "leads": {
       "24": {
         "nominal_lead_hours": 24,
-        "count": 27,
-        "bias": 0.611,
+        "count": 28,
+        "bias": 0.605,
         "alpha": 0.15,
-        "subtract_from_kp": 0.092,
+        "subtract_from_kp": 0.091,
         "status": "active"
       },
       "48": {
         "nominal_lead_hours": 48,
-        "count": 19,
-        "bias": 1.237,
+        "count": 20,
+        "bias": 1.23,
         "alpha": 0.15,
-        "subtract_from_kp": 0.185,
+        "subtract_from_kp": 0.184,
         "status": "active"
       },
       "72": {
         "nominal_lead_hours": 72,
-        "count": 11,
-        "bias": 1.296,
-        "alpha": 0.0,
-        "subtract_from_kp": 0.0,
-        "status": "learning"
+        "count": 12,
+        "bias": 1.286,
+        "alpha": 0.15,
+        "subtract_from_kp": 0.193,
+        "status": "active"
       }
     }
   }
