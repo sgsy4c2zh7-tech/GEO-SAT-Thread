@@ -100,11 +100,7 @@ button.stop{background:linear-gradient(180deg,#b72d40,#781b2a);border-color:rgba
 .metricGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-top:12px}@media(max-width:900px){.metricGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.metricGrid{grid-template-columns:1fr}}
 .metric{border:1px solid rgba(64,139,218,.30);border-radius:13px;background:rgba(6,23,45,.72);padding:11px}.metric .label{font-size:11px;color:#86a8cf}.metric .value{font-size:21px;font-weight:900;margin-top:3px}.metric .sub{font-size:11px;color:#93afd0;margin-top:4px}
 .viewGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:1120px){.viewGrid{grid-template-columns:1fr}}
-#threeContainer:fullscreen{width:100vw;height:100vh;background:#010611;border:0;margin:0;padding:0}
-#threeContainer:fullscreen::backdrop{background:#000}
-#threeContainer:fullscreen canvas{width:100%!important;height:100%!important}
-.fullscreenTimelineControls{display:none}
-#threeContainer:fullscreen .fullscreenTimelineControls{display:flex}
+.viewCard:fullscreen{background:#020713;padding:12px}.viewCard:fullscreen .scene2d{height:calc(100vh - 95px)}.viewCard:fullscreen .threeScene{height:calc(100vh - 95px)}
 .scene2d{height:520px;position:relative;background:#f5f8fc;overflow:hidden}.threeScene{height:680px;position:relative;background:#020817;overflow:hidden}.scene2d canvas,#threeContainer canvas{position:absolute;inset:0;width:100%;height:100%;display:block}.threeOverlay{position:absolute;z-index:5;inset:0;pointer-events:none}.hudBox{position:absolute;left:14px;bottom:14px;max-width:280px;padding:9px 10px;background:rgba(2,10,24,.72);border:1px solid rgba(68,151,240,.34);border-radius:10px;color:#b9d1ec;font-size:11px;line-height:1.55;backdrop-filter:blur(6px)}
 .viewTools{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.chip{border:1px solid rgba(67,148,235,.28);background:rgba(6,27,52,.65);border-radius:999px;padding:5px 9px;font-size:11px;color:#9fc0e6}.legend{display:flex;flex-wrap:wrap;gap:7px;padding:9px 12px;border-top:1px solid rgba(45,129,218,.25);background:rgba(3,15,32,.68)}.legendItem{font-size:11px;color:#9fb9d9;display:flex;align-items:center;gap:6px}.dot{width:9px;height:9px;border-radius:50%}
 .eventList{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:9px}.event{border:1px solid rgba(61,137,219,.28);border-radius:12px;padding:11px;background:rgba(4,17,36,.60)}.eventHead{display:flex;align-items:center;justify-content:space-between;gap:8px}.eventName{font-size:13px;font-weight:900}.tag{border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900}.tag.core{color:#ff96a7;background:rgba(255,82,111,.15)}.tag.body{color:#ffc56f;background:rgba(255,158,44,.14)}.tag.flank{color:#ffe98a;background:rgba(255,214,90,.12)}.tag.enlil{color:#e29cff;background:rgba(202,98,255,.13)}.tag.cactus{color:#75eaff;background:rgba(53,215,255,.12)}.tag.miss{color:#a9bad1;background:rgba(150,170,196,.10)}
@@ -137,29 +133,15 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 .toggleBox label{background:#f7fafc;border-color:#cbd9e5;color:#35516c}
 #mode3d{display:block!important}
 .threeScene{height:760px;background:#010611;border-bottom:1px solid #c9d9e8}
-
+.viewCard:fullscreen .threeScene{height:calc(100vh - 92px)}
 .hudBox{background:rgba(2,10,24,.80);border-color:rgba(87,163,238,.48);color:#dcecff;max-width:340px;max-height:205px;overflow:auto}
 .speedHud{position:absolute;right:14px;top:14px;z-index:6;width:300px;padding:12px 13px;border:1px solid rgba(98,176,255,.48);border-radius:12px;background:rgba(2,10,24,.82);color:#e9f5ff;font-size:12px;line-height:1.62;backdrop-filter:blur(7px);box-shadow:0 8px 24px rgba(0,0,0,.22)}
 .speedHud .big{font-size:24px;font-weight:900;color:#fff;line-height:1.05}.speedHud .wind{color:#64d7ff}.speedHud .cme{color:#ffbd67}.speedHud .delta{color:#ff7187}.speedHud .model{color:#a9bed3}
-.speedHud{transition:width .18s ease,padding .18s ease;pointer-events:auto}
-.speedHud.compact{width:auto;min-width:145px;padding:9px 42px 9px 11px}
-.speedHud.compact .big{margin:0}
-.speedHudToggle{pointer-events:auto;position:absolute;right:7px;top:7px;z-index:3;min-width:0!important;padding:4px 7px!important;border:1px solid rgba(137,190,235,.42)!important;border-radius:7px!important;background:rgba(16,45,72,.82)!important;color:#dcecff!important;font-size:9px!important;font-weight:800!important;line-height:1.1!important;box-shadow:none!important}
-.speedHudToggle:hover{background:rgba(29,73,110,.94)!important}
-
 .windMapLegend{position:absolute;left:14px;top:14px;z-index:6;width:250px;padding:10px 11px;border:1px solid rgba(98,176,255,.40);border-radius:11px;background:rgba(2,10,24,.76);color:#dcecff;font-size:10px;line-height:1.45;backdrop-filter:blur(7px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
 .windMapLegend .title{font-size:11px;font-weight:800;color:#fff;margin-bottom:6px}
 .windMapLegend .bar{height:9px;border-radius:999px;background:linear-gradient(90deg,#3d6fff 0%,#34c9ff 24%,#42e39b 44%,#f3e64f 64%,#ff9d2d 82%,#ff4038 100%);box-shadow:0 0 12px rgba(84,179,255,.30)}
 .windMapLegend .ticks{display:flex;justify-content:space-between;color:#99b5d0;margin-top:3px;font-size:9px}
 .windMapLegend .note{color:#9db7cf;margin-top:5px}
-
-.fullscreenTimelineControls{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:20;align-items:center;gap:9px;width:min(820px,calc(100% - 36px));padding:10px 12px;border:1px solid rgba(117,177,230,.48);border-radius:14px;background:rgba(2,10,24,.88);color:#eaf5ff;backdrop-filter:blur(9px);box-shadow:0 10px 30px rgba(0,0,0,.32)}
-.fullscreenTimelineControls button{min-width:44px;padding:8px 11px;border-radius:9px;font-size:13px;font-weight:800}
-.fullscreenTimelineControls .fsPause{background:linear-gradient(180deg,#a94a56,#7d2c37);border-color:#bd6670}
-.fullscreenTimelineControls .fsExit{margin-left:auto;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.26);color:#fff}
-.fullscreenTimelineControls input[type=range]{flex:1;min-width:140px}
-.fullscreenTimelineControls .fsTime{min-width:160px;text-align:center;font-size:11px;line-height:1.35;color:#dcecff;white-space:nowrap}
-@media(max-width:720px){.fullscreenTimelineControls{gap:6px;bottom:10px;width:calc(100% - 16px);padding:8px}.fullscreenTimelineControls .fsTime{display:none}.fullscreenTimelineControls button{min-width:40px;padding:7px 8px}}
 
 
 .modelStrip{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;background:#f8fbfe;border-top:1px solid #d5e1ec}
@@ -188,6 +170,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 @media(max-width:620px){.forecastStats{grid-template-columns:1fr}}
 .chargingGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
 .chargingPanel .forecastGraphWrap{height:320px}
+.electronPanel{grid-column:1/-1}.electronPanel .forecastGraphWrap{height:340px}
 .chargingNote{padding:8px 13px 12px 13px;font-size:10px;color:#6f879e;background:#fbfdff;border-top:1px solid #e2eaf1;line-height:1.5}
 .chargingModelLine{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:#49657f}
 @media(max-width:1000px){.chargingGrid{grid-template-columns:1fr}}
@@ -226,10 +209,10 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
 
 
 /* GEO satellite TLE/health overlay */
-.geoSatLegend{position:absolute;left:14px;top:auto;bottom:14px;z-index:7;width:300px;padding:9px 10px;border:1px solid rgba(123,170,212,.38);border-radius:10px;background:rgba(2,10,24,.78);color:#dcecff;font-size:10px;line-height:1.45;backdrop-filter:blur(7px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.geoSatLegend{position:absolute;left:14px;top:205px;bottom:auto;z-index:7;width:300px;padding:9px 10px;border:1px solid rgba(123,170,212,.38);border-radius:10px;background:rgba(2,10,24,.78);color:#dcecff;font-size:10px;line-height:1.45;backdrop-filter:blur(7px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
 .geoSatLegend .title{font-size:11px;font-weight:900;color:#fff;margin-bottom:5px}.geoLegendRow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.geoDot{display:inline-block;width:8px;height:8px;border-radius:50%}.geoSatInfo{position:absolute;right:14px;bottom:14px;z-index:7;width:315px;padding:10px 11px;border:1px solid rgba(123,170,212,.38);border-radius:10px;background:rgba(2,10,24,.80);color:#dcecff;font-size:10px;line-height:1.5;backdrop-filter:blur(7px)}
 .geoSatInfo b{color:#fff}.geoSatInfo .cause{font-weight:900}.satArchiveBar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}.satArchiveBar select{min-width:180px}
-@media(max-width:720px){.geoSatLegend{left:8px;top:auto;bottom:8px;width:225px}.geoSatInfo{display:none}}
+@media(max-width:720px){.geoSatLegend{left:8px;top:190px;bottom:auto;width:225px}.geoSatInfo{display:none}}
 
 </style>
 </head>
@@ -294,7 +277,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
         <button onclick="set3DCamera('side')">Side</button>
         <button onclick="set3DCamera('perspective')">Perspective</button>
         <button id="geoSatToggleBtn" onclick="toggleGeoSatellites()">GOES Health: ON</button>
-        <button class="ghost" onclick="toggleThreeFullscreen()">⛶ 全画面</button>
+        <button class="ghost" onclick="toggleFullscreen('threeViewCard')">⛶ 全画面</button>
       </div>
     </div>
     <div class="threeScene" id="threeContainer">
@@ -322,15 +305,6 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
         </div>
         <div class="geoSatInfo" id="geoSatInfo"><b>GOES status</b><br>markerをクリックすると公開運用状態・最近の異常情報を表示</div>
         <div class="camHelp">Drag: rotate / Wheel: zoom / Right drag: pan</div>
-      </div>
-      <div class="fullscreenTimelineControls" id="fullscreenTimelineControls">
-        <button type="button" onclick="stepTimeline(-1)" title="1時間戻る">◀</button>
-        <button type="button" onclick="playTimeline()" title="再生">▶</button>
-        <button type="button" class="fsPause" onclick="stopTimeline()" title="一時停止">Ⅱ</button>
-        <input id="timeSliderFs" type="range" min="0" max="144" value="72" step="1" oninput="updateTimelineFromFs()" aria-label="Fullscreen timeline">
-        <div class="fsTime" id="fsTimeLabel">NOW</div>
-        <button type="button" onclick="stepTimeline(1)" title="1時間進む">▶|</button>
-        <button type="button" class="fsExit" onclick="toggleThreeFullscreen()" title="全画面を終了">⛶ 終了</button>
       </div>
     </div>
     <div class="modelStrip">
@@ -367,17 +341,23 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
   </div>
 
   <div class="chargingGrid">
+    <section class="card forecastPanel chargingPanel electronPanel">
+      <div class="panelHeader"><div><div class="panelTitle">Radiation Belt Electron Forecast <span class="chip">&gt;2 MeV • −72 h → +72 h • empirical + AI residual</span></div><div class="panelSub">青＝GOES観測、橙＝経験式、赤＝AI残差補正後。AIは時間順OOF誤差だけを学習し、補正が改善しないリードでは重みを0へ縮小。24/48/72 hのfactor-of-2的中率とdex誤差を表示。</div></div></div>
+      <div class="forecastGraphWrap"><canvas id="electronFluxGraph"></canvas></div>
+      <div class="forecastStats" id="electronFluxStats"></div>
+      <div class="chargingNote"><b>Primary research target:</b> GOES &gt;2 MeV integral electron flux [cm⁻² s⁻¹ sr⁻¹]. Y軸はlog10。UI用観測は30日、学習用電子アーカイブは別ファイルに保持。将来の観測値を特徴量に混入させません。</div>
+    </section>
     <section class="card forecastPanel chargingPanel">
       <div class="panelHeader"><div><div class="panelTitle">Surface Charging Forecast <span class="chip">−72 h → +72 h • 3 h • kV</span></div><div class="panelSub">過去72 hの観測値と、現在〜+72 hの予報、さらに24/48/72 h前に発行した予報を重ねて表示。予報と実データの差を視覚化し、的中率・MAE・Biasを検証。</div></div></div>
       <div class="forecastGraphWrap"><canvas id="surfaceChargeGraph"></canvas></div>
       <div class="forecastStats" id="surfaceChargeStats"></div>
-      <div class="chargingNote"><b>Output:</b> spacecraft surface potential [kV]. 青実線/点 = validated observation、赤破線 = current forecast。過去観測は30日保持。観測truthがない期間は skill を learning 表示。</div>
+      <div class="chargingNote"><b>Output:</b> spacecraft surface potential [kV]. 青実線/点 = validated observation、赤破線 = current forecast。実測と観測入力による推定履歴を30日保存。青緑点線＝推定（実測ではない）。入力欠測区間は空白。独立した帯電実測がない期間は skill を learning 表示。推定履歴は採点・学習に使用しません。</div>
     </section>
     <section class="card forecastPanel chargingPanel">
       <div class="panelHeader"><div><div class="panelTitle">Internal Charging Forecast <span class="chip">−72 h → +72 h • 3 h • MV/m</span></div><div class="panelSub">過去72 hのvalidated observationと、現在〜+72 hの深部帯電予報を同一軸で表示。24/48/72 h前予報も重ね、観測との差を確認。>2 MeV電子が取得できる場合は入力に使用。</div></div></div>
       <div class="forecastGraphWrap"><canvas id="internalChargeGraph"></canvas></div>
       <div class="forecastStats" id="internalChargeStats"></div>
-      <div class="chargingNote"><b>Output:</b> equivalent internal electric field [MV/m]. 青実線/点 = validated observation、紫破線 = current forecast。過去観測は30日保持。AI更新は物理式の残差補正係数のみ更新。</div>
+      <div class="chargingNote"><b>Output:</b> equivalent internal electric field [MV/m]. 青実線/点 = validated observation、紫破線 = current forecast。実測と観測入力による推定履歴を30日保存。青緑点線＝推定（実測ではない）。入力欠測区間は空白。電子フラックス側はAI残差補正。内部電界は材料シナリオの状態方程式で計算し、独立した帯電真値がない限り自己学習させません。</div>
     </section>
   </div>
 
@@ -462,6 +442,7 @@ const SWIFT_CHARGING_LATEST=dataCandidates("swift-charging/latest.json");
 const SWIFT_CHARGING_VALIDATION=dataCandidates("swift-charging/verification.json");
 const SWIFT_CHARGING_ARCHIVE=dataCandidates("swift-charging/forecast-archive.json");
 const SWIFT_CHARGING_OBSERVED=dataCandidates("swift-charging/observed.json");
+const SWIFT_CHARGING_ELECTRON_HISTORY=dataCandidates("swift-charging/electron-history.json");
 const NOAA_WIND_HISTORY=[...dataCandidates("noaa/wind_history.json"),...dataCandidates("noaa_wind_history.json"),...dataCandidates("noaa-wind/history.json")];
 const DONKI_LON_POSITIVE_WEST=true;
 const NOAA={
@@ -511,7 +492,7 @@ const POST_PASS_HOURS=36;
 const STATE={
   sources:{donkiCache:src("DONKI Cache","未取得"),donkiAnalysis:src("DONKI CMEAnalysis","未取得"),donkiCME:src("DONKI CME","未取得"),wsa:src("WSA Wind","未取得"),cactus:src("CACTus","未取得"),noaaWind:src("NOAA Wind","未取得"),noaaMag:src("NOAA IMF","未取得"),noaaKp:src("NOAA Kp","未取得"),swiftWind:src("SWIFT Wind AI","未取得"),reportUi:src("Report UI Feed","未取得"),charging:src("SWIFT Charging","未取得")},
   donkiPayloads:[],wsaModel:null,cactusEvents:[],env:defaultEnv(),cmes:[],timelineCenter:new Date(),timelineStart:new Date(),timelineEnd:new Date(),selectedTime:new Date(),timer:null,
-  windObserved:[],windForecast:[],windPastForecast:[],kpObserved:[],kpForecast:[],kpPastSnapshots:[],bzObserved:[],bzForecast:[],bzPastSnapshots:[],kpLeadSkill:[],bzLeadSkill:[],kpRangeSkill:[],kpModel:null,bzModel:null,validationUi:null,generationInfo:null,calibrationInfo:null,skillHistory:[],windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,chargingForecast:[],chargingObserved:[],chargingPastSnapshots:[],chargingSkill:{surface:[],internal:[]},chargingModel:null,chargingFeed:null,chargingFallback:false,propagationCache:new Map(),mode:"3d",
+  windObserved:[],windForecast:[],windPastForecast:[],kpObserved:[],kpForecast:[],kpPastSnapshots:[],bzObserved:[],bzForecast:[],bzPastSnapshots:[],kpLeadSkill:[],bzLeadSkill:[],kpRangeSkill:[],kpModel:null,bzModel:null,validationUi:null,generationInfo:null,calibrationInfo:null,skillHistory:[],windVersion:0,windAccuracy50:null,windAccuracyCount:0,windAccuracyWindow:"24h",reportIndex:null,reportUi:null,chargingForecast:[],chargingObserved:[],chargingEstimated:[],electronObserved:[],electronPastSnapshots:[],chargingPastSnapshots:[],chargingSkill:{surface:[],internal:[],electron:[]},chargingModel:null,chargingFeed:null,chargingFallback:false,propagationCache:new Map(),mode:"3d",
   three:{ready:false,scene:null,camera:null,renderer:null,controls:null,sun:null,earth:null,cmeGroup:null,starPoints:null,clock:null,parkerGroup:null,windParticles:null,windSpeed:425,impactStrength:0}
 };
 function src(label,status){return{label,status,data:null,time:null,error:null};}
@@ -546,7 +527,7 @@ function classColor(c){if(c==="ENLIL-HIT")return"#ca62ff";if(c==="CORE-HIT")retu
 function latest(arr){if(!Array.isArray(arr))return{};for(let i=arr.length-1;i>=0;i--){const r=arr[i];if(Array.isArray(r)){if(String(r[0]).toLowerCase().includes("time"))continue;return r;}if(r&&typeof r==="object")return r;}return{};}
 function pick(obj,names){for(const n of names){if(typeof n==="number"&&Array.isArray(obj)){const v=Number(obj[n]);if(Number.isFinite(v))return v;}if(typeof n==="string"&&obj&&obj[n]!==undefined){const v=Number(obj[n]);if(Number.isFinite(v))return v;}}return 0;}
 function defaultEnv(){return{speed:425,density:0,bt:0,by:0,bz:0,kp:0,dynamicPressure:0};}
-function initTimeline(){STATE.timelineCenter=new Date();STATE.timelineStart=new Date(STATE.timelineCenter.getTime()-72*3600e3);STATE.timelineEnd=new Date(STATE.timelineCenter.getTime()+72*3600e3);STATE.selectedTime=new Date(STATE.timelineCenter);const s=document.getElementById("timeSlider"),fs=document.getElementById("timeSliderFs");if(s)s.value=72;if(fs)fs.value=72;syncTimelineControls(72,STATE.selectedTime);}
+function initTimeline(){STATE.timelineCenter=new Date();STATE.timelineStart=new Date(STATE.timelineCenter.getTime()-72*3600e3);STATE.timelineEnd=new Date(STATE.timelineCenter.getTime()+72*3600e3);STATE.selectedTime=new Date(STATE.timelineCenter);const s=document.getElementById("timeSlider");s.value=72;}
 async function fetchJson(url){const sep=url.includes("?")?"&":"?";const r=await fetch(url+sep+"t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error(`HTTP ${r.status}: ${url}`);return await r.json();}
 async function fetchJsonAny(urls){let last="";for(const u of urls){try{return{data:await fetchJson(u),url:u};}catch(e){last=e.message;}}throw new Error(last);}
 function sibling(base,file){return base.replace(/[^/]+$/,String(file));}
@@ -580,7 +561,7 @@ function windRows(payload){
   return[];
 }
 function windTime(r){for(const k of ["time","time_tag","timestamp","datetime","date","start_time"]){if(r?.[k]){const t=new Date(r[k]).getTime();if(Number.isFinite(t))return t;}}return NaN;}
-function firstFinite(r,keys){for(const k of keys){const v=Number(r?.[k]);if(Number.isFinite(v))return v;}return null;}
+function firstFinite(r,keys){for(const k of keys){const raw=r?.[k];if(raw===null||raw===undefined||raw==="")continue;const v=Number(raw);if(Number.isFinite(v))return v;}return null;}
 function normalizeWindPayload(payload,mode="auto"){
   const now=Date.now(),out=[];
   for(const r of windRows(payload)){
@@ -901,10 +882,11 @@ function buildReferenceChargingForecast(){
 }
 function normalizeChargingRows(rows){
   const src=Array.isArray(rows)?rows:[];const out=[];
-  for(const r of src){const t=new Date(r.time||r.target_time||r.datetime||0).getTime();if(!Number.isFinite(t))continue;
+  for(const r of src){const t=new Date(r.time||r.target_time||r.datetime||r.time_tag||"").getTime();if(!Number.isFinite(t))continue;
     const surface=firstFinite(r,["surface_kv","surface_potential_kv","v_surface_kv"]),diff=firstFinite(r,["differential_kv","delta_v_kv"]),internal=firstFinite(r,["internal_mvm","internal_field_mvm","e_internal_mvm"]);
-    if(surface===null&&internal===null)continue;
-    out.push({...r,_t:t,time:new Date(t).toISOString(),surface_kv:surface,differential_kv:diff,internal_mvm:internal});
+    const electron=firstFinite(r,["electron_flux_gt2mev","electron_gt2mev","flux"]);
+    if(surface===null&&internal===null&&electron===null)continue;
+    out.push({...r,_t:t,time:new Date(t).toISOString(),surface_kv:surface,differential_kv:diff,internal_mvm:internal,electron_flux_gt2mev:electron});
   }
   return out.sort((a,b)=>a._t-b._t);
 }
@@ -914,22 +896,25 @@ function normalizeChargingSnapshots(rows){
   return [24,48,72].map(age=>{if(!issues.length)return null;const want=now-age*3600e3;let best=issues[0];for(const q of issues)if(Math.abs(q.t-want)<Math.abs(best.t-want))best=q;if(Math.abs(best.t-want)>10*3600e3)return null;return{ageHours:age,issued:best.t,rows:normalizeChargingRows(groups.get(best.k))};}).filter(Boolean);
 }
 async function loadChargingForecast(){
-  setSource("charging","LOADING...");let feed=null,ver=null,arch=null,obsPayload=null;
+  setSource("charging","LOADING...");let feed=null,ver=null,arch=null,obsPayload=null,estimatePayload=null,electronPayload=null;const errors=[];
   try{feed=(await fetchJsonAny(SWIFT_CHARGING_LATEST)).data;}catch(_){ }
   try{ver=(await fetchJsonAny(SWIFT_CHARGING_VALIDATION)).data;}catch(_){ }
   try{arch=(await fetchJsonAny(SWIFT_CHARGING_ARCHIVE)).data;}catch(_){ }
-  try{obsPayload=(await fetchJsonAny(SWIFT_CHARGING_OBSERVED)).data;}catch(_){ }
+  try{obsPayload=(await fetchJsonAny(SWIFT_CHARGING_OBSERVED)).data;}catch(e){errors.push("observed.json: "+e.message);}
+  try{estimatePayload=(await fetchJsonAny(dataCandidates("swift-charging/estimated-history.json"))).data;}catch(e){errors.push("estimated-history.json: "+e.message);}
+  try{electronPayload=(await fetchJsonAny(SWIFT_CHARGING_ELECTRON_HISTORY)).data;}catch(e){errors.push("electron-history.json: "+e.message);}
+  const obsRowsAll=Array.isArray(obsPayload)?obsPayload:(obsPayload?.observed||obsPayload?.records||obsPayload?.items||obsPayload?.data||feed?.observed||[]);
+  STATE.chargingObserved=normalizeChargingRows(obsRowsAll).filter(r=>r._t>=Date.now()-30*86400e3&&r._t<=Date.now()&&!['estimate','reconstruction','forecast'].includes(r.data_kind));
+  STATE.chargingEstimated=normalizeChargingRows(estimatePayload?.estimated||feed?.estimated_history||[]).filter(r=>r._t>=Date.now()-30*86400e3&&r._t<=Date.now());
+  STATE.electronObserved=normalizeChargingRows(electronPayload?.records||feed?.electron_observed_30d||[]).filter(r=>r._t>=Date.now()-30*86400e3&&r._t<=Date.now()&&Number.isFinite(Number(r.electron_flux_gt2mev)));
   if(feed){
     STATE.chargingFeed=feed;STATE.chargingModel=feed.coefficients||{version:feed.model||"SWIFT-CHARGE"};if(!STATE.chargingModel.version)STATE.chargingModel.version=feed.model||"SWIFT-CHARGE";
     STATE.chargingForecast=normalizeChargingRows(feed.forecast||feed.records||feed.data||[]);
-    const obsRows=Array.isArray(obsPayload)?obsPayload:(obsPayload?.observed||obsPayload?.records||obsPayload?.items||feed.observed||feed.observations||[]);
-    const obsCut=Date.now()-30*86400e3;
-    STATE.chargingObserved=normalizeChargingRows(obsRows).filter(r=>r._t>=obsCut&&r._t<=Date.now()+2*3600e3);
     STATE.chargingPastSnapshots=normalizeChargingSnapshots(arch?.items||arch?.records||feed.forecast_history||[]);
-    const sk=ver?.nominal_lead_skill||feed.verification?.nominal_lead_skill||ver?.lead_skill||feed.verification?.lead_skill||{};STATE.chargingSkill={surface:sk.surface||[],internal:sk.internal||[]};const snaps=feed.past_forecast_snapshots||{};if((snaps.surface||[]).length||(snaps.internal||[]).length){const merged=[];for(const x of (snaps.surface||[]))merged.push({ageHours:x.ageHours||x.age_hours||0,issued:new Date(x.issued_at||0).getTime(),rows:normalizeChargingRows(x.rows||[])});for(const x of (snaps.internal||[])){const age=x.ageHours||x.age_hours||0,existing=merged.find(q=>q.ageHours===age);if(existing){const byT=new Map(existing.rows.map(r=>[r.time,r]));for(const r of normalizeChargingRows(x.rows||[]))byT.set(r.time,{...(byT.get(r.time)||{}),...r});existing.rows=[...byT.values()].sort((a,b)=>a._t-b._t);}else merged.push({ageHours:age,issued:new Date(x.issued_at||0).getTime(),rows:normalizeChargingRows(x.rows||[])});}STATE.chargingPastSnapshots=merged;}STATE.chargingFallback=false;
-    setSource("charging",`OK: ${STATE.chargingForecast.length} forecast / obs ${STATE.chargingObserved.length}`,feed);
+    const sk=ver?.nominal_lead_skill||feed.verification?.nominal_lead_skill||ver?.lead_skill||feed.verification?.lead_skill||{};const esk=ver?.electron?.nominal_lead_skill||feed.verification?.electron?.nominal_lead_skill||[];STATE.chargingSkill={surface:sk.surface||[],internal:sk.internal||[],electron:esk};const snaps=feed.past_forecast_snapshots||{};if((snaps.surface||[]).length||(snaps.internal||[]).length){const merged=[];for(const x of (snaps.surface||[]))merged.push({ageHours:x.ageHours||x.age_hours||0,issued:new Date(x.issued_at||0).getTime(),rows:normalizeChargingRows(x.rows||[])});for(const x of (snaps.internal||[])){const age=x.ageHours||x.age_hours||0,existing=merged.find(q=>q.ageHours===age);if(existing){const byT=new Map(existing.rows.map(r=>[r.time,r]));for(const r of normalizeChargingRows(x.rows||[]))byT.set(r.time,{...(byT.get(r.time)||{}),...Object.fromEntries(Object.entries(r).filter(([k,v])=>v!==null&&v!==undefined))});existing.rows=[...byT.values()].sort((a,b)=>a._t-b._t);}else merged.push({ageHours:age,issued:new Date(x.issued_at||0).getTime(),rows:normalizeChargingRows(x.rows||[])});}STATE.chargingPastSnapshots=merged;}STATE.electronPastSnapshots=normalizeChargingSnapshots(arch?.items||arch?.records||[]);STATE.chargingFallback=false;
+    setSource("charging",`OK: ${STATE.chargingForecast.length} forecast / electron obs ${STATE.electronObserved.length} / charging truth ${STATE.chargingObserved.length}`,feed,errors.join("; "));
   }else{
-    STATE.chargingModel=chargingModelDefaults();buildReferenceChargingForecast();STATE.chargingObserved=[];STATE.chargingPastSnapshots=[];STATE.chargingSkill={surface:[],internal:[]};
+    STATE.chargingModel=chargingModelDefaults();buildReferenceChargingForecast();STATE.chargingPastSnapshots=[];STATE.electronPastSnapshots=[];STATE.chargingSkill={surface:[],internal:[],electron:[]};
     setSource("charging",`REFERENCE: ${STATE.chargingForecast.length} points`,STATE.chargingForecast,"swift-charging/latest.json not found; using reference-model fallback");
   }
   drawChargingGraphs();renderGeoChargingStatus();
@@ -941,33 +926,80 @@ function nearestChargeRow(rows,t,maxGapH=2.0){
 }
 function drawChargeGraph(canvasId,key,unit,title){
   const canvas=document.getElementById(canvasId);if(!canvas)return;const{ctx,w,h}=setupCanvas(canvasId);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
-  const now=Date.now(),x0=now-72*3600e3,x1=now+72*3600e3,pad={l:62,r:18,t:34,b:42},vals=[];
-  const collect=rows=>{for(const r of rows||[]){if(r._t<x0||r._t>x1)continue;const v=Number(r[key]);if(Number.isFinite(v))vals.push(v);}};
-  collect(STATE.chargingObserved);collect(STATE.chargingForecast);for(const s of STATE.chargingPastSnapshots||[])collect(s.rows);
+  const now=Date.now(),x0=now-72*3600e3,x1=now+72*3600e3,pad={l:62,r:18,t:58,b:42},vals=[];
+  const collect=rows=>{for(const r of rows||[]){if(r._t<x0||r._t>x1||r[key]==null)continue;const v=Number(r[key]);if(Number.isFinite(v))vals.push(v);}};
+  collect(STATE.chargingEstimated);collect(STATE.chargingObserved);collect(STATE.chargingForecast);for(const s of STATE.chargingPastSnapshots||[])collect(s.rows);
   let ymin,ymax;if(key==="surface_kv"){ymin=vals.length?Math.floor(Math.min(...vals)-1):-10;ymax=Math.max(1,vals.length?Math.ceil(Math.max(...vals)+1):1);}else{ymin=0;ymax=Math.max(.5,vals.length?Math.ceil(Math.max(...vals)*5)/5+.2:1);}
   if(ymax<=ymin)ymax=ymin+1;const X=t=>pad.l+(t-x0)/(x1-x0)*(w-pad.l-pad.r),Y=v=>pad.t+(ymax-v)/(ymax-ymin)*(h-pad.t-pad.b);
   const step=key==="surface_kv"?Math.max(1,Math.ceil((ymax-ymin)/6)):Math.max(.1,Math.ceil((ymax-ymin)*10/6)/10);ctx.font="10px system-ui";ctx.fillStyle="#6c8298";
   for(let v=Math.ceil(ymin/step)*step;v<=ymax+1e-9;v+=step){const y=Y(v);ctx.strokeStyle="#e6edf4";ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillStyle="#6c8298";ctx.fillText((Math.abs(step)<1?v.toFixed(1):v.toFixed(0)),8,y+3);}
   for(let hh=-72;hh<=72;hh+=12){const x=X(now+hh*3600e3);ctx.strokeStyle=hh===0?"#607d98":"#eff3f7";ctx.lineWidth=hh===0?1.5:1;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();ctx.fillStyle="#6f879e";const lab=hh===0?"NOW":`${hh>0?"+":""}${hh}h`;ctx.fillText(lab,x-14,h-14);}
-  function line(rows,color,dash=[],width=2,markers=false){const q=(rows||[]).filter(r=>r._t>=x0&&r._t<=x1&&Number.isFinite(Number(r[key])));if(!q.length)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.beginPath();q.forEach((r,i)=>{const xx=X(r._t),yy=Y(Number(r[key]));i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);});ctx.stroke();ctx.setLineDash([]);if(markers){ctx.fillStyle=color;for(const r of q){ctx.beginPath();ctx.arc(X(r._t),Y(Number(r[key])),2.7,0,Math.PI*2);ctx.fill();}}ctx.restore();}
+  function line(rows,color,dash=[],width=2,markers=false){const q=(rows||[]).filter(r=>r._t>=x0&&r._t<=x1&&r[key]!=null&&Number.isFinite(Number(r[key])));if(!q.length)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.beginPath();q.forEach((r,i)=>{const xx=X(r._t),yy=Y(Number(r[key]));(i&&r._t-q[i-1]._t<=4*3600e3)?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);});ctx.stroke();ctx.setLineDash([]);if(markers){ctx.fillStyle=color;for(const r of q){ctx.beginPath();ctx.arc(X(r._t),Y(Number(r[key])),2.7,0,Math.PI*2);ctx.fill();}}ctx.restore();}
   // Archived 24 h forecast vs observation: pale vertical connectors show forecast error in the past 72 h.
   const snap24=(STATE.chargingPastSnapshots||[]).find(s=>Number(s.ageHours)===24);
-  if(snap24){ctx.save();ctx.strokeStyle="rgba(61,163,93,.22)";ctx.lineWidth=1;for(const o of STATE.chargingObserved||[]){if(o._t<x0||o._t>now||!Number.isFinite(Number(o[key])))continue;const p=nearestChargeRow(snap24.rows,o._t,2.0);if(!p||!Number.isFinite(Number(p[key])))continue;const x=X(o._t);ctx.beginPath();ctx.moveTo(x,Y(Number(o[key])));ctx.lineTo(x,Y(Number(p[key])));ctx.stroke();}ctx.restore();}
+  if(snap24){ctx.save();ctx.strokeStyle="rgba(61,163,93,.22)";ctx.lineWidth=1;for(const o of STATE.chargingObserved||[]){if(o._t<x0||o._t>now||o[key]==null||!Number.isFinite(Number(o[key])))continue;const p=nearestChargeRow(snap24.rows,o._t,2.0);if(!p||p[key]==null||!Number.isFinite(Number(p[key])))continue;const x=X(o._t);ctx.beginPath();ctx.moveTo(x,Y(Number(o[key])));ctx.lineTo(x,Y(Number(p[key])));ctx.stroke();}ctx.restore();}
+  line(STATE.chargingEstimated,"#008b8b",[3,2],2,true);
   line(STATE.chargingObserved,"#176fae",[],2.35,true);
   for(const snap of STATE.chargingPastSnapshots||[]){const color=snap.ageHours===24?"#3da35d":snap.ageHours===48?"#9167c7":"#8a98a8",dash=snap.ageHours===24?[6,3]:snap.ageHours===48?[3,3]:[1,4];line(snap.rows,color,dash,1.35,false);}
   line(STATE.chargingForecast,key==="surface_kv"?"#d9505f":"#8a56c9",[7,3],2.35,true);
   const st=STATE.selectedTime?.getTime?.()||now;if(st>=x0&&st<=x1){const x=X(st);ctx.strokeStyle="#7b48cc";ctx.lineWidth=1.7;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();}
-  const legend=[["#176fae","observed"],[key==="surface_kv"?"#d9505f":"#8a56c9","current forecast"],["#3da35d","issued -24h"],["#9167c7","issued -48h"],["#8a98a8","issued -72h"]];let lx=pad.l;ctx.font="10px system-ui";for(const [c,l] of legend){ctx.fillStyle=c;ctx.fillRect(lx,pad.t-21,12,2);ctx.fillStyle="#405a72";ctx.fillText(l,lx+16,pad.t-17);lx+=Math.max(78,ctx.measureText(l).width+32);}
-  ctx.fillStyle="#24415d";ctx.font="bold 11px system-ui";ctx.fillText(`${title} [${unit}] — −72 h observed / archived forecasts → +72 h current forecast`,pad.l,pad.t-5);
+  const legend=[["#008b8b","estimate"],["#176fae","observed"],[key==="surface_kv"?"#d9505f":"#8a56c9","current forecast"],["#3da35d","issued -24h"],["#9167c7","issued -48h"],["#8a98a8","issued -72h"]];let lx=pad.l,ly=14;ctx.font="10px system-ui";for(const [c,l] of legend){const width=Math.max(78,ctx.measureText(l).width+32);if(lx+width>w-pad.r){lx=pad.l;ly+=14;}ctx.fillStyle=c;ctx.fillRect(lx,ly-4,12,2);ctx.fillStyle="#405a72";ctx.fillText(l,lx+16,ly);lx+=width;}
+  ctx.fillStyle="#24415d";ctx.font="bold 11px system-ui";ctx.fillText(`${title} [${unit}] — −72 h observed / estimates / archived forecasts → +72 h current forecast`,pad.l,pad.t-5);
 }
 
+
+function electronSkillForLead(h){
+  const arr=STATE.chargingSkill?.electron||[];
+  return arr.find(x=>Math.round(Number(x.nominal_lead_hours??x.lead_hours??0))===h)||null;
+}
+function drawElectronFluxGraph(){
+  const canvas=document.getElementById("electronFluxGraph");if(!canvas)return;
+  const{ctx,w,h}=setupCanvas("electronFluxGraph");ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
+  const now=Date.now(),x0=now-72*3600e3,x1=now+72*3600e3,pad={l:68,r:18,t:58,b:42};
+  const vals=[];
+  const collect=rows=>{for(const r of rows||[]){if(r._t<x0||r._t>x1)continue;const v=Number(r.electron_flux_gt2mev);if(Number.isFinite(v)&&v>0)vals.push(Math.log10(v));}};
+  collect(STATE.electronObserved);collect(STATE.chargingForecast);for(const s of STATE.electronPastSnapshots||[])collect(s.rows);
+  let ymin=vals.length?Math.floor(Math.min(...vals)-.35):1,ymax=vals.length?Math.ceil(Math.max(...vals)+.35):6;
+  ymin=Math.max(0,ymin);ymax=Math.max(ymin+2,Math.min(8,ymax));
+  const X=t=>pad.l+(t-x0)/(x1-x0)*(w-pad.l-pad.r),Ylog=y=>pad.t+(ymax-y)/(ymax-ymin)*(h-pad.t-pad.b);
+  ctx.font="10px system-ui";
+  for(let p=ymin;p<=ymax;p++){const y=Ylog(p);ctx.strokeStyle="#e6edf4";ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.fillStyle="#6c8298";ctx.fillText(`1e${p}`,10,y+3);}
+  for(let hh=-72;hh<=72;hh+=12){const x=X(now+hh*3600e3);ctx.strokeStyle=hh===0?"#607d98":"#eff3f7";ctx.lineWidth=hh===0?1.5:1;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();ctx.fillStyle="#6f879e";ctx.fillText(hh===0?"NOW":`${hh>0?"+":""}${hh}h`,x-14,h-14);}
+  function line(rows,key,color,dash=[],width=2,markers=false){
+    const q=(rows||[]).filter(r=>r._t>=x0&&r._t<=x1&&Number(r[key])>0);
+    if(!q.length)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.beginPath();
+    q.forEach((r,i)=>{const xx=X(r._t),yy=Ylog(Math.log10(Number(r[key])));(i&&r._t-q[i-1]._t<=4*3600e3)?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);});
+    ctx.stroke();ctx.setLineDash([]);if(markers){ctx.fillStyle=color;for(const r of q){ctx.beginPath();ctx.arc(X(r._t),Ylog(Math.log10(Number(r[key]))),2.4,0,Math.PI*2);ctx.fill();}}ctx.restore();
+  }
+  line(STATE.electronObserved,"electron_flux_gt2mev","#176fae",[],2.2,true);
+  // Current forecast: empirical component and hybrid output.
+  line(STATE.chargingForecast,"electron_flux_empirical","#ef9b28",[2,3],1.6,false);
+  line(STATE.chargingForecast,"electron_flux_gt2mev","#d9505f",[7,3],2.35,true);
+  for(const snap of STATE.electronPastSnapshots||[]){const color=snap.ageHours===24?"#3da35d":snap.ageHours===48?"#9167c7":"#8a98a8",dash=snap.ageHours===24?[6,3]:snap.ageHours===48?[3,3]:[1,4];line(snap.rows,"electron_flux_gt2mev",color,dash,1.2,false);}
+  // Uncertainty band q05-q95 where available.
+  const q=(STATE.chargingForecast||[]).filter(r=>r._t>=now&&r._t<=x1&&Number(r.electron_q05)>0&&Number(r.electron_q95)>0);
+  if(q.length>1){ctx.save();ctx.fillStyle="rgba(217,80,95,.10)";ctx.beginPath();q.forEach((r,i)=>{const x=X(r._t),y=Ylog(Math.log10(Number(r.electron_q95)));i?ctx.lineTo(x,y):ctx.moveTo(x,y);});for(let i=q.length-1;i>=0;i--){const r=q[i];ctx.lineTo(X(r._t),Ylog(Math.log10(Number(r.electron_q05))));}ctx.closePath();ctx.fill();ctx.restore();}
+  const legend=[["#176fae","GOES observed"],["#ef9b28","empirical"],["#d9505f","empirical + AI"],["#3da35d","issued -24h"],["#9167c7","issued -48h"],["#8a98a8","issued -72h"]];
+  let lx=pad.l,ly=14;for(const [c,l] of legend){const ww=Math.max(88,ctx.measureText(l).width+31);if(lx+ww>w-pad.r){lx=pad.l;ly+=14;}ctx.fillStyle=c;ctx.fillRect(lx,ly-4,12,2);ctx.fillStyle="#405a72";ctx.fillText(l,lx+16,ly);lx+=ww;}
+  ctx.fillStyle="#24415d";ctx.font="bold 11px system-ui";ctx.fillText(">2 MeV electron flux — measured history → 72 h hybrid forecast [log scale]",pad.l,pad.t-5);
+}
+function renderElectronStats(){
+  const box=document.getElementById("electronFluxStats");if(!box)return;
+  const fc=STATE.chargingForecast||[],future=fc.filter(r=>r._t>=Date.now()&&r._t<=Date.now()+72*3600e3);
+  const peak=future.length?Math.max(...future.map(r=>Number(r.electron_flux_gt2mev)).filter(Number.isFinite)):null;
+  const modes=[...new Set(future.map(r=>r.electron_model_mode).filter(Boolean))];
+  const card=h=>{const q=electronSkillForLead(h);const hit=q&&Number.isFinite(Number(q.hit_rate_factor2))?Number(q.hit_rate_factor2).toFixed(1)+"%":"learning";const mae=q&&Number.isFinite(Number(q.mae_dex))?Number(q.mae_dex).toFixed(3):"-";return `<div class="forecastStat"><div class="k">${h}h factor-2 hit</div><div class="v">${hit}</div><div class="small">MAE ${mae} dex / n=${q?.count||0}</div></div>`;};
+  const aiActive=future.some(r=>Number(r.electron_ai_weight)>0.05);
+  box.innerHTML=`<div class="forecastStat"><div class="k">72h peak flux</div><div class="v">${Number.isFinite(peak)?peak.toExponential(2):"--"}</div><div class="small">cm⁻² s⁻¹ sr⁻¹</div></div><div class="forecastStat"><div class="k">Electron model</div><div class="v" style="font-size:13px">${aiActive?"Empirical + AI":"Empirical / bootstrap"}</div><div class="small">${esc(modes.join(", ")||"learning")}</div></div>${card(24)}${card(48)}${card(72)}`;
+}
 function drawChargingGraphs(){
+  drawElectronFluxGraph();renderElectronStats();
   drawChargeGraph("surfaceChargeGraph","surface_kv","kV","Surface potential");drawChargeGraph("internalChargeGraph","internal_mvm","MV/m","Equivalent internal field");
   const now=Date.now(),surface=(STATE.chargingForecast||[]).filter(r=>r._t>=now&&r._t<=now+72*3600e3),internal=surface;
   const smin=surface.length?Math.min(...surface.map(r=>Number(r.surface_kv)).filter(Number.isFinite)):null,imax=internal.length?Math.max(...internal.map(r=>Number(r.internal_mvm)).filter(Number.isFinite)):null;
   const ss=document.getElementById("surfaceChargeStats"),is=document.getElementById("internalChargeStats");
   const skillCard=(kind,h,primary,secondary,unit)=>{const q=chargeSkillForLead(kind,h);const p=q&&Number.isFinite(Number(q[primary]))?Number(q[primary]).toFixed(1)+"%":"learning",sec=q&&Number.isFinite(Number(q[secondary]))?Number(q[secondary]).toFixed(1)+"%":"-",mae=q&&Number.isFinite(Number(q.mae))?Number(q.mae).toFixed(kind==="surface"?2:3):"-",bias=q&&Number.isFinite(Number(q.bias))?Number(q.bias).toFixed(kind==="surface"?2:3):"-";return `<div class="forecastStat"><div class="k">${h}h hit</div><div class="v">${p}</div><div class="small">secondary ${sec} / MAE ${mae} ${unit} / Bias ${bias} / n=${q?.count||0}</div></div>`;};
-  if(ss)ss.innerHTML=`<div class="forecastStat"><div class="k">72h minimum</div><div class="v">${Number.isFinite(smin)?smin.toFixed(2):"--"} kV</div><div class="small">more negative = stronger charging</div></div><div class="forecastStat"><div class="k">Model</div><div class="v" style="font-size:13px">${esc(STATE.chargingModel?.version||"reference-v1")}</div><div class="small">${STATE.chargingFallback?"fallback / no trained feed":"AI residual calibration active"}</div></div>${skillCard("surface",24,"hit_rate_1kv","hit_rate_2kv","kV")}${skillCard("surface",48,"hit_rate_1kv","hit_rate_2kv","kV")}${skillCard("surface",72,"hit_rate_1kv","hit_rate_2kv","kV")}`;
+  if(ss)ss.innerHTML=`<div class="forecastStat"><div class="k">72h minimum</div><div class="v">${Number.isFinite(smin)?smin.toFixed(2):"--"} kV</div><div class="small">more negative = stronger charging</div></div><div class="forecastStat"><div class="k">Model</div><div class="v" style="font-size:13px">${esc(STATE.chargingModel?.version||"reference-v1")}</div><div class="small">${STATE.chargingFallback?"fallback / no trained feed":(STATE.chargingFeed?.coefficients?.training?.surface_status||"reference coefficients; truth required for training")}</div></div>${skillCard("surface",24,"hit_rate_1kv","hit_rate_2kv","kV")}${skillCard("surface",48,"hit_rate_1kv","hit_rate_2kv","kV")}${skillCard("surface",72,"hit_rate_1kv","hit_rate_2kv","kV")}`;
   if(is)is.innerHTML=`<div class="forecastStat"><div class="k">72h maximum</div><div class="v">${Number.isFinite(imax)?imax.toFixed(3):"--"} MV/m</div><div class="small">reference dielectric model</div></div><div class="forecastStat"><div class="k">Particle input</div><div class="v" style="font-size:13px">${(STATE.chargingForecast||[]).some(r=>Number.isFinite(Number(r.electron_flux_gt2mev||r.electron_gt2mev)))?"GOES >2 MeV":"proxy"}</div><div class="small">forecast feed can replace persistence</div></div>${skillCard("internal",24,"hit_rate_0_1mvm","hit_rate_0_2mvm","MV/m")}${skillCard("internal",48,"hit_rate_0_1mvm","hit_rate_0_2mvm","MV/m")}${skillCard("internal",72,"hit_rate_0_1mvm","hit_rate_0_2mvm","MV/m")}`;
 }
 function chargingStateAt(time){
@@ -1093,34 +1125,10 @@ function drawTechBackdrop(ctx,w,h,solarMode=false){
   ctx.restore();
 }
 
-function syncTimelineControls(h,t){
-  const main=document.getElementById("timeSlider"),fs=document.getElementById("timeSliderFs");
-  if(main&&Number(main.value)!==Number(h))main.value=String(h);
-  if(fs&&Number(fs.value)!==Number(h))fs.value=String(h);
-  const off=Number(h)-72,lab=document.getElementById("fsTimeLabel");
-  if(lab)lab.innerHTML=`${formatTime(t)}<br><b>${off===0?"NOW":`${off>0?"+":""}${off} h`}</b>`;
-}
-function updateTimeline(){
-  const s=document.getElementById("timeSlider");if(!s)return;
-  const h=Number(s.value),t=new Date(STATE.timelineStart.getTime()+h*3600e3);STATE.selectedTime=t;
-  syncTimelineControls(h,t);
-  const off=h-72,ws=windStateAt(t),label=document.getElementById("timeLabel");
-  if(label)label.innerHTML=`<b>${formatTime(t)}</b> / now ${off>=0?"+":""}${off}h / solar wind <b>${Math.round(ws.speed)} km/s</b> (${esc(ws.source)})`;
-  renderSummary();update3D(t);drawWindGraph();drawSpaceWeatherGraphs();
-}
-function updateTimelineFromFs(){
-  const fs=document.getElementById("timeSliderFs"),main=document.getElementById("timeSlider");if(!fs||!main)return;
-  main.value=fs.value;updateTimeline();
-}
+function updateTimeline(){const h=Number(document.getElementById("timeSlider").value),t=new Date(STATE.timelineStart.getTime()+h*3600e3);STATE.selectedTime=t;const off=h-72,ws=windStateAt(t);document.getElementById("timeLabel").innerHTML=`<b>${formatTime(t)}</b> / now ${off>=0?"+":""}${off}h / solar wind <b>${Math.round(ws.speed)} km/s</b> (${esc(ws.source)})`;renderSummary();update3D(t);drawWindGraph();drawSpaceWeatherGraphs();}
 function playTimeline(){stopTimeline();STATE.timer=setInterval(()=>{const s=document.getElementById("timeSlider");let v=Number(s.value)+1;if(v>Number(s.max))v=0;s.value=v;updateTimeline();},260);}
 function stopTimeline(){if(STATE.timer)clearInterval(STATE.timer);STATE.timer=null;}
 function stepTimeline(d){const s=document.getElementById("timeSlider");s.value=clamp(Number(s.value)+d,Number(s.min),Number(s.max));updateTimeline();}
-function toggleThreeFullscreen(){
-  const el=document.getElementById("threeContainer");
-  if(document.fullscreenElement===el)document.exitFullscreen?.();
-  else if(document.fullscreenElement)document.exitFullscreen?.().then(()=>el?.requestFullscreen?.());
-  else el?.requestFullscreen?.();
-}
 function toggleFullscreen(id){const el=document.getElementById(id);if(document.fullscreenElement)document.exitFullscreen();else el?.requestFullscreen?.();}
 function switchMode(){init3D();resize3D();update3D(STATE.selectedTime);}
 
@@ -2101,32 +2109,8 @@ function animateWindParticles(dt){
   t.windParticles.geometry.attributes.position.needsUpdate=true;
 }
 
-let SPEED_HUD_COMPACT=false;
-
-document.addEventListener("click",e=>{
-  const b=e.target?.closest?.(".speedHudToggle");
-  if(!b)return;
-  e.preventDefault();
-  e.stopPropagation();
-  toggleSpeedHudCompact();
-});
-
-function toggleSpeedHudCompact(){
-  SPEED_HUD_COMPACT=!SPEED_HUD_COMPACT;
-  const info=STATE._lastSpeedHudInfo||null;
-  const earthState=STATE._lastSpeedHudEarthState||null;
-  updateSpeedHud(info,earthState);
-}
-
-function speedHudToggleButton(){
-  return `<button type="button" class="speedHudToggle" title="${SPEED_HUD_COMPACT?'詳細を表示':'太陽風速度だけ表示'}">${SPEED_HUD_COMPACT?'詳細':'速度のみ'}</button>`;
-}
-
 function updateSpeedHud(info,earthState=null){
   const el=document.getElementById("speedHud");if(!el)return;
-  STATE._lastSpeedHudInfo=info||null;
-  STATE._lastSpeedHudEarthState=earthState||null;
-
   const simTime=STATE.selectedTime||new Date();
   const st=earthState||earthSpaceWeatherState(simTime,info);
   const ambient=st.ambient;
@@ -2137,18 +2121,8 @@ function updateSpeedHud(info,earthState=null){
   const cmeDelta=st.cmeDelta;
   const shockWeight=st.shockWeight;
 
-  el.classList.toggle("compact",SPEED_HUD_COMPACT);
-
-  if(SPEED_HUD_COMPACT){
-    el.innerHTML=
-      speedHudToggleButton()+
-      `<div class="big wind">${Math.round(combinedSpeed)} km/s</div>`;
-    return;
-  }
-
   if(!info){
     el.innerHTML=
-      speedHudToggleButton()+
       `<div class="model">Background rotating solar wind @ Earth</div>`+
       `<div class="big wind">${Math.round(backgroundSpeed)} km/s</div>`+
       `<div class="wind"><b>Background / HSS-like wind at Earth</b></div>`+
@@ -2168,7 +2142,6 @@ function updateSpeedHud(info,earthState=null){
   const footLon=sourceFootpointLongitude(c,simTime);
 
   el.innerHTML=
-    speedHudToggleButton()+
     `<div class="model">DBM + Parker split view • ${esc(shortId(c.id))} • ${esc(c.impactClass)}</div>`+
     `<div class="big wind">${Math.round(combinedSpeed)} km/s</div>`+
     `<div class="wind"><b>Local wind at magnetosphere (background + CME)</b></div>`+
@@ -2624,7 +2597,7 @@ function set3DCamera(mode){
   k.target.set(10,0,0);k.update();
 }
 window.addEventListener("resize",()=>{resize3D();drawWindGraph();drawSpaceWeatherGraphs();});
-document.addEventListener("fullscreenchange",()=>{syncTimelineControls(Number(document.getElementById("timeSlider")?.value||72),STATE.selectedTime||new Date());setTimeout(()=>{resize3D();drawWindGraph();drawSpaceWeatherGraphs();},120);});
+document.addEventListener("fullscreenchange",()=>setTimeout(()=>{resize3D();drawWindGraph();drawSpaceWeatherGraphs();},100));
 setInterval(()=>{document.getElementById("utcClock").textContent=new Date().toISOString().replace("T"," ").slice(0,19)+" UTC";},1000);
 
 renderSourcePanel();initTimeline();init3D();renderSummary();renderEvents();renderForecastSkillDashboard();updateTimeline();drawWindGraph();loadReportIndex();loadSatelliteRisk();loadAll();
