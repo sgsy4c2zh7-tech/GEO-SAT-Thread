@@ -1,9 +1,8 @@
 {
   "surface": {
-    "intercept": 0.15,
-    "kp": 0.38,
-    "south_bz_nt": 0.1,
-    "wind_excess_100kms": 0.22
+    "model": "current_balance",
+    "scenario": "reference-GEO-surface-current-balance-v1",
+    "differential_scenario": "shadowed-low-emission-surface-v1"
   },
   "internal": {
     "intercept": 0.03,
@@ -12,14 +11,14 @@
     "wind_excess_100kms": 0.018,
     "fluence_24h_1e8": 0.02
   },
-  "differential_ratio": 0.38,
+  "differential_ratio": null,
   "training": {
     "window_days": 180,
     "surface_samples": 0,
     "internal_samples": 0,
-    "surface_status": "default_reference",
+    "surface_status": "current_balance_scenario; validated_surface_targets_n=0",
     "internal_status": "default_reference"
   },
-  "model_id": "SWIFT-CHARGE-v0.1-6d21f91d30",
-  "updated_at": "2026-09-22T14:21:49Z"
+  "model_id": "SWIFT-CHARGE-v0.2-3d7afd2ab7",
+  "updated_at": "2026-09-22T14:59:47Z"
 }

@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-09-22T14:21:49Z",
-  "model": "SWIFT-RB-ELECTRON-v0.2-cf02ec6233|SWIFT-CHARGE-v0.1-6d21f91d30",
+  "updated_at": "2026-09-22T14:59:47Z",
+  "model": "SWIFT-RB-ELECTRON-v0.2-64e29f79da|SWIFT-CHARGE-v0.2-3d7afd2ab7",
   "observation_rule": "Only docs/data/swift-charging/observed.json rows are verification truth; model outputs are never self-scored.",
   "nominal_lead_skill": {
     "surface": [
@@ -54,21 +54,21 @@
     "nominal_lead_skill": [
       {
         "nominal_lead_hours": 24,
-        "count": 23,
+        "count": 24,
         "status": "verified",
-        "mae_dex": 0.2227,
-        "bias_dex": -0.2218,
-        "rmse_dex": 0.2459,
-        "hit_rate_factor2": 73.9,
+        "mae_dex": 0.2284,
+        "bias_dex": -0.2276,
+        "rmse_dex": 0.2517,
+        "hit_rate_factor2": 70.8,
         "hit_rate_factor3": 100.0
       },
       {
         "nominal_lead_hours": 48,
         "count": 5,
         "status": "verified",
-        "mae_dex": 0.2771,
-        "bias_dex": -0.1157,
-        "rmse_dex": 0.3034,
+        "mae_dex": 0.2606,
+        "bias_dex": -0.0992,
+        "rmse_dex": 0.2793,
         "hit_rate_factor2": 60.0,
         "hit_rate_factor3": 100.0
       },
@@ -286,6 +286,15 @@
           "observed": 460.53143310546875,
           "error_dex": -0.30798,
           "ratio": 0.49206
+        },
+        {
+          "issued_at": "2026-09-21T12:44:36Z",
+          "target_time": "2026-09-22T15:44:36Z",
+          "lead_hours": 27,
+          "predicted": 210.809,
+          "observed": 482.94952392578125,
+          "error_dex": -0.36001,
+          "ratio": 0.4365
         }
       ],
       "48h": [
@@ -330,9 +339,9 @@
           "target_time": "2026-09-22T15:13:41Z",
           "lead_hours": 45,
           "predicted": 199.856,
-          "observed": 584.1495971679688,
-          "error_dex": -0.46581,
-          "ratio": 0.34213
+          "observed": 482.94952392578125,
+          "error_dex": -0.38318,
+          "ratio": 0.41382
         }
       ],
       "72h": []
