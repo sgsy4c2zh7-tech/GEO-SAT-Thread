@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-09-22T04:51:35Z",
+  "updated_at": "2026-09-22T11:34:41Z",
   "model": "SWIFT CME Wind Boost Learner",
   "definition": "observed_delta_v = max(0, post_arrival_peak_speed - pre_arrival_median_speed)",
   "windows": {
     "pre_baseline": "arrival-12h to arrival-3h median",
     "post_peak": "arrival to arrival+18h max"
   },
-  "sample_count": 25,
+  "sample_count": 26,
   "global": {
-    "intercept": 106.3848,
-    "speed_geometry_slope": -0.066594,
+    "intercept": 118.5661,
+    "speed_geometry_slope": -0.081752,
     "formula": "delta_v = class_median*0.55 + max(0, intercept + slope*(speed-500)*geometry)*0.45"
   },
   "by_impact_class": {
@@ -20,9 +20,9 @@
       "default_used": false
     },
     "CORE-HIT": {
-      "count": 3,
-      "median_delta_v": 104.21,
-      "mean_delta_v": 148.39,
+      "count": 4,
+      "median_delta_v": 175.84,
+      "mean_delta_v": 173.16,
       "default_used": false
     },
     "BODY-HIT": {
@@ -595,11 +595,33 @@
       "longitude": 142.0,
       "latitude": -24.0,
       "angular_separation": 136.04,
-      "baseline_speed": 330.15,
-      "post_peak_speed": 418.14,
-      "observed_delta_v": 87.99,
+      "baseline_speed": 330.3,
+      "post_peak_speed": 576.91,
+      "observed_delta_v": 246.61,
       "pre_count": 1079,
-      "post_count": 437
+      "post_count": 760
+    },
+    {
+      "id": "2026-09-18T03:24:00-CME-001",
+      "source": "DONKI",
+      "impact_class": "CORE-HIT",
+      "earth_candidate": true,
+      "confidence": 0.95,
+      "geometry_multiplier": 1.0,
+      "t0": "2026-09-18T03:24:00Z",
+      "arrival_time": "2026-09-22T08:12:31Z",
+      "transit_hours": 100.81,
+      "speed": 371.0,
+      "effective_speed": 371.0,
+      "half_angle": 41.0,
+      "longitude": 0.0,
+      "latitude": 17.0,
+      "angular_separation": 17.0,
+      "baseline_speed": 329.45,
+      "post_peak_speed": 576.91,
+      "observed_delta_v": 247.46,
+      "pre_count": 448,
+      "post_count": 116
     }
   ]
 }
