@@ -372,7 +372,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
       <span class="modelChip">Solar rotation: 27.27 d</span>
       <span class="modelChip">Parker 1958 HMF • north view: CCW rotation</span><span class="modelChip">ENLIL-style 21.5 R☉ boundary</span><span class="modelChip">Ω: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
       <span class="modelChip">Earth speed display = local Vsw sampled from rendered heliospheric field</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span>
-      <span class="modelChip">Magnetosphere: Pdyn / Bz / CME impact response</span><span class="modelChip">GOES only: public health/anomaly feed + TLE/SGP4 position</span>
+      <span class="modelChip">Magnetosphere: storm-gated • Kp ≥ 5 only • CME alone = no deformation</span><span class="modelChip">GOES only: public health/anomaly feed + TLE/SGP4 position</span>
     </div>
   </section>
 
@@ -1966,22 +1966,71 @@ function createMagnetosphereGroup(){
   return group;
 }
 
-function updateMagnetosphere(impactStrength=0,bzOverride=null){
+function updateMagnetosphere(stormStrength=0,bzOverride=null,stormActive=false){
   if(!STATE.three.ready || !STATE.three.magnetosphere)return;
-  STATE.three.impactStrength=clamp(impactStrength,0,1);
-  const m=STATE.three.magnetosphere,pd=Math.max(.2,num(STATE.env.dynamicPressure,2)),bz=Number.isFinite(Number(bzOverride))?Number(bzOverride):num(STATE.env.bz,0);
-  const compression=clamp(1.14-Math.log10(pd+1)*.22-impactStrength*.18,.58,1.13),tailStretch=clamp(1+Math.max(0,-bz)*.018+impactStrength*.25,1,1.65);
-  const base=new THREE.Color(0x4ea6ff),yellow=new THREE.Color(0xffd347),red=new THREE.Color(0xff3b30);let hitColor;
-  if(impactStrength<.5)hitColor=base.clone().lerp(yellow,impactStrength*2);else hitColor=yellow.clone().lerp(red,(impactStrength-.5)*2);
-  for(const child of m.children){const role=child.userData.role;
+  const active=!!stormActive;
+  const strength=active?clamp(stormStrength,0,1):0;
+  STATE.three.impactStrength=strength;
+
+  const m=STATE.three.magnetosphere;
+  const pd=Math.max(.2,num(STATE.env.dynamicPressure,2));
+  const bz=Number.isFinite(Number(bzOverride))?Number(bzOverride):num(STATE.env.bz,0);
+
+  // IMPORTANT:
+  // CME proximity/arrival alone does NOT deform the magnetosphere.
+  // Outside geomagnetic-storm conditions (Kp < 5), keep the rendered cavity fixed.
+  const compression=active
+    ?clamp(1.05-Math.log10(pd+1)*.14-strength*.20,.58,1.00)
+    :1.00;
+  const tailStretch=active
+    ?clamp(1+Math.max(0,-bz)*.014+strength*.22,1,1.55)
+    :1.00;
+
+  const base=new THREE.Color(0x4ea6ff);
+  const yellow=new THREE.Color(0xffd347);
+  const red=new THREE.Color(0xff3b30);
+  let stormColor=base.clone();
+  if(active){
+    if(strength<.5)stormColor=base.clone().lerp(yellow,strength*2);
+    else stormColor=yellow.clone().lerp(red,(strength-.5)*2);
+  }
+
+  for(const child of m.children){
+    const role=child.userData.role;
+
     if(role==="magnetopause"||role==="magnetopauseWire"){
-      child.position.x=5.2*tailStretch;child.scale.set(2.15*tailStretch,1.28*compression,1.28*compression);
-      if(child.material){child.material.color.copy(hitColor);child.material.opacity=(role==="magnetopause"?.075:.095)*(1+impactStrength*2.4);}
+      child.position.x=5.2*tailStretch;
+      child.scale.set(2.15*tailStretch,1.28*compression,1.28*compression);
+      if(child.material){
+        child.material.color.copy(stormColor);
+        child.material.opacity=active
+          ?(role==="magnetopause"?.075:.095)*(1+strength*2.2)
+          :(role==="magnetopause"?.075:.095);
+      }
+
     }else if(role==="tail"){
-      child.scale.set(1,tailStretch,compression);if(child.material){child.material.color.copy(hitColor.clone().lerp(new THREE.Color(0x6f51ff),.35));child.material.opacity=.065*(1+impactStrength*1.8);}
+      child.scale.set(1,tailStretch,compression);
+      if(child.material){
+        child.material.color.copy(
+          active
+            ?stormColor.clone().lerp(new THREE.Color(0x6f51ff),.35)
+            :new THREE.Color(0x5aaeff)
+        );
+        child.material.opacity=active?.065*(1+strength*1.7):.065;
+      }
+
     }else if(role==="bowShock"){
-      child.position.x=child.userData.baseX*compression;child.scale.set(1,compression,compression);if(child.material){child.material.color.copy(impactStrength>.05?red:new THREE.Color(0xff8f66));child.material.opacity=.24+.48*impactStrength;}
-    }else if(role==="field"&&child.material){child.material.color.copy(hitColor);child.material.opacity=.32+.38*impactStrength;}
+      child.position.x=child.userData.baseX*compression;
+      child.scale.set(1,compression,compression);
+      if(child.material){
+        child.material.color.copy(active?red:new THREE.Color(0xff8f66));
+        child.material.opacity=active?.24+.44*strength:.24;
+      }
+
+    }else if(role==="field"&&child.material){
+      child.material.color.copy(active?stormColor:new THREE.Color(0x8fd4ff));
+      child.material.opacity=active?.32+.34*strength:.32;
+    }
   }
 }
 
@@ -2548,11 +2597,24 @@ function update3D(time){
   updateSolarWindSheet(time,ws.speed);
   const earthState=earthSpaceWeatherState(time,bestInfo);
   const localEarthSpeed=earthState.combinedSpeed;
-  const magnetosphereImpact=Math.max(impactStrength,earthState.cmeImpactStrength);
-  updateParkerSpiral(time,ws.speed);updateMagnetosphere(magnetosphereImpact,bzS.bz);updateSpeedHud(bestInfo,earthState);renderGeoChargingStatus();
-  const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz,magState=magnetosphereImpact>.72?"STRONG IMPACT":magnetosphereImpact>.35?"IMPACT":magnetosphereImpact>.05?"CONTACT":"QUIET";
+
+  // Magnetosphere visualization is storm-gated.
+  // Kp >= 5 = geomagnetic-storm condition for this display.
+  // A CME can still be shown arriving and can raise local wind speed,
+  // but it cannot deform/color/pulse the magnetosphere by itself.
+  const stormActive=kpS.kp>=5;
+  const stormStrength=stormActive?clamp((kpS.kp-4)/5,0,1):0;
+
+  updateParkerSpiral(time,ws.speed);
+  updateMagnetosphere(stormStrength,bzS.bz,stormActive);
+  updateSpeedHud(bestInfo,earthState);renderGeoChargingStatus();
+
+  const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz;
+  const magState=stormActive
+    ?(kpS.kp>=8?"STRONG GEOMAGNETIC STORM":"GEOMAGNETIC STORM")
+    :"NO GEOMAGNETIC STORM";
   const threeHud=document.getElementById("threeHud");
-  if(threeHud)threeHud.innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br><b>Local wind @ magnetosphere: ${Math.round(localEarthSpeed)} km/s</b><br>Background/HSS @ Earth: ${Math.round(earthState.backgroundSpeed)} km/s<br>CME enhancement @ Earth: +${Math.round(earthState.cmeDelta)} km/s<br>Earth compression proxy: ${Number(earthState.compression||0).toFixed(2)}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(earthState.backgroundSpeed).toFixed(1)}° background / ${parkerWindingDeg(earthState.backgroundSpeed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Pinwheel = background rotating solar wind / expanding shell = CME shock-sheath<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
+  if(threeHud)threeHud.innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br><b>Local wind @ magnetosphere: ${Math.round(localEarthSpeed)} km/s</b><br>Background/HSS @ Earth: ${Math.round(earthState.backgroundSpeed)} km/s<br>CME enhancement @ Earth: +${Math.round(earthState.cmeDelta)} km/s<br>Earth compression proxy: ${Number(earthState.compression||0).toFixed(2)}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(earthState.backgroundSpeed).toFixed(1)}° background / ${parkerWindingDeg(earthState.backgroundSpeed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Pinwheel = background rotating solar wind / expanding shell = CME shock-sheath<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b> / deformation trigger: <b>Kp ≥ 5 only</b>`;
 }
 
 function animate3D(){
@@ -2586,8 +2648,8 @@ function animate3D(){
     }
   }
   if(t.magnetosphere){
-    // subtle breathing to keep the field visually alive
-    t.magnetosphere.rotation.x=Math.sin(elapsed*.22)*.006;
+    // Magnetosphere moves only during a geomagnetic storm.
+    t.magnetosphere.rotation.x=t.impactStrength>0?Math.sin(elapsed*.22)*.006:0;
   }
   t.starPoints.rotation.y+=dt*.0018;
   animateWindParticles(dt);
