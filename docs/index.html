@@ -372,7 +372,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
       <span class="modelChip">Solar rotation: 27.27 d</span>
       <span class="modelChip">Parker 1958 HMF • north view: CCW rotation</span><span class="modelChip">ENLIL-style 21.5 R☉ boundary</span><span class="modelChip">Ω: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
       <span class="modelChip">Earth speed display = local Vsw sampled from rendered heliospheric field</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span>
-      <span class="modelChip">Magnetosphere: storm-gated • Kp ≥ 5 only • CME alone = no deformation</span><span class="modelChip">GOES only: public health/anomaly feed + TLE/SGP4 position</span>
+      <span class="modelChip">Magnetosphere: storm-gated • Kp ≥ 5 only • CME alone = no deformation</span><span class="modelChip">GOES only: public health/anomaly feed + TLE/SGP4 position</span><span class="modelChip">GEO radius: display-compressed inside magnetosphere • data unchanged</span>
     </div>
   </section>
 
@@ -2339,6 +2339,11 @@ function make3DCME(c,s,index){
 
 const GEO_EARTH_RADIUS_KM=6378.137;
 const GEO_EARTH_SCENE_RADIUS=3.18;
+// Display-only GEO radius.
+// Physical GEO altitude / TLE longitude-latitude data are unchanged.
+// 4.20 scene units keeps the GEO ring inside the existing magnetosphere,
+// including the strongest rendered storm-compression state.
+const GEO_DISPLAY_RADIUS=4.20;
 let GEO_SAT_VISIBLE=true;
 
 function geoHealthHex(s){
@@ -2378,8 +2383,9 @@ function geoIssueHex(s){
 function geoSatLocalPosition(s){
   const lat=clamp(num(s?.latitude_deg,0),-90,90)*Math.PI/180;
   const lon=num(s?.longitude_deg,0)*Math.PI/180;
-  const alt=clamp(num(s?.altitude_km,35786),1000,80000);
-  const r=GEO_EARTH_SCENE_RADIUS*(GEO_EARTH_RADIUS_KM+alt)/GEO_EARTH_RADIUS_KM;
+  // Visual radius only: keep real longitude/latitude and health/TLE data,
+  // but draw GEO closer to Earth so the orbit remains inside the existing cavity.
+  const r=GEO_DISPLAY_RADIUS;
   const cl=Math.cos(lat);
   return new THREE.Vector3(r*cl*Math.cos(lon),r*Math.sin(lat),r*cl*Math.sin(lon));
 }
@@ -2469,9 +2475,12 @@ function clearGeoSatellites3D(){
   t.geoSatPickables=[];
 }
 function createGeoOrbitGuide(group){
-  const pts=[],r=GEO_EARTH_SCENE_RADIUS*(GEO_EARTH_RADIUS_KM+35786)/GEO_EARTH_RADIUS_KM;
+  const pts=[],r=GEO_DISPLAY_RADIUS;
   for(let i=0;i<=180;i++){const a=i/180*Math.PI*2;pts.push(new THREE.Vector3(r*Math.cos(a),0,r*Math.sin(a)));}
-  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x6f8ba5,transparent:true,opacity:.16}));
+  const line=new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({color:0x6f8ba5,transparent:true,opacity:.20})
+  );
   line.userData.role="geoOrbitGuide";group.add(line);
 }
 function fallbackGeoSatRows(){
