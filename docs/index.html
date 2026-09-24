@@ -372,7 +372,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
       <span class="modelChip">Solar rotation: 27.27 d</span>
       <span class="modelChip">Parker 1958 HMF • north view: CCW rotation</span><span class="modelChip">ENLIL-style 21.5 R☉ boundary</span><span class="modelChip">Ω: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
       <span class="modelChip">Earth speed display = local Vsw sampled from rendered heliospheric field</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span>
-      <span class="modelChip">Magnetosphere: Pdyn / Bz / CME impact response</span><span class="modelChip">GOES only: public health/anomaly feed + TLE/SGP4 position</span>
+      <span class="modelChip">Magnetosphere: Shue 1998 • timeline Pdyn + Bz driven</span><span class="modelChip">GOES only: public health/anomaly feed + TLE/SGP4 position</span>
     </div>
   </section>
 
@@ -642,7 +642,8 @@ function normalizeWindPayload(payload,mode="auto"){
     else if(String(r.kind||"").toLowerCase()==="forecast"||t>now+30*60e3){kind="forecast";speed=pred??plain;}
     else{kind="observed";speed=obs??plain??pred;}
     if(!Number.isFinite(speed)||speed<150||speed>1800)continue;
-    out.push({_t:t,time:new Date(t).toISOString(),speed:Number(speed),kind,raw:r});
+    const density=firstFinite(r,["density","proton_density","density_cm3","observed_density","predicted_density","n_p","np"]);
+    out.push({_t:t,time:new Date(t).toISOString(),speed:Number(speed),density:Number.isFinite(density)?Number(density):null,kind,raw:r});
   }
   return out.sort((a,b)=>a._t-b._t);
 }
@@ -724,12 +725,41 @@ function interpolateWind(series,t,maxGapH=6){
   while(hi-lo>1){const m=(lo+hi)>>1;if(series[m]._t<=x)lo=m;else hi=m;}
   const a=series[lo],b=series[hi],gap=b._t-a._t;if(gap>maxGapH*3600e3)return null;const f=(x-a._t)/(gap||1);return a.speed+(b.speed-a.speed)*f;
 }
+function interpolateTimedField(series,t,key,maxGapH=6){
+  if(!series?.length)return null;
+  const x=t instanceof Date?t.getTime():Number(t);
+  const pts=series.filter(r=>Number.isFinite(Number(r?.[key]))).map(r=>({...r,_v:Number(r[key])}));
+  if(!pts.length)return null;
+  let lo=0,hi=pts.length-1;
+  if(x<=pts[0]._t)return Math.abs(pts[0]._t-x)<=maxGapH*3600e3?pts[0]._v:null;
+  if(x>=pts[hi]._t)return Math.abs(x-pts[hi]._t)<=maxGapH*3600e3?pts[hi]._v:null;
+  while(hi-lo>1){const m=(lo+hi)>>1;if(pts[m]._t<=x)lo=m;else hi=m;}
+  const a=pts[lo],b=pts[hi],gap=b._t-a._t;
+  if(gap>maxGapH*3600e3)return null;
+  const f=(x-a._t)/(gap||1);
+  return a._v+(b._v-a._v)*f;
+}
 function windStateAt(t){
   const d=t instanceof Date?t:new Date(t),x=d.getTime(),now=Date.now();
-  if(x<=now+30*60e3){const v=interpolateWind(STATE.windObserved,x,4);if(Number.isFinite(v))return{speed:v,source:"NOAA observed"};}
-  const vf=interpolateWind(STATE.windForecast,x,8);if(Number.isFinite(vf))return{speed:vf,source:"SWIFT Wind AI"};
-  const wsa=getBackgroundWindSpeedFromWSA(d);if(Number.isFinite(wsa))return{speed:wsa,source:"WSA"};
-  return{speed:clamp(num(STATE.env.speed,425),250,900),source:"NOAA current/fallback"};
+  if(x<=now+30*60e3){
+    const v=interpolateWind(STATE.windObserved,x,4);
+    if(Number.isFinite(v)){
+      const density=interpolateTimedField(STATE.windObserved,x,"density",4);
+      return{speed:v,density:Number.isFinite(density)?density:null,source:"NOAA observed"};
+    }
+  }
+  const vf=interpolateWind(STATE.windForecast,x,8);
+  if(Number.isFinite(vf)){
+    const density=interpolateTimedField(STATE.windForecast,x,"density",8);
+    return{speed:vf,density:Number.isFinite(density)?density:null,source:"SWIFT Wind AI"};
+  }
+  const wsa=getBackgroundWindSpeedFromWSA(d);
+  if(Number.isFinite(wsa))return{speed:wsa,density:null,source:"WSA"};
+  return{speed:clamp(num(STATE.env.speed,425),250,900),density:Number.isFinite(Number(STATE.env.density))?Number(STATE.env.density):null,source:"NOAA current/fallback"};
+}
+function solarWindDynamicPressureNPa(densityCm3,speedKms){
+  const n=Number(densityCm3),v=Number(speedKms);
+  return Number.isFinite(n)&&n>0&&Number.isFinite(v)&&v>0?1.6726e-6*n*v*v:null;
 }
 function getSolarWindAt(t){return windStateAt(t).speed;}
 
@@ -1860,11 +1890,24 @@ function earthSpaceWeatherState(time,info){
   const backgroundSpeed=Number.isFinite(Number(local?.speed))?Number(local.speed):ambient.speed;
   const cme=cmeDisturbanceAtEarth(info,time,backgroundSpeed);
   const combinedSpeed=Number.isFinite(cme.combinedSpeed)?cme.combinedSpeed:backgroundSpeed;
-  const localDensity=Number.isFinite(Number(local?.nPhysical))?Number(local.nPhysical):null;
   const compression=Number.isFinite(Number(local?.compression))?Number(local.compression):0;
+  const measuredDensity=Number.isFinite(Number(ambient?.density))?Number(ambient.density):null;
+  const continuityDensity=Number.isFinite(Number(local?.nPhysical))?Number(local.nPhysical):null;
+  // Prefer timestamp-matched NOAA/SWIFT density. If density is unavailable, use the
+  // rendered continuity field and its stream-compression proxy as an explicit fallback.
+  let localDensity=measuredDensity, densitySource=measuredDensity!==null?ambient.source+" density":"";
+  if(localDensity===null&&continuityDensity!==null){
+    localDensity=continuityDensity*(1+2.2*compression);
+    densitySource="continuity + compression fallback";
+  }
+  if(localDensity===null){
+    localDensity=Math.max(.2,num(STATE.env.density,5));
+    densitySource="current-density fallback";
+  }
+  const dynamicPressure=solarWindDynamicPressureNPa(localDensity,combinedSpeed);
   const impactStrength=clamp(cme.shockWeight*Math.max(0,(combinedSpeed-backgroundSpeed))/260,0,1);
   return{
-    ambient,local,backgroundSpeed,combinedSpeed,localDensity,compression,
+    ambient,local,backgroundSpeed,combinedSpeed,localDensity,densitySource,compression,dynamicPressure,
     cmeDelta:cme.deltaSpeed,earthCmeSpeed:cme.earthCmeSpeed,shockWeight:cme.shockWeight,
     cmeImpactStrength:impactStrength
   };
@@ -1901,88 +1944,170 @@ function rebuildParkerBlade(blade,pts,v){
   blade.userData.coreMat.uniforms.uOpacity.value=(blade.userData.index%3===0?.82:.56)+.10*clamp((v-300)/500,0,1);
 }
 
+
+function buildShueStyleMagnetopauseGeometry(r0Re=10.1,alpha=.58,thetaMaxDeg=150,tailCapRe=26,nTheta=34,nPhi=52){
+  // Lightweight Shue-style axisymmetric cavity.
+  // theta=0 is the Sun-facing (-X) nose; +X is the magnetotail.
+  const RE=3.18,thetaMax=thetaMaxDeg*Math.PI/180;
+  const pos=[],idx=[];
+  for(let i=0;i<=nTheta;i++){
+    const th=thetaMax*i/nTheta,c=Math.cos(th),sn=Math.sin(th);
+    const raw=r0Re*Math.pow(2/Math.max(.06,1+c),alpha);
+    const r=Math.min(tailCapRe,raw),x=-r*c*RE,rho=r*sn*RE;
+    for(let j=0;j<=nPhi;j++){
+      const ph=2*Math.PI*j/nPhi;
+      pos.push(x,rho*Math.cos(ph),rho*Math.sin(ph));
+    }
+  }
+  const row=nPhi+1;
+  for(let i=0;i<nTheta;i++){
+    for(let j=0;j<nPhi;j++){
+      const a=i*row+j,b=a+row,c=b+1,d=a+1;
+      idx.push(a,b,d,b,c,d);
+    }
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+  g.setIndex(idx);g.computeVertexNormals();
+  return g;
+}
+function makeMagnetopauseMeridian(phiDeg=0,r0Re=10.1,alpha=.58,thetaMaxDeg=150,tailCapRe=26,color=0x83d5ff,opacity=.16){
+  const RE=3.18,phi=phiDeg*Math.PI/180,pts=[];
+  for(let i=0;i<=70;i++){
+    const th=thetaMaxDeg*Math.PI/180*i/70,c=Math.cos(th),sn=Math.sin(th);
+    const r=Math.min(tailCapRe,r0Re*Math.pow(2/Math.max(.06,1+c),alpha));
+    const rho=r*sn*RE;
+    pts.push(new THREE.Vector3(-r*c*RE,rho*Math.cos(phi),rho*Math.sin(phi)));
+  }
+  const line=new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({color,transparent:true,opacity,blending:THREE.AdditiveBlending,depthWrite:false})
+  );
+  line.userData.role="magnetopauseGuide";
+  line.userData.baseOpacity=opacity;
+  return line;
+}
 function createMagnetosphereGroup(){
   const group=new THREE.Group();
   group.name="magnetosphere";
 
-  // Magnetopause: sunward side is compressed, tailward side extended by offset+scale.
-  const shellMat=new THREE.MeshBasicMaterial({
-    color:0x4ea6ff,transparent:true,opacity:.075,side:THREE.DoubleSide,
+  // Quiet-time dayside standoff ≈10 RE, safely outside GEO at 6.6 RE.
+  // The skin is intentionally very faint so GOES remains readable inside the cavity.
+  const shellGeo=buildShueStyleMagnetopauseGeometry(10.1,.58,150,26,38,58);
+  const shell=new THREE.Mesh(shellGeo,new THREE.MeshBasicMaterial({
+    color:0x4ea6ff,transparent:true,opacity:.020,side:THREE.DoubleSide,
     blending:THREE.AdditiveBlending,depthWrite:false
-  });
-  const shell=new THREE.Mesh(new THREE.SphereGeometry(5.9,48,32),shellMat);
-  shell.position.x=5.2;
-  shell.scale.set(2.15,1.28,1.28);
+  }));
   shell.userData.role="magnetopause";
   group.add(shell);
 
-  // Wireframe shell adds depth without hiding the Earth.
-  const wire=new THREE.Mesh(
-    new THREE.SphereGeometry(6.0,24,16),
-    new THREE.MeshBasicMaterial({color:0x73c8ff,transparent:true,opacity:.095,wireframe:true,depthWrite:false})
-  );
-  wire.position.x=5.2;wire.scale.set(2.15,1.28,1.28);wire.userData.role="magnetopauseWire";
+  // Sparse wire cage: gives the boundary shape without creating an opaque blue bubble.
+  const wireGeo=buildShueStyleMagnetopauseGeometry(10.1,.58,150,26,15,28);
+  const wire=new THREE.Mesh(wireGeo,new THREE.MeshBasicMaterial({
+    color:0x73c8ff,transparent:true,opacity:.045,wireframe:true,depthWrite:false
+  }));
+  wire.userData.role="magnetopauseWire";
   group.add(wire);
 
-  // Magnetotail away from the Sun (+X direction).
-  const tail=new THREE.Mesh(
-    new THREE.CylinderGeometry(5.6,2.0,35,32,1,true),
-    new THREE.MeshBasicMaterial({color:0x557bff,transparent:true,opacity:.065,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false})
+  // A few clean meridians instead of a dense shell, improving satellite visibility.
+  [0,45,90,135].forEach(ph=>group.add(makeMagnetopauseMeridian(ph,10.1,.58,150,26,0x8bdcff,.12)));
+
+  // Bow shock: wireframe-only outer surface, visible mostly as an orange rim.
+  const bow=new THREE.Mesh(
+    buildShueStyleMagnetopauseGeometry(13.0,.56,108,19,13,28),
+    new THREE.MeshBasicMaterial({
+      color:0xff9b72,transparent:true,opacity:.050,wireframe:true,
+      blending:THREE.AdditiveBlending,depthWrite:false
+    })
   );
-  tail.rotation.z=Math.PI/2;
-  tail.position.x=21.5;
-  tail.userData.role="tail";
-  group.add(tail);
+  bow.userData.role="bowShockSurface";
+  group.add(bow);
 
-  // Bow shock rings on the dayside (Sun is at -X).
-  const shockMat=new THREE.MeshBasicMaterial({color:0xff8f66,transparent:true,opacity:.28,blending:THREE.AdditiveBlending,depthWrite:false});
-  for(let i=0;i<3;i++){
-    const ring=new THREE.Mesh(new THREE.TorusGeometry(6.9+i*.85,.075,8,72),shockMat.clone());
-    ring.rotation.y=Math.PI/2;
-    ring.position.x=-7.4-i*.8;
-    ring.scale.set(1,1.0+i*.04,1.0+i*.04);
-    ring.userData.role="bowShock";
-    ring.userData.baseX=ring.position.x;
-    group.add(ring);
-  }
-
-  // Dipole-like lines in two orthogonal planes, stretching into the tail.
-  const amplitudes=[3.8,5.0,6.2,7.4];
-  for(const a of amplitudes){
+  // Open field-line design: fewer and dimmer lines, sized so GEO sits inside them.
+  const RE=3.18;
+  const amplitudesRe=[3.0,4.5,6.0];
+  for(const aRe of amplitudesRe){
+    const a=aRe*RE;
     const pts=[
-      new THREE.Vector3(-4.7,a*.45,0),
-      new THREE.Vector3(-1.0,a,0),
-      new THREE.Vector3(4.5,a*1.22,0),
-      new THREE.Vector3(12,a*.95,0),
-      new THREE.Vector3(22,a*.35,0)
+      new THREE.Vector3(-2.6*RE,a*.42,0),
+      new THREE.Vector3(-.7*RE,a,0),
+      new THREE.Vector3(2.0*RE,a*1.22,0),
+      new THREE.Vector3(7.0*RE,a*.92,0),
+      new THREE.Vector3(15.0*RE,a*.28,0)
     ];
-    const up=makeMagneticLine(pts,0x8fd4ff,.47);up.userData.role="field";group.add(up);
-    const dn=makeMagneticLine(pts.map(p=>new THREE.Vector3(p.x,-p.y,p.z)),0x8fd4ff,.47);dn.userData.role="field";group.add(dn);
+    const up=makeMagneticLine(pts,0x8fd4ff,.20);up.userData.role="field";up.userData.baseOpacity=.20;group.add(up);
+    const dn=makeMagneticLine(pts.map(p=>new THREE.Vector3(p.x,-p.y,p.z)),0x8fd4ff,.20);dn.userData.role="field";dn.userData.baseOpacity=.20;group.add(dn);
 
-    const ptsZ=pts.map(p=>new THREE.Vector3(p.x,0,p.y));
-    const z1=makeMagneticLine(ptsZ,0x6db9ff,.32);z1.userData.role="field";group.add(z1);
-    const z2=makeMagneticLine(ptsZ.map(p=>new THREE.Vector3(p.x,p.y,-p.z)),0x6db9ff,.32);z2.userData.role="field";group.add(z2);
+    if(aRe<=4.5){
+      const ptsZ=pts.map(p=>new THREE.Vector3(p.x,0,p.y));
+      const z1=makeMagneticLine(ptsZ,0x6db9ff,.14);z1.userData.role="field";z1.userData.baseOpacity=.14;group.add(z1);
+      const z2=makeMagneticLine(ptsZ.map(p=>new THREE.Vector3(p.x,p.y,-p.z)),0x6db9ff,.14);z2.userData.role="field";z2.userData.baseOpacity=.14;group.add(z2);
+    }
   }
+
+  // Store design numbers for diagnostics.
+  group.userData.geoRadiusRe=(GEO_EARTH_RADIUS_KM+35786)/GEO_EARTH_RADIUS_KM;
+  group.userData.quietNoseRe=10.1;
   return group;
 }
 
-function updateMagnetosphere(impactStrength=0,bzOverride=null){
-  if(!STATE.three.ready || !STATE.three.magnetosphere)return;
+function shue1998Magnetopause(pdNPa,bzNt){
+  const pd=clamp(Number(pdNPa)||2.0,.05,100.0);
+  const bz=clamp(Number(bzNt)||0,-60,40);
+  const r0=(10.22+1.29*Math.tanh(.184*(bz+8.14)))*Math.pow(pd,-1/6.6);
+  const alpha=(.58-.007*bz)*(1+.024*Math.log(pd));
+  const r90=r0*Math.pow(2,alpha);
+  return{pd,bz,r0:clamp(r0,3.5,16),alpha:clamp(alpha,.35,1.15),r90:clamp(r90,4.0,24)};
+}
+function updateMagnetosphere(impactStrength=0,bzOverride=null,pdynOverride=null){
+  if(!STATE.three.ready || !STATE.three.magnetosphere)return null;
   STATE.three.impactStrength=clamp(impactStrength,0,1);
-  const m=STATE.three.magnetosphere,pd=Math.max(.2,num(STATE.env.dynamicPressure,2)),bz=Number.isFinite(Number(bzOverride))?Number(bzOverride):num(STATE.env.bz,0);
-  const compression=clamp(1.14-Math.log10(pd+1)*.22-impactStrength*.18,.58,1.13),tailStretch=clamp(1+Math.max(0,-bz)*.018+impactStrength*.25,1,1.65);
-  const base=new THREE.Color(0x4ea6ff),yellow=new THREE.Color(0xffd347),red=new THREE.Color(0xff3b30);let hitColor;
-  if(impactStrength<.5)hitColor=base.clone().lerp(yellow,impactStrength*2);else hitColor=yellow.clone().lerp(red,(impactStrength-.5)*2);
-  for(const child of m.children){const role=child.userData.role;
-    if(role==="magnetopause"||role==="magnetopauseWire"){
-      child.position.x=5.2*tailStretch;child.scale.set(2.15*tailStretch,1.28*compression,1.28*compression);
-      if(child.material){child.material.color.copy(hitColor);child.material.opacity=(role==="magnetopause"?.075:.095)*(1+impactStrength*2.4);}
-    }else if(role==="tail"){
-      child.scale.set(1,tailStretch,compression);if(child.material){child.material.color.copy(hitColor.clone().lerp(new THREE.Color(0x6f51ff),.35));child.material.opacity=.065*(1+impactStrength*1.8);}
-    }else if(role==="bowShock"){
-      child.position.x=child.userData.baseX*compression;child.scale.set(1,compression,compression);if(child.material){child.material.color.copy(impactStrength>.05?red:new THREE.Color(0xff8f66));child.material.opacity=.24+.48*impactStrength;}
-    }else if(role==="field"&&child.material){child.material.color.copy(hitColor);child.material.opacity=.32+.38*impactStrength;}
+  const m=STATE.three.magnetosphere;
+  const bz=Number.isFinite(Number(bzOverride))?Number(bzOverride):num(STATE.env.bz,0);
+  const pd=Number.isFinite(Number(pdynOverride))&&Number(pdynOverride)>0?Number(pdynOverride):Math.max(.2,num(STATE.env.dynamicPressure,2));
+  const sh=shue1998Magnetopause(pd,bz);
+
+  // Base mesh was built at r0=10.1 RE, alpha=.58.
+  // Scale the nose and 90-degree flank independently from the Shue-1998 values.
+  const baseR0=10.1,baseR90=baseR0*Math.pow(2,.58);
+  const xScale=clamp(sh.r0/baseR0,.35,1.60);
+  const flankScale=clamp(sh.r90/baseR90,.35,1.70);
+
+  const base=new THREE.Color(0x4ea6ff),yellow=new THREE.Color(0xffd347),red=new THREE.Color(0xff3b30);
+  let hitColor;
+  if(impactStrength<.5)hitColor=base.clone().lerp(yellow,impactStrength*2);
+  else hitColor=yellow.clone().lerp(red,(impactStrength-.5)*2);
+
+  for(const child of m.children){
+    const role=child.userData.role;
+    if(role==="magnetopause"||role==="magnetopauseWire"||role==="magnetopauseGuide"){
+      child.scale.set(xScale,flankScale,flankScale);
+      if(child.material){
+        child.material.color.copy(hitColor);
+        const baseOp=role==="magnetopause"?.020:role==="magnetopauseWire"?.045:(child.userData.baseOpacity||.12);
+        child.material.opacity=baseOp*(1+.85*impactStrength);
+      }
+    }else if(role==="bowShockSurface"){
+      // Bow-shock stand-off remains approximate because Mach number is not available,
+      // but it follows the same measured/forecast magnetopause compression.
+      child.scale.set(clamp(xScale*.96,.32,1.55),clamp(flankScale*1.04,.36,1.75),clamp(flankScale*1.04,.36,1.75));
+      if(child.material){
+        child.material.color.copy(impactStrength>.05?red:new THREE.Color(0xff9b72));
+        child.material.opacity=.045+.075*impactStrength;
+      }
+    }else if(role==="field"&&child.material){
+      child.scale.set(xScale,flankScale,flankScale);
+      child.material.color.copy(hitColor);
+      child.material.opacity=(child.userData.baseOpacity||.16)*(1+.75*impactStrength);
+    }
   }
+
+  const geoRe=(GEO_EARTH_RADIUS_KM+35786)/GEO_EARTH_RADIUS_KM;
+  // Dayside GEO is outside only if the measured/forecast subsolar boundary itself
+  // is pushed below geosynchronous radius. Do not force it inside.
+  const geoDaysideInside=sh.r0>=geoRe;
+  m.userData.lastShue={...sh,xScale,flankScale,geoRe,geoDaysideInside};
+  return m.userData.lastShue;
 }
 
 
@@ -2241,7 +2366,8 @@ function updateSpeedHud(info,earthState=null){
       `<div class="small">pinwheel = rotating Parker / ENLIL-style background wind</div>`+
       `<div style="margin-top:5px">Ambient baseline: <b>${Math.round(ambient.speed)} km/s</b> (${esc(ambient.source)})</div>`+
       `<div>Compression proxy @ Earth: <b>${compression.toFixed(2)}</b></div>`+
-      (localDensity===null?"":`<div>Continuity density @ Earth: <b>${localDensity.toFixed(1)} cm⁻³</b></div>`)+
+      (localDensity===null?"":`<div>Density @ Earth: <b>${localDensity.toFixed(1)} cm⁻³</b> <span class="small">(${esc(st.densitySource||"")})</span></div>`)+
+      (Number.isFinite(Number(st.dynamicPressure))?`<div>Dynamic pressure: <b>${Number(st.dynamicPressure).toFixed(2)} nPa</b></div>`:"")+
       `<div>Parker HMF angle @ 1 AU: ${parkerAngleDeg(backgroundSpeed).toFixed(1)}°</div>`+
       `<div>No active Earth-directed CME: CME-driven speed enhancement = <b>0 km/s</b></div>`;
     return;
@@ -2263,7 +2389,8 @@ function updateSpeedHud(info,earthState=null){
     `<div>CME-driven enhancement @ Earth: <b>${Math.round(cmeDelta)} km/s</b> <span class="small">(weight ${(shockWeight*100).toFixed(0)}%)</span></div>`+
     `<div>Combined local wind @ magnetosphere: <b>${Math.round(combinedSpeed)} km/s</b></div>`+
     `<div>Compression proxy @ Earth: <b>${compression.toFixed(2)}</b></div>`+
-    (localDensity===null?"":`<div>Continuity density @ Earth: <b>${localDensity.toFixed(1)} cm⁻³</b></div>`)+
+    (localDensity===null?"":`<div>Density @ Earth: <b>${localDensity.toFixed(1)} cm⁻³</b> <span class="small">(${esc(st.densitySource||"")})</span></div>`)+
+    (Number.isFinite(Number(st.dynamicPressure))?`<div>Dynamic pressure: <b>${Number(st.dynamicPressure).toFixed(2)} nPa</b></div>`:"")+
     `<div style="margin-top:5px">CME speed @ current position: <b>${Math.round(s.v)} km/s</b></div>`+
     `<div>CME speed @ Earth: <b>${Number.isFinite(earthCmeSpeed)?Math.round(earthCmeSpeed):"-"} km/s</b></div>`+
     `<div class="delta">CME contribution above background: <b>+${Math.round(cmeDelta)} km/s</b></div>`+
@@ -2352,8 +2479,8 @@ function makeGeoSatLabel(s){
   ctx.font="bold 20px system-ui";ctx.fillStyle="#dcecff";ctx.fillText(`OPS: ${statusText}`.slice(0,36),18,78);
   ctx.fillStyle="#"+new THREE.Color(statusColor).getHexString();ctx.fillRect(18,91,c.width-36,10);
   const tx=new THREE.CanvasTexture(c);tx.minFilter=THREE.LinearFilter;
-  const mat=new THREE.SpriteMaterial({map:tx,transparent:true,depthWrite:false});
-  const sp=new THREE.Sprite(mat);sp.scale.set(9.2,2.36,1);sp.position.set(0,2.5,0);return sp;
+  const mat=new THREE.SpriteMaterial({map:tx,transparent:true,depthWrite:false,depthTest:true});
+  const sp=new THREE.Sprite(mat);sp.renderOrder=25;sp.scale.set(9.2,2.36,1);sp.position.set(0,2.8,0);return sp;
 }
 function buildGeoSatelliteModel(s,baseColor){
   const group=new THREE.Group();
@@ -2400,10 +2527,10 @@ function buildGeoSatelliteModel(s,baseColor){
   antenna.rotation.x=Math.PI/2;
   group.add(antenna);
 
-  const glow=new THREE.Mesh(new THREE.SphereGeometry(0.43,16,12),new THREE.MeshBasicMaterial({color:baseColor,transparent:true,opacity:0.11,blending:THREE.AdditiveBlending,depthWrite:false}));
+  const glow=new THREE.Mesh(new THREE.SphereGeometry(0.43,16,12),new THREE.MeshBasicMaterial({color:baseColor,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending,depthWrite:false}));
   group.add(glow);
 
-  group.scale.setScalar(0.72);
+  group.scale.setScalar(0.90);
   group.userData.coreMesh=body;
   return group;
 }
@@ -2422,7 +2549,7 @@ function clearGeoSatellites3D(){
 function createGeoOrbitGuide(group){
   const pts=[],r=GEO_EARTH_SCENE_RADIUS*(GEO_EARTH_RADIUS_KM+35786)/GEO_EARTH_RADIUS_KM;
   for(let i=0;i<=180;i++){const a=i/180*Math.PI*2;pts.push(new THREE.Vector3(r*Math.cos(a),0,r*Math.sin(a)));}
-  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x6f8ba5,transparent:true,opacity:.16}));
+  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x7fd7ff,transparent:true,opacity:.30,depthWrite:false}));
   line.userData.role="geoOrbitGuide";group.add(line);
 }
 function fallbackGeoSatRows(){
@@ -2549,10 +2676,10 @@ function update3D(time){
   const earthState=earthSpaceWeatherState(time,bestInfo);
   const localEarthSpeed=earthState.combinedSpeed;
   const magnetosphereImpact=Math.max(impactStrength,earthState.cmeImpactStrength);
-  updateParkerSpiral(time,ws.speed);updateMagnetosphere(magnetosphereImpact,bzS.bz);updateSpeedHud(bestInfo,earthState);renderGeoChargingStatus();
-  const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz,magState=magnetosphereImpact>.72?"STRONG IMPACT":magnetosphereImpact>.35?"IMPACT":magnetosphereImpact>.05?"CONTACT":"QUIET";
+  updateParkerSpiral(time,ws.speed);const mpState=updateMagnetosphere(magnetosphereImpact,bzS.bz,earthState.dynamicPressure);updateSpeedHud(bestInfo,earthState);renderGeoChargingStatus();
+  const pd=Number.isFinite(Number(earthState.dynamicPressure))?Number(earthState.dynamicPressure):0,bz=bzS.bz,magState=magnetosphereImpact>.72?"STRONG IMPACT":magnetosphereImpact>.35?"IMPACT":magnetosphereImpact>.05?"CONTACT":"QUIET";
   const threeHud=document.getElementById("threeHud");
-  if(threeHud)threeHud.innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br><b>Local wind @ magnetosphere: ${Math.round(localEarthSpeed)} km/s</b><br>Background/HSS @ Earth: ${Math.round(earthState.backgroundSpeed)} km/s<br>CME enhancement @ Earth: +${Math.round(earthState.cmeDelta)} km/s<br>Earth compression proxy: ${Number(earthState.compression||0).toFixed(2)}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(earthState.backgroundSpeed).toFixed(1)}° background / ${parkerWindingDeg(earthState.backgroundSpeed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Pinwheel = background rotating solar wind / expanding shell = CME shock-sheath<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
+  if(threeHud)threeHud.innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br><b>Local wind @ magnetosphere: ${Math.round(localEarthSpeed)} km/s</b><br>Background/HSS @ Earth: ${Math.round(earthState.backgroundSpeed)} km/s<br>CME enhancement @ Earth: +${Math.round(earthState.cmeDelta)} km/s<br>Earth compression proxy: ${Number(earthState.compression||0).toFixed(2)}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(earthState.backgroundSpeed).toFixed(1)}° background / ${parkerWindingDeg(earthState.backgroundSpeed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Pinwheel = background rotating solar wind / expanding shell = CME shock-sheath<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b><br>Shue-98 nose: <b>${mpState?mpState.r0.toFixed(2):"-"} R⊕</b> / flank@90° ${mpState?mpState.r90.toFixed(2):"-"} R⊕ / GEO 6.6 R⊕: <b>${mpState?(mpState.geoDaysideInside?"INSIDE":"OUTSIDE (compressed)"):"-"}</b><br>Pdyn source: ${esc(earthState.densitySource||"-")}`;
 }
 
 function animate3D(){
@@ -2591,8 +2718,16 @@ function animate3D(){
   }
   t.starPoints.rotation.y+=dt*.0018;
   animateWindParticles(dt);
-  if(t.magnetosphere&&t.impactStrength>0){const pulse=1+Math.sin(elapsed*7)*.012*t.impactStrength;t.magnetosphere.scale.set(1,pulse,pulse);}
-  else if(t.magnetosphere)t.magnetosphere.scale.set(1,1,1);
+  if(t.magnetosphere){
+    // Do not resize the entire cavity in the render loop; timeline physics owns the boundary.
+    t.magnetosphere.scale.set(1,1,1);
+    if(t.impactStrength>0){
+      const pulse=.86+.14*(.5+.5*Math.sin(elapsed*6.5));
+      for(const ch of t.magnetosphere.children){
+        if(ch.userData?.role==="bowShockSurface"&&ch.material)ch.material.opacity=(.045+.075*t.impactStrength)*pulse;
+      }
+    }
+  }
   t.controls.update();
   t.renderer.render(t.scene,t.camera);
 }
