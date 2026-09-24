@@ -1901,155 +1901,87 @@ function rebuildParkerBlade(blade,pts,v){
   blade.userData.coreMat.uniforms.uOpacity.value=(blade.userData.index%3===0?.82:.56)+.10*clamp((v-300)/500,0,1);
 }
 
-
-function buildShueStyleMagnetopauseGeometry(r0Re=10.1,alpha=.58,thetaMaxDeg=150,tailCapRe=26,nTheta=34,nPhi=52){
-  // Lightweight Shue-style axisymmetric cavity.
-  // theta=0 is the Sun-facing (-X) nose; +X is the magnetotail.
-  const RE=3.18,thetaMax=thetaMaxDeg*Math.PI/180;
-  const pos=[],idx=[];
-  for(let i=0;i<=nTheta;i++){
-    const th=thetaMax*i/nTheta,c=Math.cos(th),sn=Math.sin(th);
-    const raw=r0Re*Math.pow(2/Math.max(.06,1+c),alpha);
-    const r=Math.min(tailCapRe,raw),x=-r*c*RE,rho=r*sn*RE;
-    for(let j=0;j<=nPhi;j++){
-      const ph=2*Math.PI*j/nPhi;
-      pos.push(x,rho*Math.cos(ph),rho*Math.sin(ph));
-    }
-  }
-  const row=nPhi+1;
-  for(let i=0;i<nTheta;i++){
-    for(let j=0;j<nPhi;j++){
-      const a=i*row+j,b=a+row,c=b+1,d=a+1;
-      idx.push(a,b,d,b,c,d);
-    }
-  }
-  const g=new THREE.BufferGeometry();
-  g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
-  g.setIndex(idx);g.computeVertexNormals();
-  return g;
-}
-function makeMagnetopauseMeridian(phiDeg=0,r0Re=10.1,alpha=.58,thetaMaxDeg=150,tailCapRe=26,color=0x83d5ff,opacity=.16){
-  const RE=3.18,phi=phiDeg*Math.PI/180,pts=[];
-  for(let i=0;i<=70;i++){
-    const th=thetaMaxDeg*Math.PI/180*i/70,c=Math.cos(th),sn=Math.sin(th);
-    const r=Math.min(tailCapRe,r0Re*Math.pow(2/Math.max(.06,1+c),alpha));
-    const rho=r*sn*RE;
-    pts.push(new THREE.Vector3(-r*c*RE,rho*Math.cos(phi),rho*Math.sin(phi)));
-  }
-  const line=new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints(pts),
-    new THREE.LineBasicMaterial({color,transparent:true,opacity,blending:THREE.AdditiveBlending,depthWrite:false})
-  );
-  line.userData.role="magnetopauseGuide";
-  line.userData.baseOpacity=opacity;
-  return line;
-}
 function createMagnetosphereGroup(){
   const group=new THREE.Group();
   group.name="magnetosphere";
 
-  // Quiet-time dayside standoff ≈10 RE, safely outside GEO at 6.6 RE.
-  // The skin is intentionally very faint so GOES remains readable inside the cavity.
-  const shellGeo=buildShueStyleMagnetopauseGeometry(10.1,.58,150,26,38,58);
-  const shell=new THREE.Mesh(shellGeo,new THREE.MeshBasicMaterial({
-    color:0x4ea6ff,transparent:true,opacity:.020,side:THREE.DoubleSide,
+  // Magnetopause: sunward side is compressed, tailward side extended by offset+scale.
+  const shellMat=new THREE.MeshBasicMaterial({
+    color:0x4ea6ff,transparent:true,opacity:.075,side:THREE.DoubleSide,
     blending:THREE.AdditiveBlending,depthWrite:false
-  }));
+  });
+  const shell=new THREE.Mesh(new THREE.SphereGeometry(5.9,48,32),shellMat);
+  shell.position.x=5.2;
+  shell.scale.set(2.15,1.28,1.28);
   shell.userData.role="magnetopause";
   group.add(shell);
 
-  // Sparse wire cage: gives the boundary shape without creating an opaque blue bubble.
-  const wireGeo=buildShueStyleMagnetopauseGeometry(10.1,.58,150,26,15,28);
-  const wire=new THREE.Mesh(wireGeo,new THREE.MeshBasicMaterial({
-    color:0x73c8ff,transparent:true,opacity:.045,wireframe:true,depthWrite:false
-  }));
-  wire.userData.role="magnetopauseWire";
+  // Wireframe shell adds depth without hiding the Earth.
+  const wire=new THREE.Mesh(
+    new THREE.SphereGeometry(6.0,24,16),
+    new THREE.MeshBasicMaterial({color:0x73c8ff,transparent:true,opacity:.095,wireframe:true,depthWrite:false})
+  );
+  wire.position.x=5.2;wire.scale.set(2.15,1.28,1.28);wire.userData.role="magnetopauseWire";
   group.add(wire);
 
-  // A few clean meridians instead of a dense shell, improving satellite visibility.
-  [0,45,90,135].forEach(ph=>group.add(makeMagnetopauseMeridian(ph,10.1,.58,150,26,0x8bdcff,.12)));
-
-  // Bow shock: wireframe-only outer surface, visible mostly as an orange rim.
-  const bow=new THREE.Mesh(
-    buildShueStyleMagnetopauseGeometry(13.0,.56,108,19,13,28),
-    new THREE.MeshBasicMaterial({
-      color:0xff9b72,transparent:true,opacity:.050,wireframe:true,
-      blending:THREE.AdditiveBlending,depthWrite:false
-    })
+  // Magnetotail away from the Sun (+X direction).
+  const tail=new THREE.Mesh(
+    new THREE.CylinderGeometry(5.6,2.0,35,32,1,true),
+    new THREE.MeshBasicMaterial({color:0x557bff,transparent:true,opacity:.065,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false})
   );
-  bow.userData.role="bowShockSurface";
-  group.add(bow);
+  tail.rotation.z=Math.PI/2;
+  tail.position.x=21.5;
+  tail.userData.role="tail";
+  group.add(tail);
 
-  // Open field-line design: fewer and dimmer lines, sized so GEO sits inside them.
-  const RE=3.18;
-  const amplitudesRe=[3.0,4.5,6.0];
-  for(const aRe of amplitudesRe){
-    const a=aRe*RE;
-    const pts=[
-      new THREE.Vector3(-2.6*RE,a*.42,0),
-      new THREE.Vector3(-.7*RE,a,0),
-      new THREE.Vector3(2.0*RE,a*1.22,0),
-      new THREE.Vector3(7.0*RE,a*.92,0),
-      new THREE.Vector3(15.0*RE,a*.28,0)
-    ];
-    const up=makeMagneticLine(pts,0x8fd4ff,.20);up.userData.role="field";up.userData.baseOpacity=.20;group.add(up);
-    const dn=makeMagneticLine(pts.map(p=>new THREE.Vector3(p.x,-p.y,p.z)),0x8fd4ff,.20);dn.userData.role="field";dn.userData.baseOpacity=.20;group.add(dn);
-
-    if(aRe<=4.5){
-      const ptsZ=pts.map(p=>new THREE.Vector3(p.x,0,p.y));
-      const z1=makeMagneticLine(ptsZ,0x6db9ff,.14);z1.userData.role="field";z1.userData.baseOpacity=.14;group.add(z1);
-      const z2=makeMagneticLine(ptsZ.map(p=>new THREE.Vector3(p.x,p.y,-p.z)),0x6db9ff,.14);z2.userData.role="field";z2.userData.baseOpacity=.14;group.add(z2);
-    }
+  // Bow shock rings on the dayside (Sun is at -X).
+  const shockMat=new THREE.MeshBasicMaterial({color:0xff8f66,transparent:true,opacity:.28,blending:THREE.AdditiveBlending,depthWrite:false});
+  for(let i=0;i<3;i++){
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(6.9+i*.85,.075,8,72),shockMat.clone());
+    ring.rotation.y=Math.PI/2;
+    ring.position.x=-7.4-i*.8;
+    ring.scale.set(1,1.0+i*.04,1.0+i*.04);
+    ring.userData.role="bowShock";
+    ring.userData.baseX=ring.position.x;
+    group.add(ring);
   }
 
-  // Store design numbers for diagnostics.
-  group.userData.geoRadiusRe=(GEO_EARTH_RADIUS_KM+35786)/GEO_EARTH_RADIUS_KM;
-  group.userData.quietNoseRe=10.1;
+  // Dipole-like lines in two orthogonal planes, stretching into the tail.
+  const amplitudes=[3.8,5.0,6.2,7.4];
+  for(const a of amplitudes){
+    const pts=[
+      new THREE.Vector3(-4.7,a*.45,0),
+      new THREE.Vector3(-1.0,a,0),
+      new THREE.Vector3(4.5,a*1.22,0),
+      new THREE.Vector3(12,a*.95,0),
+      new THREE.Vector3(22,a*.35,0)
+    ];
+    const up=makeMagneticLine(pts,0x8fd4ff,.47);up.userData.role="field";group.add(up);
+    const dn=makeMagneticLine(pts.map(p=>new THREE.Vector3(p.x,-p.y,p.z)),0x8fd4ff,.47);dn.userData.role="field";group.add(dn);
+
+    const ptsZ=pts.map(p=>new THREE.Vector3(p.x,0,p.y));
+    const z1=makeMagneticLine(ptsZ,0x6db9ff,.32);z1.userData.role="field";group.add(z1);
+    const z2=makeMagneticLine(ptsZ.map(p=>new THREE.Vector3(p.x,p.y,-p.z)),0x6db9ff,.32);z2.userData.role="field";group.add(z2);
+  }
   return group;
 }
 
 function updateMagnetosphere(impactStrength=0,bzOverride=null){
   if(!STATE.three.ready || !STATE.three.magnetosphere)return;
   STATE.three.impactStrength=clamp(impactStrength,0,1);
-  const m=STATE.three.magnetosphere;
-  const pd=Math.max(.2,num(STATE.env.dynamicPressure,2));
-  const bz=Number.isFinite(Number(bzOverride))?Number(bzOverride):num(STATE.env.bz,0);
-
-  // Approximate pressure response: magnetopause distance scales weakly with Pdyn.
-  // Clamp the rendered nose just outside GEO so the visualization never repeats
-  // the old unphysical "GEO permanently outside the magnetosphere" appearance.
-  const pressureScale=clamp(Math.pow(pd/2.0,-1/6.6),.80,1.13);
-  const southwardPenalty=clamp(1-Math.max(0,-bz)*.0065,.84,1.0);
-  const impactPenalty=1-.08*clamp(impactStrength,0,1);
-  const xScale=clamp(pressureScale*southwardPenalty*impactPenalty,.70,1.13);
-  // Keep flank radius > GEO even during strong compression.
-  const flankScale=clamp(.92+.08*xScale-.035*impactStrength,.86,1.08);
-
-  const base=new THREE.Color(0x4ea6ff),yellow=new THREE.Color(0xffd347),red=new THREE.Color(0xff3b30);
-  let hitColor;
-  if(impactStrength<.5)hitColor=base.clone().lerp(yellow,impactStrength*2);
-  else hitColor=yellow.clone().lerp(red,(impactStrength-.5)*2);
-
-  for(const child of m.children){
-    const role=child.userData.role;
-    if(role==="magnetopause"||role==="magnetopauseWire"||role==="magnetopauseGuide"){
-      child.scale.set(xScale,flankScale,flankScale);
-      if(child.material){
-        child.material.color.copy(hitColor);
-        const baseOp=role==="magnetopause"?.020:role==="magnetopauseWire"?.045:(child.userData.baseOpacity||.12);
-        child.material.opacity=baseOp*(1+.85*impactStrength);
-      }
-    }else if(role==="bowShockSurface"){
-      child.scale.set(clamp(xScale*.96,.72,1.10),clamp(flankScale*1.04,.88,1.12),clamp(flankScale*1.04,.88,1.12));
-      if(child.material){
-        child.material.color.copy(impactStrength>.05?red:new THREE.Color(0xff9b72));
-        child.material.opacity=.045+.075*impactStrength;
-      }
-    }else if(role==="field"&&child.material){
-      child.scale.set(1,1,1);
-      child.material.color.copy(hitColor);
-      child.material.opacity=(child.userData.baseOpacity||.16)*(1+.75*impactStrength);
-    }
+  const m=STATE.three.magnetosphere,pd=Math.max(.2,num(STATE.env.dynamicPressure,2)),bz=Number.isFinite(Number(bzOverride))?Number(bzOverride):num(STATE.env.bz,0);
+  const compression=clamp(1.14-Math.log10(pd+1)*.22-impactStrength*.18,.58,1.13),tailStretch=clamp(1+Math.max(0,-bz)*.018+impactStrength*.25,1,1.65);
+  const base=new THREE.Color(0x4ea6ff),yellow=new THREE.Color(0xffd347),red=new THREE.Color(0xff3b30);let hitColor;
+  if(impactStrength<.5)hitColor=base.clone().lerp(yellow,impactStrength*2);else hitColor=yellow.clone().lerp(red,(impactStrength-.5)*2);
+  for(const child of m.children){const role=child.userData.role;
+    if(role==="magnetopause"||role==="magnetopauseWire"){
+      child.position.x=5.2*tailStretch;child.scale.set(2.15*tailStretch,1.28*compression,1.28*compression);
+      if(child.material){child.material.color.copy(hitColor);child.material.opacity=(role==="magnetopause"?.075:.095)*(1+impactStrength*2.4);}
+    }else if(role==="tail"){
+      child.scale.set(1,tailStretch,compression);if(child.material){child.material.color.copy(hitColor.clone().lerp(new THREE.Color(0x6f51ff),.35));child.material.opacity=.065*(1+impactStrength*1.8);}
+    }else if(role==="bowShock"){
+      child.position.x=child.userData.baseX*compression;child.scale.set(1,compression,compression);if(child.material){child.material.color.copy(impactStrength>.05?red:new THREE.Color(0xff8f66));child.material.opacity=.24+.48*impactStrength;}
+    }else if(role==="field"&&child.material){child.material.color.copy(hitColor);child.material.opacity=.32+.38*impactStrength;}
   }
 }
 
@@ -2420,8 +2352,8 @@ function makeGeoSatLabel(s){
   ctx.font="bold 20px system-ui";ctx.fillStyle="#dcecff";ctx.fillText(`OPS: ${statusText}`.slice(0,36),18,78);
   ctx.fillStyle="#"+new THREE.Color(statusColor).getHexString();ctx.fillRect(18,91,c.width-36,10);
   const tx=new THREE.CanvasTexture(c);tx.minFilter=THREE.LinearFilter;
-  const mat=new THREE.SpriteMaterial({map:tx,transparent:true,depthWrite:false,depthTest:true});
-  const sp=new THREE.Sprite(mat);sp.renderOrder=25;sp.scale.set(9.2,2.36,1);sp.position.set(0,2.8,0);return sp;
+  const mat=new THREE.SpriteMaterial({map:tx,transparent:true,depthWrite:false});
+  const sp=new THREE.Sprite(mat);sp.scale.set(9.2,2.36,1);sp.position.set(0,2.5,0);return sp;
 }
 function buildGeoSatelliteModel(s,baseColor){
   const group=new THREE.Group();
@@ -2468,10 +2400,10 @@ function buildGeoSatelliteModel(s,baseColor){
   antenna.rotation.x=Math.PI/2;
   group.add(antenna);
 
-  const glow=new THREE.Mesh(new THREE.SphereGeometry(0.43,16,12),new THREE.MeshBasicMaterial({color:baseColor,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending,depthWrite:false}));
+  const glow=new THREE.Mesh(new THREE.SphereGeometry(0.43,16,12),new THREE.MeshBasicMaterial({color:baseColor,transparent:true,opacity:0.11,blending:THREE.AdditiveBlending,depthWrite:false}));
   group.add(glow);
 
-  group.scale.setScalar(0.90);
+  group.scale.setScalar(0.72);
   group.userData.coreMesh=body;
   return group;
 }
@@ -2490,7 +2422,7 @@ function clearGeoSatellites3D(){
 function createGeoOrbitGuide(group){
   const pts=[],r=GEO_EARTH_SCENE_RADIUS*(GEO_EARTH_RADIUS_KM+35786)/GEO_EARTH_RADIUS_KM;
   for(let i=0;i<=180;i++){const a=i/180*Math.PI*2;pts.push(new THREE.Vector3(r*Math.cos(a),0,r*Math.sin(a)));}
-  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x7fd7ff,transparent:true,opacity:.30,depthWrite:false}));
+  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x6f8ba5,transparent:true,opacity:.16}));
   line.userData.role="geoOrbitGuide";group.add(line);
 }
 function fallbackGeoSatRows(){
@@ -2620,7 +2552,7 @@ function update3D(time){
   updateParkerSpiral(time,ws.speed);updateMagnetosphere(magnetosphereImpact,bzS.bz);updateSpeedHud(bestInfo,earthState);renderGeoChargingStatus();
   const pd=num(STATE.env.dynamicPressure,0),bz=bzS.bz,magState=magnetosphereImpact>.72?"STRONG IMPACT":magnetosphereImpact>.35?"IMPACT":magnetosphereImpact>.05?"CONTACT":"QUIET";
   const threeHud=document.getElementById("threeHud");
-  if(threeHud)threeHud.innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br><b>Local wind @ magnetosphere: ${Math.round(localEarthSpeed)} km/s</b><br>Background/HSS @ Earth: ${Math.round(earthState.backgroundSpeed)} km/s<br>CME enhancement @ Earth: +${Math.round(earthState.cmeDelta)} km/s<br>Earth compression proxy: ${Number(earthState.compression||0).toFixed(2)}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(earthState.backgroundSpeed).toFixed(1)}° background / ${parkerWindingDeg(earthState.backgroundSpeed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Pinwheel = background rotating solar wind / expanding shell = CME shock-sheath<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b> / GEO 6.6 R⊕ inside rendered cavity`;
+  if(threeHud)threeHud.innerHTML=`<b>${formatTime(time)}</b><br>Active CME: ${active}<br>Passed Earth: ${passed}<br><b>Local wind @ magnetosphere: ${Math.round(localEarthSpeed)} km/s</b><br>Background/HSS @ Earth: ${Math.round(earthState.backgroundSpeed)} km/s<br>CME enhancement @ Earth: +${Math.round(earthState.cmeDelta)} km/s<br>Earth compression proxy: ${Number(earthState.compression||0).toFixed(2)}<br>Kp: ${kpS.kp.toFixed(1)} (${esc(kpS.source)})<br>Bz: ${bz.toFixed(1)} nT (${esc(bzS.source)}) / Pdyn: ${pd.toFixed(2)} nPa<br>Parker HMF: ${parkerAngleDeg(earthState.backgroundSpeed).toFixed(1)}° background / ${parkerWindingDeg(earthState.backgroundSpeed).toFixed(1)}° winding @ 1 AU<br>Solar rotation: ${SOLAR_CARRINGTON_SYNODIC_DAYS.toFixed(4)} d synodic / HMF Ω: ${SOLAR_CARRINGTON_SIDEREAL_DAYS.toFixed(2)} d sidereal / Parker 1958 + north-view CCW solar rotation / trailing spiral<br>Pinwheel = background rotating solar wind / expanding shell = CME shock-sheath<br>Earth: Natural Earth geography / accurate coastlines<br>Magnetosphere: <b>${magState}</b>`;
 }
 
 function animate3D(){
@@ -2659,16 +2591,8 @@ function animate3D(){
   }
   t.starPoints.rotation.y+=dt*.0018;
   animateWindParticles(dt);
-  if(t.magnetosphere){
-    // Do not resize the entire cavity in the render loop; timeline physics owns the boundary.
-    t.magnetosphere.scale.set(1,1,1);
-    if(t.impactStrength>0){
-      const pulse=.86+.14*(.5+.5*Math.sin(elapsed*6.5));
-      for(const ch of t.magnetosphere.children){
-        if(ch.userData?.role==="bowShockSurface"&&ch.material)ch.material.opacity=(.045+.075*t.impactStrength)*pulse;
-      }
-    }
-  }
+  if(t.magnetosphere&&t.impactStrength>0){const pulse=1+Math.sin(elapsed*7)*.012*t.impactStrength;t.magnetosphere.scale.set(1,pulse,pulse);}
+  else if(t.magnetosphere)t.magnetosphere.scale.set(1,1,1);
   t.controls.update();
   t.renderer.render(t.scene,t.camera);
 }
