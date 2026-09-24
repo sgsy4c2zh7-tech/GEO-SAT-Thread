@@ -352,7 +352,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
             <span class="geoDot" style="background:#ff4f5e"></span> non-op
             <span class="geoDot" style="background:#8a98a8"></span> unknown
           </div>
-          <div style="margin-top:5px">Satellite body color = current public operational status • no surrounding halo/sphere</div>
+          <div style="margin-top:5px">Satellite body color = current public operational status • name box = LIMITED/PARTIAL or worse only</div>
         </div>
         <div class="geoSatInfo" id="geoSatInfo"><b>GOES status</b><br>markerをクリックすると公開運用状態・最近の異常情報を表示</div>
         <div class="camHelp">Drag: rotate / Wheel: zoom / Right drag: pan</div>
@@ -372,7 +372,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
       <span class="modelChip">Solar rotation: 27.27 d</span>
       <span class="modelChip">Parker 1958 HMF • north view: CCW rotation</span><span class="modelChip">ENLIL-style 21.5 R☉ boundary</span><span class="modelChip">Ω: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
       <span class="modelChip">Earth speed display = local Vsw sampled from rendered heliospheric field</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span>
-      <span class="modelChip">Magnetosphere: storm-gated • Kp ≥ 5 only • CME alone = no deformation</span><span class="modelChip">GOES status: satellite body color only • no halo</span><span class="modelChip">GEO radius: display-compressed inside magnetosphere • data unchanged</span>
+      <span class="modelChip">Magnetosphere: storm-gated • Kp ≥ 5 only • CME alone = no deformation</span><span class="modelChip">GOES labels: LIMITED/PARTIAL or worse only • body color always visible</span><span class="modelChip">GEO radius: display-compressed inside magnetosphere • data unchanged</span>
     </div>
   </section>
 
@@ -2408,6 +2408,20 @@ function geoHealthText(s){
   const map={"+":"OPERATIONAL","P":"LIMITED / PARTIAL","-":"NON-OP","B":"BACKUP","S":"STANDBY","X":"EXTENDED / OTHER"};
   return map[op]||"STATUS UNKNOWN";
 }
+function geoLabelShouldShow(s){
+  // Show name/status boxes only for LIMITED / PARTIAL or more serious public-health states.
+  // Ordinary OPERATIONAL / BACKUP / STANDBY / UNKNOWN satellites remain visible as bodies,
+  // but without a floating name rectangle.
+  const op=String(s?.ops_status_code||"").trim().toUpperCase();
+  if(op==="P" || op==="-")return true;
+
+  const txt=geoHealthText(s).toUpperCase();
+  return [
+    "LIMITED","PARTIAL","DEGRADED","NON-OP","NON OP",
+    "NONOP","OUTAGE","OFFLINE","FAILED","FAILURE",
+    "NOT OPERATIONAL","UNAVAILABLE"
+  ].some(k=>txt.includes(k));
+}
 function makeGeoSatLabel(s){
   const c=document.createElement("canvas"),ctx=c.getContext("2d");
   c.width=460;c.height=118;
@@ -2565,11 +2579,12 @@ function renderGeoSatellites3D(){
     return pa-pb||String(a.name||"").localeCompare(String(b.name||""));
   });
 
-  let alerts=0,goes=0;
+  let alerts=0,goes=0,labelCount=0;
   for(const s of sorted){
     const p=geoSatLocalPosition(s),health=geoHealthHex(s),isAlert=!!s.recent_public_alert;
     if(isAlert)alerts++;
     goes++;
+    if(geoLabelShouldShow(s))labelCount++;
     const g=new THREE.Group();
     g.position.copy(p);
     g.userData.geoSat=s;
@@ -2582,7 +2597,8 @@ function renderGeoSatellites3D(){
     }
     g.add(satModel);
 
-    g.add(makeGeoSatLabel(s));
+    // Floating name/status rectangle only for LIMITED/PARTIAL or worse.
+    if(geoLabelShouldShow(s))g.add(makeGeoSatLabel(s));
     t.geoSatGroup.add(g);
   }
   t.geoSatGroup.visible=GEO_SAT_VISIBLE;
@@ -2590,7 +2606,7 @@ function renderGeoSatellites3D(){
   if(leg){
     const tc=SAT_RISK?.tle_cache||{},mode=fallbackUsed?"SWPC GOES longitude fallback":(tc.mode||"TLE/SGP4");
     const when=tc.fetched_at?` • TLE ${esc(String(tc.fetched_at).slice(0,16))}Z`:"";
-    leg.innerHTML=`Displayed GOES <b>${goes}</b> • recent public issue ${alerts}<br><span style="color:#9db7cf">Satellite body color = current operational/public status. Recent issue details remain available by clicking the satellite. Position: ${esc(mode)}${when}</span>`;
+    leg.innerHTML=`Displayed GOES <b>${goes}</b> • labels <b>${labelCount}</b> (LIMITED/PARTIAL or worse) • recent public issue ${alerts}<br><span style="color:#9db7cf">All satellite bodies remain visible. Floating name boxes appear only for LIMITED/PARTIAL, DEGRADED, or NON-OP states. Position: ${esc(mode)}${when}</span>`;
   }
 }
 function toggleGeoSatellites(){
