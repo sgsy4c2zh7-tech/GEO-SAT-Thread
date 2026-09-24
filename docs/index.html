@@ -352,7 +352,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
             <span class="geoDot" style="background:#ff4f5e"></span> non-op
             <span class="geoDot" style="background:#8a98a8"></span> unknown
           </div>
-          <div style="margin-top:5px">Core + label bar = current public operational status • pulsing halo = recent public issue category</div>
+          <div style="margin-top:5px">Satellite body color = current public operational status • no surrounding halo/sphere</div>
         </div>
         <div class="geoSatInfo" id="geoSatInfo"><b>GOES status</b><br>markerをクリックすると公開運用状態・最近の異常情報を表示</div>
         <div class="camHelp">Drag: rotate / Wheel: zoom / Right drag: pan</div>
@@ -372,7 +372,7 @@ button.ghost{background:#f5f8fb;color:#294763;border-color:#bfcfdd}
       <span class="modelChip">Solar rotation: 27.27 d</span>
       <span class="modelChip">Parker 1958 HMF • north view: CCW rotation</span><span class="modelChip">ENLIL-style 21.5 R☉ boundary</span><span class="modelChip">Ω: 25.38 d sidereal</span><span class="modelChip">Solar surface: 27.2753 d synodic</span>
       <span class="modelChip">Earth speed display = local Vsw sampled from rendered heliospheric field</span><span class="modelChip">ENLIL-style Vsw / density ecliptic sheet</span>
-      <span class="modelChip">Magnetosphere: storm-gated • Kp ≥ 5 only • CME alone = no deformation</span><span class="modelChip">GOES only: public health/anomaly feed + TLE/SGP4 position</span><span class="modelChip">GEO radius: display-compressed inside magnetosphere • data unchanged</span>
+      <span class="modelChip">Magnetosphere: storm-gated • Kp ≥ 5 only • CME alone = no deformation</span><span class="modelChip">GOES status: satellite body color only • no halo</span><span class="modelChip">GEO radius: display-compressed inside magnetosphere • data unchanged</span>
     </div>
   </section>
 
@@ -1078,7 +1078,19 @@ function chargingStateAt(time){
 }
 function chargingHaloHex(row){if(!row)return 0x8a98a8;const s=Math.abs(num(row.surface_kv,0)),i=num(row.internal_mvm,0);if(s>=8||i>=1.0)return 0xff4f5e;if(s>=5||i>=.6)return 0xff8c42;if(s>=3||i>=.3)return 0xffd34e;return 0x4ad97b;}
 function renderGeoChargingStatus(){
-  if(!STATE.three?.geoSatGroup)return;const row=chargingStateAt(STATE.selectedTime||new Date()),col=chargingHaloHex(row);for(const g of STATE.three.geoSatGroup.children){if(!g?.userData?.geoSat)continue;let halo=g.children.find(x=>x.userData?.role==="geoChargingHalo");if(!halo&&typeof THREE!=="undefined"){halo=new THREE.Mesh(new THREE.SphereGeometry(1.15,18,14),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.10,wireframe:true,blending:THREE.AdditiveBlending,depthWrite:false}));halo.userData.role="geoChargingHalo";g.add(halo);}if(halo){halo.material.color.setHex(col);halo.visible=!!row;}}
+  // Keep charging calculations/data panels, but do not draw a sphere around GEO satellites.
+  // Remove any legacy halo if one exists from an older render.
+  if(!STATE.three?.geoSatGroup)return;
+  for(const g of STATE.three.geoSatGroup.children){
+    if(!g?.userData?.geoSat)continue;
+    for(const ch of [...(g.children||[])]){
+      if(ch.userData?.role==="geoChargingHalo"){
+        g.remove(ch);
+        ch.geometry?.dispose?.();
+        ch.material?.dispose?.();
+      }
+    }
+  }
 }
 
 function drawSpaceWeatherGraphs(){
@@ -2405,22 +2417,34 @@ function makeGeoSatLabel(s){
   ctx.strokeStyle="#6f9dc5";ctx.lineWidth=3;ctx.strokeRect(2,2,c.width-4,c.height-4);
   ctx.font="bold 32px system-ui";ctx.fillStyle="#ffffff";ctx.fillText(String(s?.name||"GOES").slice(0,22),18,45);
   ctx.font="bold 20px system-ui";ctx.fillStyle="#dcecff";ctx.fillText(`OPS: ${statusText}`.slice(0,36),18,78);
-  ctx.fillStyle="#"+new THREE.Color(statusColor).getHexString();ctx.fillRect(18,91,c.width-36,10);
+  // Status color is intentionally shown on the satellite body only.
+  ctx.fillStyle="rgba(118,150,180,.55)";ctx.fillRect(18,91,c.width-36,4);
   const tx=new THREE.CanvasTexture(c);tx.minFilter=THREE.LinearFilter;
   const mat=new THREE.SpriteMaterial({map:tx,transparent:true,depthWrite:false});
   const sp=new THREE.Sprite(mat);sp.scale.set(9.2,2.36,1);sp.position.set(0,2.5,0);return sp;
 }
 function buildGeoSatelliteModel(s,baseColor){
   const group=new THREE.Group();
-  const color=new THREE.Color(baseColor);
-  const dim=color.clone().lerp(new THREE.Color(0x102030),0.35);
-  const panelColor=color.clone().lerp(new THREE.Color(0x7fc7ff),0.35);
-  const trussMat=new THREE.MeshPhongMaterial({color:0xd8e5f2,emissive:color.clone().multiplyScalar(0.12),shininess:85});
-  const busMat=new THREE.MeshPhongMaterial({color:dim,emissive:color.clone().multiplyScalar(0.45),shininess:75});
-  const panelMat=new THREE.MeshPhongMaterial({color:panelColor,emissive:panelColor.clone().multiplyScalar(0.30),transparent:true,opacity:0.96,shininess:95});
-  const dishMat=new THREE.MeshPhongMaterial({color:0xeaf4ff,emissive:color.clone().multiplyScalar(0.16),shininess:120});
+  const statusColor=new THREE.Color(baseColor);
 
-  const body=new THREE.Mesh(new THREE.BoxGeometry(0.54,0.54,0.78),busMat);
+  // Only the central spacecraft bus carries the operational-status color.
+  // Panels, mast and dish stay neutral so satellites remain readable even when close together.
+  const trussMat=new THREE.MeshPhongMaterial({
+    color:0xcdd8e3,emissive:0x101820,shininess:70
+  });
+  const busMat=new THREE.MeshPhongMaterial({
+    color:statusColor,
+    emissive:statusColor.clone().multiplyScalar(0.40),
+    shininess:90
+  });
+  const panelMat=new THREE.MeshPhongMaterial({
+    color:0x245f99,emissive:0x071d31,transparent:true,opacity:0.96,shininess:90
+  });
+  const dishMat=new THREE.MeshPhongMaterial({
+    color:0xeaf4ff,emissive:0x101820,shininess:110
+  });
+
+  const body=new THREE.Mesh(new THREE.BoxGeometry(0.58,0.58,0.82),busMat);
   body.userData.role='geoSatCore';
   body.userData.geoSatData=s;
   group.add(body);
@@ -2433,6 +2457,7 @@ function buildGeoSatelliteModel(s,baseColor){
   const leftPanel=new THREE.Mesh(panelGeo,panelMat);
   leftPanel.position.set(-0.74,0,0);
   group.add(leftPanel);
+
   const rightPanel=new THREE.Mesh(panelGeo,panelMat);
   rightPanel.position.set(0.74,0,0);
   group.add(rightPanel);
@@ -2441,11 +2466,15 @@ function buildGeoSatelliteModel(s,baseColor){
   const leftFrame=new THREE.Mesh(panelFrameGeo,trussMat);
   leftFrame.position.copy(leftPanel.position);
   group.add(leftFrame);
+
   const rightFrame=new THREE.Mesh(panelFrameGeo,trussMat);
   rightFrame.position.copy(rightPanel.position);
   group.add(rightFrame);
 
-  const dish=new THREE.Mesh(new THREE.SphereGeometry(0.20,16,12,0,Math.PI*2,0,Math.PI/2),dishMat);
+  const dish=new THREE.Mesh(
+    new THREE.SphereGeometry(0.20,16,12,0,Math.PI*2,0,Math.PI/2),
+    dishMat
+  );
   dish.rotation.x=Math.PI;
   dish.position.set(0,0.18,0.42);
   group.add(dish);
@@ -2455,13 +2484,12 @@ function buildGeoSatelliteModel(s,baseColor){
   antenna.rotation.x=Math.PI/2;
   group.add(antenna);
 
-  const glow=new THREE.Mesh(new THREE.SphereGeometry(0.43,16,12),new THREE.MeshBasicMaterial({color:baseColor,transparent:true,opacity:0.11,blending:THREE.AdditiveBlending,depthWrite:false}));
-  group.add(glow);
-
+  // No glow sphere / halo around the satellite.
   group.scale.setScalar(0.72);
   group.userData.coreMesh=body;
   return group;
 }
+
 function clearGeoSatellites3D(){
   const t=STATE.three;if(!t?.geoSatGroup)return;
   while(t.geoSatGroup.children.length){
@@ -2554,14 +2582,6 @@ function renderGeoSatellites3D(){
     }
     g.add(satModel);
 
-    if(isAlert){
-      const haloColor=geoIssueHex(s);
-      const halo=new THREE.Mesh(new THREE.SphereGeometry(0.95,18,14),new THREE.MeshBasicMaterial({color:haloColor,transparent:true,opacity:.24,wireframe:true,blending:THREE.AdditiveBlending,depthWrite:false}));
-      halo.userData.role="geoSatAlertHalo";
-      halo.userData.phase=Math.random()*Math.PI*2;
-      g.add(halo);
-    }
-
     g.add(makeGeoSatLabel(s));
     t.geoSatGroup.add(g);
   }
@@ -2570,7 +2590,7 @@ function renderGeoSatellites3D(){
   if(leg){
     const tc=SAT_RISK?.tle_cache||{},mode=fallbackUsed?"SWPC GOES longitude fallback":(tc.mode||"TLE/SGP4");
     const when=tc.fetched_at?` • TLE ${esc(String(tc.fetched_at).slice(0,16))}Z`:"";
-    leg.innerHTML=`Displayed GOES <b>${goes}</b> • recent public issue ${alerts}<br><span style="color:#9db7cf">Satellite body + label bar = current operational/public status. Halo = recent public issue. Position: ${esc(mode)}${when}</span>`;
+    leg.innerHTML=`Displayed GOES <b>${goes}</b> • recent public issue ${alerts}<br><span style="color:#9db7cf">Satellite body color = current operational/public status. Recent issue details remain available by clicking the satellite. Position: ${esc(mode)}${when}</span>`;
   }
 }
 function toggleGeoSatellites(){
@@ -2645,17 +2665,6 @@ function animate3D(){
   if(t.solarWindSheet?.material?.uniforms?.uTime)t.solarWindSheet.material.uniforms.uTime.value=elapsed;
   // Earth and GEO motion are driven ONLY by the simulation timeline in update3D().
   // When the slider is stopped, their rotation is frozen.
-  if(t.geoSatGroup){
-    for(const marker of t.geoSatGroup.children){
-      for(const ch of (marker.children||[])){
-        if(ch.userData?.role==="geoSatAlertHalo"){
-          const ph=ch.userData.phase||0,p=1+.18*Math.sin(elapsed*4.5+ph);
-          ch.scale.setScalar(p);
-          if(ch.material)ch.material.opacity=.18+.20*(.5+.5*Math.sin(elapsed*4.5+ph));
-        }
-      }
-    }
-  }
   if(t.magnetosphere){
     // Magnetosphere moves only during a geomagnetic storm.
     t.magnetosphere.rotation.x=t.impactStrength>0?Math.sin(elapsed*.22)*.006:0;
