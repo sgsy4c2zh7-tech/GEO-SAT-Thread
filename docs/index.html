@@ -572,7 +572,9 @@ function earthTimelineRotationRad(time,ref=STATE.timelineCenter){
 }
 function syncEarthAndGeoToTimeline(time){
   if(!STATE.three?.ready)return;
-  const t=STATE.three,y=earthTimelineRotationRad(time),tilt=23.44*Math.PI/180;
+  const t=STATE.three,y=earthTimelineRotationRad(time);
+  // Visual tilt only. Keep the physical axial tilt reference separate from the display.
+  const tilt=18*Math.PI/180;
   if(t.earth){t.earth.rotation.y=y;t.earth.rotation.z=tilt;}
   if(t.earthNight){t.earthNight.rotation.y=y;t.earthNight.rotation.z=tilt;}
   if(t.clouds){
