@@ -646,18 +646,6 @@ def load_charging_archive() -> list[dict[str, Any]]:
     return [r for r in records(obj, keys=("items", "records", "data")) if isinstance(r, dict)]
 
 
-def load_electron_history() -> list[dict[str, Any]]:
-    obj = load_json(DATA / "swift-charging" / "electron-history.json") or {}
-    out=[]
-    for r in records(obj, keys=("records","items","data")):
-        t=parse_time(r.get("time") or r.get("time_tag"))
-        v=num(r.get("electron_flux_gt2mev") or r.get("flux"))
-        if t and v is not None and v >= 0:
-            out.append({"_t":t,"time":iso_z(t),"electron_flux_gt2mev":v})
-    return sorted(out,key=lambda x:x["_t"])
-
-
-
 def _charging_skill_map(v: dict[str, Any], family: str) -> dict[int, dict[str, Any]]:
     rows_ = ((v.get("nominal_lead_skill") or {}).get(family) or []) if isinstance(v, dict) else []
     out = {}
@@ -754,12 +742,29 @@ def load_wind_forecast_archive() -> list[dict[str, Any]]:
         target = parse_time(r.get("target_time") or r.get("time"))
         pred = num(r.get("predicted_speed"))
         if issued and target and pred is not None:
+            components = r.get("background_components") if isinstance(r.get("background_components"), dict) else {}
+            weights = r.get("blend_weights") if isinstance(r.get("blend_weights"), dict) else {}
             out.append({
                 "_issued": issued, "issued_at": iso_z(issued),
                 "_t": target, "time": iso_z(target),
+                "model": r.get("model"),
                 "predicted_speed": pred,
                 "background_speed": num(r.get("background_speed")),
                 "lead_hours": num(r.get("lead_hours")),
+                "cme_effect_weighted": num(r.get("cme_effect_weighted"), 0.0),
+                "blend_bin": r.get("blend_bin"),
+                "background_components": {
+                    "recent": num(components.get("recent")),
+                    "rotation27": num(components.get("rotation27")),
+                    "hss_nonlinear": num(components.get("hss_nonlinear")),
+                    "wsa": num(components.get("wsa")),
+                },
+                "blend_weights": {
+                    "recent": num(weights.get("recent")),
+                    "rotation27": num(weights.get("rotation27")),
+                    "hss_nonlinear": num(weights.get("hss_nonlinear")),
+                    "wsa": num(weights.get("wsa")),
+                },
             })
     return sorted(out, key=lambda x: (x["_issued"], x["_t"]))
 
@@ -872,6 +877,134 @@ def _monthly_pair_subset(rows: list[dict[str, Any]], start: datetime, end: datet
             out.append(r)
     return out
 
+
+WIND_COMPONENTS = ("recent", "rotation27", "hss_nonlinear", "wsa")
+
+def wind_lead_bin(lead_h: float | None) -> str:
+    h = float(lead_h or 0.0)
+    if h <= 24:
+        return "near_0_24h"
+    if h <= 72:
+        return "mid_24_72h"
+    return "far_72_120h"
+
+def nearest_observed_wind(rows: list[dict[str, Any]], target: datetime, max_hours: float = 1.5) -> float | None:
+    best = None
+    best_dt = 1e99
+    for r in rows:
+        t = r.get("_t")
+        v = num(r.get("speed"))
+        if not isinstance(t, datetime) or v is None:
+            continue
+        d = abs((t - target).total_seconds()) / 3600.0
+        if d < best_dt:
+            best_dt = d
+            best = v
+    return best if best is not None and best_dt <= max_hours else None
+
+def wind_component_skill_rows(
+    archive: list[dict[str, Any]],
+    observed_hourly: list[dict[str, Any]],
+    *,
+    max_cme_for_background_skill: float = 25.0,
+) -> list[dict[str, Any]]:
+    """Evaluate each background source as a stand-alone predictor.
+
+    This is diagnostic only. The four predictors are correlated, so the best
+    stand-alone MAE is not automatically the best ensemble weight.
+    """
+    buckets: dict[tuple[str, str], list[float]] = {}
+    obsvals: dict[tuple[str, str], list[float]] = {}
+
+    for r in archive:
+        comps = r.get("background_components") or {}
+        if not isinstance(comps, dict):
+            continue
+        if abs(float(num(r.get("cme_effect_weighted"), 0.0) or 0.0)) > max_cme_for_background_skill:
+            continue
+        obs = nearest_observed_wind(observed_hourly, r["_t"])
+        if obs is None:
+            continue
+        b = wind_lead_bin(r.get("lead_hours"))
+        for comp in WIND_COMPONENTS:
+            v = num(comps.get(comp))
+            if v is None:
+                continue
+            key = (b, comp)
+            buckets.setdefault(key, []).append(float(v) - float(obs))
+            obsvals.setdefault(key, []).append(float(obs))
+            key_all = ("all", comp)
+            buckets.setdefault(key_all, []).append(float(v) - float(obs))
+            obsvals.setdefault(key_all, []).append(float(obs))
+
+    rows: list[dict[str, Any]] = []
+    order = ["near_0_24h", "mid_24_72h", "far_72_120h", "all"]
+    for b in order:
+        baseline_mae = None
+        base_errs = buckets.get((b, "recent"), [])
+        if base_errs:
+            baseline_mae = statistics.mean(abs(e) for e in base_errs)
+
+        for comp in WIND_COMPONENTS:
+            errs = buckets.get((b, comp), [])
+            if not errs:
+                continue
+            n = len(errs)
+            mae = statistics.mean(abs(e) for e in errs)
+            rmse = math.sqrt(statistics.mean(e * e for e in errs))
+            bias = statistics.mean(errs)
+            hit50 = 100.0 * sum(abs(e) <= 50 for e in errs) / n
+            hit100 = 100.0 * sum(abs(e) <= 100 for e in errs) / n
+            skill_vs_recent = None
+            if baseline_mae is not None and baseline_mae > 1e-9:
+                skill_vs_recent = 100.0 * (1.0 - mae / baseline_mae)
+            rows.append({
+                "Lead_Bin": b,
+                "Component": comp,
+                "N": n,
+                "MAE_km_s": round(mae, 2),
+                "RMSE_km_s": round(rmse, 2),
+                "Bias_km_s": round(bias, 2),
+                "Hit50_pct": round(hit50, 1),
+                "Hit100_pct": round(hit100, 1),
+                "Skill_vs_Recent_pct": round(skill_vs_recent, 1) if skill_vs_recent is not None else None,
+            })
+    return rows
+
+def current_wind_weight_rows(swift_wind: dict[str, Any] | None) -> list[dict[str, Any]]:
+    coeff = (swift_wind or {}).get("coefficients") or {}
+    aw = coeff.get("adaptive_weighting") if isinstance(coeff, dict) else {}
+    if not isinstance(aw, dict):
+        return []
+    prior = aw.get("prior") if isinstance(aw.get("prior"), dict) else {}
+    bins = aw.get("bins") if isinstance(aw.get("bins"), dict) else {}
+    rows = []
+    for key, label in (
+        ("near", "0-24 h"),
+        ("mid", "24-72 h"),
+        ("far", "72-120 h"),
+    ):
+        info = bins.get(key) if isinstance(bins.get(key), dict) else {}
+        fitted = info.get("fitted_weights") if isinstance(info.get("fitted_weights"), dict) else {}
+        applied = info.get("applied_weights") if isinstance(info.get("applied_weights"), dict) else {}
+        row = {
+            "Lead_Bin": label,
+            "Status": info.get("status"),
+            "Samples": info.get("sample_count"),
+            "Train_N": info.get("train_count"),
+            "Validation_N": info.get("validation_count"),
+            "Reliability": info.get("reliability"),
+            "Validation_Prior_MAE": info.get("validation_prior_mae_kms"),
+            "Validation_Adaptive_MAE": info.get("validation_applied_mae_kms"),
+            "Validation_Improvement": info.get("validation_improvement_kms"),
+        }
+        for c in WIND_COMPONENTS:
+            row[f"Prior_{c}"] = num(prior.get(c))
+            row[f"Fitted_{c}"] = num(fitted.get(c))
+            row[f"Applied_{c}"] = num(applied.get(c))
+        rows.append(row)
+    return rows
+
 def main() -> None:
     now = utcnow()
     month_start, month_end = month_bounds(now)
@@ -894,7 +1027,6 @@ def main() -> None:
     charging = load_swift_charging()
     charging_verification = load_charging_verification() or (charging.get("verification") or {})
     charging_archive = load_charging_archive()
-    electron_history = load_electron_history()
     validation_history_obj = load_json(DATA / 'validation' / 'history.json') or {}
     validation_history = [x for x in (validation_history_obj.get('history') or []) if isinstance(x, dict)]
     coronal_holes = load_json(DATA / 'coronal-holes' / 'latest.json') or {}
@@ -904,6 +1036,10 @@ def main() -> None:
 
     wind_hourly_all = bin_hourly(wind_hist, ["speed", "density"], HISTORY_DAYS)
     mag_hourly_all = bin_hourly(mag_hist, ["bz", "bt"], HISTORY_DAYS)
+
+    # Adaptive-Wind diagnostics for Excel.
+    wind_weight_rows = current_wind_weight_rows(swift_wind)
+    wind_component_rows = wind_component_skill_rows(wind_archive, wind_hourly_all)
     wind_hourly = in_range(wind_hourly_all, month_start, month_end)
     mag_hourly = in_range(mag_hourly_all, month_start, month_end)
     mag_by_time = {r["time"]: r for r in mag_hourly}
@@ -958,12 +1094,8 @@ def main() -> None:
         if t:
             charging_obs.append({"_t": t, "time": iso_z(t), "surface_kv": num(r.get("surface_kv")), "differential_kv": num(r.get("differential_kv")), "internal_field_mvm": num(r.get("internal_field_mvm")), "electron_flux_gt2mev": num(r.get("electron_flux_gt2mev")), "source": r.get("source")})
     charging_obs.sort(key=lambda x: x["_t"])
-    # SWIFT-CHARGE independent observations are retained for 30 days only.
-    charging_obs = [r for r in charging_obs if now - timedelta(days=30) <= r["_t"] <= now + timedelta(hours=2)]
     surface_skill = _charging_skill_map(charging_verification, "surface")
     internal_skill = _charging_skill_map(charging_verification, "internal")
-    electron_skill_rows = ((charging_verification.get("electron") or {}).get("nominal_lead_skill") or [])
-    electron_skill = {int(r.get("nominal_lead_hours",0)):r for r in electron_skill_rows if r.get("nominal_lead_hours")}
     surface_vals = [r["surface_kv"] for r in charging_fc if r.get("surface_kv") is not None]
     internal_vals = [r["internal_field_mvm"] for r in charging_fc if r.get("internal_field_mvm") is not None]
     if surface_vals:
@@ -974,8 +1106,6 @@ def main() -> None:
     i24 = internal_skill.get(24, {})
     month_metrics.append({"Metric": "Surface charging 24h hit ±1 kV", "Value": s24.get("hit_rate_1kv"), "Unit": "%"})
     month_metrics.append({"Metric": "Internal charging 24h hit ±0.1 MV/m", "Value": i24.get("hit_rate_0_1mvm"), "Unit": "%"})
-    e24=electron_skill.get(24,{})
-    month_metrics.append({"Metric":"Electron 24h factor-2 hit","Value":e24.get("hit_rate_factor2"),"Unit":"%"})
 
     # Companion JSON for the browser UI.  It is built from the exact same
     # arrays used below for the monthly Excel sheets, so Kp/Bz/Wind remain in sync.
@@ -1048,9 +1178,6 @@ def main() -> None:
                 {k: r.get(k) for k in ("time", "surface_kv", "differential_kv", "internal_field_mvm", "electron_flux_gt2mev", "source")}
                 for r in charging_obs[-1000:]
             ],
-            "estimated_history": charging.get("estimated_history") or [],
-            "electron_observed_30d": charging.get("electron_observed_30d") or [],
-            "electron_model": charging.get("electron_model") or {},
             "verification": charging_verification,
             "past_forecast_snapshots": charging.get("past_forecast_snapshots") or {},
             "methodology": charging.get("methodology") or {},
@@ -1094,6 +1221,9 @@ def main() -> None:
         "good": wb.add_format({"bg_color": "#E2F0D9", "border": 1}),
         "warn": wb.add_format({"bg_color": "#FFF2CC", "border": 1}),
         "bad": wb.add_format({"bg_color": "#F8CBAD", "border": 1}),
+        "pct1": wb.add_format({"num_format": "0.0%", "border": 1}),
+        "note": wb.add_format({"font_color": "#666666", "italic": True, "text_wrap": True}),
+        "weight": wb.add_format({"num_format": "0.000", "border": 1}),
     }
 
     # Monthly summary + daily summary
@@ -1153,6 +1283,125 @@ def main() -> None:
         chart.add_series({"name":"Past forecast", "categories":["Wind_Fcst_History",1,1,len(hist_rows),1], "values":["Wind_Fcst_History",1,3,len(hist_rows),3]})
         chart.add_series({"name":"Observed", "categories":["Wind_Fcst_History",1,1,len(hist_rows),1], "values":["Wind_Fcst_History",1,4,len(hist_rows),4]})
         chart.set_title({"name":"Archived SWIFT forecast vs observed wind"}); chart.set_y_axis({"name":"km/s"}); chart.set_size({"width":840,"height":340}); ws.insert_chart("I2",chart)
+
+
+    # ------------------------------------------------------------------
+    # Wind_Component_Skill
+    # ------------------------------------------------------------------
+    ws = wb.add_worksheet("Wind_Component_Skill")
+    ws.merge_range("A1:U1", "Solar-wind empirical component skill / adaptive weighting", fmt["title"])
+    ws.write("A2", "Purpose", fmt["section"])
+    ws.merge_range(
+        "B2:U2",
+        "Shows how well recent persistence, 27-day recurrence, HSS nonlinear term, and WSA perform, "
+        "and how the adaptive ensemble changes their weights. Stand-alone component skill is diagnostic: "
+        "correlated predictors mean the lowest individual MAE does not automatically deserve the largest ensemble weight.",
+        fmt["note"],
+    )
+
+    # Table A: adaptive weights by lead range.
+    ws.write("A4", "A. Current adaptive weights by forecast lead", fmt["section"])
+    weight_headers = [
+        "Lead_Bin","Status","Samples","Train_N","Validation_N","Reliability",
+        "Validation_Prior_MAE","Validation_Adaptive_MAE","Validation_Improvement",
+        "Prior_recent","Fitted_recent","Applied_recent",
+        "Prior_rotation27","Fitted_rotation27","Applied_rotation27",
+        "Prior_hss_nonlinear","Fitted_hss_nonlinear","Applied_hss_nonlinear",
+        "Prior_wsa","Fitted_wsa","Applied_wsa",
+    ]
+    write_table(ws, 4, 0, weight_headers, wind_weight_rows, fmt)
+
+    # Highlight whether adaptive validation improved the prior.
+    if wind_weight_rows:
+        first_excel_row = 6
+        last_excel_row = 5 + len(wind_weight_rows)
+        ws.conditional_format(f"I{first_excel_row}:I{last_excel_row}", {
+            "type": "cell", "criteria": ">", "value": 0,
+            "format": fmt["good"],
+        })
+        ws.conditional_format(f"I{first_excel_row}:I{last_excel_row}", {
+            "type": "cell", "criteria": "<", "value": 0,
+            "format": fmt["bad"],
+        })
+
+    # Table B: each empirical source used alone.
+    skill_start = 9
+    ws.write(skill_start, 0, "B. Stand-alone component forecast skill", fmt["section"])
+    skill_headers = [
+        "Lead_Bin","Component","N","MAE_km_s","RMSE_km_s","Bias_km_s",
+        "Hit50_pct","Hit100_pct","Skill_vs_Recent_pct",
+    ]
+    write_table(ws, skill_start + 1, 0, skill_headers, wind_component_rows, fmt)
+
+    if wind_component_rows:
+        data_first = skill_start + 3  # Excel 1-based row
+        data_last = skill_start + 2 + len(wind_component_rows)
+        ws.conditional_format(f"D{data_first}:D{data_last}", {
+            "type": "3_color_scale",
+            "min_color": "#E2F0D9", "mid_color": "#FFF2CC", "max_color": "#F8CBAD",
+        })
+        ws.conditional_format(f"G{data_first}:G{data_last}", {
+            "type": "data_bar", "bar_color": "#5B9BD5",
+        })
+        ws.conditional_format(f"I{data_first}:I{data_last}", {
+            "type": "cell", "criteria": ">", "value": 0, "format": fmt["good"],
+        })
+        ws.conditional_format(f"I{data_first}:I{data_last}", {
+            "type": "cell", "criteria": "<", "value": 0, "format": fmt["bad"],
+        })
+
+    # Compact MAE matrix for fast visual comparison.
+    matrix_col = 11  # L
+    ws.write(9, matrix_col, "C. MAE matrix [km/s]", fmt["section"])
+    matrix_headers = ["Component", "0-24h", "24-72h", "72-120h", "All"]
+    for j, h in enumerate(matrix_headers):
+        ws.write(10, matrix_col + j, h, fmt["header"])
+
+    skill_lookup = {(r["Lead_Bin"], r["Component"]): r for r in wind_component_rows}
+    bin_map = [("near_0_24h","0-24h"),("mid_24_72h","24-72h"),("far_72_120h","72-120h"),("all","All")]
+    for i, comp in enumerate(WIND_COMPONENTS, start=11):
+        ws.write(i, matrix_col, comp, fmt["body"])
+        for j, (bkey, _) in enumerate(bin_map, start=1):
+            rr = skill_lookup.get((bkey, comp))
+            ws.write(i, matrix_col + j, rr.get("MAE_km_s") if rr else None, fmt["num2"])
+
+    # Chart applied weights.
+    if wind_weight_rows:
+        chart = wb.add_chart({"type": "column"})
+        # Categories: lead bins in A6:A8. Applied columns are L/O/R/U in the table.
+        categories = ["Wind_Component_Skill", 5, 0, 4 + len(wind_weight_rows), 0]
+        for col_idx, name in ((11, "Recent"), (14, "27-day"), (17, "HSS"), (20, "WSA")):
+            chart.add_series({
+                "name": name,
+                "categories": categories,
+                "values": ["Wind_Component_Skill", 5, col_idx, 4 + len(wind_weight_rows), col_idx],
+            })
+        chart.set_title({"name": "Applied adaptive weights by lead range"})
+        chart.set_y_axis({"name": "Weight", "min": 0, "max": 1})
+        chart.set_legend({"position": "bottom"})
+        chart.set_size({"width": 760, "height": 300})
+        ws.insert_chart("L18", chart)
+
+    # Chart component MAE matrix.
+    if wind_component_rows:
+        chart2 = wb.add_chart({"type": "column"})
+        for j, label in enumerate(("0-24h","24-72h","72-120h","All"), start=1):
+            chart2.add_series({
+                "name": label,
+                "categories": ["Wind_Component_Skill", 11, matrix_col, 14, matrix_col],
+                "values": ["Wind_Component_Skill", 11, matrix_col + j, 14, matrix_col + j],
+            })
+        chart2.set_title({"name": "Stand-alone MAE by empirical component"})
+        chart2.set_y_axis({"name": "MAE [km/s]"})
+        chart2.set_legend({"position": "bottom"})
+        chart2.set_size({"width": 760, "height": 300})
+        ws.insert_chart("L34", chart2)
+
+    ws.set_column("A:A", 16)
+    ws.set_column("B:B", 24)
+    ws.set_column("C:I", 16)
+    ws.set_column("J:U", 17)
+    ws.freeze_panes(5, 0)
 
     ws = wb.add_worksheet("Kp_Forecast")
     kpf_rows = prepare_rows_for_excel(kp_fc, [("UTC", "_t"), ("Kp", "kp"), ("G_Scale", "g_scale"), ("Confidence", "confidence"), ("Source", "source")])
@@ -1398,151 +1647,35 @@ def main() -> None:
     ws.set_column("N:N",19);ws.set_column("O:R",15)
     add_line_chart(wb,ws,"Bz minimum observed vs 24/48/72 h lead forecasts","Bz_Fcst_History",0,len(bz_chart_rows),13,[(14,"Observed Bz min"),(15,"24h forecast"),(16,"48h forecast"),(17,"72h forecast")],"T2","nT")
 
-    # Observation-driven history is intentionally separate from measured truth.
-    estimate_rows = charging.get("estimated_history") or []
-    ws_est = wb.add_worksheet("Charging_Estimates")
-    estimate_columns = ["time", "surface_kv", "internal_field_mvm", "kp", "bz_min_nt", "wind_kms", "electron_flux_gt2mev", "model", "source"]
-    write_table(ws_est, 0, 0, estimate_columns, estimate_rows, fmt)
-    ws_est.set_column("A:A", 24)
-    ws_est.set_column("B:H", 20)
-    ws_est.set_column("I:I", 70)
-
     # SWIFT-CHARGE forecast and verification
-    # Display window mirrors the browser UI: validated observations / archived forecast
-    # for the previous 72 h and current forecast for the next 72 h.
-    charge_x0 = now - timedelta(hours=72)
-    charge_x1 = now + timedelta(hours=72)
-
-    def _lead_pair_map(family: str, lead: int = 24):
-        block = (((charging_verification.get("lead_pairs") or {}).get(family) or {}).get(f"{lead}h") or [])
-        out = {}
-        for r in block:
-            tt = parse_time(r.get("target_time"))
-            if tt and charge_x0 <= tt <= now + timedelta(hours=1):
-                out[iso_z(tt)] = r
-        return out
-
-    surface_pair24 = _lead_pair_map("surface", 24)
-    internal_pair24 = _lead_pair_map("internal", 24)
-
-
-    # Radiation-belt electron forecast / observations / skill.
-    ws = wb.add_worksheet("Electron_Forecast_72h")
-    electron_fc_rows=[]
-    for r in charging_fc:
-        electron_fc_rows.append({
-            "Time": r.get("time"), "Lead_h": r.get("lead_hours"),
-            "Hybrid_Flux_gt2MeV": r.get("electron_flux_gt2mev"),
-            "Empirical_Flux": r.get("electron_flux_empirical"),
-            "AI_Delta_dex": r.get("electron_ai_delta_dex"),
-            "AI_Weight": r.get("electron_ai_weight"),
-            "Q05_Flux": r.get("electron_q05"), "Q95_Flux": r.get("electron_q95"),
-            "Fluence_24h": r.get("electron_fluence_24h"),
-            "Mode": r.get("electron_model_mode"),
-        })
-    write_table(ws,0,0,["Time","Lead_h","Hybrid_Flux_gt2MeV","Empirical_Flux","AI_Delta_dex","AI_Weight","Q05_Flux","Q95_Flux","Fluence_24h","Mode"],electron_fc_rows,fmt)
-    ws.set_column("A:A",22);ws.set_column("B:I",18);ws.set_column("J:J",30)
-
-    ws = wb.add_worksheet("Electron_Observed_30d")
-    ecut=now-timedelta(days=30)
-    eobs=[{"Time":r.get("time"),"Electron_gt2MeV":r.get("electron_flux_gt2mev")} for r in electron_history if ecut <= r["_t"] <= now+timedelta(hours=1)]
-    write_table(ws,0,0,["Time","Electron_gt2MeV"],eobs,fmt)
-    ws.set_column("A:A",22);ws.set_column("B:B",22)
-
-    ws = wb.add_worksheet("Electron_Lead_Skill")
-    esk=[]
-    for h in (24,48,72):
-        q=electron_skill.get(h,{})
-        esk.append({"Lead_h":h,"Count":q.get("count"),"Status":q.get("status"),"MAE_dex":q.get("mae_dex"),"Bias_dex":q.get("bias_dex"),"RMSE_dex":q.get("rmse_dex"),"Factor2_Hit_pct":q.get("hit_rate_factor2"),"Factor3_Hit_pct":q.get("hit_rate_factor3")})
-    write_table(ws,0,0,["Lead_h","Count","Status","MAE_dex","Bias_dex","RMSE_dex","Factor2_Hit_pct","Factor3_Hit_pct"],esk,fmt)
-    ws.set_column("A:H",18)
-
-    ws = wb.add_worksheet("Electron_Model")
-    em=charging.get("electron_model") or {}
-    em_rows=[
-        {"Item":"Model ID","Value":em.get("model_id"),"Note":"Lagged empirical + optional OOF AI residual"},
-        {"Item":"Family","Value":em.get("model_family"),"Note":"Direct log10 >2 MeV electron forecast"},
-        {"Item":"Training samples","Value":em.get("training_samples_common"),"Note":"Common issue times with all target leads"},
-        {"Item":"No future observation","Value":str(((em.get("feature_definition") or {}).get("no_future_observation_rule"))),"Note":"issued_at-time information only"},
-        {"Item":"Electron lags h","Value":str(((em.get("feature_definition") or {}).get("electron_lags_hours"))),"Note":"autoregressive memory"},
-        {"Item":"Driver memories h","Value":str(((em.get("feature_definition") or {}).get("driver_memory_hours"))),"Note":"EWMA histories"},
-    ]
-    write_table(ws,0,0,["Item","Value","Note"],em_rows,fmt);ws.set_column("A:A",24);ws.set_column("B:B",60);ws.set_column("C:C",70)
-
     ws = wb.add_worksheet("Surface_Charging")
-    surface_fc_by_time = {r["time"]: r for r in charging_fc if charge_x0 <= r["_t"] <= charge_x1}
-    surface_obs_by_time = {r["time"]: r for r in charging_obs if charge_x0 <= r["_t"] <= now + timedelta(hours=1) and r.get("surface_kv") is not None}
-    surface_times = sorted(set(surface_fc_by_time) | set(surface_obs_by_time) | set(surface_pair24))
     surface_rows = []
-    for ts in surface_times:
-        tt = parse_time(ts)
-        if not tt or not (charge_x0 <= tt <= charge_x1):
-            continue
-        fc = surface_fc_by_time.get(ts) or {}
-        ob = surface_obs_by_time.get(ts) or {}
-        p24 = surface_pair24.get(ts) or {}
+    obs_surface_by_time = {r["time"]: r for r in charging_obs if r.get("surface_kv") is not None}
+    for r in charging_fc:
         surface_rows.append({
-            "UTC": tt.replace(tzinfo=None),
-            "Hours_From_Now": round((tt-now).total_seconds()/3600.0, 2),
-            "Observed_Surface_kV": ob.get("surface_kv"),
-            "Forecast_24h_Ago_kV": p24.get("predicted"),
-            "Current_Forecast_kV": fc.get("surface_kv") if tt >= now - timedelta(hours=2) else None,
-            "Differential_kV": fc.get("differential_kv"),
-            "Secondary_Surface_kV": fc.get("surface_secondary_kv"),
-            "Surface_Model_Mode": fc.get("surface_model_mode"),
-            "LowE_ElectronFlux_cm2_s": fc.get("surface_plasma_e_flux_cm2_s"),
-            "LowE_IonFlux_cm2_s": fc.get("surface_plasma_i_flux_cm2_s"),
-            "Electron_Char_keV": fc.get("surface_e_char_kev"),
-            "Ion_Char_keV": fc.get("surface_i_char_kev"),
-            "Electron_Current_A_m2": fc.get("surface_e_current_a_m2"),
-            "Ion_Current_A_m2": fc.get("surface_i_current_a_m2"),
-            "Photo_Current_A_m2": fc.get("surface_photo_current_a_m2"),
-            "Secondary_Yield": fc.get("surface_secondary_yield"),
-            "Kp": fc.get("kp"), "BzMin_nT": fc.get("bz_min_nt"), "Wind_km_s": fc.get("wind_kms"),
-            "Source": ob.get("source") or fc.get("source"),
+            "UTC": r["_t"].replace(tzinfo=None), "Lead_h": r.get("lead_hours"),
+            "Surface_kV": r.get("surface_kv"), "Differential_kV": r.get("differential_kv"),
+            "Observed_Surface_kV": (obs_surface_by_time.get(r["time"]) or {}).get("surface_kv"),
+            "Kp": r.get("kp"), "BzMin_nT": r.get("bz_min_nt"), "Wind_km_s": r.get("wind_kms"), "Source": r.get("source")
         })
-    write_table(ws,0,0,["UTC","Hours_From_Now","Observed_Surface_kV","Forecast_24h_Ago_kV","Current_Forecast_kV","Differential_kV","Secondary_Surface_kV","Surface_Model_Mode","LowE_ElectronFlux_cm2_s","LowE_IonFlux_cm2_s","Electron_Char_keV","Ion_Char_keV","Electron_Current_A_m2","Ion_Current_A_m2","Photo_Current_A_m2","Secondary_Yield","Kp","BzMin_nT","Wind_km_s","Source"],surface_rows,fmt)
-    ws.set_column("A:A",19);ws.set_column("B:S",18);ws.set_column("T:T",48)
-    add_line_chart(wb,ws,"SWIFT-CHARGE surface potential — −72 h observed / archived → +72 h forecast","Surface_Charging",0,len(surface_rows),0,[(2,"Observed surface kV"),(3,"24h-issued forecast"),(4,"Current forecast")],"L2","kV")
+    write_table(ws,0,0,["UTC","Lead_h","Surface_kV","Differential_kV","Observed_Surface_kV","Kp","BzMin_nT","Wind_km_s","Source"],surface_rows,fmt)
+    ws.set_column("A:A",19);ws.set_column("B:H",16);ws.set_column("I:I",48)
+    add_line_chart(wb,ws,"SWIFT-CHARGE surface potential — next 72 h","Surface_Charging",0,len(surface_rows),0,[(2,"Surface kV"),(3,"Differential kV"),(4,"Observed surface kV")],"K2","kV")
 
     ws = wb.add_worksheet("Internal_Charging")
-    internal_fc_by_time = {r["time"]: r for r in charging_fc if charge_x0 <= r["_t"] <= charge_x1}
-    internal_obs_by_time = {r["time"]: r for r in charging_obs if charge_x0 <= r["_t"] <= now + timedelta(hours=1) and r.get("internal_field_mvm") is not None}
-    internal_times = sorted(set(internal_fc_by_time) | set(internal_obs_by_time) | set(internal_pair24))
     internal_rows = []
-    for ts in internal_times:
-        tt = parse_time(ts)
-        if not tt or not (charge_x0 <= tt <= charge_x1):
-            continue
-        fc = internal_fc_by_time.get(ts) or {}
-        ob = internal_obs_by_time.get(ts) or {}
-        p24 = internal_pair24.get(ts) or {}
+    obs_internal_by_time = {r["time"]: r for r in charging_obs if r.get("internal_field_mvm") is not None}
+    for r in charging_fc:
         internal_rows.append({
-            "UTC": tt.replace(tzinfo=None),
-            "Hours_From_Now": round((tt-now).total_seconds()/3600.0, 2),
-            "Observed_Internal_MV_m": ob.get("internal_field_mvm"),
-            "Forecast_24h_Ago_MV_m": p24.get("predicted"),
-            "Current_Forecast_MV_m": fc.get("internal_field_mvm") if tt >= now - timedelta(hours=2) else None,
-            "Electron_gt2MeV": fc.get("electron_flux_gt2mev") or ob.get("electron_flux_gt2mev"),
-            "Electron_Fluence24h_Proxy": fc.get("electron_fluence_24h_proxy"),
-            "Kp": fc.get("kp"), "BzMin_nT": fc.get("bz_min_nt"), "Wind_km_s": fc.get("wind_kms"),
-            "Source": ob.get("source") or fc.get("source"),
+            "UTC": r["_t"].replace(tzinfo=None), "Lead_h": r.get("lead_hours"),
+            "Internal_Field_MV_m": r.get("internal_field_mvm"),
+            "Observed_Internal_MV_m": (obs_internal_by_time.get(r["time"]) or {}).get("internal_field_mvm"),
+            "Electron_gt2MeV": r.get("electron_flux_gt2mev"), "Electron_Fluence24h_Proxy": r.get("electron_fluence_24h_proxy"),
+            "Kp": r.get("kp"), "BzMin_nT": r.get("bz_min_nt"), "Wind_km_s": r.get("wind_kms"), "Source": r.get("source")
         })
-    write_table(ws,0,0,["UTC","Hours_From_Now","Observed_Internal_MV_m","Forecast_24h_Ago_MV_m","Current_Forecast_MV_m","Electron_gt2MeV","Electron_Fluence24h_Proxy","Kp","BzMin_nT","Wind_km_s","Source"],internal_rows,fmt)
-    ws.set_column("A:A",19);ws.set_column("B:J",19);ws.set_column("K:K",48)
-    add_line_chart(wb,ws,"SWIFT-CHARGE internal field — −72 h observed / archived → +72 h forecast","Internal_Charging",0,len(internal_rows),0,[(2,"Observed MV/m"),(3,"24h-issued forecast"),(4,"Current forecast")],"M2","MV/m")
-
-    ws = wb.add_worksheet("Charging_Observed_30d")
-    observed_30d_rows = [{
-        "UTC": r["_t"].replace(tzinfo=None),
-        "Surface_kV": r.get("surface_kv"),
-        "Differential_kV": r.get("differential_kv"),
-        "Internal_Field_MV_m": r.get("internal_field_mvm"),
-        "Electron_gt2MeV": r.get("electron_flux_gt2mev"),
-        "Source": r.get("source"),
-    } for r in charging_obs]
-    write_table(ws,0,0,["UTC","Surface_kV","Differential_kV","Internal_Field_MV_m","Electron_gt2MeV","Source"],observed_30d_rows,fmt)
-    ws.set_column("A:A",19);ws.set_column("B:E",20);ws.set_column("F:F",52)
+    write_table(ws,0,0,["UTC","Lead_h","Internal_Field_MV_m","Observed_Internal_MV_m","Electron_gt2MeV","Electron_Fluence24h_Proxy","Kp","BzMin_nT","Wind_km_s","Source"],internal_rows,fmt)
+    ws.set_column("A:A",19);ws.set_column("B:I",19);ws.set_column("J:J",48)
+    add_line_chart(wb,ws,"SWIFT-CHARGE equivalent internal field — next 72 h","Internal_Charging",0,len(internal_rows),0,[(2,"Forecast MV/m"),(3,"Observed MV/m")],"L2","MV/m")
 
     ws = wb.add_worksheet("Charging_Lead_Skill")
     charging_skill_rows=[]
@@ -1571,12 +1704,9 @@ def main() -> None:
     model_rows=[
         {"Item":"Model","Value":charging.get("model"),"Note":"Current SWIFT-CHARGE generation"},
         {"Item":"Reference scope","Value":((charging.get("reference_spacecraft") or {}).get("scope")),"Note":"Not direct GOES hardware telemetry"},
-        {"Item":"Material scenario","Value":str(((charging.get("reference_spacecraft") or {}).get("material_scenario"))),"Note":"Declared epsilon/sigma/transport-response assumptions"},
-        {"Item":"Surface model","Value":json.dumps(coeff.get("surface") or {},ensure_ascii=False),"Note":tr.get("surface_status")},
-        {"Item":"Surface current-balance scenario","Value":json.dumps(((charging.get("reference_spacecraft") or {}).get("surface_scenario") or {}),ensure_ascii=False),"Note":"Ji + Jph + Jse + Jbs - Je - Jleak = 0"},
-        {"Item":"Differential surface scenario","Value":json.dumps(((charging.get("reference_spacecraft") or {}).get("differential_surface_scenario") or {}),ensure_ascii=False),"Note":"Differential kV = |V_surface2 - V_surface1|"},
+        {"Item":"Surface coefficients","Value":json.dumps(coeff.get("surface") or {},ensure_ascii=False),"Note":tr.get("surface_status")},
         {"Item":"Internal coefficients","Value":json.dumps(coeff.get("internal") or {},ensure_ascii=False),"Note":tr.get("internal_status")},
-        {"Item":"Differential method","Value":"two-surface equilibrium difference","Note":"No fixed differential ratio"},
+        {"Item":"Differential ratio","Value":coeff.get("differential_ratio"),"Note":"Reference material differential-potential proxy"},
         {"Item":"Surface training N","Value":tr.get("surface_samples"),"Note":"Validated target count used for coefficient update"},
         {"Item":"Internal training N","Value":tr.get("internal_samples"),"Note":"Validated target count used for coefficient update"},
         {"Item":"Verification rule","Value":charging_verification.get("observation_rule"),"Note":"Model-generated values never self-score"},
@@ -1619,17 +1749,16 @@ def main() -> None:
     ws = wb.add_worksheet("Methods")
     method_rows=[
         {"Item":"Wind verification","Definition":"Issued SWIFT forecast vs NOAA RTSW; error = forecast - observed; ±50 km/s hit is primary short-lead metric."},
+        {"Item":"Wind component skill","Definition":"Wind_Component_Skill compares recent persistence, 27-day recurrence, nonlinear HSS and WSA as stand-alone background-wind predictors using archived issued component values paired with later NOAA observations. Rows with CME boost >25 km/s are excluded from background-component skill. Skill_vs_Recent >0 means lower MAE than persistence for the same lead bin."},
+        {"Item":"Adaptive Wind weights","Definition":"The four background-wind weights are constrained non-negative and sum to one. Current fixed coefficients act as priors. Lead-bin fits are regularized and accepted only when time-ordered validation improves over the prior; CME boost remains a separate additive term."},
         {"Item":"Kp verification","Definition":"Issued 3-hour SWIFT Kp vs NOAA planetary K; primary hit = ±1.0 Kp, strict hit = ±0.67 Kp. 24/48/72 h skill selects one archived forecast per target nearest the nominal lead within ±4.5 h."},
         {"Item":"Kp range verification","Definition":"Observed-Kp strata are non-overlapping: 1<=Kp<5, 5<=Kp<6, 6<=Kp<8, 8<=Kp<=9. Kp<1 is excluded from this requested stratification."},
         {"Item":"Bz verification","Definition":"Forecast 3-hour Bz minimum vs observed 3-hour minimum; primary numeric hit = ±2 nT, secondary = ±3 nT; southward probability is also scored with 60% direction threshold and Brier score. 24/48/72 h skill uses ±4.5 h lead matching."},
         {"Item":"Model generation separation","Definition":"Primary Kp/Bz verification and calibration use only archive rows whose model field exactly matches the current latest.json model. Legacy and unversioned forecasts are preserved for historical comparison only."},
         {"Item":"24/48/72 h auto-calibration","Definition":"Current-generation residual bias is estimated separately near nominal 24/48/72 h leads over the previous 30 days. Correction strength ramps with sample count and is linearly interpolated by forecast lead; short-lead correction tends to zero."},
         {"Item":"Surface charging forecast","Definition":"SWIFT-CHARGE reference GEO spacecraft potential [kV] from Kp, southward Bz and solar-wind enhancement. Coefficients can be ridge-updated only when validated charging targets exist. It is not direct GOES bus-potential telemetry."},
-        {"Item":"Electron forecast","Definition":"Primary research target: GOES >2 MeV integral electron flux. Lagged empirical regression uses only issue-time/past observations; optional AI learns time-ordered OOF residuals and is shrinkage weighted."},
-        {"Item":"Internal charging forecast","Definition":"Reference material scenario solves epsilon*dE/dt=J_eff-sigma*E with declared epsilon, conductivity and transport-response assumptions. Integral flux is not treated as direct hardware current."},
+        {"Item":"Internal charging forecast","Definition":"Equivalent reference-dielectric internal field [MV/m] from >2 MeV electron environment proxy, 24 h fluence and geomagnetic drivers. It is not a measured field inside GOES hardware."},
         {"Item":"Charging verification","Definition":"24/48/72 h surface primary hit = ±1 kV (secondary ±2 kV); internal primary hit = ±0.1 MV/m (secondary ±0.2 MV/m). Only independent observed/validated rows in docs/data/swift-charging/observed.json count as truth."},
-        {"Item":"Charging observation retention","Definition":"Independent charging observation/validation targets are retained for the latest 30 days. UI and workbook show −72 h observed context against +72 h current forecasts."},
-        {"Item":"Electron data retention","Definition":"UI electron observations retain 30 days; a separate research archive accumulates longer history for model training/verification and is not charging truth."},
         {"Item":"CME arrival","Definition":"NOAA speed/density shock proxy near predicted arrival. Keep this distinct from a manually adjudicated ICME boundary in publications."},
         {"Item":"Uncertainty","Definition":"Empirical p10/p50/p90 forecast-minus-observation residuals from previous 30 days, split by lead day."},
         {"Item":"DBM gamma","Definition":str(((validation.get("models") or {}).get("cme_arrival") or {}).get("dbm_gamma_fit"))},
@@ -1653,9 +1782,6 @@ def main() -> None:
         {"Data": "SWIFT-CHARGE forecast", "Path_or_URL": "docs/data/swift-charging/latest.json"},
         {"Data": "SWIFT-CHARGE verification", "Path_or_URL": "docs/data/swift-charging/verification.json"},
         {"Data": "SWIFT-CHARGE forecast archive", "Path_or_URL": "docs/data/swift-charging/forecast-archive.json"},
-        {"Data":"GOES >2 MeV electron UI history","Path_or_URL":"docs/data/swift-charging/electron-history.json"},
-        {"Data":"GOES >2 MeV electron research history","Path_or_URL":"docs/data/swift-charging/electron-research-history.json"},
-        {"Data":"SWIFT-RB electron model","Path_or_URL":"docs/data/swift-charging/electron-model.json"},
         {"Data": "SWIFT-CHARGE independent targets", "Path_or_URL": "docs/data/swift-charging/observed.json"},
         {"Data": "SWIFT Kp forecast archive", "Path_or_URL": "docs/data/swift-kp/forecast-archive.json"},
         {"Data": "SWIFT Bz forecast archive", "Path_or_URL": "docs/data/swift-bz/forecast-archive.json"},
@@ -1679,7 +1805,7 @@ def main() -> None:
         "primary_wind_accuracy": {"definition": "|predicted - observed| <= 50 km/s", "window": "last_24h", **current_acc},
         "retention_months": REPORT_RETENTION_MONTHS,
         "validation_feed_url": "./data/validation/ui_validation_latest.json",
-        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Wind_Fcst_History", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Coronal_Holes", "Research_Metrics", "Wind_Verification", "ENLIL_Verification", "Kp_Verification", "Bz_Verification", "Model_Generations", "Auto_Calibration", "Forecast_Skill_History", "Kp_Lead_Skill", "Kp_Range_Skill", "Kp_Fcst_History", "Bz_Lead_Skill", "Bz_Fcst_History", "Electron_Forecast_72h", "Electron_Observed_30d", "Electron_Lead_Skill", "Electron_Model", "Surface_Charging", "Internal_Charging", "Charging_Observed_30d", "Charging_Lead_Skill", "Charging_Fcst_History", "Charging_Model", "CME_Verification", "Uncertainty", "Kp_Observed", "ENLIL_Earth", "Methods", "Sources"],
+        "sheets": ["Monthly_Summary", "SolarWind_Month", "Wind_Forecast_3d", "Wind_Fcst_History", "Wind_Component_Skill", "Kp_Forecast", "Accuracy", "Bz_AI", "CME_Arrivals", "CME_Wind_Boost", "Coronal_Holes", "Research_Metrics", "Wind_Verification", "ENLIL_Verification", "Kp_Verification", "Bz_Verification", "Model_Generations", "Auto_Calibration", "Forecast_Skill_History", "Kp_Lead_Skill", "Kp_Range_Skill", "Kp_Fcst_History", "Bz_Lead_Skill", "Bz_Fcst_History", "Surface_Charging", "Internal_Charging", "Charging_Lead_Skill", "Charging_Fcst_History", "Charging_Model", "CME_Verification", "Uncertainty", "Kp_Observed", "ENLIL_Earth", "Methods", "Sources"],
     }
     (OUT_DOCS / "index.json").write_text(json.dumps(index_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote {final_path}")
