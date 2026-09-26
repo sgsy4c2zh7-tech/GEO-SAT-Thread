@@ -58,7 +58,6 @@ ACCURACY_HISTORY = OUT / "accuracy-history.json"
 ACCURACY_HISTORY_ALIAS = OUT / "history.json"
 CME_BOOST_MODEL = OUT / "cme-boost-model.json"
 CME_ARRIVALS = DOCS_DATA / "cme-arrivals" / "latest.json"
-CORONAL_HOLES = DOCS_DATA / "coronal-holes" / "latest.json"
 
 NOAA_HISTORY_PATHS = [
     DOCS_DATA / "noaa" / "wind_history.json",
@@ -68,10 +67,12 @@ NOAA_HISTORY_PATHS = [
 
 NOAA_LIVE_URLS = [
     "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json",
+    "https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json",
+    "https://services.swpc.noaa.gov/products/solar-wind/plasma-3-day.json",
 ]
 
 NOW = datetime.now(timezone.utc)
-FORECAST_HOURS = 72
+FORECAST_HOURS = 120
 PAST_RECORD_HOURS = 72
 STEP_HOURS = 1
 KEEP_ARCHIVE = 12000
@@ -461,16 +462,53 @@ def main() -> None:
                 }
         return clamp(total, 0, 450), best
 
+    # ------------------------------------------------------------------
+    # Adaptive background-wind weighting
+    #
+    # Four background components are blended:
+    #   recent / 27-day recurrence / nonlinear HSS / WSA
+    #
+    # The old fixed values are now PRIORS rather than permanent weights.
+    # The fitted weights are learned from archived *issued* forecasts only,
+    # after the target-time NOAA observation becomes available.
+    #
+    # Constraints:
+    #   - each weight >= 0
+    #   - weights sum to 1
+    #   - regularization pulls noisy fits back toward the prior
+    #   - CME stays separate and is never absorbed into the background blend
+    # ------------------------------------------------------------------
+    BACKGROUND_KEYS = ("recent", "rotation27", "hss_nonlinear", "wsa")
+    WEIGHT_BINS = (
+        ("near", 0.0, 24.0),
+        ("mid", 24.0, 72.0),
+        ("far", 72.0, 120.0),
+    )
+    PRIOR_WEIGHTS = {
+        "recent": 0.34,
+        "rotation27": 0.39,
+        "hss_nonlinear": 0.17,
+        "wsa": 0.10,
+    }
+    MIN_WEIGHT_SAMPLES = 48
+    WEIGHT_FIT_DAYS = 45
+    WEIGHT_PRIOR_LAMBDA = 5.0
+    MAX_CME_FOR_BACKGROUND_FIT = 25.0
+
     default_coeff = {
-        "version": "SWIFT-Wind-AI-v0.8-CH-residual",
+        "version": "SWIFT-Wind-AI-v0.7-adaptive-weights",
         "updated_at": iso_z(NOW),
         "weights": {
-            "recent": 0.34,
-            "rotation27": 0.39,
-            "hss_nonlinear": 0.17,
-            "wsa": 0.10,
+            **PRIOR_WEIGHTS,
             "cme": 1.00,
-            "coronal_hole": 0.55,
+        },
+        "adaptive_weighting": {
+            "method": "constrained simplex fit to archived issued forecasts",
+            "prior": PRIOR_WEIGHTS,
+            "lambda_prior": WEIGHT_PRIOR_LAMBDA,
+            "min_samples_per_bin": MIN_WEIGHT_SAMPLES,
+            "fit_window_days": WEIGHT_FIT_DAYS,
+            "bins": {},
         },
         "calibration": {"gain": 1.0, "offset": 0.0},
         "limits": {
@@ -480,9 +518,11 @@ def main() -> None:
             "ema_alpha": 0.48,
         },
         "notes": [
-            "records and forecast are both emitted for dashboard compatibility.",
-            "Historical fit uses context available before each target time (walk-forward), not current-time leakage.",
+            "Background weights are treated as priors and can adapt from archived issued forecasts.",
+            "Adaptive weights are non-negative, sum to one, and are regularized toward the prior.",
+            "Only true issued-forecast archive rows with later NOAA observations are used for weight learning.",
             "CME speed increase is learned separately in cme-boost-model.json and added as an independent pulse.",
+            "Historical gain/offset calibration remains walk-forward and separate from adaptive blend weights.",
             "Primary wind accuracy is the hit rate within ±50 km/s.",
         ],
     }
@@ -490,21 +530,31 @@ def main() -> None:
     loaded = load_json(COEFFICIENTS, {}) or {}
     coeff = dict(default_coeff)
     if isinstance(loaded, dict):
-        coeff.update({k: v for k, v in loaded.items() if k not in ("weights", "calibration", "limits")})
-        ww = dict(default_coeff["weights"])
+        coeff.update({k: v for k, v in loaded.items()
+                      if k not in ("weights", "adaptive_weighting", "calibration", "limits")})
+
+        # Preserve the previous background blend as the starting prior if present,
+        # but force it back onto the probability simplex.
+        prior = dict(PRIOR_WEIGHTS)
         if isinstance(loaded.get("weights"), dict):
-            for k in ww:
-                if num(loaded["weights"].get(k)) is not None:
-                    ww[k] = float(num(loaded["weights"].get(k)))
-        # Force CME weight to a sane range because old v0.4 files used 0.05.
-        ww["cme"] = clamp(ww.get("cme", 1.0), 0.65, 1.35)
-        ww["coronal_hole"] = clamp(ww.get("coronal_hole", 0.55), 0.15, 0.85)
-        coeff["weights"] = ww
+            for k in BACKGROUND_KEYS:
+                v = num(loaded["weights"].get(k))
+                if v is not None:
+                    prior[k] = clamp(float(v), 0.0, 1.0)
+        s_prior = sum(prior.values()) or 1.0
+        prior = {k: prior[k] / s_prior for k in BACKGROUND_KEYS}
+
+        cme_w = 1.0
+        if isinstance(loaded.get("weights"), dict):
+            cme_w = clamp(float(num(loaded["weights"].get("cme"), 1.0)), 0.65, 1.35)
+        coeff["weights"] = {**prior, "cme": cme_w}
+
         cc = dict(default_coeff["calibration"])
         if isinstance(loaded.get("calibration"), dict):
             cc["gain"] = float(num(loaded["calibration"].get("gain"), 1.0))
             cc["offset"] = float(num(loaded["calibration"].get("offset"), 0.0))
         coeff["calibration"] = cc
+
         ll = dict(default_coeff["limits"])
         if isinstance(loaded.get("limits"), dict):
             for k in ll:
@@ -512,46 +562,260 @@ def main() -> None:
                     ll[k] = float(num(loaded["limits"].get(k)))
         coeff["limits"] = ll
 
+    # Load the existing archive BEFORE building the new forecast so only previously
+    # issued forecasts can influence today's adaptive weights.
+    archive_obj = load_json(ARCHIVE, {"items": []}) or {"items": []}
+    archive_items = archive_obj.get("items", []) if isinstance(archive_obj, dict) else []
+    archive_items = [x for x in archive_items if isinstance(x, dict)][-KEEP_ARCHIVE:]
 
-    ch_obj = load_json(CORONAL_HOLES, {}) or {}
-    ch_impacts = [r for r in (ch_obj.get("earth_impacts") or []) if isinstance(r, dict)]
+    def project_simplex(values: list[float]) -> list[float]:
+        """Euclidean projection onto {w_i >= 0, sum(w)=1}."""
+        if not values:
+            return []
+        u = sorted((float(x) for x in values), reverse=True)
+        cssv = 0.0
+        rho = 0
+        theta = 0.0
+        for j, uj in enumerate(u, start=1):
+            cssv += uj
+            t = (cssv - 1.0) / j
+            if uj - t > 0:
+                rho = j
+                theta = t
+        if rho == 0:
+            return [1.0 / len(values)] * len(values)
+        out = [max(0.0, float(x) - theta) for x in values]
+        s = sum(out) or 1.0
+        return [x / s for x in out]
 
-    def ch_residual_at(t: datetime, background_speed: float) -> tuple[float, dict[str, Any] | None]:
-        """Return a conservative CH/HSS residual correction.
+    def bin_for_lead(lead_h: float) -> str:
+        h = clamp(float(lead_h), 0.0, 120.0)
+        for name, lo, hi in WEIGHT_BINS:
+            if (lo <= h < hi) or (name == WEIGHT_BINS[-1][0] and h <= hi):
+                return name
+        return "far"
 
-        CH information is deliberately used as a *residual feature*.  The
-        background already contains rotation27/WSA information and may later be
-        blended with official WSA-ENLIL, so this term is reduced when the base
-        model already predicts a fast stream.
-        """
-        total = 0.0
-        best = None
-        for e in ch_impacts:
-            at = parse_time(e.get("arrival_time"))
-            if not at:
+    def archived_component_row(a: dict[str, Any]) -> dict[str, float | None] | None:
+        c = a.get("background_components")
+        if not isinstance(c, dict):
+            return None
+        vals: dict[str, float | None] = {}
+        for k in BACKGROUND_KEYS:
+            v = num(c.get(k))
+            vals[k] = float(v) if v is not None else None
+        # Need at least three independent background sources to learn something useful.
+        if sum(v is not None for v in vals.values()) < 3:
+            return None
+        return vals
+
+    def blend_from_components(weights: dict[str, float],
+                              components: dict[str, float | None]) -> float | None:
+        active = [(k, components.get(k)) for k in BACKGROUND_KEYS
+                  if components.get(k) is not None and math.isfinite(float(components[k]))]
+        if not active:
+            return None
+        den = sum(max(0.0, float(weights.get(k, 0.0))) for k, _ in active)
+        if den <= 1e-12:
+            return float(mean([float(v) for _, v in active], 400.0))
+        return sum(max(0.0, float(weights.get(k, 0.0))) * float(v) for k, v in active) / den
+
+    def fit_weight_bin(bin_name: str, prior: dict[str, float]) -> tuple[dict[str, float], dict[str, Any]]:
+        cutoff = NOW - timedelta(days=WEIGHT_FIT_DAYS)
+        rows: list[dict[str, Any]] = []
+
+        for a in archive_items:
+            issued = parse_time(a.get("issued_at"))
+            target = parse_time(a.get("target_time"))
+            if not issued or not target or issued < cutoff:
                 continue
-            dh = (t-at).total_seconds()/3600.0
-            if dh < -30 or dh > 42:
+            lead_h = num(a.get("lead_hours"))
+            if lead_h is None or bin_for_lead(float(lead_h)) != bin_name:
                 continue
-            conf = clamp(float(num(e.get("confidence"), 0.25)), 0.0, 1.0)
-            prior = max(0.0, float(num(e.get("predicted_delta_v_km_s_prior"), 0.0)))
-            # HSS arrival is broad: gradual rise, slower decay.
-            shape = math.exp(-((dh/18.0)**2)) if dh < 0 else math.exp(-dh/24.0)
-            # Avoid double counting when rotation/WSA/background already says fast.
-            duplicate_guard = 1.0 - 0.48*sigmoid((background_speed-515.0)/55.0)
-            add = prior * conf * shape * clamp(duplicate_guard, 0.38, 1.0)
-            total += add
-            if best is None or add > best["boost"]:
-                best = {
-                    "source_id": e.get("source_id"),
-                    "arrival_time": e.get("arrival_time"),
-                    "confidence": round(conf,3),
-                    "earth_facing_score": e.get("earth_facing_score"),
-                    "predicted_peak_speed_km_s_prior": e.get("predicted_peak_speed_km_s_prior"),
-                    "raw_residual_prior": round(prior,1),
-                    "boost": round(add,1),
-                }
-        return clamp(total, 0.0, 150.0), best
+
+            # Do not let a modeled CME pulse distort the background-source weights.
+            cme = abs(float(num(a.get("cme_effect_weighted"), 0.0)))
+            if cme > MAX_CME_FOR_BACKGROUND_FIT:
+                continue
+
+            comps = archived_component_row(a)
+            if comps is None:
+                continue
+
+            observed = speed_near(target, 0.75)
+            if observed is None:
+                continue
+
+            rows.append({
+                "components": comps,
+                "observed": float(observed),
+                "target_time": target,
+                "issued_at": issued,
+            })
+
+        rows.sort(key=lambda r: (r["target_time"], r["issued_at"]))
+
+        if len(rows) < MIN_WEIGHT_SAMPLES:
+            return dict(prior), {
+                "status": "fallback-prior",
+                "sample_count": len(rows),
+                "required": MIN_WEIGHT_SAMPLES,
+            }
+
+        # Time-ordered split: older rows fit the weights, newest rows decide
+        # whether the adaptive blend is actually allowed into operations.
+        val_n = max(12, int(round(len(rows) * 0.20)))
+        if len(rows) - val_n < 24:
+            val_n = max(8, len(rows) - 24)
+        train_rows = rows[:-val_n] if val_n > 0 else rows
+        val_rows = rows[-val_n:] if val_n > 0 else rows
+
+        w0 = [float(prior[k]) for k in BACKGROUND_KEYS]
+        w = project_simplex(w0)
+
+        def loss(vec: list[float]) -> float:
+            wm = {k: vec[i] for i, k in enumerate(BACKGROUND_KEYS)}
+            total = 0.0
+            n = 0
+            for r in train_rows:
+                pred = blend_from_components(wm, r["components"])
+                if pred is None:
+                    continue
+                e = pred - r["observed"]
+                # Huber loss: less sensitive to isolated shocks / bad boundaries.
+                ae = abs(e)
+                delta = 90.0
+                total += 0.5 * e * e if ae <= delta else delta * (ae - 0.5 * delta)
+                n += 1
+            if n == 0:
+                return 1e18
+            reg = WEIGHT_PRIOR_LAMBDA * sum((vec[i] - w0[i]) ** 2 for i in range(len(vec)))
+            return total / n + reg
+
+        # Small deterministic projected-gradient solver.
+        # Only four blend variables are fitted, so no heavy ML dependency is needed.
+        step = 0.035
+        eps = 1e-4
+        best_w = w[:]
+        best_loss = loss(w)
+
+        for _ in range(220):
+            grad = []
+            for j in range(len(w)):
+                wp = w[:]
+                wm = w[:]
+                wp[j] += eps
+                wm[j] -= eps
+                grad.append(
+                    (loss(project_simplex(wp)) - loss(project_simplex(wm))) / (2 * eps)
+                )
+
+            candidate = project_simplex([w[i] - step * grad[i] for i in range(len(w))])
+            cand_loss = loss(candidate)
+
+            if cand_loss <= best_loss:
+                w = candidate
+                best_w = candidate[:]
+                best_loss = cand_loss
+                step = min(0.08, step * 1.03)
+            else:
+                step *= 0.55
+                if step < 1e-5:
+                    break
+
+        fitted = {k: best_w[i] for i, k in enumerate(BACKGROUND_KEYS)}
+
+        # Reliability shrinkage: minimum samples => mostly prior;
+        # about 240 total samples => nearly full fitted blend.
+        reliability = clamp((len(rows) - MIN_WEIGHT_SAMPLES) / 192.0, 0.0, 1.0)
+        applied = {
+            k: (1.0 - reliability) * prior[k] + reliability * fitted[k]
+            for k in BACKGROUND_KEYS
+        }
+        applied_vec = project_simplex([applied[k] for k in BACKGROUND_KEYS])
+        applied = {k: applied_vec[i] for i, k in enumerate(BACKGROUND_KEYS)}
+
+        def mae(weights: dict[str, float], sample_rows: list[dict[str, Any]]) -> float:
+            errs = []
+            for r in sample_rows:
+                pred = blend_from_components(weights, r["components"])
+                if pred is not None:
+                    errs.append(abs(pred - r["observed"]))
+            return float(mean(errs, 999.0))
+
+        train_prior_mae = mae(prior, train_rows)
+        train_applied_mae = mae(applied, train_rows)
+        val_prior_mae = mae(prior, val_rows)
+        val_applied_mae = mae(applied, val_rows)
+        val_improvement = val_prior_mae - val_applied_mae
+
+        # Operational gate:
+        # adaptive weights are adopted only if they improve the most recent
+        # time-ordered validation tail by at least 0.5 km/s.
+        if val_improvement < 0.5:
+            applied = dict(prior)
+            status = "rejected-no-out-of-sample-improvement"
+            val_applied_mae = mae(applied, val_rows)
+            val_improvement = val_prior_mae - val_applied_mae
+        else:
+            status = "adaptive"
+
+        return applied, {
+            "status": status,
+            "sample_count": len(rows),
+            "train_count": len(train_rows),
+            "validation_count": len(val_rows),
+            "reliability": round(reliability, 4),
+            "train_prior_mae_kms": round(train_prior_mae, 2),
+            "train_applied_mae_kms": round(train_applied_mae, 2),
+            "validation_prior_mae_kms": round(val_prior_mae, 2),
+            "validation_applied_mae_kms": round(val_applied_mae, 2),
+            "validation_improvement_kms": round(val_improvement, 2),
+            "fitted_weights": {k: round(fitted[k], 5) for k in BACKGROUND_KEYS},
+            "applied_weights": {k: round(applied[k], 5) for k in BACKGROUND_KEYS},
+            "fit_window_days": WEIGHT_FIT_DAYS,
+            "max_cme_for_fit_kms": MAX_CME_FOR_BACKGROUND_FIT,
+        }
+
+    background_prior = {k: float(coeff["weights"][k]) for k in BACKGROUND_KEYS}
+    adaptive_bins: dict[str, dict[str, float]] = {}
+    adaptive_fit: dict[str, Any] = {}
+
+    for bin_name, _, _ in WEIGHT_BINS:
+        w_fit, info = fit_weight_bin(bin_name, background_prior)
+        adaptive_bins[bin_name] = w_fit
+        adaptive_fit[bin_name] = info
+
+    coeff["adaptive_weighting"] = {
+        "method": "projected constrained adaptive ensemble",
+        "constraints": "w_i >= 0; sum(w_i)=1; CME separate",
+        "prior": {k: round(background_prior[k], 5) for k in BACKGROUND_KEYS},
+        "lambda_prior": WEIGHT_PRIOR_LAMBDA,
+        "min_samples_per_bin": MIN_WEIGHT_SAMPLES,
+        "fit_window_days": WEIGHT_FIT_DAYS,
+        "bins": adaptive_fit,
+    }
+
+    def weights_for_lead(lead_h: float) -> dict[str, float]:
+        """Interpolate adaptive weights smoothly between lead-time bins."""
+        h = clamp(float(lead_h), 0.0, 120.0)
+
+        centers = [
+            (12.0, adaptive_bins["near"]),
+            (48.0, adaptive_bins["mid"]),
+            (96.0, adaptive_bins["far"]),
+        ]
+        if h <= centers[0][0]:
+            return dict(centers[0][1])
+        if h >= centers[-1][0]:
+            return dict(centers[-1][1])
+
+        for (h0, w0), (h1, w1) in zip(centers, centers[1:]):
+            if h <= h1:
+                f = (h - h0) / (h1 - h0)
+                vals = [(1.0 - f) * w0[k] + f * w1[k] for k in BACKGROUND_KEYS]
+                vals = project_simplex(vals)
+                return {k: vals[i] for i, k in enumerate(BACKGROUND_KEYS)}
+        return dict(adaptive_bins["far"])
 
     def raw_components(t: datetime, calibration: bool = True) -> tuple[float, float, dict[str, Any]]:
         lead_h = max(0.0, (t - NOW).total_seconds() / 3600.0)
@@ -572,19 +836,15 @@ def main() -> None:
         hss_gate = sigmoid((rot - 455.0) / 45.0)
         hss_term = 375.0 + 250.0 * hss_gate + 30.0 * math.tanh((rot - 500.0) / 120.0)
 
-        bg_sources = {
-            "recent": (coeff["weights"]["recent"], rec_term),
-            "rotation27": (coeff["weights"]["rotation27"], rot),
-            "hss_nonlinear": (coeff["weights"]["hss_nonlinear"], hss_term),
+        blend_weights = weights_for_lead(lead_h)
+        components = {
+            "recent": rec_term,
+            "rotation27": rot,
+            "hss_nonlinear": hss_term,
+            "wsa": wsa_speed,
         }
-        if wsa_speed is not None:
-            bg_sources["wsa"] = (coeff["weights"]["wsa"], wsa_speed)
-
-        den = sum(max(0.0, wgt) for wgt, _ in bg_sources.values()) or 1.0
-        background = sum(max(0.0, wgt) * val for wgt, val in bg_sources.values()) / den
-
-        ch_boost, ch_meta = ch_residual_at(t, background)
-        background = background + coeff["weights"]["coronal_hole"] * ch_boost
+        background_raw = blend_from_components(blend_weights, components)
+        background = float(background_raw if background_raw is not None else rec_term)
 
         cme_boost, cme_meta = cme_boost_at(t)
         enhanced = background + coeff["weights"]["cme"] * cme_boost
@@ -607,10 +867,16 @@ def main() -> None:
             "hss_gate": round(hss_gate, 4),
             "hss_speed": round(hss_term, 2),
             "wsa_speed": round(wsa_speed, 2) if wsa_speed is not None else None,
+            "background_components": {
+                "recent": round(rec_term, 2),
+                "rotation27": round(rot, 2),
+                "hss_nonlinear": round(hss_term, 2),
+                "wsa": round(wsa_speed, 2) if wsa_speed is not None else None,
+            },
+            "blend_weights": {k: round(blend_weights[k], 5) for k in BACKGROUND_KEYS},
+            "blend_bin": bin_for_lead(lead_h),
             "cme_effect_weighted": round(cme_boost, 2),
             "nearest_cme": cme_meta,
-            "coronal_hole_effect_weighted": round(ch_boost, 2),
-            "nearest_coronal_hole_hss": ch_meta,
         }
         return background, enhanced, meta
 
@@ -650,6 +916,7 @@ def main() -> None:
             "bias": round(float(mean(fit_errs, 0.0)), 2),
         }
 
+    coeff["version"] = "SWIFT-Wind-AI-v0.7-adaptive-weights"
     coeff["updated_at"] = iso_z(NOW)
     coeff["rotation27_shift_hours"] = rotation_shift_h
     coeff["cme_boost_sample_count"] = int(boost_model.get("sample_count", 0) or 0)
@@ -674,8 +941,6 @@ def main() -> None:
             "swift_background_speed": round(bg, 2),
             "swift_cme_enhanced_speed": round(enhanced, 2),
             "cme_effect_weighted": meta["cme_effect_weighted"],
-            "coronal_hole_effect_weighted": meta.get("coronal_hole_effect_weighted"),
-            "nearest_coronal_hole_hss": meta.get("nearest_coronal_hole_hss"),
             "features": meta,
             "kind": "hindcast",
         })
@@ -712,8 +977,6 @@ def main() -> None:
             "swift_background_speed": round(bg, 2),
             "swift_cme_enhanced_speed": round(enh, 2),
             "cme_effect_weighted": meta["cme_effect_weighted"],
-            "coronal_hole_effect_weighted": meta.get("coronal_hole_effect_weighted"),
-            "nearest_coronal_hole_hss": meta.get("nearest_coronal_hole_hss"),
             "speed": round(enh, 2),
             "speed_raw_nonlinear": round(rr["enhanced"], 2),
             "features": meta,
@@ -812,13 +1075,13 @@ def main() -> None:
     b24 = verification["last_24h"]["background"]
     latest_payload = {
         "updated_at": iso_z(NOW),
-        "model": "SWIFT-Wind-AI-v0.8-CH-residual",
+        "model": "SWIFT-Wind-AI-v0.7-adaptive-weights",
         "source": "NOAA history + live NOAA RTSW + 27.27-day recurrence + optional WSA + learned CME boost",
         "forecast_days": FORECAST_HOURS / 24,
         "history_hours": PAST_RECORD_HOURS,
         "step_hours": STEP_HOURS,
         "target": "±50 km/s",
-        "formula": "Vsw = calibrated(recent + rotation27 + HSS + WSA + confidence-gated CH residual) + learned CME deltaV; future output is EMA/slew limited",
+        "formula": "Vsw = calibrated(adaptive_simplex_blend(recent, rotation27, HSS, WSA; lead-dependent)) + learned_CME_deltaV; future output is EMA/slew limited",
         "current": forecast[0] if forecast else None,
         "records": records,
         "forecast": forecast,
@@ -828,7 +1091,6 @@ def main() -> None:
             "noaa_wind": noaa_meta,
             "wsa": wsa_meta,
             "cme_arrivals": cme_meta,
-            "coronal_holes": {"model": ch_obj.get("model"), "status": ch_obj.get("status"), "earth_impacts": len(ch_impacts)},
             "cme_boost_model": {
                 "file": str(CME_BOOST_MODEL.relative_to(ROOT)),
                 "sample_count": int(boost_model.get("sample_count", 0) or 0),
@@ -845,18 +1107,22 @@ def main() -> None:
     }
 
     # Forecast archive for true forecast-vs-observation verification later.
-    archive_obj = load_json(ARCHIVE, {"items": []}) or {"items": []}
-    archive_items = archive_obj.get("items", []) if isinstance(archive_obj, dict) else []
-    archive_items = [x for x in archive_items if isinstance(x, dict)][-KEEP_ARCHIVE:]
+    # archive_items was loaded before adaptive-weight fitting, so the current issue
+    # cannot train on itself.
     issued_at = iso_z(NOW)
     for r in forecast:
+        features = r.get("features") or {}
         archive_items.append({
             "issued_at": issued_at,
             "target_time": r["time"],
+            "model": "SWIFT-Wind-AI-v0.7-adaptive-weights",
             "predicted_speed": r["swift_cme_enhanced_speed"],
             "background_speed": r["swift_background_speed"],
             "cme_effect_weighted": r["cme_effect_weighted"],
             "lead_hours": r["lead_hours"],
+            "background_components": features.get("background_components"),
+            "blend_weights": features.get("blend_weights"),
+            "blend_bin": features.get("blend_bin"),
         })
     archive_items = archive_items[-KEEP_ARCHIVE:]
 
@@ -939,6 +1205,7 @@ def main() -> None:
         "wind_accuracy_24h_within_50": v24.get("hit_rate_50kms"),
         "wind_mae_24h": v24.get("mae"),
         "calibration": coeff.get("calibration"),
+        "adaptive_weighting": coeff.get("adaptive_weighting"),
     }, ensure_ascii=False, indent=2))
 
 
