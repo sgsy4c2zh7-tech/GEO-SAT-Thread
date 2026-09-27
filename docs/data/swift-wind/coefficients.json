@@ -1,6 +1,6 @@
 {
   "version": "SWIFT-Wind-AI-v0.7-adaptive-weights",
-  "updated_at": "2026-09-26T23:41:47Z",
+  "updated_at": "2026-09-27T05:25:51Z",
   "weights": {
     "recent": 0.5090909090909091,
     "rotation27": 0.35454545454545455,
@@ -22,9 +22,30 @@
     "fit_window_days": 45,
     "bins": {
       "near": {
-        "status": "fallback-prior",
-        "sample_count": 38,
-        "required": 48
+        "status": "rejected-no-out-of-sample-improvement",
+        "sample_count": 69,
+        "train_count": 55,
+        "validation_count": 14,
+        "reliability": 0.1094,
+        "train_prior_mae_kms": 12.13,
+        "train_applied_mae_kms": 11.96,
+        "validation_prior_mae_kms": 13.74,
+        "validation_applied_mae_kms": 13.74,
+        "validation_improvement_kms": 0.0,
+        "fitted_weights": {
+          "recent": 0.02665,
+          "rotation27": 0.4549,
+          "hss_nonlinear": 0.22008,
+          "wsa": 0.29837
+        },
+        "applied_weights": {
+          "recent": 0.50909,
+          "rotation27": 0.35455,
+          "hss_nonlinear": 0.04545,
+          "wsa": 0.09091
+        },
+        "fit_window_days": 45,
+        "max_cme_for_fit_kms": 25.0
       },
       "mid": {
         "status": "fallback-prior",
@@ -39,8 +60,8 @@
     }
   },
   "calibration": {
-    "gain": 0.9871,
-    "offset": -26.535
+    "gain": 1.00816,
+    "offset": -34.399
   },
   "limits": {
     "min_speed": 260.0,
@@ -58,15 +79,15 @@
   "rotation_shift_hours": 0,
   "training_points": 2239,
   "last_fit": {
-    "time": "2026-09-26T23:41:47Z",
-    "fit_count": 224,
-    "gain_candidate": 1.03752,
-    "offset_candidate": -44.764,
-    "gain_applied": 0.9871,
-    "offset_applied": -26.535,
-    "mae": 30.88,
-    "bias": -2.5
+    "time": "2026-09-27T05:25:51Z",
+    "fit_count": 223,
+    "gain_candidate": 1.04728,
+    "offset_candidate": -49.004,
+    "gain_applied": 1.00816,
+    "offset_applied": -34.399,
+    "mae": 32.24,
+    "bias": -1.49
   },
   "rotation27_shift_hours": 0,
-  "cme_boost_sample_count": 35
+  "cme_boost_sample_count": 36
 }
