@@ -1,34 +1,34 @@
 {
-  "updated_at": "2026-09-27T05:00:00Z",
+  "updated_at": "2026-09-27T12:00:00Z",
   "model": "SWIFT-Bz-v2.1-lead-calibration",
   "last_7d": {
-    "count": 1160,
-    "brier_score": 0.1895,
-    "direction_hit_rate_threshold60": 37.3,
-    "bz_min_mae": 3.32,
+    "count": 1196,
+    "brier_score": 0.189,
+    "direction_hit_rate_threshold60": 37.5,
+    "bz_min_mae": 3.28,
     "predicted_southward_rate": 59.6,
-    "observed_southward_rate": 91.7
+    "observed_southward_rate": 92.0
   },
   "last_30d": {
-    "count": 1185,
-    "brier_score": 0.1907,
-    "direction_hit_rate_threshold60": 36.5,
-    "bz_min_mae": 3.3,
-    "predicted_southward_rate": 59.4,
-    "observed_southward_rate": 91.9
+    "count": 1237,
+    "brier_score": 0.1908,
+    "direction_hit_rate_threshold60": 36.3,
+    "bz_min_mae": 3.25,
+    "predicted_southward_rate": 59.3,
+    "observed_southward_rate": 92.2
   },
   "all_generations_30d": {
-    "count": 3111,
-    "brier_score": 0.2456,
-    "direction_hit_rate_threshold60": 26.8,
-    "bz_min_mae": 2.87,
-    "predicted_southward_rate": 52.9,
-    "observed_southward_rate": 92.8
+    "count": 3163,
+    "brier_score": 0.2447,
+    "direction_hit_rate_threshold60": 26.9,
+    "bz_min_mae": 2.86,
+    "predicted_southward_rate": 53.0,
+    "observed_southward_rate": 92.9
   },
   "readiness": {
     "state": "calibrated",
-    "scored_forecasts": 1185,
-    "kp_input_confidence": 0.793
+    "scored_forecasts": 1237,
+    "kp_input_confidence": 0.792
   },
   "nominal_lead_bias_calibration": {
     "version": "bz-nominal-lead-bias-v1",
@@ -38,29 +38,29 @@
     "leads": {
       "24": {
         "nominal_lead_hours": 24,
-        "count": 87,
-        "bz_min_bias": -0.577,
+        "count": 91,
+        "bz_min_bias": -0.723,
         "alpha": 0.45,
-        "add_to_bz_min_nt": 0.26,
+        "add_to_bz_min_nt": 0.326,
         "add_to_probability_pp": 12.0,
         "status": "active"
       },
       "48": {
         "nominal_lead_hours": 48,
-        "count": 77,
-        "bz_min_bias": 0.012,
+        "count": 79,
+        "bz_min_bias": -0.053,
         "alpha": 0.3,
-        "add_to_bz_min_nt": -0.004,
-        "add_to_probability_pp": 8.964,
+        "add_to_bz_min_nt": 0.016,
+        "add_to_probability_pp": 9.03,
         "status": "active"
       },
       "72": {
         "nominal_lead_hours": 72,
-        "count": 67,
-        "bz_min_bias": 1.793,
+        "count": 69,
+        "bz_min_bias": 1.754,
         "alpha": 0.3,
-        "add_to_bz_min_nt": -0.538,
-        "add_to_probability_pp": 8.421,
+        "add_to_bz_min_nt": -0.526,
+        "add_to_probability_pp": 8.565,
         "status": "active"
       }
     }
