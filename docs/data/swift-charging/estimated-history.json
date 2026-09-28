@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-09-28T14:08:29Z",
+  "updated_at": "2026-09-28T21:17:41Z",
   "retention_days": 30,
   "data_kind": "estimate",
   "verification_eligible": false,
   "note": "Observation-driven estimates, excluded from truth scoring and training. Missing drivers remain gaps.",
-  "electron_fetch_status": "NOAA fetched 1945 valid points",
+  "electron_fetch_status": "NOAA fetch failed: JSONDecodeError: Expecting value: line 1 column 200271 (char 200270)",
   "driver_counts": {
     "kp": 247,
-    "bz": 30829,
-    "wind": 30417,
-    "electron": 3669
+    "bz": 31533,
+    "wind": 31117,
+    "electron": 3670
   },
   "estimated": [
     {
@@ -1590,6 +1590,43 @@
       "electron_fluence_24h": 158815429.12,
       "fluence_coverage": 1.0,
       "internal_model": "reference-GEO-dielectric-v1"
+    },
+    {
+      "time": "2026-09-28T15:00:00Z",
+      "data_kind": "estimate",
+      "model": "SWIFT-CHARGE-v0.2-3d7afd2ab7",
+      "source": "Observed environment -> reference charging model; NOT charging telemetry",
+      "kp": 0.67,
+      "bz_min_nt": -1.19,
+      "wind_kms": 333.86,
+      "internal_field_mvm": 0.10619,
+      "electron_flux_gt2mev": 3529.000732421875,
+      "electron_fluence_24h": 174490081.366,
+      "fluence_coverage": 1.0,
+      "internal_model": "reference-GEO-dielectric-v1"
+    },
+    {
+      "time": "2026-09-28T18:00:00Z",
+      "data_kind": "estimate",
+      "model": "SWIFT-CHARGE-v0.2-3d7afd2ab7",
+      "source": "Observed environment -> reference charging model; NOT charging telemetry",
+      "kp": 1.0,
+      "bz_min_nt": -1.64,
+      "wind_kms": 331.49,
+      "internal_field_mvm": 0.11775,
+      "electron_flux_gt2mev": 3969.695556640625,
+      "electron_fluence_24h": 188137991.144,
+      "fluence_coverage": 1.0,
+      "internal_model": "reference-GEO-dielectric-v1"
+    },
+    {
+      "time": "2026-09-28T21:00:00Z",
+      "data_kind": "estimate",
+      "model": "SWIFT-CHARGE-v0.2-3d7afd2ab7",
+      "source": "Observed environment -> reference charging model; NOT charging telemetry",
+      "kp": 1.0,
+      "bz_min_nt": -0.22,
+      "wind_kms": 338.54
     }
   ]
 }
