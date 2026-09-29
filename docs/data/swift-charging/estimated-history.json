@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-09-28T21:17:41Z",
+  "updated_at": "2026-09-29T01:05:28Z",
   "retention_days": 30,
   "data_kind": "estimate",
   "verification_eligible": false,
   "note": "Observation-driven estimates, excluded from truth scoring and training. Missing drivers remain gaps.",
-  "electron_fetch_status": "NOAA fetch failed: JSONDecodeError: Expecting value: line 1 column 200271 (char 200270)",
+  "electron_fetch_status": "NOAA fetched 1959 valid points",
   "driver_counts": {
     "kp": 247,
-    "bz": 31533,
-    "wind": 31117,
-    "electron": 3670
+    "bz": 31762,
+    "wind": 31345,
+    "electron": 3800
   },
   "estimated": [
     {
@@ -1626,7 +1626,26 @@
       "source": "Observed environment -> reference charging model; NOT charging telemetry",
       "kp": 1.0,
       "bz_min_nt": -0.22,
-      "wind_kms": 338.54
+      "wind_kms": 338.54,
+      "internal_field_mvm": 0.13223,
+      "electron_flux_gt2mev": 2110.6953125,
+      "electron_fluence_24h": 192186060.809,
+      "fluence_coverage": 1.0,
+      "internal_model": "reference-GEO-dielectric-v1"
+    },
+    {
+      "time": "2026-09-29T00:00:00Z",
+      "data_kind": "estimate",
+      "model": "SWIFT-CHARGE-v0.2-3d7afd2ab7",
+      "source": "Observed environment -> reference charging model; NOT charging telemetry",
+      "kp": 0.67,
+      "bz_min_nt": -2.04,
+      "wind_kms": 329.56,
+      "internal_field_mvm": 0.1355,
+      "electron_flux_gt2mev": 1592.027099609375,
+      "electron_fluence_24h": 191665512.561,
+      "fluence_coverage": 1.0,
+      "internal_model": "reference-GEO-dielectric-v1"
     }
   ]
 }
