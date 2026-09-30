@@ -1,6 +1,6 @@
 {
   "version": "SWIFT-Wind-AI-v0.7-adaptive-weights",
-  "updated_at": "2026-09-29T22:23:03Z",
+  "updated_at": "2026-09-30T05:40:57Z",
   "weights": {
     "recent": 0.5090909090909091,
     "rotation27": 0.35454545454545455,
@@ -23,20 +23,20 @@
     "bins": {
       "near": {
         "status": "rejected-no-out-of-sample-improvement",
-        "sample_count": 329,
-        "train_count": 263,
-        "validation_count": 66,
+        "sample_count": 353,
+        "train_count": 282,
+        "validation_count": 71,
         "reliability": 1.0,
-        "train_prior_mae_kms": 31.08,
-        "train_applied_mae_kms": 28.37,
-        "validation_prior_mae_kms": 34.94,
-        "validation_applied_mae_kms": 34.94,
+        "train_prior_mae_kms": 30.96,
+        "train_applied_mae_kms": 28.13,
+        "validation_prior_mae_kms": 31.18,
+        "validation_applied_mae_kms": 31.18,
         "validation_improvement_kms": 0.0,
         "fitted_weights": {
-          "recent": 0.72506,
+          "recent": 0.78761,
           "rotation27": 0.0,
           "hss_nonlinear": 0.0,
-          "wsa": 0.27494
+          "wsa": 0.21239
         },
         "applied_weights": {
           "recent": 0.50909,
@@ -48,16 +48,16 @@
         "max_cme_for_fit_kms": 25.0
       },
       "mid": {
-        "status": "adaptive",
-        "sample_count": 402,
-        "train_count": 322,
-        "validation_count": 80,
+        "status": "rejected-no-out-of-sample-improvement",
+        "sample_count": 455,
+        "train_count": 364,
+        "validation_count": 91,
         "reliability": 1.0,
-        "train_prior_mae_kms": 113.36,
-        "train_applied_mae_kms": 66.94,
-        "validation_prior_mae_kms": 122.49,
-        "validation_applied_mae_kms": 113.33,
-        "validation_improvement_kms": 9.16,
+        "train_prior_mae_kms": 114.74,
+        "train_applied_mae_kms": 71.84,
+        "validation_prior_mae_kms": 103.93,
+        "validation_applied_mae_kms": 103.93,
+        "validation_improvement_kms": 0.0,
         "fitted_weights": {
           "recent": 0.0,
           "rotation27": 0.0,
@@ -65,24 +65,45 @@
           "wsa": 1.0
         },
         "applied_weights": {
-          "recent": 0.0,
-          "rotation27": 0.0,
-          "hss_nonlinear": 0.0,
-          "wsa": 1.0
+          "recent": 0.50909,
+          "rotation27": 0.35455,
+          "hss_nonlinear": 0.04545,
+          "wsa": 0.09091
         },
         "fit_window_days": 45,
         "max_cme_for_fit_kms": 25.0
       },
       "far": {
-        "status": "fallback-prior",
-        "sample_count": 34,
-        "required": 48
+        "status": "adaptive",
+        "sample_count": 70,
+        "train_count": 56,
+        "validation_count": 14,
+        "reliability": 0.1146,
+        "train_prior_mae_kms": 177.5,
+        "train_applied_mae_kms": 170.23,
+        "validation_prior_mae_kms": 164.45,
+        "validation_applied_mae_kms": 157.47,
+        "validation_improvement_kms": 6.98,
+        "fitted_weights": {
+          "recent": 0.0,
+          "rotation27": 0.0,
+          "hss_nonlinear": 0.0,
+          "wsa": 1.0
+        },
+        "applied_weights": {
+          "recent": 0.45076,
+          "rotation27": 0.31392,
+          "hss_nonlinear": 0.04025,
+          "wsa": 0.19508
+        },
+        "fit_window_days": 45,
+        "max_cme_for_fit_kms": 25.0
       }
     }
   },
   "calibration": {
-    "gain": 1.07736,
-    "offset": -55.67
+    "gain": 1.05179,
+    "offset": -44.025
   },
   "limits": {
     "min_speed": 260.0,
@@ -100,15 +121,15 @@
   "rotation_shift_hours": 0,
   "training_points": 2239,
   "last_fit": {
-    "time": "2026-09-29T22:23:03Z",
+    "time": "2026-09-30T05:40:57Z",
     "fit_count": 221,
-    "gain_candidate": 1.05329,
-    "offset_candidate": -42.939,
-    "gain_applied": 1.07736,
-    "offset_applied": -55.67,
-    "mae": 24.33,
-    "bias": -3.09
+    "gain_candidate": 1.00431,
+    "offset_candidate": -22.4,
+    "gain_applied": 1.05179,
+    "offset_applied": -44.025,
+    "mae": 23.03,
+    "bias": -2.71
   },
   "rotation27_shift_hours": 0,
-  "cme_boost_sample_count": 46
+  "cme_boost_sample_count": 48
 }

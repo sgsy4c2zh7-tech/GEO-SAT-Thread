@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-09-29T22:23:03Z",
+  "updated_at": "2026-09-30T05:40:57Z",
   "model": "SWIFT CME Wind Boost Learner",
   "definition": "observed_delta_v = max(0, post_arrival_peak_speed - pre_arrival_median_speed)",
   "windows": {
     "pre_baseline": "arrival-12h to arrival-3h median",
     "post_peak": "arrival to arrival+18h max"
   },
-  "sample_count": 46,
+  "sample_count": 48,
   "global": {
-    "intercept": 88.1237,
-    "speed_geometry_slope": -0.059581,
+    "intercept": 88.8419,
+    "speed_geometry_slope": -0.060411,
     "formula": "delta_v = class_median*0.55 + max(0, intercept + slope*(speed-500)*geometry)*0.45"
   },
   "by_impact_class": {
@@ -1017,7 +1017,7 @@
       "post_peak_speed": 331.95,
       "observed_delta_v": 4.35,
       "pre_count": 703,
-      "post_count": 1669
+      "post_count": 1881
     },
     {
       "id": "2026-09-26T00:48:00-CME-001",
@@ -1039,7 +1039,7 @@
       "post_peak_speed": 331.95,
       "observed_delta_v": 6.88,
       "pre_count": 718,
-      "post_count": 1552
+      "post_count": 1880
     },
     {
       "id": "2026-09-26T02:24:00-CME-001",
@@ -1057,11 +1057,55 @@
       "longitude": -140.0,
       "latitude": 39.0,
       "angular_separation": 126.54,
-      "baseline_speed": 301.69,
-      "post_peak_speed": 295.77,
-      "observed_delta_v": 0.0,
+      "baseline_speed": 301.73,
+      "post_peak_speed": 366.93,
+      "observed_delta_v": 65.2,
       "pre_count": 1073,
-      "post_count": 173
+      "post_count": 1044
+    },
+    {
+      "id": "2026-09-27T07:00:00-CME-001",
+      "source": "DONKI",
+      "impact_class": "MISS",
+      "earth_candidate": false,
+      "confidence": 0.02,
+      "geometry_multiplier": 0.0,
+      "t0": "2026-09-27T07:00:00Z",
+      "arrival_time": "2026-09-29T20:42:58Z",
+      "transit_hours": 61.72,
+      "speed": 606.0,
+      "effective_speed": 151.5,
+      "half_angle": 28.0,
+      "longitude": 118.0,
+      "latitude": -30.0,
+      "angular_separation": 113.99,
+      "baseline_speed": 300.93,
+      "post_peak_speed": 366.93,
+      "observed_delta_v": 66.0,
+      "pre_count": 1036,
+      "post_count": 1007
+    },
+    {
+      "id": "2026-09-26T15:24:00-CME-001",
+      "source": "DONKI",
+      "impact_class": "MISS",
+      "earth_candidate": false,
+      "confidence": 0.02,
+      "geometry_multiplier": 0.0,
+      "t0": "2026-09-26T15:24:00Z",
+      "arrival_time": "2026-09-30T02:41:47Z",
+      "transit_hours": 83.3,
+      "speed": 449.0,
+      "effective_speed": 112.2,
+      "half_angle": 13.0,
+      "longitude": 0.0,
+      "latitude": 48.0,
+      "angular_separation": 48.0,
+      "baseline_speed": 289.07,
+      "post_peak_speed": 366.93,
+      "observed_delta_v": 77.86,
+      "pre_count": 803,
+      "post_count": 346
     }
   ]
 }
