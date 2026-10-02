@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-10-02T00:53:54Z",
-  "model": "SWIFT-RB-ELECTRON-v0.2-010be75060|SWIFT-CHARGE-v0.2-3d7afd2ab7",
+  "updated_at": "2026-10-02T09:55:25Z",
+  "model": "SWIFT-RB-ELECTRON-v0.2-8070cd10de|SWIFT-CHARGE-v0.2-3d7afd2ab7",
   "observation_rule": "Only docs/data/swift-charging/observed.json rows are verification truth; model outputs are never self-scored.",
   "nominal_lead_skill": {
     "surface": [
@@ -54,33 +54,33 @@
     "nominal_lead_skill": [
       {
         "nominal_lead_hours": 24,
-        "count": 146,
+        "count": 149,
         "status": "verified",
-        "mae_dex": 0.419,
-        "bias_dex": -0.3376,
-        "rmse_dex": 0.5327,
-        "hit_rate_factor2": 45.9,
-        "hit_rate_factor3": 63.0
+        "mae_dex": 0.4139,
+        "bias_dex": -0.3275,
+        "rmse_dex": 0.5279,
+        "hit_rate_factor2": 47.0,
+        "hit_rate_factor3": 63.8
       },
       {
         "nominal_lead_hours": 48,
-        "count": 135,
+        "count": 139,
         "status": "verified",
-        "mae_dex": 0.5666,
-        "bias_dex": -0.4823,
-        "rmse_dex": 0.7134,
-        "hit_rate_factor2": 35.6,
-        "hit_rate_factor3": 53.3
+        "mae_dex": 0.5595,
+        "bias_dex": -0.4627,
+        "rmse_dex": 0.7075,
+        "hit_rate_factor2": 36.7,
+        "hit_rate_factor3": 54.0
       },
       {
         "nominal_lead_hours": 72,
-        "count": 84,
+        "count": 86,
         "status": "verified",
-        "mae_dex": 0.6671,
-        "bias_dex": -0.649,
-        "rmse_dex": 0.8238,
-        "hit_rate_factor2": 34.5,
-        "hit_rate_factor3": 42.9
+        "mae_dex": 0.6538,
+        "bias_dex": -0.6379,
+        "rmse_dex": 0.8143,
+        "hit_rate_factor2": 36.0,
+        "hit_rate_factor3": 44.2
       }
     ],
     "lead_pairs": {
@@ -1398,6 +1398,33 @@
           "observed": 280.3747253417969,
           "error_dex": -0.03136,
           "ratio": 0.93033
+        },
+        {
+          "issued_at": "2026-10-01T00:38:04Z",
+          "target_time": "2026-10-02T03:38:04Z",
+          "lead_hours": 27,
+          "predicted": 246.1214,
+          "observed": 161.79310607910156,
+          "error_dex": 0.18219,
+          "ratio": 1.52121
+        },
+        {
+          "issued_at": "2026-10-01T10:17:43Z",
+          "target_time": "2026-10-02T07:17:43Z",
+          "lead_hours": 21,
+          "predicted": 315.0574,
+          "observed": 173.23196411132812,
+          "error_dex": 0.25976,
+          "ratio": 1.8187
+        },
+        {
+          "issued_at": "2026-10-01T10:17:43Z",
+          "target_time": "2026-10-02T10:17:43Z",
+          "lead_hours": 24,
+          "predicted": 293.896,
+          "observed": 258.65960693359375,
+          "error_dex": 0.05547,
+          "ratio": 1.13623
         }
       ],
       "48h": [
@@ -2612,9 +2639,45 @@
           "target_time": "2026-10-02T01:23:48Z",
           "lead_hours": 51,
           "predicted": 297.9273,
-          "observed": 130.62171936035156,
-          "error_dex": 0.35809,
-          "ratio": 2.28084
+          "observed": 137.73048400878906,
+          "error_dex": 0.33508,
+          "ratio": 2.16312
+        },
+        {
+          "issued_at": "2026-09-30T05:41:43Z",
+          "target_time": "2026-10-02T02:41:43Z",
+          "lead_hours": 45,
+          "predicted": 206.1009,
+          "observed": 25.731666564941406,
+          "error_dex": 0.90361,
+          "ratio": 8.00962
+        },
+        {
+          "issued_at": "2026-09-30T05:41:43Z",
+          "target_time": "2026-10-02T05:41:43Z",
+          "lead_hours": 48,
+          "predicted": 197.2653,
+          "observed": 172.76397705078125,
+          "error_dex": 0.0576,
+          "ratio": 1.14182
+        },
+        {
+          "issued_at": "2026-09-30T05:41:43Z",
+          "target_time": "2026-10-02T08:41:43Z",
+          "lead_hours": 51,
+          "predicted": 189.3104,
+          "observed": 333.8891296386719,
+          "error_dex": -0.24643,
+          "ratio": 0.56699
+        },
+        {
+          "issued_at": "2026-09-30T12:46:07Z",
+          "target_time": "2026-10-02T09:46:07Z",
+          "lead_hours": 45,
+          "predicted": 324.3876,
+          "observed": 258.65960693359375,
+          "error_dex": 0.09834,
+          "ratio": 1.25411
         }
       ],
       "72h": [
@@ -3370,9 +3433,27 @@
           "target_time": "2026-10-02T01:05:28Z",
           "lead_hours": 72,
           "predicted": 179.664,
-          "observed": 130.62171936035156,
-          "error_dex": 0.13845,
-          "ratio": 1.37545
+          "observed": 156.42202758789062,
+          "error_dex": 0.06016,
+          "ratio": 1.14859
+        },
+        {
+          "issued_at": "2026-09-29T09:57:52Z",
+          "target_time": "2026-10-02T06:57:52Z",
+          "lead_hours": 69,
+          "predicted": 199.2761,
+          "observed": 273.0142822265625,
+          "error_dex": -0.13673,
+          "ratio": 0.72991
+        },
+        {
+          "issued_at": "2026-09-29T09:57:52Z",
+          "target_time": "2026-10-02T09:57:52Z",
+          "lead_hours": 72,
+          "predicted": 191.1227,
+          "observed": 258.65960693359375,
+          "error_dex": -0.13142,
+          "ratio": 0.7389
         }
       ]
     }
