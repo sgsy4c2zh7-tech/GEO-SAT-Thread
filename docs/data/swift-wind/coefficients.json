@@ -1,6 +1,6 @@
 {
   "version": "SWIFT-Wind-AI-v0.7-adaptive-weights",
-  "updated_at": "2026-10-03T05:26:00Z",
+  "updated_at": "2026-10-03T11:48:11Z",
   "weights": {
     "recent": 0.5090909090909091,
     "rotation27": 0.35454545454545455,
@@ -74,16 +74,16 @@
         "max_cme_for_fit_kms": 25.0
       },
       "far": {
-        "status": "adaptive",
-        "sample_count": 131,
-        "train_count": 105,
-        "validation_count": 26,
-        "reliability": 0.4323,
-        "train_prior_mae_kms": 173.62,
-        "train_applied_mae_kms": 146.92,
-        "validation_prior_mae_kms": 116.7,
-        "validation_applied_mae_kms": 111.5,
-        "validation_improvement_kms": 5.2,
+        "status": "rejected-no-out-of-sample-improvement",
+        "sample_count": 137,
+        "train_count": 110,
+        "validation_count": 27,
+        "reliability": 0.4635,
+        "train_prior_mae_kms": 173.33,
+        "train_applied_mae_kms": 144.72,
+        "validation_prior_mae_kms": 93.53,
+        "validation_applied_mae_kms": 93.53,
+        "validation_improvement_kms": 0.0,
         "fitted_weights": {
           "recent": 0.0,
           "rotation27": 0.0,
@@ -91,10 +91,10 @@
           "wsa": 1.0
         },
         "applied_weights": {
-          "recent": 0.28902,
-          "rotation27": 0.20128,
-          "hss_nonlinear": 0.0258,
-          "wsa": 0.4839
+          "recent": 0.50909,
+          "rotation27": 0.35455,
+          "hss_nonlinear": 0.04545,
+          "wsa": 0.09091
         },
         "fit_window_days": 45,
         "max_cme_for_fit_kms": 25.0
@@ -102,8 +102,8 @@
     }
   },
   "calibration": {
-    "gain": 0.82011,
-    "offset": 20.605
+    "gain": 0.80607,
+    "offset": 20.78
   },
   "limits": {
     "min_speed": 260.0,
@@ -121,15 +121,15 @@
   "rotation_shift_hours": 0,
   "training_points": 2239,
   "last_fit": {
-    "time": "2026-10-03T05:26:00Z",
-    "fit_count": 223,
+    "time": "2026-10-03T11:48:11Z",
+    "fit_count": 222,
     "gain_candidate": 0.78,
-    "offset_candidate": 25.477,
-    "gain_applied": 0.82011,
-    "offset_applied": 20.605,
-    "mae": 59.05,
-    "bias": 11.26
+    "offset_candidate": 21.104,
+    "gain_applied": 0.80607,
+    "offset_applied": 20.78,
+    "mae": 60.36,
+    "bias": 10.13
   },
   "rotation27_shift_hours": 0,
-  "cme_boost_sample_count": 68
+  "cme_boost_sample_count": 69
 }
