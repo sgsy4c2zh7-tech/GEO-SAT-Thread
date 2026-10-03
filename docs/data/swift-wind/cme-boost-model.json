@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-03T16:28:47Z",
+  "updated_at": "2026-10-03T21:25:19Z",
   "model": "SWIFT CME Wind Boost Learner",
   "definition": "observed_delta_v = max(0, post_arrival_peak_speed - pre_arrival_median_speed)",
   "windows": {
@@ -8,8 +8,8 @@
   },
   "sample_count": 69,
   "global": {
-    "intercept": 79.7555,
-    "speed_geometry_slope": -0.051669,
+    "intercept": 79.8908,
+    "speed_geometry_slope": -0.051778,
     "formula": "delta_v = class_median*0.55 + max(0, intercept + slope*(speed-500)*geometry)*0.45"
   },
   "by_impact_class": {
@@ -34,7 +34,7 @@
     "FLANK-HIT": {
       "count": 4,
       "median_delta_v": 32.43,
-      "mean_delta_v": 50.63,
+      "mean_delta_v": 51.88,
       "default_used": false
     },
     "CACTUS-WIDE-HALO": {
@@ -1541,11 +1541,11 @@
       "longitude": 0.0,
       "latitude": 46.0,
       "angular_separation": 46.0,
-      "baseline_speed": 282.5,
-      "post_peak_speed": 325.28,
-      "observed_delta_v": 42.78,
+      "baseline_speed": 282.57,
+      "post_peak_speed": 329.56,
+      "observed_delta_v": 46.99,
       "pre_count": 831,
-      "post_count": 1609
+      "post_count": 1908
     },
     {
       "id": "2026-09-28T14:36:00-CME-001",
@@ -1564,10 +1564,10 @@
       "latitude": 14.0,
       "angular_separation": 41.99,
       "baseline_speed": 295.25,
-      "post_peak_speed": 311.05,
-      "observed_delta_v": 15.81,
+      "post_peak_speed": 316.05,
+      "observed_delta_v": 20.81,
       "pre_count": 1078,
-      "post_count": 833
+      "post_count": 1175
     }
   ]
 }
