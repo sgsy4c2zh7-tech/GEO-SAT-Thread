@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-04T12:32:38Z",
+  "updated_at": "2026-10-04T18:42:29Z",
   "retention_days": 730,
   "history": [
     {
@@ -5726,6 +5726,91 @@
         "hit_rate_3nt": 58.6,
         "brier_score": 0.2147,
         "direction_hit_rate_threshold60": 38.8
+      },
+      "kp_model": "SWIFT-Kp-AI-v0.9-adaptive-residual-CH",
+      "bz_model": "SWIFT-Bz-v2.1-lead-calibration",
+      "cme_all": {
+        "count": 49,
+        "mae_hours": 7.81,
+        "median_ae_hours": 9.3,
+        "bias_hours": 0.79,
+        "within_6h": 28.6,
+        "within_12h": 100.0
+      },
+      "dbm_gamma": {
+        "gamma_km_inv": 3e-08,
+        "count": 0,
+        "status": "learning",
+        "method": "default DBM gamma until >=5 shock-proxy events"
+      }
+    },
+    {
+      "time": "2026-10-04T18:42:29Z",
+      "swift_wind_30d": {
+        "count": 9371,
+        "mae": 80.91,
+        "median_ae": 59.36,
+        "rmse": 108.16,
+        "bias": 26.78,
+        "p90_ae": 181.38,
+        "hit_rate_50": 42.4,
+        "hit_rate_75": 60.7,
+        "hit_rate_100": 71.5,
+        "pearson_r": 0.194
+      },
+      "enlil_wind_30d": {
+        "count": 168198,
+        "mae": 60.97,
+        "median_ae": 53.47,
+        "rmse": 74.78,
+        "bias": 28.53,
+        "p90_ae": 117.97,
+        "hit_rate_50": 46.9,
+        "hit_rate_75": 67.3,
+        "hit_rate_100": 81.7,
+        "pearson_r": 0.435
+      },
+      "kp_current_30d": {
+        "count": 1668,
+        "mae": 1.04,
+        "median_ae": 1.0,
+        "rmse": 1.325,
+        "bias": -0.071,
+        "p90_ae": 2.33,
+        "hit_rate_067": 47.4,
+        "hit_rate_1": 64.8,
+        "pearson_r": 0.047
+      },
+      "bz_current_30d": {
+        "count": 2400,
+        "bz_min_mae": 3.522,
+        "bz_min_bias": -0.478,
+        "bz_min_rmse": 4.581,
+        "hit_rate_2nt": 36.0,
+        "hit_rate_3nt": 52.1,
+        "brier_score": 0.161,
+        "direction_hit_rate_threshold60": 53.9
+      },
+      "kp_all_30d": {
+        "count": 5126,
+        "mae": 1.631,
+        "median_ae": 1.34,
+        "rmse": 1.991,
+        "bias": 1.072,
+        "p90_ae": 3.33,
+        "hit_rate_067": 28.2,
+        "hit_rate_1": 40.5,
+        "pearson_r": 0.125
+      },
+      "bz_all_30d": {
+        "count": 4326,
+        "bz_min_mae": 3.18,
+        "bz_min_bias": -1.03,
+        "bz_min_rmse": 4.139,
+        "hit_rate_2nt": 41.8,
+        "hit_rate_3nt": 58.1,
+        "brier_score": 0.2143,
+        "direction_hit_rate_threshold60": 39.2
       },
       "kp_model": "SWIFT-Kp-AI-v0.9-adaptive-residual-CH",
       "bz_model": "SWIFT-Bz-v2.1-lead-calibration",
