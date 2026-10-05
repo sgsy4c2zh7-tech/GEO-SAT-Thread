@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-10-04T18:41:41Z",
-  "model": "SWIFT-RB-ELECTRON-v0.2-019051b806|SWIFT-CHARGE-v0.2-3d7afd2ab7",
+  "updated_at": "2026-10-05T00:00:53Z",
+  "model": "SWIFT-RB-ELECTRON-v0.2-207e54c579|SWIFT-CHARGE-v0.2-3d7afd2ab7",
   "observation_rule": "Only docs/data/swift-charging/observed.json rows are verification truth; model outputs are never self-scored.",
   "nominal_lead_skill": {
     "surface": [
@@ -54,33 +54,33 @@
     "nominal_lead_skill": [
       {
         "nominal_lead_hours": 24,
-        "count": 175,
+        "count": 177,
         "status": "verified",
-        "mae_dex": 0.3952,
-        "bias_dex": -0.2624,
-        "rmse_dex": 0.5171,
-        "hit_rate_factor2": 50.3,
-        "hit_rate_factor3": 66.9
+        "mae_dex": 0.3918,
+        "bias_dex": -0.2605,
+        "rmse_dex": 0.5144,
+        "hit_rate_factor2": 50.8,
+        "hit_rate_factor3": 67.2
       },
       {
         "nominal_lead_hours": 48,
-        "count": 162,
+        "count": 164,
         "status": "verified",
-        "mae_dex": 0.5053,
-        "bias_dex": -0.4064,
-        "rmse_dex": 0.6612,
-        "hit_rate_factor2": 42.6,
-        "hit_rate_factor3": 59.9
+        "mae_dex": 0.5067,
+        "bias_dex": -0.3961,
+        "rmse_dex": 0.6602,
+        "hit_rate_factor2": 42.1,
+        "hit_rate_factor3": 59.8
       },
       {
         "nominal_lead_hours": 72,
-        "count": 102,
+        "count": 104,
         "status": "verified",
-        "mae_dex": 0.5979,
-        "bias_dex": -0.5465,
-        "rmse_dex": 0.7592,
-        "hit_rate_factor2": 37.3,
-        "hit_rate_factor3": 52.0
+        "mae_dex": 0.5904,
+        "bias_dex": -0.5353,
+        "rmse_dex": 0.7525,
+        "hit_rate_factor2": 38.5,
+        "hit_rate_factor3": 52.9
       }
     ],
     "lead_pairs": {
@@ -1647,9 +1647,9 @@
           "target_time": "2026-10-04T19:29:47Z",
           "lead_hours": 27,
           "predicted": 213.4652,
-          "observed": 149.64254760742188,
-          "error_dex": 0.15427,
-          "ratio": 1.4265
+          "observed": 154.57672119140625,
+          "error_dex": 0.14018,
+          "ratio": 1.38097
         },
         {
           "issued_at": "2026-10-03T21:26:41Z",
@@ -1659,6 +1659,24 @@
           "observed": 74.8777847290039,
           "error_dex": 0.19346,
           "ratio": 1.5612
+        },
+        {
+          "issued_at": "2026-10-03T21:26:41Z",
+          "target_time": "2026-10-04T21:26:41Z",
+          "lead_hours": 24,
+          "predicted": 115.7987,
+          "observed": 113.05115509033203,
+          "error_dex": 0.01043,
+          "ratio": 1.0243
+        },
+        {
+          "issued_at": "2026-10-03T21:26:41Z",
+          "target_time": "2026-10-05T00:26:41Z",
+          "lead_hours": 27,
+          "predicted": 114.7742,
+          "observed": 176.13633728027344,
+          "error_dex": -0.186,
+          "ratio": 0.65162
         }
       ],
       "48h": [
@@ -3112,13 +3130,31 @@
           "ratio": 1.50498
         },
         {
+          "issued_at": "2026-10-02T17:56:56Z",
+          "target_time": "2026-10-04T20:56:56Z",
+          "lead_hours": 51,
+          "predicted": 189.3894,
+          "observed": 65.62657928466797,
+          "error_dex": 0.46028,
+          "ratio": 2.88586
+        },
+        {
           "issued_at": "2026-10-02T22:21:15Z",
           "target_time": "2026-10-04T19:21:15Z",
           "lead_hours": 45,
           "predicted": 168.5544,
-          "observed": 149.64254760742188,
-          "error_dex": 0.05169,
-          "ratio": 1.12638
+          "observed": 256.677001953125,
+          "error_dex": -0.18265,
+          "ratio": 0.65668
+        },
+        {
+          "issued_at": "2026-10-02T22:21:15Z",
+          "target_time": "2026-10-04T22:21:15Z",
+          "lead_hours": 48,
+          "predicted": 163.3062,
+          "observed": 36.58982849121094,
+          "error_dex": 0.64964,
+          "ratio": 4.46316
         }
       ],
       "72h": [
@@ -4039,6 +4075,24 @@
           "observed": 155.8788604736328,
           "error_dex": 0.06022,
           "ratio": 1.14873
+        },
+        {
+          "issued_at": "2026-10-02T00:53:54Z",
+          "target_time": "2026-10-04T21:53:54Z",
+          "lead_hours": 69,
+          "predicted": 119.5953,
+          "observed": 68.48326110839844,
+          "error_dex": 0.24213,
+          "ratio": 1.74634
+        },
+        {
+          "issued_at": "2026-10-02T00:53:54Z",
+          "target_time": "2026-10-05T00:53:54Z",
+          "lead_hours": 72,
+          "predicted": 118.3057,
+          "observed": 176.13633728027344,
+          "error_dex": -0.17284,
+          "ratio": 0.67167
         }
       ]
     }
