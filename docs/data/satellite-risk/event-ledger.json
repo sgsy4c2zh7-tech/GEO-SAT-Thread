@@ -1,7 +1,143 @@
 {
   "schema_version": "SWIFT-GEO-SAT-EVENT-LEDGER-v0.4",
-  "updated_at": "2026-10-12T06:31:28.569790Z",
+  "updated_at": "2026-10-12T16:14:36.541458Z",
   "events": [
+    {
+      "issued_at": "2026-10-12T13:00:00Z",
+      "title": "Product Anomaly/Outage: Correction: GOES-18, 19 - GOES-18, 19 products delivered to PDA Issued: Oct 12, 2026 1300Z",
+      "satellites": [
+        "GOES-18"
+      ],
+      "scope": "product/data",
+      "nature": "anomaly/outage",
+      "issue_category": "PRODUCT_DATA",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": true,
+        "metrics": {
+          "window_start": "2026-10-09T13:00:00Z",
+          "window_end": "2026-10-12T13:00:00Z",
+          "max_wind_kms": 904.2,
+          "max_kp": 7.0,
+          "min_bz_nt": -29.83,
+          "n_wind": 7448,
+          "n_kp": 22,
+          "n_bz": 7575
+        },
+        "flags": {
+          "wind_ge_500": true,
+          "kp_ge_5": true,
+          "bz_le_minus5": true
+        },
+        "association_score_0_100": 94.2,
+        "interpretation": "Descriptive 72 h pre-event environment only; does not establish that space weather caused the anomaly."
+      },
+      "space_weather_windows": {
+        "covered": true,
+        "at_event": {
+          "kp": null,
+          "bz_nt": null,
+          "wind_kms": null
+        },
+        "windows": {
+          "6": {
+            "max_wind_kms": 608.65,
+            "max_kp": null,
+            "min_bz_nt": -1.12,
+            "n_wind": 469,
+            "n_kp": 0,
+            "n_bz": 475
+          },
+          "24": {
+            "max_wind_kms": 614.65,
+            "max_kp": 3.33,
+            "min_bz_nt": -4.35,
+            "n_wind": 2341,
+            "n_kp": 6,
+            "n_bz": 2367
+          },
+          "72": {
+            "max_wind_kms": 904.2,
+            "max_kp": 7.0,
+            "min_bz_nt": -29.83,
+            "n_wind": 7448,
+            "n_kp": 22,
+            "n_bz": 7575
+          }
+        },
+        "interpretation": "Descriptive co-occurrence only; causal attribution is not automatic."
+      }
+    },
+    {
+      "issued_at": "2026-10-12T11:47:00Z",
+      "title": "Product Anomaly/Outage: GOES-18, 19 - products delivered to AWIPS, GRB, PDA, SWPC -Issued: Oct 12, 2026 1147Z",
+      "satellites": [
+        "GOES-18"
+      ],
+      "scope": "product/data",
+      "nature": "anomaly/outage",
+      "issue_category": "PRODUCT_DATA",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": true,
+        "metrics": {
+          "window_start": "2026-10-09T11:47:00Z",
+          "window_end": "2026-10-12T11:47:00Z",
+          "max_wind_kms": 904.2,
+          "max_kp": 7.0,
+          "min_bz_nt": -29.83,
+          "n_wind": 7593,
+          "n_kp": 23,
+          "n_bz": 7721
+        },
+        "flags": {
+          "wind_ge_500": true,
+          "kp_ge_5": true,
+          "bz_le_minus5": true
+        },
+        "association_score_0_100": 94.2,
+        "interpretation": "Descriptive 72 h pre-event environment only; does not establish that space weather caused the anomaly."
+      },
+      "space_weather_windows": {
+        "covered": true,
+        "at_event": {
+          "kp": null,
+          "bz_nt": 1.66,
+          "wind_kms": 469.76
+        },
+        "windows": {
+          "6": {
+            "max_wind_kms": 608.65,
+            "max_kp": 3.33,
+            "min_bz_nt": -3.67,
+            "n_wind": 615,
+            "n_kp": 1,
+            "n_bz": 621
+          },
+          "24": {
+            "max_wind_kms": 618.94,
+            "max_kp": 3.33,
+            "min_bz_nt": -4.35,
+            "n_wind": 2484,
+            "n_kp": 7,
+            "n_bz": 2513
+          },
+          "72": {
+            "max_wind_kms": 904.2,
+            "max_kp": 7.0,
+            "min_bz_nt": -29.83,
+            "n_wind": 7593,
+            "n_kp": 23,
+            "n_bz": 7721
+          }
+        },
+        "interpretation": "Descriptive co-occurrence only; causal attribution is not automatic."
+      }
+    },
     {
       "issued_at": "2026-09-26T01:03:00Z",
       "title": "Product Outage/Anomaly: GOES-18, GOES-19 All Products and all scenes delivered to GRB - Issued September 26, 2026 0103Z",
@@ -9706,6 +9842,48 @@
       "satellites": [
         "GOES-18",
         "GOES-19"
+      ],
+      "scope": "product/data",
+      "nature": "anomaly/outage",
+      "issue_category": "PRODUCT_DATA",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      },
+      "space_weather_windows": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      }
+    },
+    {
+      "issued_at": null,
+      "title": "Product Anomaly/Outage: Correction: GOES-18, 19 - GOES-18, 19",
+      "satellites": [
+        "GOES-18"
+      ],
+      "scope": "product/data",
+      "nature": "anomaly/outage",
+      "issue_category": "PRODUCT_DATA",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      },
+      "space_weather_windows": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      }
+    },
+    {
+      "issued_at": null,
+      "title": "Product Anomaly/Outage: GOES-18, 19 - products delivered to AWIPS,",
+      "satellites": [
+        "GOES-18"
       ],
       "scope": "product/data",
       "nature": "anomaly/outage",
