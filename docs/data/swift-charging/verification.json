@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-10-18T20:55:07Z",
-  "model": "SWIFT-RB-ELECTRON-v0.2-64ee871d8a|SWIFT-CHARGE-v0.2-3d7afd2ab7",
+  "updated_at": "2026-10-19T04:54:23Z",
+  "model": "SWIFT-RB-ELECTRON-v0.2-cd089e05ce|SWIFT-CHARGE-v0.2-3d7afd2ab7",
   "observation_rule": "Only docs/data/swift-charging/observed.json rows are verification truth; model outputs are never self-scored.",
   "nominal_lead_skill": {
     "surface": [
@@ -54,31 +54,31 @@
     "nominal_lead_skill": [
       {
         "nominal_lead_hours": 24,
-        "count": 292,
+        "count": 296,
         "status": "verified",
-        "mae_dex": 0.6652,
-        "bias_dex": -0.0802,
-        "rmse_dex": 0.8921,
-        "hit_rate_factor2": 34.2,
-        "hit_rate_factor3": 46.9
+        "mae_dex": 0.6728,
+        "bias_dex": -0.0956,
+        "rmse_dex": 0.8989,
+        "hit_rate_factor2": 33.8,
+        "hit_rate_factor3": 46.3
       },
       {
         "nominal_lead_hours": 48,
-        "count": 288,
+        "count": 290,
         "status": "verified",
-        "mae_dex": 0.7227,
-        "bias_dex": -0.2819,
-        "rmse_dex": 0.9244,
-        "hit_rate_factor2": 30.2,
-        "hit_rate_factor3": 44.4
+        "mae_dex": 0.7215,
+        "bias_dex": -0.2837,
+        "rmse_dex": 0.9224,
+        "hit_rate_factor2": 30.0,
+        "hit_rate_factor3": 44.5
       },
       {
         "nominal_lead_hours": 72,
         "count": 192,
         "status": "verified",
-        "mae_dex": 0.8154,
-        "bias_dex": -0.6209,
-        "rmse_dex": 1.0277,
+        "mae_dex": 0.8157,
+        "bias_dex": -0.6212,
+        "rmse_dex": 1.0278,
         "hit_rate_factor2": 28.1,
         "hit_rate_factor3": 39.1
       }
@@ -2712,6 +2712,42 @@
           "observed": 169.48545837402344,
           "error_dex": -0.20266,
           "ratio": 0.62711
+        },
+        {
+          "issued_at": "2026-10-17T23:14:06Z",
+          "target_time": "2026-10-18T23:14:06Z",
+          "lead_hours": 24,
+          "predicted": 12.2561,
+          "observed": 171.7068328857422,
+          "error_dex": -1.14644,
+          "ratio": 0.07138
+        },
+        {
+          "issued_at": "2026-10-17T23:14:06Z",
+          "target_time": "2026-10-19T02:14:06Z",
+          "lead_hours": 27,
+          "predicted": 5.1355,
+          "observed": 254.37109375,
+          "error_dex": -1.69489,
+          "ratio": 0.02019
+        },
+        {
+          "issued_at": "2026-10-18T04:45:27Z",
+          "target_time": "2026-10-19T01:45:27Z",
+          "lead_hours": 21,
+          "predicted": 68.5664,
+          "observed": 217.6450958251953,
+          "error_dex": -0.50164,
+          "ratio": 0.31504
+        },
+        {
+          "issued_at": "2026-10-18T04:45:27Z",
+          "target_time": "2026-10-19T04:45:27Z",
+          "lead_hours": 24,
+          "predicted": 8.9271,
+          "observed": 309.43316650390625,
+          "error_dex": -1.53986,
+          "ratio": 0.02885
         }
       ],
       "48h": [
@@ -5306,6 +5342,24 @@
           "observed": 233.09910583496094,
           "error_dex": -2.36754,
           "ratio": 0.00429
+        },
+        {
+          "issued_at": "2026-10-17T04:39:14Z",
+          "target_time": "2026-10-19T01:39:14Z",
+          "lead_hours": 45,
+          "predicted": 126.3542,
+          "observed": 358.3242492675781,
+          "error_dex": -0.45269,
+          "ratio": 0.35263
+        },
+        {
+          "issued_at": "2026-10-17T04:39:14Z",
+          "target_time": "2026-10-19T04:39:14Z",
+          "lead_hours": 48,
+          "predicted": 83.3244,
+          "observed": 360.6736755371094,
+          "error_dex": -0.63634,
+          "ratio": 0.23102
         }
       ],
       "72h": [
@@ -7033,9 +7087,9 @@
           "target_time": "2026-10-18T21:32:51Z",
           "lead_hours": 72,
           "predicted": 159.1422,
-          "observed": 199.8208770751953,
-          "error_dex": -0.09886,
-          "ratio": 0.79642
+          "observed": 226.44566345214844,
+          "error_dex": -0.15318,
+          "ratio": 0.70278
         }
       ]
     }
