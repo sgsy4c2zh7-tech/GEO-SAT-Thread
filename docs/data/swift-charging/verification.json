@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-10-21T00:00:38Z",
-  "model": "SWIFT-RB-ELECTRON-v0.2-cf41f8e598|SWIFT-CHARGE-v0.2-3d7afd2ab7",
+  "updated_at": "2026-10-21T05:01:27Z",
+  "model": "SWIFT-RB-ELECTRON-v0.2-7b5cb5bb95|SWIFT-CHARGE-v0.2-3d7afd2ab7",
   "observation_rule": "Only docs/data/swift-charging/observed.json rows are verification truth; model outputs are never self-scored.",
   "nominal_lead_skill": {
     "surface": [
@@ -54,33 +54,33 @@
     "nominal_lead_skill": [
       {
         "nominal_lead_hours": 24,
-        "count": 308,
+        "count": 309,
         "status": "verified",
-        "mae_dex": 0.6706,
-        "bias_dex": -0.1146,
-        "rmse_dex": 0.8942,
-        "hit_rate_factor2": 33.4,
-        "hit_rate_factor3": 46.4
+        "mae_dex": 0.67,
+        "bias_dex": -0.1158,
+        "rmse_dex": 0.8935,
+        "hit_rate_factor2": 33.7,
+        "hit_rate_factor3": 46.3
       },
       {
         "nominal_lead_hours": 48,
-        "count": 300,
+        "count": 302,
         "status": "verified",
-        "mae_dex": 0.7175,
-        "bias_dex": -0.2943,
-        "rmse_dex": 0.9171,
-        "hit_rate_factor2": 30.3,
+        "mae_dex": 0.7156,
+        "bias_dex": -0.2952,
+        "rmse_dex": 0.9145,
+        "hit_rate_factor2": 30.1,
         "hit_rate_factor3": 45.0
       },
       {
         "nominal_lead_hours": 72,
-        "count": 196,
+        "count": 198,
         "status": "verified",
-        "mae_dex": 0.8028,
-        "bias_dex": -0.61,
-        "rmse_dex": 1.0177,
-        "hit_rate_factor2": 29.1,
-        "hit_rate_factor3": 40.3
+        "mae_dex": 0.7981,
+        "bias_dex": -0.6005,
+        "rmse_dex": 1.0132,
+        "hit_rate_factor2": 29.3,
+        "hit_rate_factor3": 40.4
       }
     ],
     "lead_pairs": {
@@ -2853,9 +2853,18 @@
           "target_time": "2026-10-21T00:28:30Z",
           "lead_hours": 24,
           "predicted": 107.9324,
-          "observed": 274.89617919921875,
-          "error_dex": -0.40602,
-          "ratio": 0.39263
+          "observed": 135.78477478027344,
+          "error_dex": -0.0997,
+          "ratio": 0.79488
+        },
+        {
+          "issued_at": "2026-10-20T00:28:30Z",
+          "target_time": "2026-10-21T03:28:30Z",
+          "lead_hours": 27,
+          "predicted": 26.9363,
+          "observed": 163.07254028320312,
+          "error_dex": -0.78204,
+          "ratio": 0.16518
         }
       ],
       "48h": [
@@ -5555,9 +5564,27 @@
           "target_time": "2026-10-20T23:55:07Z",
           "lead_hours": 51,
           "predicted": 11.4659,
-          "observed": 274.89617919921875,
-          "error_dex": -1.37976,
-          "ratio": 0.04171
+          "observed": 232.2492218017578,
+          "error_dex": -1.30655,
+          "ratio": 0.04937
+        },
+        {
+          "issued_at": "2026-10-19T04:54:23Z",
+          "target_time": "2026-10-21T01:54:23Z",
+          "lead_hours": 45,
+          "predicted": 39.9392,
+          "observed": 144.12852478027344,
+          "error_dex": -0.55735,
+          "ratio": 0.27711
+        },
+        {
+          "issued_at": "2026-10-19T04:54:23Z",
+          "target_time": "2026-10-21T04:54:23Z",
+          "lead_hours": 48,
+          "predicted": 83.1644,
+          "observed": 197.54237365722656,
+          "error_dex": -0.37572,
+          "ratio": 0.421
         }
       ],
       "72h": [
@@ -7324,6 +7351,24 @@
           "observed": 172.36788940429688,
           "error_dex": 0.21913,
           "ratio": 1.65627
+        },
+        {
+          "issued_at": "2026-10-18T04:45:27Z",
+          "target_time": "2026-10-21T01:45:27Z",
+          "lead_hours": 69,
+          "predicted": 149.0982,
+          "observed": 100.08512878417969,
+          "error_dex": 0.1731,
+          "ratio": 1.48971
+        },
+        {
+          "issued_at": "2026-10-18T04:45:27Z",
+          "target_time": "2026-10-21T04:45:27Z",
+          "lead_hours": 72,
+          "predicted": 276.3284,
+          "observed": 87.09459686279297,
+          "error_dex": 0.50143,
+          "ratio": 3.17274
         }
       ]
     }
