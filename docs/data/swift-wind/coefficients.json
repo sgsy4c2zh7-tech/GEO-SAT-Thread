@@ -1,6 +1,6 @@
 {
   "version": "SWIFT-Wind-AI-v0.7-adaptive-weights",
-  "updated_at": "2026-10-23T11:48:15Z",
+  "updated_at": "2026-10-24T16:03:23Z",
   "weights": {
     "recent": 0.5090909090909091,
     "rotation27": 0.35454545454545455,
@@ -23,20 +23,20 @@
     "bins": {
       "near": {
         "status": "rejected-no-out-of-sample-improvement",
-        "sample_count": 1500,
-        "train_count": 1200,
-        "validation_count": 300,
+        "sample_count": 1521,
+        "train_count": 1217,
+        "validation_count": 304,
         "reliability": 1.0,
-        "train_prior_mae_kms": 48.29,
-        "train_applied_mae_kms": 46.81,
-        "validation_prior_mae_kms": 23.49,
-        "validation_applied_mae_kms": 23.49,
+        "train_prior_mae_kms": 47.82,
+        "train_applied_mae_kms": 46.39,
+        "validation_prior_mae_kms": 24.1,
+        "validation_applied_mae_kms": 24.1,
         "validation_improvement_kms": 0.0,
         "fitted_weights": {
-          "recent": 0.6301,
+          "recent": 0.62528,
           "rotation27": 0.0,
-          "hss_nonlinear": 0.09425,
-          "wsa": 0.27565
+          "hss_nonlinear": 0.09755,
+          "wsa": 0.27717
         },
         "applied_weights": {
           "recent": 0.50909,
@@ -49,52 +49,52 @@
       },
       "mid": {
         "status": "adaptive",
-        "sample_count": 2908,
-        "train_count": 2326,
-        "validation_count": 582,
+        "sample_count": 2984,
+        "train_count": 2387,
+        "validation_count": 597,
         "reliability": 1.0,
-        "train_prior_mae_kms": 108.99,
-        "train_applied_mae_kms": 88.3,
-        "validation_prior_mae_kms": 43.5,
-        "validation_applied_mae_kms": 39.87,
-        "validation_improvement_kms": 3.63,
+        "train_prior_mae_kms": 106.88,
+        "train_applied_mae_kms": 86.78,
+        "validation_prior_mae_kms": 42.99,
+        "validation_applied_mae_kms": 37.49,
+        "validation_improvement_kms": 5.5,
         "fitted_weights": {
-          "recent": 0.18986,
+          "recent": 0.19984,
           "rotation27": 0.0,
           "hss_nonlinear": 0.0,
-          "wsa": 0.81014
+          "wsa": 0.80016
         },
         "applied_weights": {
-          "recent": 0.18986,
+          "recent": 0.19984,
           "rotation27": 0.0,
           "hss_nonlinear": 0.0,
-          "wsa": 0.81014
+          "wsa": 0.80016
         },
         "fit_window_days": 45,
         "max_cme_for_fit_kms": 25.0
       },
       "far": {
-        "status": "rejected-no-out-of-sample-improvement",
-        "sample_count": 2632,
-        "train_count": 2106,
-        "validation_count": 526,
+        "status": "adaptive",
+        "sample_count": 2729,
+        "train_count": 2183,
+        "validation_count": 546,
         "reliability": 1.0,
-        "train_prior_mae_kms": 112.22,
-        "train_applied_mae_kms": 87.54,
-        "validation_prior_mae_kms": 40.21,
-        "validation_applied_mae_kms": 40.21,
-        "validation_improvement_kms": 0.0,
+        "train_prior_mae_kms": 109.12,
+        "train_applied_mae_kms": 87.27,
+        "validation_prior_mae_kms": 38.34,
+        "validation_applied_mae_kms": 29.23,
+        "validation_improvement_kms": 9.12,
         "fitted_weights": {
-          "recent": 0.0,
+          "recent": 0.03169,
           "rotation27": 0.0,
-          "hss_nonlinear": 0.19864,
-          "wsa": 0.80136
+          "hss_nonlinear": 0.17652,
+          "wsa": 0.79179
         },
         "applied_weights": {
-          "recent": 0.50909,
-          "rotation27": 0.35455,
-          "hss_nonlinear": 0.04545,
-          "wsa": 0.09091
+          "recent": 0.03169,
+          "rotation27": 0.0,
+          "hss_nonlinear": 0.17652,
+          "wsa": 0.79179
         },
         "fit_window_days": 45,
         "max_cme_for_fit_kms": 25.0
@@ -102,8 +102,8 @@
     }
   },
   "calibration": {
-    "gain": 1.02506,
-    "offset": 14.188
+    "gain": 0.93929,
+    "offset": 44.222
   },
   "limits": {
     "min_speed": 260.0,
@@ -121,15 +121,15 @@
   "rotation_shift_hours": 0,
   "training_points": 2239,
   "last_fit": {
-    "time": "2026-10-23T11:48:15Z",
+    "time": "2026-10-24T16:03:23Z",
     "fit_count": 222,
-    "gain_candidate": 0.8821,
-    "offset_candidate": 70.506,
-    "gain_applied": 1.02506,
-    "offset_applied": 14.188,
-    "mae": 21.12,
-    "bias": 1.03
+    "gain_candidate": 0.78,
+    "offset_candidate": 100.0,
+    "gain_applied": 0.93929,
+    "offset_applied": 44.222,
+    "mae": 23.47,
+    "bias": 3.95
   },
-  "rotation27_shift_hours": -6,
+  "rotation27_shift_hours": 12,
   "cme_boost_sample_count": 46
 }
