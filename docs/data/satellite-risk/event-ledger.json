@@ -1,7 +1,75 @@
 {
   "schema_version": "SWIFT-GEO-SAT-EVENT-LEDGER-v0.4",
-  "updated_at": "2026-10-28T14:31:25.635631Z",
+  "updated_at": "2026-10-28T19:52:56.343886Z",
   "events": [
+    {
+      "issued_at": "2026-10-28T15:54:00Z",
+      "title": "Product Anomaly/Outage: GOES-18 Channel 16 ABI Product Degradation - Issued: October 28, 2026 1554Z",
+      "satellites": [
+        "GOES-18"
+      ],
+      "scope": "instrument/product",
+      "nature": "anomaly/outage",
+      "issue_category": "INSTRUMENT",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": true,
+        "metrics": {
+          "window_start": "2026-10-25T15:54:00Z",
+          "window_end": "2026-10-28T15:54:00Z",
+          "max_wind_kms": 397.21,
+          "max_kp": 2.0,
+          "min_bz_nt": -7.48,
+          "n_wind": 2619,
+          "n_kp": 8,
+          "n_bz": 1687
+        },
+        "flags": {
+          "wind_ge_500": false,
+          "kp_ge_5": false,
+          "bz_le_minus5": true
+        },
+        "association_score_0_100": 23.2,
+        "interpretation": "Descriptive 72 h pre-event environment only; does not establish that space weather caused the anomaly."
+      },
+      "space_weather_windows": {
+        "covered": true,
+        "at_event": {
+          "kp": null,
+          "bz_nt": null,
+          "wind_kms": null
+        },
+        "windows": {
+          "6": {
+            "max_wind_kms": null,
+            "max_kp": null,
+            "min_bz_nt": null,
+            "n_wind": 0,
+            "n_kp": 0,
+            "n_bz": 0
+          },
+          "24": {
+            "max_wind_kms": null,
+            "max_kp": null,
+            "min_bz_nt": null,
+            "n_wind": 0,
+            "n_kp": 0,
+            "n_bz": 0
+          },
+          "72": {
+            "max_wind_kms": 397.21,
+            "max_kp": 2.0,
+            "min_bz_nt": -7.48,
+            "n_wind": 2619,
+            "n_kp": 8,
+            "n_bz": 1687
+          }
+        },
+        "interpretation": "Descriptive co-occurrence only; causal attribution is not automatic."
+      }
+    },
     {
       "issued_at": "2026-10-12T13:00:00Z",
       "title": "Product Anomaly/Outage: Correction: GOES-18, 19 - GOES-18, 19 products delivered to PDA Issued: Oct 12, 2026 1300Z",
@@ -9888,6 +9956,27 @@
       "scope": "product/data",
       "nature": "anomaly/outage",
       "issue_category": "PRODUCT_DATA",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      },
+      "space_weather_windows": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      }
+    },
+    {
+      "issued_at": null,
+      "title": "Product Anomaly/Outage: GOES-18 Channel 16 ABI Product Degradation -",
+      "satellites": [
+        "GOES-18"
+      ],
+      "scope": "instrument/product",
+      "nature": "anomaly/outage",
+      "issue_category": "INSTRUMENT",
       "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
       "source": "NOAA OSPO satellite messages",
       "causal_attribution": "NOT ESTABLISHED",
