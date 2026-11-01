@@ -1,7 +1,75 @@
 {
   "schema_version": "SWIFT-GEO-SAT-EVENT-LEDGER-v0.4",
-  "updated_at": "2026-11-01T02:34:28.476317Z",
+  "updated_at": "2026-11-01T09:43:35.594375Z",
   "events": [
+    {
+      "issued_at": "2026-11-01T03:06:00Z",
+      "title": "Product Outage/Anomaly: GOES-18 All EXIS, SUVI and SEISS Products - Issued: November 01, 2026 0306Z",
+      "satellites": [
+        "GOES-18"
+      ],
+      "scope": "instrument/product",
+      "nature": "anomaly/outage",
+      "issue_category": "INSTRUMENT",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": true,
+        "metrics": {
+          "window_start": "2026-10-29T03:06:00Z",
+          "window_end": "2026-11-01T03:06:00Z",
+          "max_wind_kms": 402.98,
+          "max_kp": 2.33,
+          "min_bz_nt": -6.8,
+          "n_wind": 2252,
+          "n_kp": 9,
+          "n_bz": 1378
+        },
+        "flags": {
+          "wind_ge_500": false,
+          "kp_ge_5": false,
+          "bz_le_minus5": true
+        },
+        "association_score_0_100": 23.3,
+        "interpretation": "Descriptive 72 h pre-event environment only; does not establish that space weather caused the anomaly."
+      },
+      "space_weather_windows": {
+        "covered": true,
+        "at_event": {
+          "kp": null,
+          "bz_nt": null,
+          "wind_kms": null
+        },
+        "windows": {
+          "6": {
+            "max_wind_kms": null,
+            "max_kp": null,
+            "min_bz_nt": null,
+            "n_wind": 0,
+            "n_kp": 0,
+            "n_bz": 0
+          },
+          "24": {
+            "max_wind_kms": null,
+            "max_kp": null,
+            "min_bz_nt": null,
+            "n_wind": 0,
+            "n_kp": 0,
+            "n_bz": 0
+          },
+          "72": {
+            "max_wind_kms": 402.98,
+            "max_kp": 2.33,
+            "min_bz_nt": -6.8,
+            "n_wind": 2252,
+            "n_kp": 9,
+            "n_bz": 1378
+          }
+        },
+        "interpretation": "Descriptive co-occurrence only; causal attribution is not automatic."
+      }
+    },
     {
       "issued_at": "2026-10-28T15:54:00Z",
       "title": "Product Anomaly/Outage: GOES-18 Channel 16 ABI Product Degradation - Issued: October 28, 2026 1554Z",
@@ -9971,6 +10039,27 @@
     {
       "issued_at": null,
       "title": "Product Anomaly/Outage: GOES-18 Channel 16 ABI Product Degradation -",
+      "satellites": [
+        "GOES-18"
+      ],
+      "scope": "instrument/product",
+      "nature": "anomaly/outage",
+      "issue_category": "INSTRUMENT",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      },
+      "space_weather_windows": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      }
+    },
+    {
+      "issued_at": null,
+      "title": "Product Outage/Anomaly: GOES-18 All EXIS, SUVI and SEISS Products -",
       "satellites": [
         "GOES-18"
       ],
