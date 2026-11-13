@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-11-13T05:55:22.502721+00:00",
-  "stamp": "2026-11-13T0500Z",
+  "generated_at": "2026-11-13T14:19:42.301307+00:00",
+  "stamp": "2026-11-13T1400Z",
   "source": "NASA DONKI",
   "startDate": "2026-10-30",
   "endDate": "2026-11-13",
@@ -9,12 +9,12 @@
   "max_files": 130,
   "schedule": "every 3 hours",
   "any_ok": true,
-  "total_count": 55,
+  "total_count": 57,
   "sources": {
     "cmeAnalysis": {
       "ok": true,
       "url": "https://api.nasa.gov/DONKI/CMEAnalysis?startDate=2026-10-30&endDate=2026-11-13&api_key=NASA_API_KEY",
-      "count": 24,
+      "count": 25,
       "data": [
         {
           "catalog": "M2M_CATALOG",
@@ -591,6 +591,30 @@
           "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49506/-1",
           "submissionTime": "2026-11-12T02:10Z",
           "versionId": 1
+        },
+        {
+          "catalog": "M2M_CATALOG",
+          "isMostAccurate": true,
+          "time21_5": "2026-11-13T13:49Z",
+          "latitude": -67.0,
+          "longitude": 54.0,
+          "halfAngle": 38.0,
+          "speed": 308.0,
+          "type": "S",
+          "associatedCMEID": "2026-11-13T01:26:00-CME-001",
+          "associatedCMEstartTime": "2026-11-13T01:26Z",
+          "associatedCMELink": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49525/-1",
+          "featureCode": "LE",
+          "dataLevel": "0",
+          "measurementTechnique": "SWPC_CAT",
+          "imageType": "running difference",
+          "tilt": null,
+          "minorHalfWidth": null,
+          "speedMeasuredAtHeight": 14.9,
+          "note": "Measurement based on the best fit between SOHO LASCO C3 and STEREO A COR2 imagery. The leading edge of the CME is unclear, so this measurement is more approximate than usual and based on the fastest portion of the CME prior to it leaving the field of view of STEREO A COR2.",
+          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49526/-1",
+          "submissionTime": "2026-11-13T12:46Z",
+          "versionId": 1
         }
       ],
       "error": null
@@ -598,7 +622,7 @@
     "cme": {
       "ok": true,
       "url": "https://api.nasa.gov/DONKI/CME?startDate=2026-10-30&endDate=2026-11-13&api_key=NASA_API_KEY",
-      "count": 31,
+      "count": 32,
       "data": [
         {
           "activityID": "2026-10-30T12:36:00-CME-001",
@@ -2910,6 +2934,55 @@
           "sentNotifications": null,
           "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49523/-1",
           "submissionTime": "2026-11-13T01:12Z",
+          "versionId": 1
+        },
+        {
+          "activityID": "2026-11-13T01:26:00-CME-001",
+          "catalog": "M2M_CATALOG",
+          "startTime": "2026-11-13T01:26Z",
+          "instruments": [
+            {
+              "displayName": "SOHO: LASCO/C2"
+            },
+            {
+              "displayName": "SOHO: LASCO/C3"
+            },
+            {
+              "displayName": "STEREO A: SECCHI/COR2"
+            },
+            {
+              "displayName": "GOES: CCOR-1"
+            }
+          ],
+          "sourceLocation": "",
+          "activeRegionNum": null,
+          "note": "CME visible to the SW in SOHO LASCO C2/C3 and GOES CCOR-1 imagery and to the SSE in STEREO A COR2 imagery. The potential source is not clear, but some faint dimming and moving field lines are seen to the far south in SDO AIA 171/193 imagery starting around 2026-11-12T17:30Z.",
+          "cmeAnalyses": [
+            {
+              "isMostAccurate": true,
+              "levelOfData": 0,
+              "time21_5": "2026-11-13T13:49Z",
+              "latitude": -67.0,
+              "longitude": 54.0,
+              "halfAngle": 38.0,
+              "speed": 308.0,
+              "type": "S",
+              "featureCode": "LE",
+              "imageType": "running difference",
+              "measurementTechnique": "SWPC_CAT",
+              "note": "Measurement based on the best fit between SOHO LASCO C3 and STEREO A COR2 imagery. The leading edge of the CME is unclear, so this measurement is more approximate than usual and based on the fastest portion of the CME prior to it leaving the field of view of STEREO A COR2.",
+              "minorHalfWidth": null,
+              "speedMeasuredAtHeight": 14.9,
+              "tilt": null,
+              "submissionTime": "2026-11-13T12:46Z",
+              "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49526/-1",
+              "enlilList": []
+            }
+          ],
+          "linkedEvents": null,
+          "sentNotifications": null,
+          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49525/-1",
+          "submissionTime": "2026-11-13T12:44Z",
           "versionId": 1
         }
       ],
