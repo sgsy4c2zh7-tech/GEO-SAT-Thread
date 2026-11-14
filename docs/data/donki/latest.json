@@ -1,45 +1,21 @@
 {
-  "generated_at": "2026-11-13T21:18:19.904845+00:00",
-  "stamp": "2026-11-13T2100Z",
+  "generated_at": "2026-11-14T05:44:00.003007+00:00",
+  "stamp": "2026-11-14T0500Z",
   "source": "NASA DONKI",
-  "startDate": "2026-10-30",
-  "endDate": "2026-11-13",
+  "startDate": "2026-10-31",
+  "endDate": "2026-11-14",
   "fetch_days": 14,
   "retention_days": 14,
   "max_files": 130,
   "schedule": "every 3 hours",
   "any_ok": true,
-  "total_count": 61,
+  "total_count": 62,
   "sources": {
     "cmeAnalysis": {
       "ok": true,
-      "url": "https://api.nasa.gov/DONKI/CMEAnalysis?startDate=2026-10-30&endDate=2026-11-13&api_key=NASA_API_KEY",
+      "url": "https://api.nasa.gov/DONKI/CMEAnalysis?startDate=2026-10-31&endDate=2026-11-14&api_key=NASA_API_KEY",
       "count": 27,
       "data": [
-        {
-          "catalog": "M2M_CATALOG",
-          "isMostAccurate": true,
-          "time21_5": "2026-10-31T04:19Z",
-          "latitude": -9.0,
-          "longitude": 130.0,
-          "halfAngle": 10.0,
-          "speed": 218.0,
-          "type": "S",
-          "associatedCMEID": "2026-10-30T12:36:00-CME-001",
-          "associatedCMEstartTime": "2026-10-30T12:36Z",
-          "associatedCMELink": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49341/-1",
-          "featureCode": "LE",
-          "dataLevel": "0",
-          "measurementTechnique": "SWPC_CAT",
-          "imageType": "running difference",
-          "tilt": null,
-          "minorHalfWidth": null,
-          "speedMeasuredAtHeight": 12.0,
-          "note": "An approximate analysis based on the location of the (very minor) source and the imagery in SOHO LASCO C2/C3 coronagraphs and not confirmed by triangulation since the front is not seen in STEREO A COR2.",
-          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49342/-1",
-          "submissionTime": "2026-10-30T21:20Z",
-          "versionId": 1
-        },
         {
           "catalog": "M2M_CATALOG",
           "isMostAccurate": true,
@@ -663,61 +639,39 @@
           "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49538/-1",
           "submissionTime": "2026-11-13T18:03Z",
           "versionId": 1
+        },
+        {
+          "catalog": "M2M_CATALOG",
+          "isMostAccurate": true,
+          "time21_5": "2026-11-14T04:11Z",
+          "latitude": -51.0,
+          "longitude": 22.0,
+          "halfAngle": 12.0,
+          "speed": 474.0,
+          "type": "S",
+          "associatedCMEID": "2026-11-13T21:24:00-CME-001",
+          "associatedCMEstartTime": "2026-11-13T21:24Z",
+          "associatedCMELink": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49547/-1",
+          "featureCode": "LE",
+          "dataLevel": "0",
+          "measurementTechnique": "SWPC_CAT",
+          "imageType": "running difference",
+          "tilt": null,
+          "minorHalfWidth": null,
+          "speedMeasuredAtHeight": 10.0,
+          "note": "",
+          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49548/-1",
+          "submissionTime": "2026-11-14T01:52Z",
+          "versionId": 1
         }
       ],
       "error": null
     },
     "cme": {
       "ok": true,
-      "url": "https://api.nasa.gov/DONKI/CME?startDate=2026-10-30&endDate=2026-11-13&api_key=NASA_API_KEY",
-      "count": 34,
+      "url": "https://api.nasa.gov/DONKI/CME?startDate=2026-10-31&endDate=2026-11-14&api_key=NASA_API_KEY",
+      "count": 35,
       "data": [
-        {
-          "activityID": "2026-10-30T12:36:00-CME-001",
-          "catalog": "M2M_CATALOG",
-          "startTime": "2026-10-30T12:36Z",
-          "instruments": [
-            {
-              "displayName": "SOHO: LASCO/C2"
-            },
-            {
-              "displayName": "SOHO: LASCO/C3"
-            },
-            {
-              "displayName": "GOES: CCOR-1"
-            }
-          ],
-          "sourceLocation": "S10W130",
-          "activeRegionNum": 14561,
-          "note": "Very minor and faint CME seen to the W in SOHO LASCO C2/C3 and in GOES CCOR-1 coronagraphs. This CME is not seen in STEREO A COR2. Its source is a very minor eruption from the former AR 14561 (S10W130) starting ~2026-10-30T11:25Z as seen in STEREO A EUV 195 imagery. AR 14561 rotated off of the Earth-facing disk on 2026-10-27.",
-          "cmeAnalyses": [
-            {
-              "isMostAccurate": true,
-              "levelOfData": 0,
-              "time21_5": "2026-10-31T04:19Z",
-              "latitude": -9.0,
-              "longitude": 130.0,
-              "halfAngle": 10.0,
-              "speed": 218.0,
-              "type": "S",
-              "featureCode": "LE",
-              "imageType": "running difference",
-              "measurementTechnique": "SWPC_CAT",
-              "note": "An approximate analysis based on the location of the (very minor) source and the imagery in SOHO LASCO C2/C3 coronagraphs and not confirmed by triangulation since the front is not seen in STEREO A COR2.",
-              "minorHalfWidth": null,
-              "speedMeasuredAtHeight": 12.0,
-              "tilt": null,
-              "submissionTime": "2026-10-30T21:20Z",
-              "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49342/-1",
-              "enlilList": []
-            }
-          ],
-          "linkedEvents": null,
-          "sentNotifications": null,
-          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49341/-1",
-          "submissionTime": "2026-11-02T20:37Z",
-          "versionId": 2
-        },
         {
           "activityID": "2026-10-31T05:00:00-CME-001",
           "catalog": "M2M_CATALOG",
@@ -3171,20 +3125,88 @@
           "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49537/-1",
           "submissionTime": "2026-11-13T18:02Z",
           "versionId": 1
+        },
+        {
+          "activityID": "2026-11-13T16:24:00-CME-001",
+          "catalog": "M2M_CATALOG",
+          "startTime": "2026-11-13T16:24Z",
+          "instruments": [
+            {
+              "displayName": "SOHO: LASCO/C2"
+            },
+            {
+              "displayName": "GOES: CCOR-1"
+            }
+          ],
+          "sourceLocation": "",
+          "activeRegionNum": null,
+          "note": "A faint messy front seen to the SSW in SOHO LASCO C2 and later in C3 and GOES CCOR-1 as a messy fuzzy half-loop. There is also a much fainter loop seen in STEREO A COR2 coronagraph to the SW, but this loop in STEREO A COR2 seems to be starting much earlier (first seen ~13Z), so it is likely a different event.",
+          "cmeAnalyses": [],
+          "linkedEvents": null,
+          "sentNotifications": null,
+          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49546/-1",
+          "submissionTime": "2026-11-13T22:32Z",
+          "versionId": 1
+        },
+        {
+          "activityID": "2026-11-13T21:24:00-CME-001",
+          "catalog": "M2M_CATALOG",
+          "startTime": "2026-11-13T21:24Z",
+          "instruments": [
+            {
+              "displayName": "SOHO: LASCO/C2"
+            },
+            {
+              "displayName": "SOHO: LASCO/C3"
+            },
+            {
+              "displayName": "STEREO A: SECCHI/COR2"
+            }
+          ],
+          "sourceLocation": "",
+          "activeRegionNum": null,
+          "note": "A very small CME seen to the SSW in SOHO LASCO C2 and to the SE in STEREO A COR2 coronagraphs, and in early timestamps of C3. The front is not clear in GOES CCOR-1. No source has been found for this CME.",
+          "cmeAnalyses": [
+            {
+              "isMostAccurate": true,
+              "levelOfData": 0,
+              "time21_5": "2026-11-14T04:11Z",
+              "latitude": -51.0,
+              "longitude": 22.0,
+              "halfAngle": 12.0,
+              "speed": 474.0,
+              "type": "S",
+              "featureCode": "LE",
+              "imageType": "running difference",
+              "measurementTechnique": "SWPC_CAT",
+              "note": "",
+              "minorHalfWidth": null,
+              "speedMeasuredAtHeight": 10.0,
+              "tilt": null,
+              "submissionTime": "2026-11-14T01:52Z",
+              "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49548/-1",
+              "enlilList": []
+            }
+          ],
+          "linkedEvents": null,
+          "sentNotifications": null,
+          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49547/-1",
+          "submissionTime": "2026-11-14T01:50Z",
+          "versionId": 1
         }
       ],
       "error": null
     },
     "sep": {
       "ok": true,
-      "url": "https://api.nasa.gov/DONKI/SEP?startDate=2026-10-30&endDate=2026-11-13&api_key=NASA_API_KEY",
+      "url": "https://api.nasa.gov/DONKI/SEP?startDate=2026-10-31&endDate=2026-11-14&api_key=NASA_API_KEY",
       "count": 0,
       "data": [],
       "error": null
     },
     "flr": {
       "ok": false,
-      "url": "https://api.nasa.gov/DONKI/FLR?startDate=2026-10-30&endDate=2026-11-13&api_key=NASA_API_KEY",
+      "url": "https://api.nasa.gov/DONKI/FLR?startDate=2026-10-31&endDate=2026-11-14&api_key=NASA_API_KEY",
       "count": 0,
       "data": [],
       "error": "HTTP Error 404: Not Found"
