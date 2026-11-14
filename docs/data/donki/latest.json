@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-11-14T13:15:11.353468+00:00",
-  "stamp": "2026-11-14T1300Z",
+  "generated_at": "2026-11-14T19:49:32.362692+00:00",
+  "stamp": "2026-11-14T1900Z",
   "source": "NASA DONKI",
   "startDate": "2026-10-31",
   "endDate": "2026-11-14",
@@ -9,12 +9,12 @@
   "max_files": 130,
   "schedule": "every 3 hours",
   "any_ok": true,
-  "total_count": 62,
+  "total_count": 67,
   "sources": {
     "cmeAnalysis": {
       "ok": true,
       "url": "https://api.nasa.gov/DONKI/CMEAnalysis?startDate=2026-10-31&endDate=2026-11-14&api_key=NASA_API_KEY",
-      "count": 27,
+      "count": 29,
       "data": [
         {
           "catalog": "M2M_CATALOG",
@@ -663,6 +663,54 @@
           "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49548/-1",
           "submissionTime": "2026-11-14T01:52Z",
           "versionId": 1
+        },
+        {
+          "catalog": "M2M_CATALOG",
+          "isMostAccurate": true,
+          "time21_5": "2026-11-14T10:20Z",
+          "latitude": -48.0,
+          "longitude": 21.0,
+          "halfAngle": 14.0,
+          "speed": 399.0,
+          "type": "S",
+          "associatedCMEID": "2026-11-14T01:48:00-CME-001",
+          "associatedCMEstartTime": "2026-11-14T01:48Z",
+          "associatedCMELink": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49549/-1",
+          "featureCode": "LE",
+          "dataLevel": "0",
+          "measurementTechnique": "SWPC_CAT",
+          "imageType": "running difference",
+          "tilt": null,
+          "minorHalfWidth": null,
+          "speedMeasuredAtHeight": 10.3,
+          "note": "Measurement based on the best fit between SOHO LASCO C2/C3 and STEREO A COR2 imagery.",
+          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49550/-1",
+          "submissionTime": "2026-11-14T14:24Z",
+          "versionId": 1
+        },
+        {
+          "catalog": "M2M_CATALOG",
+          "isMostAccurate": true,
+          "time21_5": "2026-11-14T13:48Z",
+          "latitude": -50.0,
+          "longitude": 26.0,
+          "halfAngle": 15.0,
+          "speed": 345.0,
+          "type": "S",
+          "associatedCMEID": "2026-11-14T04:00:00-CME-001",
+          "associatedCMEstartTime": "2026-11-14T04:00Z",
+          "associatedCMELink": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49551/-1",
+          "featureCode": "LE",
+          "dataLevel": "0",
+          "measurementTechnique": "SWPC_CAT",
+          "imageType": "running difference",
+          "tilt": null,
+          "minorHalfWidth": null,
+          "speedMeasuredAtHeight": 7.6,
+          "note": "Measurement based on the approximate source location and best fit between SOHO LASCO C2/C3 and STEREO A COR2 imagery.",
+          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49552/-1",
+          "submissionTime": "2026-11-14T14:26Z",
+          "versionId": 1
         }
       ],
       "error": null
@@ -670,7 +718,7 @@
     "cme": {
       "ok": true,
       "url": "https://api.nasa.gov/DONKI/CME?startDate=2026-10-31&endDate=2026-11-14&api_key=NASA_API_KEY",
-      "count": 35,
+      "count": 38,
       "data": [
         {
           "activityID": "2026-10-31T05:00:00-CME-001",
@@ -3192,6 +3240,144 @@
           "sentNotifications": null,
           "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49547/-1",
           "submissionTime": "2026-11-14T01:50Z",
+          "versionId": 1
+        },
+        {
+          "activityID": "2026-11-14T01:48:00-CME-001",
+          "catalog": "M2M_CATALOG",
+          "startTime": "2026-11-14T01:48Z",
+          "instruments": [
+            {
+              "displayName": "SOHO: LASCO/C2"
+            },
+            {
+              "displayName": "SOHO: LASCO/C3"
+            },
+            {
+              "displayName": "STEREO A: SECCHI/COR2"
+            }
+          ],
+          "sourceLocation": "",
+          "activeRegionNum": null,
+          "note": "This CME is visible to the south/southwest in SOHO LASCO C2/C3 and to the southeast in STEREO A COR2 imagery. There are no clear sources observed on the Earth-facing disk around the time of this event.",
+          "cmeAnalyses": [
+            {
+              "isMostAccurate": true,
+              "levelOfData": 0,
+              "time21_5": "2026-11-14T10:20Z",
+              "latitude": -48.0,
+              "longitude": 21.0,
+              "halfAngle": 14.0,
+              "speed": 399.0,
+              "type": "S",
+              "featureCode": "LE",
+              "imageType": "running difference",
+              "measurementTechnique": "SWPC_CAT",
+              "note": "Measurement based on the best fit between SOHO LASCO C2/C3 and STEREO A COR2 imagery.",
+              "minorHalfWidth": null,
+              "speedMeasuredAtHeight": 10.3,
+              "tilt": null,
+              "submissionTime": "2026-11-14T14:24Z",
+              "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49550/-1",
+              "enlilList": []
+            }
+          ],
+          "linkedEvents": null,
+          "sentNotifications": null,
+          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49549/-1",
+          "submissionTime": "2026-11-14T14:23Z",
+          "versionId": 1
+        },
+        {
+          "activityID": "2026-11-14T04:00:00-CME-001",
+          "catalog": "M2M_CATALOG",
+          "startTime": "2026-11-14T04:00Z",
+          "instruments": [
+            {
+              "displayName": "SOHO: LASCO/C2"
+            },
+            {
+              "displayName": "SOHO: LASCO/C3"
+            },
+            {
+              "displayName": "STEREO A: SECCHI/COR2"
+            }
+          ],
+          "sourceLocation": "S45W25",
+          "activeRegionNum": null,
+          "note": "This CME is visible to the south/southwest in SOHO LASCO C2/C3 and to the southeast in STEREO A COR2 imagery. The source may be related to a small filament eruption centered near S45W25 as seen in SDO AIA 304 imagery which begins to lift off around 2026-11-14T03:00Z.",
+          "cmeAnalyses": [
+            {
+              "isMostAccurate": true,
+              "levelOfData": 0,
+              "time21_5": "2026-11-14T13:48Z",
+              "latitude": -50.0,
+              "longitude": 26.0,
+              "halfAngle": 15.0,
+              "speed": 345.0,
+              "type": "S",
+              "featureCode": "LE",
+              "imageType": "running difference",
+              "measurementTechnique": "SWPC_CAT",
+              "note": "Measurement based on the approximate source location and best fit between SOHO LASCO C2/C3 and STEREO A COR2 imagery.",
+              "minorHalfWidth": null,
+              "speedMeasuredAtHeight": 7.6,
+              "tilt": null,
+              "submissionTime": "2026-11-14T14:26Z",
+              "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49552/-1",
+              "enlilList": []
+            }
+          ],
+          "linkedEvents": null,
+          "sentNotifications": null,
+          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49551/-1",
+          "submissionTime": "2026-11-14T14:25Z",
+          "versionId": 1
+        },
+        {
+          "activityID": "2026-11-14T14:00:00-CME-001",
+          "catalog": "M2M_CATALOG",
+          "startTime": "2026-11-14T14:00Z",
+          "instruments": [
+            {
+              "displayName": "SOHO: LASCO/C2"
+            },
+            {
+              "displayName": "SOHO: LASCO/C3"
+            },
+            {
+              "displayName": "GOES: CCOR-1"
+            }
+          ],
+          "sourceLocation": "",
+          "activeRegionNum": null,
+          "note": "This CME is visible to the east in SOHO LASCO C2/C3 and GOES CCOR-1 imagery. This event is not seen in STEREO A COR2 imagery due to a data gap starting at 2026-11-14T13:23Z. The source is likely far-sided as there are no corresponding source signatures on the Earth-facing disk around the time of this event.",
+          "cmeAnalyses": [
+            {
+              "isMostAccurate": true,
+              "levelOfData": 0,
+              "time21_5": "2026-11-14T23:13Z",
+              "latitude": -3.0,
+              "longitude": null,
+              "halfAngle": 21.0,
+              "speed": 397.0,
+              "type": "S",
+              "featureCode": "LE",
+              "imageType": "running difference",
+              "measurementTechnique": "Plane-of-sky",
+              "note": "A plane-of-sky measurement was made using a longitude of -90 degrees due to the far-sided and therefore unknown source location.",
+              "minorHalfWidth": null,
+              "speedMeasuredAtHeight": 8.9,
+              "tilt": null,
+              "submissionTime": "2026-11-14T17:40Z",
+              "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49555/-1",
+              "enlilList": []
+            }
+          ],
+          "linkedEvents": null,
+          "sentNotifications": null,
+          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49554/-1",
+          "submissionTime": "2026-11-14T17:39Z",
           "versionId": 1
         }
       ],
