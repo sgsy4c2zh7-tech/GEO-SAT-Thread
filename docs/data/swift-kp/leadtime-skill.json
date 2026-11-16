@@ -1,45 +1,45 @@
 {
-  "updated_at": "2026-11-15T06:47:31Z",
+  "updated_at": "2026-11-16T19:42:49Z",
   "model": "SWIFT-Kp-AI-v0.9-adaptive-residual-CH",
   "overall": {
-    "count": 692,
-    "mae": 0.922,
-    "bias": -0.078,
-    "rmse": 1.156,
-    "hit_rate_within_1kp": 67.3,
-    "hit_rate_within_067kp": 50.7,
+    "count": 672,
+    "mae": 0.927,
+    "bias": -0.008,
+    "rmse": 1.159,
+    "hit_rate_within_1kp": 68.2,
+    "hit_rate_within_067kp": 50.6,
     "g_scale_hit_rate": 99.3
   },
   "by_lead_day": [
     {
       "lead_day": 1,
-      "count": 220,
-      "mae": 0.817,
-      "bias": 0.059,
-      "rmse": 1.022,
-      "hit_rate_within_1kp": 74.1,
-      "hit_rate_within_067kp": 55.9,
+      "count": 226,
+      "mae": 0.779,
+      "bias": 0.092,
+      "rmse": 0.991,
+      "hit_rate_within_1kp": 76.5,
+      "hit_rate_within_067kp": 58.8,
       "g_scale_hit_rate": 100.0
     },
     {
       "lead_day": 2,
-      "count": 224,
-      "mae": 0.973,
-      "bias": -0.137,
-      "rmse": 1.232,
-      "hit_rate_within_1kp": 66.5,
-      "hit_rate_within_067kp": 49.1,
+      "count": 226,
+      "mae": 0.998,
+      "bias": -0.018,
+      "rmse": 1.237,
+      "hit_rate_within_1kp": 66.4,
+      "hit_rate_within_067kp": 46.9,
       "g_scale_hit_rate": 98.7
     },
     {
       "lead_day": 3,
-      "count": 248,
-      "mae": 0.968,
-      "bias": -0.147,
-      "rmse": 1.197,
-      "hit_rate_within_1kp": 62.1,
-      "hit_rate_within_067kp": 47.6,
-      "g_scale_hit_rate": 99.2
+      "count": 220,
+      "mae": 1.006,
+      "bias": -0.102,
+      "rmse": 1.235,
+      "hit_rate_within_1kp": 61.4,
+      "hit_rate_within_067kp": 45.9,
+      "g_scale_hit_rate": 99.1
     }
   ],
   "adaptive_bias": {
@@ -50,24 +50,24 @@
     "leads": {
       "24": {
         "nominal_lead_hours": 24,
-        "count": 76,
-        "bias": -0.035,
-        "alpha": 0.3,
-        "subtract_from_kp": -0.011,
+        "count": 81,
+        "bias": 0.006,
+        "alpha": 0.45,
+        "subtract_from_kp": 0.003,
         "status": "active"
       },
       "48": {
         "nominal_lead_hours": 48,
         "count": 78,
-        "bias": -0.057,
+        "bias": 0.001,
         "alpha": 0.3,
-        "subtract_from_kp": -0.017,
+        "subtract_from_kp": 0.0,
         "status": "active"
       },
       "72": {
         "nominal_lead_hours": 72,
-        "count": 41,
-        "bias": -0.033,
+        "count": 35,
+        "bias": -0.032,
         "alpha": 0.3,
         "subtract_from_kp": -0.01,
         "status": "active"
