@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-11-20T11:07:42.721562+00:00",
-  "stamp": "2026-11-20T1100Z",
+  "generated_at": "2026-11-20T19:49:09.333366+00:00",
+  "stamp": "2026-11-20T1900Z",
   "source": "NASA DONKI",
   "startDate": "2026-11-06",
   "endDate": "2026-11-20",
@@ -9,7 +9,7 @@
   "max_files": 130,
   "schedule": "every 3 hours",
   "any_ok": true,
-  "total_count": 97,
+  "total_count": 99,
   "sources": {
     "cmeAnalysis": {
       "ok": true,
@@ -1006,7 +1006,7 @@
     "cme": {
       "ok": true,
       "url": "https://api.nasa.gov/DONKI/CME?startDate=2026-11-06&endDate=2026-11-20&api_key=NASA_API_KEY",
-      "count": 56,
+      "count": 58,
       "data": [
         {
           "activityID": "2026-11-06T01:26:00-CME-001",
@@ -5164,6 +5164,89 @@
           "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49674/-1",
           "submissionTime": "2026-11-20T01:31Z",
           "versionId": 1
+        },
+        {
+          "activityID": "2026-11-20T06:24:00-CME-001",
+          "catalog": "M2M_CATALOG",
+          "startTime": "2026-11-20T06:24Z",
+          "instruments": [
+            {
+              "displayName": "SOHO: LASCO/C2"
+            },
+            {
+              "displayName": "SOHO: LASCO/C3"
+            }
+          ],
+          "sourceLocation": "",
+          "activeRegionNum": null,
+          "note": "Faint CME seen to the east in SOHO LASCO C2/C3 imagery only. The CME is not clearly visible in GOES CCOR-1 or STEREO A COR2 imagery. The potential source is not found and is likely farsided.",
+          "cmeAnalyses": [
+            {
+              "isMostAccurate": true,
+              "levelOfData": 0,
+              "time21_5": "2026-11-20T15:53Z",
+              "latitude": 8.0,
+              "longitude": null,
+              "halfAngle": 23.0,
+              "speed": 384.0,
+              "type": "S",
+              "featureCode": "LE",
+              "imageType": "running difference",
+              "measurementTechnique": "Plane-of-sky",
+              "note": "Plane of sky measurement based on SOHO LASCO C2/C3 imagery.",
+              "minorHalfWidth": null,
+              "speedMeasuredAtHeight": 7.1,
+              "tilt": null,
+              "submissionTime": "2026-11-20T16:41Z",
+              "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49684/-1",
+              "enlilList": []
+            }
+          ],
+          "linkedEvents": null,
+          "sentNotifications": null,
+          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49683/-1",
+          "submissionTime": "2026-11-20T16:40Z",
+          "versionId": 1
+        },
+        {
+          "activityID": "2026-11-20T12:15:00-CME-001",
+          "catalog": "M2M_CATALOG",
+          "startTime": "2026-11-20T12:15Z",
+          "instruments": [
+            {
+              "displayName": "GOES: CCOR-1"
+            }
+          ],
+          "sourceLocation": "",
+          "activeRegionNum": null,
+          "note": "CME visible to the NE in GOES CCOR-1 imagery. This CME is not clearly visible in STEREO A COR2 imagery. The CME is not visible in SOHO LASCO C2/C3 in real-time due to a data gap. The potential source may be an eruption faintly seen beyond the NE limb in GOES SUVI 304 imagery starting at approximately 2026-11-20T10:20Z. Moving/opening field lines are also faintly seen beyond the NE limb in SDO AIA 171 in ISWA.",
+          "cmeAnalyses": [
+            {
+              "isMostAccurate": true,
+              "levelOfData": 0,
+              "time21_5": "2026-11-20T15:53Z",
+              "latitude": 33.0,
+              "longitude": null,
+              "halfAngle": 12.0,
+              "speed": 888.0,
+              "type": "C",
+              "featureCode": "LE",
+              "imageType": "running difference",
+              "measurementTechnique": "Plane-of-sky",
+              "note": "Plane of sky measurement using GOES CCOR-1 running difference imagery.",
+              "minorHalfWidth": null,
+              "speedMeasuredAtHeight": 8.4,
+              "tilt": null,
+              "submissionTime": "2026-11-20T16:53Z",
+              "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49687/-1",
+              "enlilList": []
+            }
+          ],
+          "linkedEvents": null,
+          "sentNotifications": null,
+          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49686/-1",
+          "submissionTime": "2026-11-20T16:54Z",
+          "versionId": 2
         }
       ],
       "error": null
