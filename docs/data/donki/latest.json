@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-11-21T02:01:46.417293+00:00",
-  "stamp": "2026-11-21T0200Z",
+  "generated_at": "2026-11-21T10:47:41.747555+00:00",
+  "stamp": "2026-11-21T1000Z",
   "source": "NASA DONKI",
   "startDate": "2026-11-07",
   "endDate": "2026-11-21",
@@ -9,7 +9,7 @@
   "max_files": 130,
   "schedule": "every 3 hours",
   "any_ok": true,
-  "total_count": 91,
+  "total_count": 92,
   "sources": {
     "cmeAnalysis": {
       "ok": true,
@@ -886,7 +886,7 @@
     "cme": {
       "ok": true,
       "url": "https://api.nasa.gov/DONKI/CME?startDate=2026-11-07&endDate=2026-11-21&api_key=NASA_API_KEY",
-      "count": 55,
+      "count": 56,
       "data": [
         {
           "activityID": "2026-11-07T06:24:00-CME-001",
@@ -4866,6 +4866,49 @@
           "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49695/-1",
           "submissionTime": "2026-11-21T00:26Z",
           "versionId": 2
+        },
+        {
+          "activityID": "2026-11-20T23:15:00-CME-001",
+          "catalog": "M2M_CATALOG",
+          "startTime": "2026-11-20T23:15Z",
+          "instruments": [
+            {
+              "displayName": "GOES: CCOR-1"
+            },
+            {
+              "displayName": "SOHO: LASCO/C3"
+            }
+          ],
+          "sourceLocation": "",
+          "activeRegionNum": null,
+          "note": "A faint loop CME seen to the NW in early GOES CCOR-1 imagery and in SOHO LASCO C3 (after the data gap). It is fully covered by a data gap in STEREO A COR2. No source has been found for this CME in EUV imagery, so it is likely far-sided.",
+          "cmeAnalyses": [
+            {
+              "isMostAccurate": true,
+              "levelOfData": 0,
+              "time21_5": "2026-11-21T09:52Z",
+              "latitude": 33.0,
+              "longitude": null,
+              "halfAngle": 23.0,
+              "speed": 298.0,
+              "type": "S",
+              "featureCode": "LE",
+              "imageType": "running difference",
+              "measurementTechnique": "Plane-of-sky",
+              "note": "Plane-of-sky analysis using early GOES CCOR-1 imagery and one timestamp of SOHO LASCO C3. Needs to be revisited once LASCO imagery backfills.",
+              "minorHalfWidth": null,
+              "speedMeasuredAtHeight": 8.0,
+              "tilt": null,
+              "submissionTime": "2026-11-21T03:03Z",
+              "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CMEAnalysis/49698/-1",
+              "enlilList": []
+            }
+          ],
+          "linkedEvents": null,
+          "sentNotifications": null,
+          "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49697/-1",
+          "submissionTime": "2026-11-21T03:00Z",
+          "versionId": 1
         }
       ],
       "error": null
