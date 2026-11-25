@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-11-24T23:57:13Z",
+  "updated_at": "2026-11-25T08:46:37Z",
   "model": "SWIFT CME Wind Boost Learner",
   "definition": "observed_delta_v = max(0, post_arrival_peak_speed - pre_arrival_median_speed)",
   "windows": {
     "pre_baseline": "arrival-12h to arrival-3h median",
     "post_peak": "arrival to arrival+18h max"
   },
-  "sample_count": 58,
+  "sample_count": 59,
   "global": {
-    "intercept": 77.475,
-    "speed_geometry_slope": 0.065889,
+    "intercept": 80.6189,
+    "speed_geometry_slope": 0.08353,
     "formula": "delta_v = class_median*0.55 + max(0, intercept + slope*(speed-500)*geometry)*0.45"
   },
   "by_impact_class": {
@@ -22,13 +22,13 @@
     "CORE-HIT": {
       "count": 8,
       "median_delta_v": 99.92,
-      "mean_delta_v": 103.52,
+      "mean_delta_v": 104.64,
       "default_used": false
     },
     "BODY-HIT": {
       "count": 1,
-      "median_delta_v": 27.72,
-      "mean_delta_v": 27.72,
+      "median_delta_v": 57.38,
+      "mean_delta_v": 57.38,
       "default_used": false
     },
     "FLANK-HIT": {
@@ -1212,10 +1212,10 @@
       "latitude": 8.0,
       "angular_separation": 8.0,
       "baseline_speed": 324.86,
-      "post_peak_speed": 351.94,
-      "observed_delta_v": 27.08,
+      "post_peak_speed": 360.84,
+      "observed_delta_v": 35.98,
       "pre_count": 294,
-      "post_count": 964
+      "post_count": 1080
     },
     {
       "id": "2026-11-22T03:48:00-CME-001",
@@ -1234,10 +1234,10 @@
       "latitude": 36.0,
       "angular_separation": 70.79,
       "baseline_speed": 324.73,
-      "post_peak_speed": 351.94,
-      "observed_delta_v": 27.21,
+      "post_peak_speed": 381.6,
+      "observed_delta_v": 56.87,
       "pre_count": 486,
-      "post_count": 774
+      "post_count": 1080
     },
     {
       "id": "2026-11-22T03:48:00-CME-001",
@@ -1256,10 +1256,10 @@
       "latitude": 29.0,
       "angular_separation": 29.0,
       "baseline_speed": 324.22,
-      "post_peak_speed": 351.94,
-      "observed_delta_v": 27.72,
+      "post_peak_speed": 381.6,
+      "observed_delta_v": 57.38,
       "pre_count": 519,
-      "post_count": 741
+      "post_count": 1080
     },
     {
       "id": "2026-11-19T18:30:00-CME-001",
@@ -1277,11 +1277,11 @@
       "longitude": 0.0,
       "latitude": 45.0,
       "angular_separation": 45.0,
-      "baseline_speed": 318.25,
-      "post_peak_speed": 351.94,
-      "observed_delta_v": 33.69,
+      "baseline_speed": 318.95,
+      "post_peak_speed": 392.59,
+      "observed_delta_v": 73.64,
       "pre_count": 542,
-      "post_count": 531
+      "post_count": 1062
     },
     {
       "id": "2026-11-22T07:48:00-CME-001",
@@ -1299,11 +1299,11 @@
       "longitude": -73.0,
       "latitude": 28.0,
       "angular_separation": 75.04,
-      "baseline_speed": 317.92,
-      "post_peak_speed": 351.94,
-      "observed_delta_v": 34.02,
+      "baseline_speed": 318.66,
+      "post_peak_speed": 392.59,
+      "observed_delta_v": 73.93,
       "pre_count": 542,
-      "post_count": 514
+      "post_count": 1045
     },
     {
       "id": "2026-11-22T07:48:00-CME-001",
@@ -1321,11 +1321,33 @@
       "longitude": -65.0,
       "latitude": 24.0,
       "angular_separation": 67.29,
-      "baseline_speed": 318.9,
-      "post_peak_speed": 347.81,
-      "observed_delta_v": 28.91,
+      "baseline_speed": 319.36,
+      "post_peak_speed": 392.59,
+      "observed_delta_v": 73.23,
       "pre_count": 541,
-      "post_count": 402
+      "post_count": 933
+    },
+    {
+      "id": "2026-11-20T17:03:00-CME-001",
+      "source": "DONKI",
+      "impact_class": "MISS",
+      "earth_candidate": false,
+      "confidence": 0.02,
+      "geometry_multiplier": 0.0,
+      "t0": "2026-11-20T17:03:00Z",
+      "arrival_time": "2026-11-25T05:46:16Z",
+      "transit_hours": 108.72,
+      "speed": 344.0,
+      "effective_speed": 86.0,
+      "half_angle": 10.0,
+      "longitude": 0.0,
+      "latitude": 51.0,
+      "angular_separation": 51.0,
+      "baseline_speed": 329.94,
+      "post_peak_speed": 392.59,
+      "observed_delta_v": 62.65,
+      "pre_count": 540,
+      "post_count": 176
     }
   ]
 }
