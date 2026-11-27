@@ -1,7 +1,143 @@
 {
   "schema_version": "SWIFT-GEO-SAT-EVENT-LEDGER-v0.4",
-  "updated_at": "2026-11-27T04:32:05.880487Z",
+  "updated_at": "2026-11-27T14:20:14.988072Z",
   "events": [
+    {
+      "issued_at": "2026-11-27T08:59:00Z",
+      "title": "Product Outage/Anomaly: Update #1 GOES-19 CCOR-1 Product Degradation - Issued November 27, 2026 0859Z",
+      "satellites": [
+        "GOES-19"
+      ],
+      "scope": "instrument/product",
+      "nature": "anomaly/outage",
+      "issue_category": "INSTRUMENT",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": true,
+        "metrics": {
+          "window_start": "2026-11-24T08:59:00Z",
+          "window_end": "2026-11-27T08:59:00Z",
+          "max_wind_kms": 405.05,
+          "max_kp": 3.0,
+          "min_bz_nt": -6.37,
+          "n_wind": 4298,
+          "n_kp": 24,
+          "n_bz": 7182
+        },
+        "flags": {
+          "wind_ge_500": false,
+          "kp_ge_5": false,
+          "bz_le_minus5": true
+        },
+        "association_score_0_100": 25.8,
+        "interpretation": "Descriptive 72 h pre-event environment only; does not establish that space weather caused the anomaly."
+      },
+      "space_weather_windows": {
+        "covered": true,
+        "at_event": {
+          "kp": 0.33,
+          "bz_nt": 4.05,
+          "wind_kms": 298.1
+        },
+        "windows": {
+          "6": {
+            "max_wind_kms": 304.23,
+            "max_kp": 1.0,
+            "min_bz_nt": -4.71,
+            "n_wind": 361,
+            "n_kp": 2,
+            "n_bz": 470
+          },
+          "24": {
+            "max_wind_kms": 354.36,
+            "max_kp": 2.33,
+            "min_bz_nt": -5.41,
+            "n_wind": 1432,
+            "n_kp": 8,
+            "n_bz": 2121
+          },
+          "72": {
+            "max_wind_kms": 405.05,
+            "max_kp": 3.0,
+            "min_bz_nt": -6.37,
+            "n_wind": 4298,
+            "n_kp": 24,
+            "n_bz": 7182
+          }
+        },
+        "interpretation": "Descriptive co-occurrence only; causal attribution is not automatic."
+      }
+    },
+    {
+      "issued_at": "2026-11-27T06:28:00Z",
+      "title": "Product Outage/Anomaly: GOES-19 CCOR-1 Product Degradation - Issued November 27, 2026 0628Z",
+      "satellites": [
+        "GOES-19"
+      ],
+      "scope": "instrument/product",
+      "nature": "anomaly/outage",
+      "issue_category": "INSTRUMENT",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": true,
+        "metrics": {
+          "window_start": "2026-11-24T06:28:00Z",
+          "window_end": "2026-11-27T06:28:00Z",
+          "max_wind_kms": 405.05,
+          "max_kp": 3.0,
+          "min_bz_nt": -6.37,
+          "n_wind": 4298,
+          "n_kp": 24,
+          "n_bz": 7223
+        },
+        "flags": {
+          "wind_ge_500": false,
+          "kp_ge_5": false,
+          "bz_le_minus5": true
+        },
+        "association_score_0_100": 25.8,
+        "interpretation": "Descriptive 72 h pre-event environment only; does not establish that space weather caused the anomaly."
+      },
+      "space_weather_windows": {
+        "covered": true,
+        "at_event": {
+          "kp": 0.33,
+          "bz_nt": 5.1,
+          "wind_kms": 290.64
+        },
+        "windows": {
+          "6": {
+            "max_wind_kms": 329.79,
+            "max_kp": 1.0,
+            "min_bz_nt": -4.9,
+            "n_wind": 360,
+            "n_kp": 2,
+            "n_bz": 361
+          },
+          "24": {
+            "max_wind_kms": 354.36,
+            "max_kp": 2.33,
+            "min_bz_nt": -5.41,
+            "n_wind": 1432,
+            "n_kp": 8,
+            "n_bz": 2124
+          },
+          "72": {
+            "max_wind_kms": 405.05,
+            "max_kp": 3.0,
+            "min_bz_nt": -6.37,
+            "n_wind": 4298,
+            "n_kp": 24,
+            "n_bz": 7223
+          }
+        },
+        "interpretation": "Descriptive co-occurrence only; causal attribution is not automatic."
+      }
+    },
     {
       "issued_at": "2026-11-21T10:33:00Z",
       "title": "Product Outage/Anomaly: Update #1: Correction: GOES-19 Intermediate Cloud Top Height Full Disk - Issued November 21, 2026 1033Z",
@@ -10600,6 +10736,48 @@
       "scope": "product/data",
       "nature": "anomaly/outage",
       "issue_category": "PRODUCT_DATA",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      },
+      "space_weather_windows": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      }
+    },
+    {
+      "issued_at": null,
+      "title": "Product Outage/Anomaly: Update #1 GOES-19 CCOR-1 Product Degradation",
+      "satellites": [
+        "GOES-19"
+      ],
+      "scope": "instrument/product",
+      "nature": "anomaly/outage",
+      "issue_category": "INSTRUMENT",
+      "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
+      "source": "NOAA OSPO satellite messages",
+      "causal_attribution": "NOT ESTABLISHED",
+      "space_weather_72h_before": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      },
+      "space_weather_windows": {
+        "covered": false,
+        "reason": "event timestamp unavailable"
+      }
+    },
+    {
+      "issued_at": null,
+      "title": "Product Outage/Anomaly: GOES-19 CCOR-1 Product Degradation - Issued",
+      "satellites": [
+        "GOES-19"
+      ],
+      "scope": "instrument/product",
+      "nature": "anomaly/outage",
+      "issue_category": "INSTRUMENT",
       "cause_attribution": "CATEGORY_FROM_PUBLIC_TEXT_NOT_ROOT_CAUSE",
       "source": "NOAA OSPO satellite messages",
       "causal_attribution": "NOT ESTABLISHED",
